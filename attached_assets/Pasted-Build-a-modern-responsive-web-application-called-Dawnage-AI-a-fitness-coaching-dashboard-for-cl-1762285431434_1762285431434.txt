@@ -1,0 +1,193 @@
+Build a modern, responsive web application called "Dawnage AI" — a fitness coaching dashboard for clients.
+
+Use:
+
+React (Vite + TypeScript preferred)
+
+Supabase (for authentication, database, and storage)
+
+Tailwind CSS for styling
+
+Recharts or Chart.js for analytics
+
+Design Reference:
+Follow the modern, premium look of https://www.dawnage.com
+ — clean, minimal, bold typography, and fitness-luxury tone.
+Use a dark, premium fitness dashboard theme inspired by Dawnage AI.
+
+Base: deep charcoal #0B0B0C / card #131416
+
+Text: white #FFFFFF, muted gray #A1A1A8
+
+Accent: red #F04E45, highlight green #00D26A, gold #F6C85A
+
+Rounded-2xl cards, subtle shadows, bold sans-serif fonts (Inter/Poppins).
+
+Minimal, data-focused layout with glowing progress bars and smooth charts.
+
+Modern, high-contrast, luxury-performance aesthetic.
+
+Authentication Flow (Supabase):
+
+When a user enters their phone number, fetch their client profile from Supabase.
+
+If the profile exists, show their personalized dashboard.
+
+If not, show “Profile not found.”
+
+Database Tables (Supabase):
+
+clients
+
+phone_number
+
+name
+
+email (optional)
+
+region
+
+timezone
+
+start_date
+
+package_length_weeks
+
+auto_end_date (calculated = start_date + package_length_weeks)
+
+goal
+
+injuries
+
+medical_condition
+
+preferred_checkin_day
+
+preferred_checkin_time
+
+current_weight (auto-updated)
+
+photo_front_url, photo_back_url, photo_left_url, photo_right_url
+
+daily_checkins
+
+date (auto)
+
+week_number
+
+day_of_week
+
+morning_weight
+
+workout_status (enum: done, no, cardio_day, rest_day)
+
+workout_performance_strength (1–10)
+
+nutrition_score (1–10)
+
+daily_steps
+
+sleep_hours
+
+water_liters
+
+energy_level (1–10)
+
+digestion (enum: None, bloated, constipated, diarrhea)
+
+hunger_level (1–10)
+
+stress_level (1–10)
+
+calorie_intake
+
+weekly_measurements
+
+measurement_date
+
+weight_kg
+
+chest_cm
+
+waist_cm
+
+hip_cm
+
+thigh_cm
+
+arm_cm
+
+neck_cm
+
+front_url, back_url, left_url, right_url
+
+workout_plans
+
+plan_start_date
+
+plan_end_date
+
+weekly_workouts (json)
+
+weekly_steps_goal
+
+weekly_cardio_goal_minutes
+
+meal_plans
+
+plan_start_date
+
+plan_end_date
+
+daily_meal_plan (json)
+
+supplement_list (json)
+
+calorie_target
+
+macros_target (protein/fat/carbs)
+
+notes
+
+Pages / Navigation:
+
+Dashboard: Overview with charts (line for trends, bar for weekly comparisons), summary of workouts, nutrition, progress.
+
+Check-Ins (Daily): Form to log daily check-ins with all related metrics.
+
+Measurements: Weekly measurement tracker and progress graph.
+
+Plans: Tabs for Workout and Meal plans, fetched dynamically from Supabase.
+
+Analytics: Graphs analyzing all client data (weight trends, energy vs. stress, etc.).
+
+Media: Upload and view progress photos (Supabase Storage).
+
+Client Info: All personal details, editable profile form.
+
+Core Features:
+
+Real-time updates: when Supabase data changes, reflect instantly in the dashboard.
+
+Responsive layout with collapsible sidebar navigation.
+
+Recharts visualizations (LineChart, BarChart).
+
+Client progress analysis — strength trend, weight trend, nutrition score average, etc.
+
+Workout logs and performance analysis section.
+
+Header Example Text:
+“Gain unprecedented insights into your fitness journey with our comprehensive, user-friendly dashboard. Track progress, stay motivated, and access exclusive content — all in one place.”
+
+Output Expectation:
+
+Fully functional, styled React web app.
+
+Supabase connected.
+
+Clean UI matching dawnage.com tone.
+
+All pages connected via sidebar navigation.
+
+Responsive dashboard with charts and client info.
