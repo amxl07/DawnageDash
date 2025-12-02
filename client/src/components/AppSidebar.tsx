@@ -1,9 +1,12 @@
-import { Home, ClipboardList, Ruler, Calendar, BarChart3, Image, User } from "lucide-react";
+import { Home, ClipboardList, Ruler, Calendar, BarChart3, Image, User, LogOut } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import logoUrl from "@assets/dashboard_1762285477469.png";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarMenu,
@@ -23,6 +26,7 @@ const menuItems = [
 
 export function AppSidebar() {
   const [location] = useLocation();
+  const { signOut, user } = useAuth();
 
   return (
     <Sidebar>
@@ -30,14 +34,14 @@ export function AppSidebar() {
         <div className="px-6 py-6">
           <img src={logoUrl} alt="Dawnage AI" className="w-full max-w-[180px]" data-testid="img-logo" />
         </div>
-        
+
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton 
-                    asChild 
+                  <SidebarMenuButton
+                    asChild
                     isActive={location === item.url}
                     data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
                   >
@@ -52,6 +56,24 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <SidebarFooter>
+        <div className="px-4 py-4 border-t">
+          <div className="mb-3 px-2">
+            <p className="text-sm font-medium truncate">{user?.email}</p>
+            <p className="text-xs text-muted-foreground">Signed in</p>
+          </div>
+          <Button
+            variant="outline"
+            className="w-full justify-start"
+            onClick={signOut}
+            data-testid="button-sign-out"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign Out
+          </Button>
+        </div>
+      </SidebarFooter>
     </Sidebar>
   );
 }

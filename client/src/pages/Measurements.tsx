@@ -2,71 +2,127 @@ import { MeasurementCard } from "@/components/MeasurementCard";
 import { MeasurementProgressChart } from "@/components/MeasurementProgressChart";
 import { MeasurementComparisonCard } from "@/components/MeasurementComparisonCard";
 import { MetricCard } from "@/components/MetricCard";
+import { Card } from "@/components/ui/card";
 import { TrendingDown, Ruler, Target } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Measurements() {
-  // TODO: Remove mock data - fetch from Supabase
-  const measurements = [
-    {
-      date: 'Jan 29, 2025',
-      weekNumber: 4,
-      measurements: { weight: 78.5, chest: 100, waist: 84, hip: 95, thigh: 56, arm: 34.5 },
-      changes: { weight: -1.2 },
-    },
-    {
-      date: 'Jan 22, 2025',
-      weekNumber: 3,
-      measurements: { weight: 79.7, chest: 101, waist: 85, hip: 96, thigh: 56.5, arm: 35 },
-      changes: { weight: -1.1 },
-    },
-    {
-      date: 'Jan 15, 2025',
-      weekNumber: 2,
-      measurements: { weight: 80.8, chest: 101.5, waist: 86, hip: 97, thigh: 57, arm: 35.5 },
-      changes: { weight: -1.4 },
-    },
-    {
-      date: 'Jan 8, 2025',
-      weekNumber: 1,
-      measurements: { weight: 82.2, chest: 102, waist: 88, hip: 98, thigh: 58, arm: 36 },
-    },
-  ];
+  const { user } = useAuth();
 
-  // TODO: Remove mock data - fetch from Supabase
-  const progressData = [
-    { week: 'W1', weight: 82.2, chest: 102, waist: 88, hip: 98, thigh: 58, arm: 36 },
-    { week: 'W2', weight: 80.8, chest: 101.5, waist: 86, hip: 97, thigh: 57, arm: 35.5 },
-    { week: 'W3', weight: 79.7, chest: 101, waist: 85, hip: 96, thigh: 56.5, arm: 35 },
-    { week: 'W4', weight: 78.5, chest: 100, waist: 84, hip: 95, thigh: 56, arm: 34.5 },
-  ];
+  // Fetch measurements from Supabase
+  const { data: bodyMeasurements, isLoading } = useQuery({
+    queryKey: ['bodyMeasurements', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('body_measurements')
+        .select('*')
+        .order('date', { ascending: false });
 
-  // TODO: Remove mock data - fetch from Supabase
-  const comparisonData = {
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  // Transform measurements for card display
+  const measurements = bodyMeasurements?.map((measurement, index) => {
+    const prevMeasurement = bodyMeasurements[index + 1];
+    const weightChange = prevMeasurement
+      ? parseFloat(measurement.weight || '0') - parseFloat(prevMeasurement.weight || '0')
+      : 0;
+
+    return {
+      date: new Date(measurement.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      weekNumber: index + 1,
+      measurements: {
+        weight: parseFloat(measurement.weight || '0'),
+        chest: parseFloat(measurement.chest || '0'),
+        waist: parseFloat(measurement.waist || '0'),
+        hip: parseFloat(measurement.hips || '0'),
+        thigh: parseFloat(measurement.thighs || '0'),
+        arm: parseFloat(measurement.arms || '0'),
+      },
+      changes: weightChange !== 0 ? { weight: weightChange } : undefined,
+    };
+  }) || [];
+
+  // Transform measurements for progress chart
+  const progressData = bodyMeasurements?.slice().reverse().map((measurement, index) => ({
+    week: `W${index + 1}`,
+    weight: parseFloat(measurement.weight || '0'),
+    chest: parseFloat(measurement.chest || '0'),
+    waist: parseFloat(measurement.waist || '0'),
+    hip: parseFloat(measurement.hips || '0'),
+    thigh: parseFloat(measurement.thighs || '0'),
+    arm: parseFloat(measurement.arms || '0'),
+  })) || [];
+
+  // Comparison data (current vs start)
+  const currentMeasurement = bodyMeasurements?.[0];
+  const startMeasurement = bodyMeasurements?.[bodyMeasurements.length - 1];
+
+  const comparisonData = currentMeasurement && startMeasurement ? {
     current: {
-      week: 4,
-      date: 'Jan 29, 2025',
-      weight: 78.5,
-      chest: 100,
-      waist: 84,
-      hip: 95,
-      thigh: 56,
-      arm: 34.5,
+      week: bodyMeasurements?.length || 0,
+      date: new Date(currentMeasurement.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      weight: parseFloat(currentMeasurement.weight || '0'),
+      chest: parseFloat(currentMeasurement.chest || '0'),
+      waist: parseFloat(currentMeasurement.waist || '0'),
+      hip: parseFloat(currentMeasurement.hips || '0'),
+      thigh: parseFloat(currentMeasurement.thighs || '0'),
+      arm: parseFloat(currentMeasurement.arms || '0'),
     },
     start: {
       week: 1,
-      date: 'Jan 8, 2025',
-      weight: 82.2,
-      chest: 102,
-      waist: 88,
-      hip: 98,
-      thigh: 58,
-      arm: 36,
+      date: new Date(startMeasurement.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      weight: parseFloat(startMeasurement.weight || '0'),
+      chest: parseFloat(startMeasurement.chest || '0'),
+      waist: parseFloat(startMeasurement.waist || '0'),
+      hip: parseFloat(startMeasurement.hips || '0'),
+      thigh: parseFloat(startMeasurement.thighs || '0'),
+      arm: parseFloat(startMeasurement.arms || '0'),
     },
-  };
+  } : null;
 
-  const totalWeightLost = 3.7;
-  const waistReduction = 4;
-  const avgWeeklyLoss = 1.2;
+  // Calculate metrics
+  const totalWeightLost = currentMeasurement && startMeasurement
+    ? (parseFloat(startMeasurement.weight || '0') - parseFloat(currentMeasurement.weight || '0')).toFixed(1)
+    : '0';
+
+  const waistReduction = currentMeasurement && startMeasurement
+    ? (parseFloat(startMeasurement.waist || '0') - parseFloat(currentMeasurement.waist || '0')).toFixed(0)
+    : '0';
+
+  const totalWeeks = bodyMeasurements?.length || 1;
+  const avgWeeklyLoss = totalWeeks > 0
+    ? (parseFloat(totalWeightLost) / totalWeeks).toFixed(1)
+    : '0';
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading measurements...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!bodyMeasurements || bodyMeasurements.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="p-8 text-center max-w-md">
+          <h2 className="text-2xl font-bold mb-4">No Measurements Yet</h2>
+          <p className="text-muted-foreground">
+            You haven't recorded any body measurements yet. Start tracking your physical progress today!
+          </p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -80,14 +136,14 @@ export default function Measurements() {
           title="Total Weight Lost"
           value={`${totalWeightLost} kg`}
           icon={TrendingDown}
-          trend={{ value: 4.5, isPositive: false }}
+          trend={parseFloat(totalWeightLost) !== 0 ? { value: parseFloat(totalWeightLost), isPositive: false } : undefined}
           subtitle="Since start"
         />
         <MetricCard
           title="Waist Reduction"
           value={`${waistReduction} cm`}
           icon={Ruler}
-          subtitle="4 weeks"
+          subtitle={`${totalWeeks} ${totalWeeks === 1 ? 'week' : 'weeks'}`}
         />
         <MetricCard
           title="Avg Weekly Loss"
@@ -97,9 +153,9 @@ export default function Measurements() {
         />
       </div>
 
-      <MeasurementProgressChart data={progressData} />
+      {progressData.length > 0 && <MeasurementProgressChart data={progressData} />}
 
-      <MeasurementComparisonCard data={comparisonData} />
+      {comparisonData && <MeasurementComparisonCard data={comparisonData} />}
 
       <div>
         <h3 className="text-2xl font-bold mb-6">Measurement History</h3>

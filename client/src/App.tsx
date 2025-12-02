@@ -5,6 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "@/pages/Dashboard";
 import CheckIns from "@/pages/CheckIns";
 import Measurements from "@/pages/Measurements";
@@ -19,13 +21,41 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
-      <Route path="/" component={Dashboard} />
-      <Route path="/check-ins" component={CheckIns} />
-      <Route path="/measurements" component={Measurements} />
-      <Route path="/plans" component={Plans} />
-      <Route path="/analytics" component={Analytics} />
-      <Route path="/media" component={Media} />
-      <Route path="/profile" component={Profile} />
+      <Route path="/">
+        <ProtectedRoute>
+          <Dashboard />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/check-ins">
+        <ProtectedRoute>
+          <CheckIns />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/measurements">
+        <ProtectedRoute>
+          <Measurements />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/plans">
+        <ProtectedRoute>
+          <Plans />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/analytics">
+        <ProtectedRoute>
+          <Analytics />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/media">
+        <ProtectedRoute>
+          <Media />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/profile">
+        <ProtectedRoute>
+          <Profile />
+        </ProtectedRoute>
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );
@@ -55,12 +85,14 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <SidebarProvider style={style as React.CSSProperties}>
-          <AppContent />
-        </SidebarProvider>
-        <Toaster />
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <SidebarProvider style={style as React.CSSProperties}>
+            <AppContent />
+          </SidebarProvider>
+          <Toaster />
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

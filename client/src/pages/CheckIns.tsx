@@ -1,85 +1,123 @@
 import { DailyCheckInCard } from "@/components/DailyCheckInCard";
 import { CheckInTrendsChart } from "@/components/CheckInTrendsChart";
 import { MetricCard } from "@/components/MetricCard";
+import { Card } from "@/components/ui/card";
 import { Activity, TrendingDown, TrendingUp, Award } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function CheckIns() {
-  // TODO: Remove mock data - fetch from Supabase
-  const checkInHistory = [
-    {
-      date: 'Feb 4, 2025',
-      dayNumber: 28,
-      vitals: { morningWeight: 78.5, sleepHours: 7.5, weightChange: -0.3 },
-      workout: { status: 'done' as const, performance: 9 },
-      nutrition: { score: 9, calorieIntake: 2100, waterLiters: 2.8, dailySteps: 9200 },
-      wellbeing: { energyLevel: 9, hungerLevel: 4, stressLevel: 2, digestion: 'none' as const },
-    },
-    {
-      date: 'Feb 3, 2025',
-      dayNumber: 27,
-      vitals: { morningWeight: 78.8, sleepHours: 8, weightChange: -0.2 },
-      workout: { status: 'rest_day' as const },
-      nutrition: { score: 8, calorieIntake: 2000, waterLiters: 2.5, dailySteps: 6500 },
-      wellbeing: { energyLevel: 8, hungerLevel: 5, stressLevel: 3, digestion: 'none' as const },
-    },
-    {
-      date: 'Feb 2, 2025',
-      dayNumber: 26,
-      vitals: { morningWeight: 79.0, sleepHours: 7, weightChange: -0.4 },
-      workout: { status: 'done' as const, performance: 8 },
-      nutrition: { score: 9, calorieIntake: 2050, waterLiters: 3.0, dailySteps: 10500 },
-      wellbeing: { energyLevel: 8, hungerLevel: 4, stressLevel: 2, digestion: 'none' as const },
-    },
-    {
-      date: 'Feb 1, 2025',
-      dayNumber: 25,
-      vitals: { morningWeight: 79.4, sleepHours: 6.5, weightChange: -0.1 },
-      workout: { status: 'cardio_day' as const, performance: 7 },
-      nutrition: { score: 8, calorieIntake: 1950, waterLiters: 2.6, dailySteps: 12000 },
-      wellbeing: { energyLevel: 7, hungerLevel: 6, stressLevel: 4, digestion: 'none' as const },
-    },
-    {
-      date: 'Jan 31, 2025',
-      dayNumber: 24,
-      vitals: { morningWeight: 79.5, sleepHours: 8, weightChange: -0.3 },
-      workout: { status: 'done' as const, performance: 9 },
-      nutrition: { score: 10, calorieIntake: 2100, waterLiters: 2.8, dailySteps: 8900 },
-      wellbeing: { energyLevel: 9, hungerLevel: 4, stressLevel: 2, digestion: 'none' as const },
-    },
-    {
-      date: 'Jan 30, 2025',
-      dayNumber: 23,
-      vitals: { morningWeight: 79.8, sleepHours: 7.5, weightChange: -0.2 },
-      workout: { status: 'done' as const, performance: 8 },
-      nutrition: { score: 9, calorieIntake: 2000, waterLiters: 2.7, dailySteps: 9500 },
-      wellbeing: { energyLevel: 8, hungerLevel: 5, stressLevel: 3, digestion: 'none' as const },
-    },
-    {
-      date: 'Jan 29, 2025',
-      dayNumber: 22,
-      vitals: { morningWeight: 80.0, sleepHours: 7, weightChange: -0.5 },
-      workout: { status: 'no' as const },
-      nutrition: { score: 7, calorieIntake: 2200, waterLiters: 2.0, dailySteps: 5500 },
-      wellbeing: { energyLevel: 6, hungerLevel: 7, stressLevel: 6, digestion: 'bloated' as const },
-    },
-  ];
+  const { user } = useAuth();
 
-  // TODO: Remove mock data - calculate from Supabase
-  const trendData = [
-    { day: 'D22', weight: 80.0, nutrition: 7, performance: 0, energy: 6, stress: 6, sleep: 7, steps: 5500, water: 2.0 },
-    { day: 'D23', weight: 79.8, nutrition: 9, performance: 8, energy: 8, stress: 3, sleep: 7.5, steps: 9500, water: 2.7 },
-    { day: 'D24', weight: 79.5, nutrition: 10, performance: 9, energy: 9, stress: 2, sleep: 8, steps: 8900, water: 2.8 },
-    { day: 'D25', weight: 79.4, nutrition: 8, performance: 7, energy: 7, stress: 4, sleep: 6.5, steps: 12000, water: 2.6 },
-    { day: 'D26', weight: 79.0, nutrition: 9, performance: 8, energy: 8, stress: 2, sleep: 7, steps: 10500, water: 3.0 },
-    { day: 'D27', weight: 78.8, nutrition: 8, performance: 0, energy: 8, stress: 3, sleep: 8, steps: 6500, water: 2.5 },
-    { day: 'D28', weight: 78.5, nutrition: 9, performance: 9, energy: 9, stress: 2, sleep: 7.5, steps: 9200, water: 2.8 },
-  ];
+  // Fetch check-ins from Supabase
+  const { data: checkIns, isLoading } = useQuery({
+    queryKey: ['dailyCheckIns', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('daily_check_ins')
+        .select('*')
+        .order('date', { ascending: false });
 
-  // TODO: Remove mock data - calculate from Supabase
-  const avgNutrition = 8.6;
-  const avgPerformance = 8.2;
-  const consistencyRate = 86;
-  const weightLost = 1.5;
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  // Transform check-ins for the card display
+  const checkInHistory = checkIns?.map((checkIn, index) => {
+    const prevWeight = checkIns[index + 1]?.morning_weight || checkIn.morning_weight;
+    const weightChange = checkIn.morning_weight
+      ? parseFloat(checkIn.morning_weight) - parseFloat(prevWeight || checkIn.morning_weight)
+      : 0;
+
+    return {
+      date: new Date(checkIn.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      dayNumber: checkIn.day_number || index + 1,
+      vitals: {
+        morningWeight: parseFloat(checkIn.morning_weight || '0'),
+        sleepHours: parseFloat(checkIn.sleep_hours || '0'),
+        weightChange: weightChange,
+      },
+      workout: {
+        status: (['done', 'no', 'cardio_day', 'rest_day'].includes(checkIn.workout_status || '')
+          ? checkIn.workout_status
+          : 'no') as 'done' | 'no' | 'cardio_day' | 'rest_day',
+        performance: checkIn.workout_performance || undefined,
+      },
+      nutrition: {
+        score: checkIn.nutrition_score || 0,
+        calorieIntake: checkIn.calorie_intake || 0,
+        waterLiters: parseFloat(checkIn.water_liters || '0'),
+        dailySteps: checkIn.daily_steps || 0,
+      },
+      wellbeing: {
+        energyLevel: checkIn.energy_level || 0,
+        hungerLevel: checkIn.hunger_level || 0,
+        stressLevel: checkIn.stress_level || 0,
+        digestion: (checkIn.digestion || 'none') as 'none' | 'bloated' | 'constipated' | 'diarrhea',
+      },
+    };
+  }) || [];
+
+  // Transform check-ins for the trend chart (last 7 days)
+  const trendData = checkIns?.slice(0, 7).reverse().map((checkIn, index) => ({
+    day: `D${checkIn.day_number || index + 1}`,
+    weight: parseFloat(checkIn.morning_weight || '0'),
+    nutrition: checkIn.nutrition_score || 0,
+    performance: checkIn.workout_performance || 0,
+    energy: checkIn.energy_level || 0,
+    stress: checkIn.stress_level || 0,
+    sleep: parseFloat(checkIn.sleep_hours || '0'),
+    steps: checkIn.daily_steps || 0,
+    water: parseFloat(checkIn.water_liters || '0'),
+  })) || [];
+
+  // Calculate metrics from real data
+  const last7Days = checkIns?.slice(0, 7) || [];
+  const avgNutrition = last7Days.length > 0
+    ? (last7Days.reduce((sum, c) => sum + (c.nutrition_score || 0), 0) / last7Days.length).toFixed(1)
+    : '0';
+
+  const workoutDays = last7Days.filter(c => c.workout_performance);
+  const avgPerformance = workoutDays.length > 0
+    ? (workoutDays.reduce((sum, c) => sum + (c.workout_performance || 0), 0) / workoutDays.length).toFixed(1)
+    : '0';
+
+  const totalDays = checkIns?.length || 0;
+  const trackedDays = checkIns?.filter(c => c.nutrition_score || c.workout_status).length || 0;
+  const consistencyRate = totalDays > 0 ? Math.round((trackedDays / totalDays) * 100) : 0;
+
+  const firstWeight = checkIns?.[checkIns.length - 1]?.morning_weight || 0;
+  const lastWeight = checkIns?.[0]?.morning_weight || 0;
+  const weightLost = firstWeight && lastWeight
+    ? (parseFloat(firstWeight) - parseFloat(lastWeight)).toFixed(1)
+    : '0';
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading check-ins...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!checkIns || checkIns.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="p-8 text-center max-w-md">
+          <h2 className="text-2xl font-bold mb-4">No Check-Ins Yet</h2>
+          <p className="text-muted-foreground">
+            You haven't recorded any daily check-ins yet. Start tracking your progress today!
+          </p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -93,14 +131,12 @@ export default function CheckIns() {
           title="Avg Nutrition Score"
           value={avgNutrition}
           icon={Activity}
-          trend={{ value: 12, isPositive: true }}
           subtitle="Last 7 days"
         />
         <MetricCard
           title="Avg Performance"
           value={avgPerformance}
           icon={TrendingUp}
-          trend={{ value: 8, isPositive: true }}
           subtitle="When tracked"
         />
         <MetricCard
@@ -111,10 +147,10 @@ export default function CheckIns() {
         />
         <MetricCard
           title="Weight Progress"
-          value={`-${weightLost} kg`}
+          value={`${parseFloat(weightLost) >= 0 ? '-' : '+'}${Math.abs(parseFloat(weightLost))} kg`}
           icon={TrendingDown}
-          trend={{ value: 1.9, isPositive: false }}
-          subtitle="Last 7 days"
+          trend={parseFloat(weightLost) !== 0 ? { value: Math.abs(parseFloat(weightLost)), isPositive: parseFloat(weightLost) > 0 } : undefined}
+          subtitle="Total change"
         />
       </div>
 

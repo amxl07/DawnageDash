@@ -6,125 +6,271 @@ import { WeeklyComparisonChart } from "@/components/WeeklyComparisonChart";
 import { WorkoutHeatmap } from "@/components/WorkoutHeatmap";
 import { ProgressBar } from "@/components/ProgressBar";
 import { Card } from "@/components/ui/card";
-import { Weight, Flame, Trophy, Zap, TrendingUp, Activity, Target } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Weight, Flame, Trophy, Zap, Activity, Target, MessageCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
 export default function Dashboard() {
-  // TODO: Remove mock data - fetch from Supabase
-  const weightData = [
-    { date: 'W1', weight: 82.5 },
-    { date: 'W2', weight: 81.8 },
-    { date: 'W3', weight: 81.2 },
-    { date: 'W4', weight: 80.5 },
-    { date: 'W5', weight: 79.8 },
-    { date: 'W6', weight: 79.2 },
-    { date: 'W7', weight: 78.5 },
-  ];
+  const {
+    checkIns,
+    metrics,
+    weightTrend,
+    weightChartData,
+    performanceChartData,
+    nutritionBreakdown,
+    isLoading,
+  } = useDashboardData();
 
-  const performanceData = [
-    { day: 'Mon', performance: 8, nutrition: 9, energy: 7 },
-    { day: 'Tue', performance: 9, nutrition: 8, energy: 8 },
-    { day: 'Wed', performance: 7, nutrition: 9, energy: 9 },
-    { day: 'Thu', performance: 9, nutrition: 10, energy: 8 },
-    { day: 'Fri', performance: 8, nutrition: 8, energy: 7 },
-    { day: 'Sat', performance: 10, nutrition: 9, energy: 9 },
-    { day: 'Sun', performance: 0, nutrition: 9, energy: 8 },
-  ];
+  // Calculate workout heatmap from check-ins
+  const heatmapData = checkIns?.map(checkIn => ({
+    date: new Date(checkIn.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    status: (checkIn.workout_status === 'done' ? 'done' :
+             checkIn.workout_status === 'rest_day' ? 'rest' :
+             checkIn.workout_status === 'no' ? 'missed' : 'rest') as 'done' | 'rest' | 'missed',
+    intensity: checkIn.workout_performance || 0,
+  })) || [];
 
-  const weeklyComparisonData = [
-    { week: 'W1', workouts: 5, avgNutrition: 7.5, avgEnergy: 7.2, avgSleep: 7.2 },
-    { week: 'W2', workouts: 6, avgNutrition: 8.2, avgEnergy: 7.8, avgSleep: 7.5 },
-    { week: 'W3', workouts: 6, avgNutrition: 8.8, avgEnergy: 8.4, avgSleep: 7.8 },
-    { week: 'W4', workouts: 6, avgNutrition: 9.1, avgEnergy: 8.7, avgSleep: 8.0 },
-  ];
+  // Calculate weekly comparison data
+  const weeklyComparisonData: Array<{
+    week: string;
+    workouts: number;
+    avgNutrition: number;
+    avgEnergy: number;
+    avgSleep: number;
+  }> = [];
+  if (checkIns && checkIns.length > 0) {
+    const weeksData = new Map();
 
-  const heatmapData = [
-    // Week 1
-    { date: 'Jan 1', status: 'done' as const, intensity: 8 },
-    { date: 'Jan 2', status: 'done' as const, intensity: 7 },
-    { date: 'Jan 3', status: 'done' as const, intensity: 9 },
-    { date: 'Jan 4', status: 'rest' as const },
-    { date: 'Jan 5', status: 'done' as const, intensity: 8 },
-    { date: 'Jan 6', status: 'done' as const, intensity: 9 },
-    { date: 'Jan 7', status: 'rest' as const },
-    // Week 2
-    { date: 'Jan 8', status: 'done' as const, intensity: 9 },
-    { date: 'Jan 9', status: 'done' as const, intensity: 8 },
-    { date: 'Jan 10', status: 'done' as const, intensity: 7 },
-    { date: 'Jan 11', status: 'rest' as const },
-    { date: 'Jan 12', status: 'done' as const, intensity: 9 },
-    { date: 'Jan 13', status: 'done' as const, intensity: 10 },
-    { date: 'Jan 14', status: 'rest' as const },
-    // Week 3
-    { date: 'Jan 15', status: 'done' as const, intensity: 8 },
-    { date: 'Jan 16', status: 'done' as const, intensity: 9 },
-    { date: 'Jan 17', status: 'done' as const, intensity: 8 },
-    { date: 'Jan 18', status: 'rest' as const },
-    { date: 'Jan 19', status: 'done' as const, intensity: 9 },
-    { date: 'Jan 20', status: 'done' as const, intensity: 10 },
-    { date: 'Jan 21', status: 'rest' as const },
-    // Week 4
-    { date: 'Jan 22', status: 'done' as const, intensity: 9 },
-    { date: 'Jan 23', status: 'missed' as const },
-    { date: 'Jan 24', status: 'done' as const, intensity: 8 },
-    { date: 'Jan 25', status: 'rest' as const },
-    { date: 'Jan 26', status: 'done' as const, intensity: 9 },
-    { date: 'Jan 27', status: 'done' as const, intensity: 10 },
-    { date: 'Jan 28', status: 'done' as const, intensity: 8 },
-  ];
+    checkIns.forEach(checkIn => {
+      const date = new Date(checkIn.date);
+      const weekNum = Math.ceil((date.getDate()) / 7);
+      const weekKey = `W${weekNum}`;
+
+      if (!weeksData.has(weekKey)) {
+        weeksData.set(weekKey, {
+          week: weekKey,
+          workouts: 0,
+          nutritionSum: 0,
+          energySum: 0,
+          sleepSum: 0,
+          count: 0,
+        });
+      }
+
+      const week = weeksData.get(weekKey);
+      if (checkIn.workout_status === 'done') week.workouts++;
+      week.nutritionSum += checkIn.nutrition_score || 0;
+      week.energySum += checkIn.energy_level || 0;
+      week.sleepSum += parseFloat(checkIn.sleep_hours || '0');
+      week.count++;
+    });
+
+    weeksData.forEach(week => {
+      weeklyComparisonData.push({
+        week: week.week,
+        workouts: week.workouts,
+        avgNutrition: week.count > 0 ? +(week.nutritionSum / week.count).toFixed(1) : 0,
+        avgEnergy: week.count > 0 ? +(week.energySum / week.count).toFixed(1) : 0,
+        avgSleep: week.count > 0 ? +(week.sleepSum / week.count).toFixed(1) : 0,
+      });
+    });
+  }
+
+  // Calculate progress metrics
+  const totalDaysTracked = checkIns?.length || 0;
+  const currentWeek = Math.ceil(totalDaysTracked / 7);
+  const last7CheckIns = checkIns?.slice(-7) || [];
+  const workoutsThisWeek = last7CheckIns.filter(c => c.workout_status === 'done').length;
+  const sleepThisWeek = last7CheckIns.reduce((sum, c) => sum + parseFloat(c.sleep_hours || '0'), 0);
+  const avgStepsThisWeek = last7CheckIns.length > 0
+    ? Math.round(last7CheckIns.reduce((sum, c) => sum + (c.daily_steps || 0), 0) / last7CheckIns.length)
+    : 0;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!checkIns || checkIns.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen p-6">
+        <div className="max-w-2xl w-full space-y-6">
+          {/* Welcome Card */}
+          <Card className="p-8 text-center">
+            <h2 className="text-3xl font-bold mb-4">Welcome to Dawnage AI! 🎉</h2>
+            <p className="text-muted-foreground mb-4">
+              You don't have any check-ins or measurements recorded yet.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Start tracking your fitness journey by adding your first check-in or measurement.
+            </p>
+          </Card>
+
+          {/* WhatsApp Activation Card for New Users */}
+          <Card className="relative overflow-hidden bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-green-200 dark:border-green-800">
+            <div className="p-8">
+              <div className="flex flex-col items-center text-center gap-6">
+                {/* WhatsApp Icon */}
+                <div className="w-20 h-20 rounded-2xl bg-green-500 flex items-center justify-center shadow-lg">
+                  <MessageCircle className="w-10 h-10 text-white" />
+                </div>
+
+                {/* Title */}
+                <div>
+                  <h3 className="text-3xl font-bold text-green-900 dark:text-green-100 mb-3">
+                    Activate Your AI Fitness Assistant
+                  </h3>
+                  <p className="text-green-800 dark:text-green-200 text-lg max-w-xl mx-auto">
+                    Get started with personalized fitness coaching directly on WhatsApp!
+                    Track your progress, receive daily reminders, and get instant feedback.
+                  </p>
+                </div>
+
+                {/* Features Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-2xl mt-4">
+                  <div className="flex flex-col items-center gap-2 p-4 bg-white/50 dark:bg-green-900/20 rounded-xl">
+                    <div className="w-12 h-12 rounded-lg bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
+                      <MessageCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+                    </div>
+                    <span className="font-semibold text-green-900 dark:text-green-100">Daily Check-ins</span>
+                    <span className="text-sm text-green-700 dark:text-green-300 text-center">
+                      Log workouts & meals via chat
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-2 p-4 bg-white/50 dark:bg-green-900/20 rounded-xl">
+                    <div className="w-12 h-12 rounded-lg bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
+                      <Zap className="w-6 h-6 text-green-600 dark:text-green-400" />
+                    </div>
+                    <span className="font-semibold text-green-900 dark:text-green-100">Real-time Coaching</span>
+                    <span className="text-sm text-green-700 dark:text-green-300 text-center">
+                      Instant feedback & tips
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-2 p-4 bg-white/50 dark:bg-green-900/20 rounded-xl">
+                    <div className="w-12 h-12 rounded-lg bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
+                      <Target className="w-6 h-6 text-green-600 dark:text-green-400" />
+                    </div>
+                    <span className="font-semibold text-green-900 dark:text-green-100">Smart Reminders</span>
+                    <span className="text-sm text-green-700 dark:text-green-300 text-center">
+                      Stay on track daily
+                    </span>
+                  </div>
+                </div>
+
+                {/* CTA Button */}
+                <Button
+                  onClick={() => {
+                    const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || "918075054992";
+                    const message = import.meta.env.VITE_WHATSAPP_DEFAULT_MESSAGE || "Hi! I want to activate my Dawnage AI fitness assistant.";
+                    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+                    window.open(whatsappUrl, "_blank");
+                  }}
+                  size="lg"
+                  className="bg-green-600 hover:bg-green-700 text-white font-bold text-lg px-8 py-6 shadow-xl hover:shadow-2xl transition-all mt-4"
+                >
+                  <MessageCircle className="w-6 h-6 mr-3" />
+                  Activate on WhatsApp Now
+                </Button>
+
+                <p className="text-sm text-green-700 dark:text-green-300 mt-2">
+                  Click to start chatting with your AI coach on WhatsApp
+                </p>
+              </div>
+            </div>
+
+            {/* Decorative background */}
+            <div className="absolute bottom-0 right-0 opacity-10 pointer-events-none">
+              <svg width="200" height="200" viewBox="0 0 200 200" fill="none">
+                <circle cx="150" cy="150" r="100" fill="currentColor" className="text-green-600" />
+                <circle cx="180" cy="120" r="60" fill="currentColor" className="text-green-500" />
+              </svg>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-4xl font-bold mb-2" data-testid="text-dashboard-title">Dashboard</h1>
           <p className="text-muted-foreground">Comprehensive insights into your fitness journey with real-time data tracking</p>
         </div>
-        <Badge className="rounded-full text-sm px-4 py-2">
-          <Activity className="w-4 h-4 mr-2" />
-          Day 28 • Week 4
-        </Badge>
+        <div className="flex flex-col gap-3 items-end">
+          <Badge className="rounded-full text-sm px-4 py-2">
+            <Activity className="w-4 h-4 mr-2" />
+            Day {totalDaysTracked} • Week {currentWeek}
+          </Badge>
+          {/* WhatsApp Activation Button - Top Right */}
+          <Button
+            onClick={() => {
+              const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || "918075054992";
+              const message = import.meta.env.VITE_WHATSAPP_DEFAULT_MESSAGE || "Hi! I want to activate my Dawnage AI fitness assistant.";
+              const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+              window.open(whatsappUrl, "_blank");
+            }}
+            size="lg"
+            className="bg-green-600 hover:bg-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+          >
+            <MessageCircle className="w-5 h-5 mr-2" />
+            Activate AI on WhatsApp
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
           title="Current Weight"
-          value="78.5 kg"
+          value={`${metrics.currentWeight} kg`}
           icon={Weight}
-          trend={{ value: 2.3, isPositive: false }}
+          trend={weightTrend !== 0 ? { value: Math.abs(weightTrend), isPositive: weightTrend < 0 } : undefined}
           subtitle="Last 7 days"
         />
         <MetricCard
           title="Workouts"
-          value="24"
+          value={metrics.totalWorkouts.toString()}
           icon={Flame}
-          trend={{ value: 15, isPositive: true }}
-          subtitle="This month"
+          subtitle="Total tracked"
         />
         <MetricCard
           title="Nutrition Score"
-          value="8.7"
+          value={metrics.avgNutritionScore}
           icon={Trophy}
-          subtitle="Average this week"
+          subtitle="Average score"
         />
         <MetricCard
           title="Energy Level"
-          value="9/10"
+          value={`${metrics.avgEnergyLevel}/10`}
           icon={Zap}
-          trend={{ value: 10, isPositive: true }}
+          subtitle="Average level"
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <WeightChart data={weightData} />
-        <PerformanceChart data={performanceData} />
+        <WeightChart data={weightChartData} />
+        <PerformanceChart data={performanceChartData} />
       </div>
 
-      <WorkoutHeatmap data={heatmapData} />
+      {heatmapData.length > 0 && <WorkoutHeatmap data={heatmapData} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <NutritionBreakdownChart protein={151} carbs={207} fats={63} />
-        <WeeklyComparisonChart data={weeklyComparisonData} />
+        <NutritionBreakdownChart
+          protein={nutritionBreakdown.protein}
+          carbs={nutritionBreakdown.carbs}
+          fats={nutritionBreakdown.fats}
+        />
+        {weeklyComparisonData.length > 0 && <WeeklyComparisonChart data={weeklyComparisonData} />}
       </div>
 
       <Card className="p-6 rounded-2xl">
@@ -133,16 +279,36 @@ export default function Dashboard() {
             <h3 className="text-2xl font-bold">Current Week Progress</h3>
             <Badge variant="outline" className="rounded-full">
               <Target className="w-4 h-4 mr-2" />
-              6/7 days tracked
+              {last7CheckIns.length}/7 days tracked
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground">Track your goals and stay on target this week</p>
         </div>
         <div className="space-y-6">
-          <ProgressBar value={7500} max={10000} label="Daily Steps Goal" variant="success" />
-          <ProgressBar value={8.7} max={10} label="Nutrition Score" variant="gold" />
-          <ProgressBar value={5} max={6} label="Workouts This Week" variant="primary" />
-          <ProgressBar value={55} max={60} label="Sleep Hours (Weekly)" variant="success" />
+          <ProgressBar
+            value={avgStepsThisWeek}
+            max={10000}
+            label="Daily Steps Goal (Avg)"
+            variant="success"
+          />
+          <ProgressBar
+            value={parseFloat(metrics.avgNutritionScore)}
+            max={10}
+            label="Nutrition Score"
+            variant="gold"
+          />
+          <ProgressBar
+            value={workoutsThisWeek}
+            max={6}
+            label="Workouts This Week"
+            variant="primary"
+          />
+          <ProgressBar
+            value={sleepThisWeek}
+            max={56}
+            label="Sleep Hours (Weekly)"
+            variant="success"
+          />
         </div>
       </Card>
     </div>

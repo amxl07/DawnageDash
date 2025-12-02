@@ -35,13 +35,13 @@ interface DailyCheckInCardProps {
 
 export function DailyCheckInCard({ data }: DailyCheckInCardProps) {
   const getWorkoutBadge = () => {
-    const statusConfig = {
+    const statusConfig: Record<string, { label: string; variant: 'default' | 'destructive' | 'secondary' | 'outline'; color: string }> = {
       done: { label: 'Completed', variant: 'default' as const, color: 'bg-success' },
       no: { label: 'Missed', variant: 'destructive' as const, color: 'bg-primary' },
       cardio_day: { label: 'Cardio', variant: 'secondary' as const, color: 'bg-gold' },
       rest_day: { label: 'Rest Day', variant: 'outline' as const, color: 'bg-muted' },
     };
-    const config = statusConfig[data.workout.status];
+    const config = statusConfig[data.workout.status] || statusConfig['no'];
     return (
       <Badge variant={config.variant} className="rounded-full">
         {config.label}
