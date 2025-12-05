@@ -3,7 +3,10 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Utensils, Coffee, Sun, Moon, Edit2, Save, X, Plus, Trash2 } from "lucide-react";
+import { Utensils, Coffee, Sun, Moon, Edit2, Save, X, Plus, Trash2, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 interface Meal {
   id: string;
@@ -32,17 +35,21 @@ interface DayMealPlan {
 
 interface EditableMealPlanProps {
   initialPlan: DayMealPlan;
+  day?: string;
   onSave?: (plan: DayMealPlan) => void;
 }
 
-export function EditableMealPlan({ initialPlan, onSave }: EditableMealPlanProps) {
+export function EditableMealPlan({ initialPlan, day = "Monday", onSave }: EditableMealPlanProps) {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [mealPlan, setMealPlan] = useState<DayMealPlan>(initialPlan);
 
   const calculateTotals = () => {
     const meals = [mealPlan.breakfast, mealPlan.lunch, mealPlan.dinner];
     const allItems = [...meals, ...mealPlan.snacks];
-    
+
     return {
       calories: allItems.reduce((sum, item) => sum + item.calories, 0),
       protein: allItems.reduce((sum, item) => sum + item.protein, 0),
@@ -51,11 +58,96 @@ export function EditableMealPlan({ initialPlan, onSave }: EditableMealPlanProps)
     };
   };
 
-  const handleSave = () => {
-    // TODO: Remove mock functionality - save to Supabase
-    console.log('Saving meal plan to database:', mealPlan);
-    onSave?.(mealPlan);
-    setIsEditing(false);
+  const handleSave = async () => {
+    if (!user) return;
+    setIsLoading(true);
+
+    try {
+      // 1. Delete existing meals for this day
+      const { error: deleteError } = await supabase
+        .from('meal_plans')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('day_of_week', day);
+
+      if (deleteError) throw deleteError;
+
+      // 2. Prepare new rows
+      const rows = [];
+
+      // Breakfast
+      rows.push({
+        user_id: user.id,
+        day_of_week: day,
+        meal_type: 'Breakfast',
+        description: mealPlan.breakfast.name,
+        calories: mealPlan.breakfast.calories,
+        protein: mealPlan.breakfast.protein,
+        carbs: mealPlan.breakfast.carbs,
+        fats: mealPlan.breakfast.fats,
+      });
+
+      // Lunch
+      rows.push({
+        user_id: user.id,
+        day_of_week: day,
+        meal_type: 'Lunch',
+        description: mealPlan.lunch.name,
+        calories: mealPlan.lunch.calories,
+        protein: mealPlan.lunch.protein,
+        carbs: mealPlan.lunch.carbs,
+        fats: mealPlan.lunch.fats,
+      });
+
+      // Dinner
+      rows.push({
+        user_id: user.id,
+        day_of_week: day,
+        meal_type: 'Dinner',
+        description: mealPlan.dinner.name,
+        calories: mealPlan.dinner.calories,
+        protein: mealPlan.dinner.protein,
+        carbs: mealPlan.dinner.carbs,
+        fats: mealPlan.dinner.fats,
+      });
+
+      // Snacks
+      mealPlan.snacks.forEach(snack => {
+        rows.push({
+          user_id: user.id,
+          day_of_week: day,
+          meal_type: 'Snacks',
+          description: snack.name,
+          calories: snack.calories,
+          protein: snack.protein,
+          carbs: snack.carbs,
+          fats: snack.fats,
+        });
+      });
+
+      // 3. Insert new rows
+      const { error: insertError } = await supabase
+        .from('meal_plans')
+        .insert(rows);
+
+      if (insertError) throw insertError;
+
+      toast({
+        title: "Success",
+        description: "Meal plan saved successfully!",
+      });
+
+      onSave?.(mealPlan);
+      setIsEditing(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save meal plan",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCancel = () => {
@@ -125,7 +217,7 @@ export function EditableMealPlan({ initialPlan, onSave }: EditableMealPlanProps)
           )}
         </div>
       </div>
-      
+
       {isEditing ? (
         <div className="grid grid-cols-4 gap-2">
           <div>
@@ -201,8 +293,8 @@ export function EditableMealPlan({ initialPlan, onSave }: EditableMealPlanProps)
                 <X className="w-4 h-4 mr-2" />
                 Cancel
               </Button>
-              <Button onClick={handleSave} className="rounded-xl" data-testid="button-save-meal">
-                <Save className="w-4 h-4 mr-2" />
+              <Button onClick={handleSave} className="rounded-xl" data-testid="button-save-meal" disabled={isLoading}>
+                {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                 Save Changes
               </Button>
             </>
@@ -254,7 +346,7 @@ export function EditableMealPlan({ initialPlan, onSave }: EditableMealPlanProps)
         {renderMeal(mealPlan.breakfast, <Coffee className="w-5 h-5 text-primary" />, "breakfast", "Breakfast")}
         {renderMeal(mealPlan.lunch, <Sun className="w-5 h-5 text-primary" />, "lunch", "Lunch")}
         {renderMeal(mealPlan.dinner, <Moon className="w-5 h-5 text-primary" />, "dinner", "Dinner")}
-        
+
         <div className="space-y-3 pt-4">
           <div className="flex items-center justify-between">
             <h4 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Snacks</h4>
@@ -271,7 +363,7 @@ export function EditableMealPlan({ initialPlan, onSave }: EditableMealPlanProps)
               </Button>
             )}
           </div>
-          
+
           {mealPlan.snacks.map((snack) => (
             <div key={snack.id} className="p-3 rounded-lg bg-muted/30">
               {isEditing ? (

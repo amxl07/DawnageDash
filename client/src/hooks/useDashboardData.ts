@@ -14,10 +14,15 @@ export function useDashboardData() {
         .select('*')
         .order('date', { ascending: true });
 
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error('Check-ins fetch error:', error);
+        return []; // Return empty array instead of throwing
+      }
+      return data || [];
     },
     enabled: !!user,
+    retry: false, // Don't retry on failure
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   // Fetch body measurements
@@ -29,10 +34,14 @@ export function useDashboardData() {
         .select('*')
         .order('date', { ascending: true });
 
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error('Measurements fetch error:', error);
+        return [];
+      }
+      return data || [];
     },
     enabled: !!user,
+    retry: false,
   });
 
   // Fetch workout plans
@@ -44,10 +53,14 @@ export function useDashboardData() {
         .select('*')
         .order('day_of_week', { ascending: true });
 
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error('Workout plans fetch error:', error);
+        return [];
+      }
+      return data || [];
     },
     enabled: !!user,
+    retry: false,
   });
 
   // Fetch meal plans
@@ -59,10 +72,14 @@ export function useDashboardData() {
         .select('*')
         .order('day_of_week', { ascending: true });
 
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error('Meal plans fetch error:', error);
+        return [];
+      }
+      return data || [];
     },
     enabled: !!user,
+    retry: false,
   });
 
   // Calculate derived metrics from check-ins

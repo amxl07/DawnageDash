@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "@/pages/Dashboard";
 import CheckIns from "@/pages/CheckIns";
@@ -14,6 +14,7 @@ import Plans from "@/pages/Plans";
 import Analytics from "@/pages/Analytics";
 import Media from "@/pages/Media";
 import Profile from "@/pages/Profile";
+import WorkoutLogs from "@/pages/WorkoutLogs";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
 
@@ -51,6 +52,11 @@ function Router() {
           <Media />
         </ProtectedRoute>
       </Route>
+      <Route path="/workout-logs">
+        <ProtectedRoute>
+          <WorkoutLogs />
+        </ProtectedRoute>
+      </Route>
       <Route path="/profile">
         <ProtectedRoute>
           <Profile />
@@ -62,6 +68,29 @@ function Router() {
 }
 
 function AppContent() {
+  const { user, loading } = useAuth();
+
+  // Show full-screen loader while auth is initializing
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show minimal layout for login page (no sidebar/header)
+  if (!user) {
+    return (
+      <div className="min-h-screen">
+        <Router />
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen w-full">
       <AppSidebar />

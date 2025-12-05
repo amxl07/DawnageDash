@@ -17,6 +17,7 @@ export default function CheckIns() {
       const { data, error } = await supabase
         .from('daily_check_ins')
         .select('*')
+        .eq('user_id', user.id)
         .order('date', { ascending: false });
 
       if (error) throw error;
@@ -32,18 +33,28 @@ export default function CheckIns() {
       ? parseFloat(checkIn.morning_weight) - parseFloat(prevWeight || checkIn.morning_weight)
       : 0;
 
+    // Calculate day number if missing (assuming checkIns are sorted descending by date)
+    // If checkIns are Newest First, then the oldest checkIn is at index checkIns.length - 1 (Day 1)
+    // So current checkIn day number = total - index
+    const calculatedDayNumber = checkIns.length - index;
+    const displayDayNumber = checkIn.day_number || calculatedDayNumber;
+
     return {
       date: new Date(checkIn.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      dayNumber: checkIn.day_number || index + 1,
+      dayNumber: displayDayNumber,
       vitals: {
         morningWeight: parseFloat(checkIn.morning_weight || '0'),
         sleepHours: parseFloat(checkIn.sleep_hours || '0'),
         weightChange: weightChange,
       },
       workout: {
-        status: (['done', 'no', 'cardio_day', 'rest_day'].includes(checkIn.workout_status || '')
-          ? checkIn.workout_status
-          : 'no') as 'done' | 'no' | 'cardio_day' | 'rest_day',
+        status: (() => {
+          const status = (checkIn.workout_status || '').toLowerCase().trim();
+          if (status === 'done' || status === 'completed' || status === 'yes') return 'done';
+          if (status === 'cardio_day' || status === 'cardio') return 'cardio_day';
+          if (status === 'rest_day' || status === 'rest') return 'rest_day';
+          return 'no';
+        })() as 'done' | 'no' | 'cardio_day' | 'rest_day',
         performance: checkIn.workout_performance || undefined,
       },
       nutrition: {
@@ -61,18 +72,18 @@ export default function CheckIns() {
     };
   }) || [];
 
-  // Transform check-ins for the trend chart (last 7 days)
-  const trendData = checkIns?.slice(0, 7).reverse().map((checkIn, index) => ({
-    day: `D${checkIn.day_number || index + 1}`,
-    weight: parseFloat(checkIn.morning_weight || '0'),
-    nutrition: checkIn.nutrition_score || 0,
-    performance: checkIn.workout_performance || 0,
-    energy: checkIn.energy_level || 0,
-    stress: checkIn.stress_level || 0,
-    sleep: parseFloat(checkIn.sleep_hours || '0'),
-    steps: checkIn.daily_steps || 0,
-    water: parseFloat(checkIn.water_liters || '0'),
-  })) || [];
+  // Better approach: Derive trendData from checkInHistory to reuse dayNumber logic
+  const trendData = checkInHistory.slice(0, 7).reverse().map(checkIn => ({
+    day: `D${checkIn.dayNumber}`,
+    weight: checkIn.vitals.morningWeight,
+    nutrition: checkIn.nutrition.score,
+    performance: checkIn.workout.performance || 0,
+    energy: checkIn.wellbeing.energyLevel,
+    stress: checkIn.wellbeing.stressLevel,
+    sleep: checkIn.vitals.sleepHours,
+    steps: checkIn.nutrition.dailySteps,
+    water: checkIn.nutrition.waterLiters,
+  }));
 
   // Calculate metrics from real data
   const last7Days = checkIns?.slice(0, 7) || [];

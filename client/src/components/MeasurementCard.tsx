@@ -24,13 +24,13 @@ export function MeasurementCard({ date, weekNumber, measurements, changes }: Mea
     if (value < 0) return (
       <div className="flex items-center gap-1 text-success">
         <TrendingDown className="w-3 h-3" />
-        <span className="text-xs font-semibold">{Math.abs(value)} kg</span>
+        <span className="text-xs font-semibold">{Math.abs(value).toFixed(1)} kg</span>
       </div>
     );
     return (
       <div className="flex items-center gap-1 text-primary">
         <TrendingUp className="w-3 h-3" />
-        <span className="text-xs font-semibold">+{value} kg</span>
+        <span className="text-xs font-semibold">+{value.toFixed(1)} kg</span>
       </div>
     );
   };
@@ -48,7 +48,7 @@ export function MeasurementCard({ date, weekNumber, measurements, changes }: Mea
         </div>
         {changes && renderChange(changes.weight)}
       </div>
-      
+
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <div className="space-y-1">
           <p className="text-xs text-muted-foreground">Weight</p>

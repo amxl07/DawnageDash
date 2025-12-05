@@ -1,4 +1,4 @@
-import { Home, ClipboardList, Ruler, Calendar, BarChart3, Image, User, LogOut } from "lucide-react";
+import { Home, ClipboardList, Ruler, Calendar, BarChart3, Image, User, LogOut, Dumbbell } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import logoUrl from "@assets/dashboard_1762285477469.png";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,6 +19,7 @@ const menuItems = [
   { title: "Check-Ins", url: "/check-ins", icon: ClipboardList },
   { title: "Measurements", url: "/measurements", icon: Ruler },
   { title: "Plans", url: "/plans", icon: Calendar },
+  { title: "Workout Logs", url: "/workout-logs", icon: Dumbbell },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
   { title: "Media", url: "/media", icon: Image },
   { title: "Profile", url: "/profile", icon: User },

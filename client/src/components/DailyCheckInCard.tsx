@@ -82,7 +82,7 @@ export function DailyCheckInCard({ data }: DailyCheckInCardProps) {
                 {data.vitals.weightChange && (
                   <span className={`text-xs font-semibold flex items-center ${data.vitals.weightChange < 0 ? 'text-success' : 'text-primary'}`}>
                     {data.vitals.weightChange < 0 ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
-                    {Math.abs(data.vitals.weightChange)}
+                    {Math.abs(data.vitals.weightChange).toFixed(1)}%
                   </span>
                 )}
               </div>

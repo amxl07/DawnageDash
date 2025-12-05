@@ -108,6 +108,7 @@ export type BodyMeasurement = typeof bodyMeasurements.$inferSelect;
 export const workoutPlans = pgTable("workout_plans", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  level: varchar("level", { length: 20 }).default('Beginner'), // 'Beginner', 'Intermediate', 'Professional'
   dayOfWeek: varchar("day_of_week", { length: 10 }).notNull(), // 'Monday', 'Tuesday', etc.
   focus: varchar("focus", { length: 100 }),
   exercises: text("exercises"), // JSON string of exercises
@@ -127,6 +128,7 @@ export type WorkoutPlan = typeof workoutPlans.$inferSelect;
 export const mealPlans = pgTable("meal_plans", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  level: varchar("level", { length: 20 }).default('Beginner'), // 'Beginner', 'Intermediate', 'Professional'
   dayOfWeek: varchar("day_of_week", { length: 10 }).notNull(),
   mealType: varchar("meal_type", { length: 20 }).notNull(), // 'Breakfast', 'Lunch', 'Dinner', 'Snacks'
   description: text("description"),
@@ -182,3 +184,39 @@ export const userGoals = pgTable("user_goals", {
 export const insertUserGoalSchema = createInsertSchema(userGoals);
 export type InsertUserGoal = z.infer<typeof insertUserGoalSchema>;
 export type UserGoal = typeof userGoals.$inferSelect;
+
+// ============================================================================
+// ONBOARDING QUESTIONNAIRE TABLE
+// ============================================================================
+export const onboardingQuestionnaire = pgTable("onboarding_questionnaire", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  answers: text("answers"), // JSON string of answers
+  completedSections: text("completed_sections"), // JSON string of completed section IDs
+  status: varchar("status", { length: 20 }).default('in_progress'), // 'in_progress', 'completed'
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertOnboardingQuestionnaireSchema = createInsertSchema(onboardingQuestionnaire);
+export type InsertOnboardingQuestionnaire = z.infer<typeof insertOnboardingQuestionnaireSchema>;
+export type OnboardingQuestionnaire = typeof onboardingQuestionnaire.$inferSelect;
+
+// ============================================================================
+// WORKOUT LOGS TABLE
+// ============================================================================
+export const workoutLogs = pgTable("workout_logs", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  date: date("date").notNull(),
+  title: varchar("title", { length: 100 }).notNull(),
+  content: text("content"), // JSON string of flexible workout data
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertWorkoutLogSchema = createInsertSchema(workoutLogs);
+export type InsertWorkoutLog = z.infer<typeof insertWorkoutLogSchema>;
+export type WorkoutLog = typeof workoutLogs.$inferSelect;

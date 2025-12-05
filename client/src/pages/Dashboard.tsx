@@ -3,7 +3,7 @@ import { WeightChart } from "@/components/WeightChart";
 import { PerformanceChart } from "@/components/PerformanceChart";
 import { NutritionBreakdownChart } from "@/components/NutritionBreakdownChart";
 import { WeeklyComparisonChart } from "@/components/WeeklyComparisonChart";
-import { WorkoutHeatmap } from "@/components/WorkoutHeatmap";
+
 import { ProgressBar } from "@/components/ProgressBar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,15 +21,6 @@ export default function Dashboard() {
     nutritionBreakdown,
     isLoading,
   } = useDashboardData();
-
-  // Calculate workout heatmap from check-ins
-  const heatmapData = checkIns?.map(checkIn => ({
-    date: new Date(checkIn.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    status: (checkIn.workout_status === 'done' ? 'done' :
-             checkIn.workout_status === 'rest_day' ? 'rest' :
-             checkIn.workout_status === 'no' ? 'missed' : 'rest') as 'done' | 'rest' | 'missed',
-    intensity: checkIn.workout_performance || 0,
-  })) || [];
 
   // Calculate weekly comparison data
   const weeklyComparisonData: Array<{
@@ -234,7 +225,7 @@ export default function Dashboard() {
           title="Current Weight"
           value={`${metrics.currentWeight} kg`}
           icon={Weight}
-          trend={weightTrend !== 0 ? { value: Math.abs(weightTrend), isPositive: weightTrend < 0 } : undefined}
+          trend={weightTrend !== 0 ? { value: Math.round(Math.abs(weightTrend)), isPositive: weightTrend < 0 } : undefined}
           subtitle="Last 7 days"
         />
         <MetricCard
@@ -262,7 +253,7 @@ export default function Dashboard() {
         <PerformanceChart data={performanceChartData} />
       </div>
 
-      {heatmapData.length > 0 && <WorkoutHeatmap data={heatmapData} />}
+
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <NutritionBreakdownChart
