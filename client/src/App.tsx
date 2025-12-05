@@ -73,7 +73,7 @@ function AppContent() {
   // Show full-screen loader while auth is initializing
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen w-full">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading...</p>
@@ -82,43 +82,44 @@ function AppContent() {
     );
   }
 
-  // Show minimal layout for login page (no sidebar/header)
+  // Show minimal layout for login page (no sidebar/header) - centered
   if (!user) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-screen w-full flex items-center justify-center">
         <Router />
       </div>
     );
   }
 
-  return (
-    <div className="flex h-screen w-full">
-      <AppSidebar />
-      <div className="flex flex-col flex-1">
-        <header className="flex items-center justify-between p-4 border-b sticky top-0 z-50 bg-background">
-          <SidebarTrigger data-testid="button-sidebar-toggle" />
-        </header>
-        <main className="flex-1 overflow-auto p-8">
-          <Router />
-        </main>
-      </div>
-    </div>
-  );
-}
-
-export default function App() {
-  const style = {
+  // Authenticated layout with sidebar
+  const sidebarStyle = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
   };
 
   return (
+    <SidebarProvider style={sidebarStyle as React.CSSProperties}>
+      <div className="flex h-screen w-full">
+        <AppSidebar />
+        <div className="flex flex-col flex-1">
+          <header className="flex items-center justify-between p-4 border-b sticky top-0 z-50 bg-background">
+            <SidebarTrigger data-testid="button-sidebar-toggle" />
+          </header>
+          <main className="flex-1 overflow-auto p-8">
+            <Router />
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
+  );
+}
+
+export default function App() {
+  return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <TooltipProvider>
-          <SidebarProvider style={style as React.CSSProperties}>
-            <AppContent />
-          </SidebarProvider>
+          <AppContent />
           <Toaster />
         </TooltipProvider>
       </AuthProvider>
