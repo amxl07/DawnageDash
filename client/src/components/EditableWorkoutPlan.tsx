@@ -20,20 +20,32 @@ interface Exercise {
 
 interface DayWorkout {
   id: string;
-  day: string;
+  dayNumber: number;
   focus: string;
   exercises: Exercise[];
+  isTemplate?: boolean;
 }
+
+type WorkoutType = 'GYM_WORKOUT' | 'HOME_WORKOUT' | 'ADVANCE_CALISTHENICS' | 'POWERBUILDING' | 'CALIS_COMPOUND_LIFTS';
+type SubCategory = '0_EXPERIENCE' | '6_MONTH_EXPERIENCE' | 'JUST_BODYWEIGHT' | 'JUST_DBS' | 'JUST_RINGS' | 'DBS_RINGS' | 'PHASE_1' | 'PHASE_2' | null;
 
 interface EditableWorkoutPlanProps {
   initialPlan: DayWorkout[];
-  level?: string;
+  level: string;
+  workoutType: WorkoutType;
+  subCategory: SubCategory;
+  daysPerWeek: number;
   onSave?: (plan: DayWorkout[]) => void;
 }
 
-const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-
-export function EditableWorkoutPlan({ initialPlan, level = 'Beginner', onSave }: EditableWorkoutPlanProps) {
+export function EditableWorkoutPlan({
+  initialPlan,
+  level,
+  workoutType,
+  subCategory,
+  daysPerWeek,
+  onSave
+}: EditableWorkoutPlanProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
@@ -41,10 +53,9 @@ export function EditableWorkoutPlan({ initialPlan, level = 'Beginner', onSave }:
   const [workoutPlan, setWorkoutPlan] = useState<DayWorkout[]>([]);
   const [editingDay, setEditingDay] = useState<string | null>(null);
 
+
   useEffect(() => {
-    const sorted = [...initialPlan].sort((a, b) => {
-      return dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day);
-    });
+    const sorted = [...initialPlan].sort((a, b) => a.dayNumber - b.dayNumber);
     setWorkoutPlan(sorted);
   }, [initialPlan]);
 
@@ -53,19 +64,32 @@ export function EditableWorkoutPlan({ initialPlan, level = 'Beginner', onSave }:
     setIsLoading(true);
 
     try {
-      const { error: deleteError } = await supabase
+      // Delete existing plans for this hierarchy path
+      let deleteQuery = supabase
         .from('workout_plans')
         .delete()
         .eq('user_id', user.id)
-        .eq('level', level);
+        .eq('level', level)
+        .eq('workout_type', workoutType)
+        .eq('days_per_week', daysPerWeek);
 
+      if (subCategory) {
+        deleteQuery = deleteQuery.eq('sub_category', subCategory);
+      } else {
+        deleteQuery = deleteQuery.is('sub_category', null);
+      }
+
+      const { error: deleteError } = await deleteQuery;
       if (deleteError) throw deleteError;
 
       const rows = workoutPlan.map(day => ({
         user_id: user.id,
-        day_of_week: day.day,
-        focus: day.focus,
         level: level,
+        workout_type: workoutType,
+        sub_category: subCategory,
+        days_per_week: daysPerWeek,
+        day_number: day.dayNumber,
+        focus: day.focus,
         exercises: JSON.stringify(day.exercises),
       }));
 
@@ -95,9 +119,7 @@ export function EditableWorkoutPlan({ initialPlan, level = 'Beginner', onSave }:
   };
 
   const handleCancel = () => {
-    const sorted = [...initialPlan].sort((a, b) => {
-      return dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day);
-    });
+    const sorted = [...initialPlan].sort((a, b) => a.dayNumber - b.dayNumber);
     setWorkoutPlan(sorted);
     setIsEditing(false);
     setEditingDay(null);
@@ -147,9 +169,9 @@ export function EditableWorkoutPlan({ initialPlan, level = 'Beginner', onSave }:
     );
   };
 
-  const updateDayInfo = (dayId: string, field: 'day' | 'focus', value: string) => {
+  const updateDayFocus = (dayId: string, value: string) => {
     setWorkoutPlan(plan =>
-      plan.map(day => (day.id === dayId ? { ...day, [field]: value } : day))
+      plan.map(day => (day.id === dayId ? { ...day, focus: value } : day))
     );
   };
 
@@ -157,8 +179,8 @@ export function EditableWorkoutPlan({ initialPlan, level = 'Beginner', onSave }:
     <Card className="p-6" data-testid="card-workout-plan">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-xl font-semibold mb-1">Weekly Schedule</h3>
-          <p className="text-sm text-muted-foreground">Your training plan for the week</p>
+          <h3 className="text-xl font-semibold mb-1">{daysPerWeek}-Day Schedule</h3>
+          <p className="text-sm text-muted-foreground">Your training plan</p>
         </div>
         <div className="flex items-center gap-2">
           {isEditing ? (
@@ -205,7 +227,7 @@ export function EditableWorkoutPlan({ initialPlan, level = 'Beginner', onSave }:
             key={day.id}
             value={day.id}
             className="border rounded-lg"
-            data-testid={`accordion-day-${day.day.toLowerCase()}`}
+            data-testid={`accordion-day-${day.dayNumber}`}
           >
             <AccordionTrigger className="hover:no-underline px-4 py-3">
               <div className="flex items-center gap-3 flex-1">
@@ -215,23 +237,18 @@ export function EditableWorkoutPlan({ initialPlan, level = 'Beginner', onSave }:
                 <div className="text-left flex-1">
                   {isEditing && editingDay === day.id ? (
                     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                      <Input
-                        value={day.day}
-                        onChange={(e) => updateDayInfo(day.id, 'day', e.target.value)}
-                        className="max-w-[120px] h-9 text-sm"
-                        data-testid={`input-day-name-${day.id}`}
-                      />
+                      <span className="text-sm font-medium text-muted-foreground">Day {day.dayNumber}</span>
                       <Input
                         value={day.focus}
-                        onChange={(e) => updateDayInfo(day.id, 'focus', e.target.value)}
-                        className="h-9 text-sm"
+                        onChange={(e) => updateDayFocus(day.id, e.target.value)}
+                        className="h-9 text-sm flex-1"
                         placeholder="Focus area..."
                         data-testid={`input-day-focus-${day.id}`}
                       />
                     </div>
                   ) : (
                     <>
-                      <p className="font-semibold text-base">{day.day}</p>
+                      <p className="font-semibold text-base">Day {day.dayNumber}</p>
                       <p className="text-sm text-muted-foreground">{day.focus || 'Rest day'}</p>
                     </>
                   )}

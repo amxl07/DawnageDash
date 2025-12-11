@@ -105,11 +105,19 @@ export type BodyMeasurement = typeof bodyMeasurements.$inferSelect;
 // ============================================================================
 // WORKOUT PLANS TABLE
 // ============================================================================
+// Hierarchical structure: Level > WorkoutType > SubCategory > DaysPerWeek > DayNumber
 export const workoutPlans = pgTable("workout_plans", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  level: varchar("level", { length: 20 }).default('Beginner'), // 'Beginner', 'Intermediate', 'Professional'
-  dayOfWeek: varchar("day_of_week", { length: 10 }).notNull(), // 'Monday', 'Tuesday', etc.
+
+  // Hierarchy fields
+  level: varchar("level", { length: 20 }).notNull().default('Beginner'), // 'Beginner', 'Intermediate', 'Advanced'
+  workoutType: varchar("workout_type", { length: 50 }).notNull(), // 'GYM_WORKOUT', 'HOME_WORKOUT', 'ADVANCE_CALISTHENICS', 'POWERBUILDING', 'CALIS_COMPOUND_LIFTS'
+  subCategory: varchar("sub_category", { length: 50 }), // '0_EXPERIENCE', '6_MONTH_EXPERIENCE', 'JUST_BODYWEIGHT', 'JUST_DBS', 'JUST_RINGS', 'DBS_RINGS', 'PHASE_1', 'PHASE_2', or NULL
+  daysPerWeek: integer("days_per_week").notNull(), // 3, 4, 5, or 6
+  dayNumber: integer("day_number").notNull(), // 1, 2, 3, 4, 5, 6 (ordinal within the plan)
+
+  // Workout details
   focus: varchar("focus", { length: 100 }),
   exercises: text("exercises"), // JSON string of exercises
   notes: text("notes"),
@@ -121,6 +129,34 @@ export const workoutPlans = pgTable("workout_plans", {
 export const insertWorkoutPlanSchema = createInsertSchema(workoutPlans);
 export type InsertWorkoutPlan = z.infer<typeof insertWorkoutPlanSchema>;
 export type WorkoutPlan = typeof workoutPlans.$inferSelect;
+
+// ============================================================================
+// WORKOUT TEMPLATES TABLE (Global - no user_id)
+// ============================================================================
+// Master templates available to all users. When user selects a template,
+// it gets copied to their workout_plans table for customization.
+export const workoutTemplates = pgTable("workout_templates", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+
+  // Hierarchy fields (same as workout_plans but no user_id)
+  level: varchar("level", { length: 20 }).notNull().default('Beginner'),
+  workoutType: varchar("workout_type", { length: 50 }).notNull(),
+  subCategory: varchar("sub_category", { length: 50 }),
+  daysPerWeek: integer("days_per_week").notNull(),
+  dayNumber: integer("day_number").notNull(),
+
+  // Workout details
+  focus: varchar("focus", { length: 100 }),
+  exercises: text("exercises"), // JSON string of exercises
+  notes: text("notes"),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertWorkoutTemplateSchema = createInsertSchema(workoutTemplates);
+export type InsertWorkoutTemplate = z.infer<typeof insertWorkoutTemplateSchema>;
+export type WorkoutTemplate = typeof workoutTemplates.$inferSelect;
 
 // ============================================================================
 // MEAL PLANS TABLE
