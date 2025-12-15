@@ -72,10 +72,10 @@ VALUES (
   1,
   'Glutes + Quads',
   '[
-    {"name": "BB Hip Thrust", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Squats", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Seated Leg Extension", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Walking Lunges", "sets": 3, "reps": "5-6", "tempo": "1-1-1"}
+    {"name": "BB Hip Thrust", "sets": 3, "reps": "5-6"},
+    {"name": "Squats", "sets": 3, "reps": "5-6"},
+    {"name": "Seated Leg Extension", "sets": 3, "reps": "5-6"},
+    {"name": "Walking Lunges", "sets": 3, "reps": "5-6"}
   ]'::TEXT
 );
 
@@ -89,10 +89,10 @@ VALUES (
   2,
   'Pull',
   '[
-    {"name": "Weighted Pull Ups", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Bent Over Rows", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Weighted Chin Ups", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Standing Cable Curls", "sets": 3, "reps": "5-6", "tempo": "1-1-1"}
+    {"name": "Weighted Pull Ups", "sets": 3, "reps": "5-6"},
+    {"name": "Bent Over Rows", "sets": 3, "reps": "5-6"},
+    {"name": "Weighted Chin Ups", "sets": 3, "reps": "5-6"},
+    {"name": "Standing Cable Curls", "sets": 3, "reps": "5-6"}
   ]'::TEXT
 );
 
@@ -106,10 +106,10 @@ VALUES (
   3,
   'Posterior',
   '[
-    {"name": "Dead Lift", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Shrugs BB", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Good Mornings", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Leg Curls", "sets": 3, "reps": "5-6", "tempo": "1-1-1"}
+    {"name": "Dead Lift", "sets": 3, "reps": "5-6"},
+    {"name": "Shrugs BB", "sets": 3, "reps": "5-6"},
+    {"name": "Good Mornings", "sets": 3, "reps": "5-6"},
+    {"name": "Leg Curls", "sets": 3, "reps": "5-6"}
   ]'::TEXT
 );
 
@@ -123,10 +123,10 @@ VALUES (
   4,
   'Push',
   '[
-    {"name": "BB Bench Press", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Military Press", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Weighted Dips", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Decline Close Grip B Press", "sets": 3, "reps": "5-6", "tempo": "1-1-1"}
+    {"name": "BB Bench Press", "sets": 3, "reps": "5-6"},
+    {"name": "Military Press", "sets": 3, "reps": "5-6"},
+    {"name": "Weighted Dips", "sets": 3, "reps": "5-6"},
+    {"name": "Decline Close Grip B Press", "sets": 3, "reps": "5-6"}
   ]'::TEXT
 );
 
@@ -144,10 +144,10 @@ VALUES (
   1,
   'Glutes + Quads',
   '[
-    {"name": "BB Hip Thrust", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Squats", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Seated Leg Extension", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Walking Lunges", "sets": 3, "reps": "5-6", "tempo": "1-1-1"}
+    {"name": "BB Hip Thrust", "sets": 3, "reps": "5-6"},
+    {"name": "Squats", "sets": 3, "reps": "5-6"},
+    {"name": "Seated Leg Extension", "sets": 3, "reps": "5-6"},
+    {"name": "Walking Lunges", "sets": 3, "reps": "5-6"}
   ]'::TEXT
 );
 
@@ -161,10 +161,10 @@ VALUES (
   2,
   'Posterior',
   '[
-    {"name": "Dead Lift", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Shrugs", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Good Mornings", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Leg Curls", "sets": 3, "reps": "5-6", "tempo": "1-1-1"}
+    {"name": "Dead Lift", "sets": 3, "reps": "5-6"},
+    {"name": "Shrugs", "sets": 3, "reps": "5-6"},
+    {"name": "Good Mornings", "sets": 3, "reps": "5-6"},
+    {"name": "Leg Curls", "sets": 3, "reps": "5-6"}
   ]'::TEXT
 );
 
@@ -178,10 +178,10 @@ VALUES (
   3,
   'Chest + Abs',
   '[
-    {"name": "BB Bench Press", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Miliitry Press", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Weighted Push Ups", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Semi Incline DB Press", "sets": 3, "reps": "5-6", "tempo": "1-1-1"}
+    {"name": "BB Bench Press", "sets": 3, "reps": "5-6"},
+    {"name": "Miliitry Press", "sets": 3, "reps": "5-6"},
+    {"name": "Weighted Push Ups", "sets": 3, "reps": "5-6"},
+    {"name": "Semi Incline DB Press", "sets": 3, "reps": "5-6"}
   ]'::TEXT
 );
 
@@ -195,10 +195,10 @@ VALUES (
   4,
   'Back + Biceps',
   '[
-    {"name": "Rear Delt Flys", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Bent Over Rows", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Weighted Chin Ups", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Standing Cable Curls", "sets": 3, "reps": "5-6", "tempo": "1-1-1"}
+    {"name": "Rear Delt Flys", "sets": 3, "reps": "5-6"},
+    {"name": "Bent Over Rows", "sets": 3, "reps": "5-6"},
+    {"name": "Weighted Chin Ups", "sets": 3, "reps": "5-6"},
+    {"name": "Standing Cable Curls", "sets": 3, "reps": "5-6"}
   ]'::TEXT
 );
 
@@ -212,10 +212,10 @@ VALUES (
   5,
   'Shoulder + Triceps',
   '[
-    {"name": "Miliary Press", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Weighted Dips", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Decline Close Grip B Press", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Cable Lateral Raises", "sets": 3, "reps": "5-6", "tempo": "1-1-1"}
+    {"name": "Miliary Press", "sets": 3, "reps": "5-6"},
+    {"name": "Weighted Dips", "sets": 3, "reps": "5-6"},
+    {"name": "Decline Close Grip B Press", "sets": 3, "reps": "5-6"},
+    {"name": "Cable Lateral Raises", "sets": 3, "reps": "5-6"}
   ]'::TEXT
 );
 
@@ -234,10 +234,10 @@ VALUES (
   1,
   'Glutes + Quads',
   '[
-    {"name": "BB Hip Thrust", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Squats", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Seated Leg Extension", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Walking Lunges", "sets": 3, "reps": "5-6", "tempo": "1-1-1"}
+    {"name": "BB Hip Thrust", "sets": 3, "reps": "5-6"},
+    {"name": "Squats", "sets": 3, "reps": "5-6"},
+    {"name": "Seated Leg Extension", "sets": 3, "reps": "5-6"},
+    {"name": "Walking Lunges", "sets": 3, "reps": "5-6"}
   ]'::TEXT
 );
 
@@ -265,10 +265,10 @@ VALUES (
   3,
   'Posterior',
   '[
-    {"name": "Dead Lift", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Shrugs", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Good Mornings", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Leg Curls", "sets": 3, "reps": "5-6", "tempo": "1-1-1"}
+    {"name": "Dead Lift", "sets": 3, "reps": "5-6"},
+    {"name": "Shrugs", "sets": 3, "reps": "5-6"},
+    {"name": "Good Mornings", "sets": 3, "reps": "5-6"},
+    {"name": "Leg Curls", "sets": 3, "reps": "5-6"}
   ]'::TEXT
 );
 
@@ -294,10 +294,10 @@ VALUES (
   4,
   'Chest + Abs',
   '[
-    {"name": "BB Bench Press", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Miliitry Press", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Weighted Dips", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Decline Close Grip B Press", "sets": 3, "reps": "5-6", "tempo": "1-1-1"}
+    {"name": "BB Bench Press", "sets": 3, "reps": "5-6"},
+    {"name": "Miliitry Press", "sets": 3, "reps": "5-6"},
+    {"name": "Weighted Dips", "sets": 3, "reps": "5-6"},
+    {"name": "Decline Close Grip B Press", "sets": 3, "reps": "5-6"}
   ]'::TEXT
 );
 
@@ -310,10 +310,10 @@ VALUES (
   5,
   'Back + Biceps',
   '[
-    {"name": "Weighted Pull Ups", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Bent Over Rows", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Weighted Chin Ups", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Standing Cable Curls", "sets": 3, "reps": "5-6", "tempo": "1-1-1"}
+    {"name": "Weighted Pull Ups", "sets": 3, "reps": "5-6"},
+    {"name": "Bent Over Rows", "sets": 3, "reps": "5-6"},
+    {"name": "Weighted Chin Ups", "sets": 3, "reps": "5-6"},
+    {"name": "Standing Cable Curls", "sets": 3, "reps": "5-6"}
   ]'::TEXT
 );
 
@@ -326,9 +326,9 @@ VALUES (
   6,
   'Shoulder + Triceps',
   '[
-    {"name": "Miliary Press", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Weighted Dips", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Close Grip B Press", "sets": 3, "reps": "5-6", "tempo": "1-1-1"},
-    {"name": "Cable Lateral Raises", "sets": 3, "reps": "5-6", "tempo": "1-1-1"}
+    {"name": "Miliary Press", "sets": 3, "reps": "5-6"},
+    {"name": "Weighted Dips", "sets": 3, "reps": "5-6"},
+    {"name": "Close Grip B Press", "sets": 3, "reps": "5-6"},
+    {"name": "Cable Lateral Raises", "sets": 3, "reps": "5-6"}
   ]'::TEXT
 );

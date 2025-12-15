@@ -15,6 +15,8 @@ export const users = pgTable("users", {
   phoneNumber: text("phone_number"),
   countryCode: text("country_code"), // e.g., '+1', '+91', '+44'
   avatarUrl: text("avatar_url"),
+  activeWorkoutPlan: text("active_workout_plan"), // JSON string of { level, workoutType, subCategory, daysPerWeek }
+  activeMealPlan: text("active_meal_plan"), // JSON string of { calories, dietType }
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -159,12 +161,37 @@ export type InsertWorkoutTemplate = z.infer<typeof insertWorkoutTemplateSchema>;
 export type WorkoutTemplate = typeof workoutTemplates.$inferSelect;
 
 // ============================================================================
+// MEAL TEMPLATES TABLE (Global)
+// ============================================================================
+export const mealTemplates = pgTable("meal_templates", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull(), // e.g., 'Option 1'
+  caloriesTarget: integer("calories_target").notNull(), // e.g., 1200
+  dietType: varchar("diet_type", { length: 50 }).notNull(), // 'Vegetarian', 'Eggetarian', 'Non-Vegetarian'
+  content: text("content").notNull(), // JSON string of the full day meal plan
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMealTemplateSchema = createInsertSchema(mealTemplates);
+export type InsertMealTemplate = z.infer<typeof insertMealTemplateSchema>;
+export type MealTemplate = typeof mealTemplates.$inferSelect;
+
+// ============================================================================
 // MEAL PLANS TABLE
 // ============================================================================
 export const mealPlans = pgTable("meal_plans", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  level: varchar("level", { length: 20 }).default('Beginner'), // 'Beginner', 'Intermediate', 'Professional'
+
+  // Updated fields for new structure
+  dietType: varchar("diet_type", { length: 50 }), // 'Vegetarian', 'Eggetarian', 'Non-Vegetarian'
+  caloriesTarget: integer("calories_target"), // e.g., 1200
+
+  // Legacy/Compatibility fields
+  level: varchar("level", { length: 20 }).default('Beginner'),
+
   dayOfWeek: varchar("day_of_week", { length: 10 }).notNull(),
   mealType: varchar("meal_type", { length: 20 }).notNull(), // 'Breakfast', 'Lunch', 'Dinner', 'Snacks'
   description: text("description"),

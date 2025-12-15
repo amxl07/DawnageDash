@@ -41,6 +41,9 @@ CREATE TABLE IF NOT EXISTS workout_templates (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Clear existing templates to prevent duplicates (Idempotency)
+TRUNCATE TABLE workout_templates;
+
 -- Create index for template lookups
 CREATE INDEX IF NOT EXISTS idx_workout_templates_hierarchy 
 ON workout_templates(level, workout_type, sub_category, days_per_week);

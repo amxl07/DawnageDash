@@ -1,0 +1,36 @@
+
+-- Option 1: ~1200 Kcals (Vegetarian)
+INSERT INTO meal_templates (name, calories_target, diet_type, content) VALUES
+('Option 1: ~1200 Kcals', 1200, 'Vegetarian', '{"breakfast":{"name":"Wheat Bread (2 pcs), Low fat paneer (100g), Vegetables","calories":310,"protein":27,"carbs":32.7,"fats":9.9},"lunch":{"name":"Rice (40g), Low Fat Paneer (100g)","calories":312,"protein":24.6,"carbs":35.7,"fats":8},"dinner":{"name":"Wheat Flour (40g), Soy Chunks (30g), Vegetables","calories":243,"protein":19.2,"carbs":40.7,"fats":0.4},"snacks":[{"id":"snack1","name":"Banana (100g)","calories":89,"protein":1.1,"carbs":22.8,"fats":0.3},{"id":"snack2","name":"Whey Protein (1 Scoop), Low Fat Milk (200ml)","calories":240,"protein":29.6,"carbs":12.2,"fats":8}]}'::text);
+
+-- Option 1: ~1200 Kcals (Eggetarian)
+INSERT INTO meal_templates (name, calories_target, diet_type, content) VALUES
+('Option 1: ~1200 Kcals', 1200, 'Eggetarian', '{"breakfast":{"name":"Wheat Bread (2 pcs), Egg whites (6 pcs), Vegetables","calories":243,"protein":27,"carbs":29.6,"fats":2.2},"lunch":{"name":"Rice (40g), Low Fat Paneer (100g)","calories":312,"protein":24.6,"carbs":35.7,"fats":8},"dinner":{"name":"Wheat Flour (40g), Egg Whites (6 pcs), Vegetables","calories":243,"protein":24.6,"carbs":32.2,"fats":0.6},"snacks":[{"id":"snack1","name":"Banana (100g)","calories":89,"protein":1.1,"carbs":22.8,"fats":0.3},{"id":"snack2","name":"Whey Protein (1 Scoop), Low Fat Milk (200ml), Almond (10 pcs)","calories":310,"protein":32.1,"carbs":14.8,"fats":14}]}'::text);
+
+-- Option 1: ~1200 Kcals (Non-Vegetarian)
+INSERT INTO meal_templates (name, calories_target, diet_type, content) VALUES
+('Option 1: ~1200 Kcals', 1200, 'Non-Vegetarian', '{"breakfast":{"name":"Wheat Bread (2 pcs), Egg whites (6 pcs), Vegetables","calories":243,"protein":27,"carbs":29.6,"fats":2.2},"lunch":{"name":"Rice (40g), Chicken Breast (100g)","calories":252,"protein":34.6,"carbs":31.2,"fats":1},"dinner":{"name":"Wheat Flour (40g), Soy Chunks (30g), Vegetables","calories":243,"protein":19.2,"carbs":40.7,"fats":0.4},"snacks":[{"id":"snack1","name":"Banana (100g)","calories":89,"protein":1.1,"carbs":22.8,"fats":0.3},{"id":"snack2","name":"Whey Protein (1 Scoop), Low Fat Milk (200ml), Almond (10 pcs)","calories":310,"protein":32.1,"carbs":14.8,"fats":14}]}'::text);
+
+-- Option 2: ~1400 Kcals (Vegetarian)
+INSERT INTO meal_templates (name, calories_target, diet_type, content) VALUES
+('Option 2: ~1400 Kcals', 1400, 'Vegetarian', '{"breakfast":{"name":"Wheat Bread (2 pcs), Low Fat Paneer (100g), Vegetables","calories":310,"protein":25.5,"carbs":28,"fats":9.1},"lunch":{"name":"Rice (40g), Soy Chunks (30g), Cashew Nuts (5 pcs)","calories":300,"protein":21,"carbs":45.5,"fats":3.1},"dinner":{"name":"Wheat Flour (40g), Low Fat Paneer (100g), Almonds (10 pcs), Vegetables","calories":380,"protein":27.1,"carbs":37.9,"fats":14.3},"snacks":[{"id":"snack1","name":"Banana (100g), Almond (10 pcs)","calories":159,"protein":3.6,"carbs":25.4,"fats":6.3},{"id":"snack2","name":"Whey Protein (1 Scoop), Low Fat Milk (200ml)","calories":240,"protein":29.6,"carbs":12.2,"fats":8}]}'::text);
+
+-- Option 2: ~1400 Kcals (Eggetarian)
+INSERT INTO meal_templates (name, calories_target, diet_type, content) VALUES
+('Option 2: ~1400 Kcals', 1400, 'Eggetarian', '{"breakfast":{"name":"Wheat Bread (2 pcs), Egg Whites (4 pcs), Whole Eggs (2 pcs)","calories":352,"protein":31.5,"carbs":25.2,"fats":10.8},"lunch":{"name":"Rice (40g), Low Fat Paneer (100g), Vegetables","calories":312,"protein":24.6,"carbs":35.7,"fats":8},"dinner":{"name":"Wheat Flour (40g), Egg Whites (6 pcs), Almond (10 pcs), Vegetables","calories":313,"protein":27.7,"carbs":34.8,"fats":6.6},"snacks":[{"id":"snack1","name":"Banana (100g), Almond (10 pcs)","calories":159,"protein":3.6,"carbs":25.4,"fats":6.3},{"id":"snack2","name":"Whey Protein (1 Scoop), Low Fat Milk (200ml)","calories":240,"protein":29.6,"carbs":12.2,"fats":8}]}'::text);
+
+-- Option 2: ~1400 Kcals (Non-Vegetarian)
+INSERT INTO meal_templates (name, calories_target, diet_type, content) VALUES
+('Option 2: ~1400 Kcals', 1400, 'Non-Vegetarian', '{"breakfast":{"name":"Wheat Bread (2 pcs), Egg Whites (4 pcs), Whole Eggs (2 pcs)","calories":352,"protein":31.5,"carbs":25.2,"fats":10.8},"lunch":{"name":"Rice (40g), Chicken Breast (100g), Vegetables","calories":252,"protein":34.6,"carbs":31.2,"fats":1},"dinner":{"name":"Wheat Flour (40g), Low Fat Paneer (100g), Cheese (1 Slice), Vegetables","calories":372,"protein":28.6,"carbs":35.6,"fats":13.3},"snacks":[{"id":"snack1","name":"Banana (100g), Almond (10 pcs)","calories":159,"protein":3.6,"carbs":25.4,"fats":6.3},{"id":"snack2","name":"Whey Protein (1 Scoop), Low Fat Milk (200ml)","calories":240,"protein":29.6,"carbs":12.2,"fats":8}]}'::text);
+
+-- Option 3: ~1600 Kcals (Vegetarian)
+INSERT INTO meal_templates (name, calories_target, diet_type, content) VALUES
+('Option 3: ~1600 Kcals', 1600, 'Vegetarian', '{"breakfast":{"name":"Wheat Bread (2 pcs), Low Fat Paneer (100g), Vegetables","calories":310,"protein":25.5,"carbs":28,"fats":9.1},"lunch":{"name":"Rice (40g), Soy Chunks (30g)","calories":245,"protein":19.2,"carbs":41.1,"fats":0.1},"dinner":{"name":"Wheat Flour (40g), Low Fat Paneer (100g), Cashew Nuts (10 pcs), Vegetables","calories":421,"protein":28.2,"carbs":41.3,"fats":17.3},"snacks":[{"id":"snack1","name":"Banana (100g), Almond (10 pcs)","calories":159,"protein":3.6,"carbs":25.4,"fats":6.3},{"id":"snack2","name":"Whey Protein (1 Scoop), Low Fat Milk (200ml), Oats (50g), Almond (10 pcs)","calories":500,"protein":38.4,"carbs":48.6,"fats":17.6}]}'::text);
+
+-- Option 3: ~1600 Kcals (Eggetarian)
+INSERT INTO meal_templates (name, calories_target, diet_type, content) VALUES
+('Option 3: ~1600 Kcals', 1600, 'Eggetarian', '{"breakfast":{"name":"Wheat Bread (2 pcs), Egg Whites (6 pcs), Whole Eggs (2 pcs), Vegetables","calories":386,"protein":38.7,"carbs":25.6,"fats":10.9},"lunch":{"name":"Rice (40g), Low Fat Paneer (100g), Vegetables","calories":312,"protein":24.6,"carbs":35.7,"fats":8},"dinner":{"name":"Wheat Flour (40g), Low Fat Paneer (100g), Vegetables","calories":310,"protein":24.6,"carbs":35.3,"fats":8.3},"snacks":[{"id":"snack1","name":"Banana (100g), Almond (5 pcs)","calories":124,"protein":2.3,"carbs":24.1,"fats":3.3},{"id":"snack2","name":"Whey Protein (1 Scoop), Low Fat Milk (200ml), Oats (50g)","calories":430,"protein":35.9,"carbs":46,"fats":11.8}]}'::text);
+
+-- Option 3: ~1600 Kcals (Non-Vegetarian)
+INSERT INTO meal_templates (name, calories_target, diet_type, content) VALUES
+('Option 3: ~1600 Kcals', 1600, 'Non-Vegetarian', '{"breakfast":{"name":"Wheat Bread (2 pcs), Egg Whites (6 pcs), Whole Eggs (2 pcs), Vegetables","calories":386,"protein":38.7,"carbs":25.6,"fats":10.9},"lunch":{"name":"Rice (40g), Chicken Breast (100g), Vegetables","calories":252,"protein":34.6,"carbs":31.2,"fats":1},"dinner":{"name":"Wheat Flour (40g), Low Fat Paneer (100g), Cashew Nuts (5 pcs), Vegetables","calories":345,"protein":25.8,"carbs":36.6,"fats":11.3},"snacks":[{"id":"snack1","name":"Banana (100g), Almond (5 pcs)","calories":124,"protein":2.3,"carbs":24.1,"fats":3.3},{"id":"snack2","name":"Whey Protein (1 Scoop), Low Fat Milk (200ml), Oats (50g), Peanut Butter (10g)","calories":494,"protein":38.5,"carbs":47.9,"fats":16.9}]}'::text);
