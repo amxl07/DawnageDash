@@ -39,6 +39,8 @@ interface DayMealPlan {
 interface EditableMealPlanProps {
   initialPlan: DayMealPlan;
   day?: string;
+  caloriesTarget?: number;
+  dietType?: string;
   onSave?: (plan: DayMealPlan) => void;
 }
 
@@ -76,15 +78,16 @@ const MealComposer = ({
 
     // Extract potential food name from last segment (e.g. "100g chic" -> "chic")
     const match = lastSegment.match(/^(\d+(?:\.\d+)?)\s*(?:g|gram|grams|ml|pcs|slice|scoop|cup)?\s+(.+)$/i)
-      || lastSegment.match(/^(.+?)\s+(\d+(?:\.\d+)?)\s*(?:g|gram|grams|ml|pcs|slice|scoop|cup)?$/i);
+      || lastSegment.match(/^(.+?)\s+(\d+(?:\.\d+)?)\s*(?:g|gram|grams|ml|pcs|slice|scoop|cup)?$/i)
+      || lastSegment.match(/^(.+?)\s*\(/i);
 
     let query = lastSegment;
     if (match) {
       if (isNaN(parseFloat(match[1]))) query = match[1];
-      else query = match[3];
+      else query = match[2]; // Fixed: Name is in group 2 for the prefix regex
     }
 
-    if (query.length >= 2 && foodDb.length > 0) {
+    if (query && query.length >= 2 && foodDb.length > 0) {
       const matches = foodDb.filter(f => f.name.toLowerCase().includes(query.toLowerCase())).slice(0, 5);
       setSuggestions(matches);
       setActiveSegment(lastSegment);
@@ -385,7 +388,7 @@ const MealComposer = ({
   );
 };
 
-export function EditableMealPlan({ initialPlan, day = "Monday", onSave }: EditableMealPlanProps) {
+export function EditableMealPlan({ initialPlan, day = "Monday", caloriesTarget, dietType, onSave }: EditableMealPlanProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
@@ -408,22 +411,39 @@ export function EditableMealPlan({ initialPlan, day = "Monday", onSave }: Editab
     setIsLoading(true);
 
     try {
-      // 1. Delete existing meals for this day
-      const { error: deleteError } = await supabase
+      // 1. Delete existing meals for this day AND config
+      // Note: Plans.tsx deletes by config, so we should allow this component to do the same to be consistent.
+      // BUT, if we delete by DAY, we might delete other configs if not careful?
+      // Actually, standard usage is: User has ONE active plan config (e.g. 1500 Veg).
+      // If we just save 'Daily' for this user without specifying target/type, it's ambiguous.
+      // We MUST save with target/type.
+
+      let deleteQuery = supabase
         .from('meal_plans')
         .delete()
         .eq('user_id', user.id)
         .eq('day_of_week', day);
 
+      if (caloriesTarget) deleteQuery = deleteQuery.eq('calories_target', caloriesTarget);
+      if (dietType) deleteQuery = deleteQuery.eq('diet_type', dietType);
+
+      const { error: deleteError } = await deleteQuery;
+
       if (deleteError) throw deleteError;
 
       // 2. Prepare new rows
+      const baseRow = {
+        user_id: user.id,
+        day_of_week: day,
+        calories_target: caloriesTarget,
+        diet_type: dietType
+      };
+
       const rows = [];
 
       // Breakfast
       rows.push({
-        user_id: user.id,
-        day_of_week: day,
+        ...baseRow,
         meal_type: 'Breakfast',
         description: mealPlan.breakfast.name,
         calories: mealPlan.breakfast.calories,
@@ -434,8 +454,7 @@ export function EditableMealPlan({ initialPlan, day = "Monday", onSave }: Editab
 
       // Lunch
       rows.push({
-        user_id: user.id,
-        day_of_week: day,
+        ...baseRow,
         meal_type: 'Lunch',
         description: mealPlan.lunch.name,
         calories: mealPlan.lunch.calories,
@@ -446,8 +465,7 @@ export function EditableMealPlan({ initialPlan, day = "Monday", onSave }: Editab
 
       // Dinner
       rows.push({
-        user_id: user.id,
-        day_of_week: day,
+        ...baseRow,
         meal_type: 'Dinner',
         description: mealPlan.dinner.name,
         calories: mealPlan.dinner.calories,

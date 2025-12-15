@@ -308,14 +308,24 @@ export default function Plans() {
     enabled: !!user,
   });
 
-  const getDayMealPlan = () => {
-    // If it's a custom plan, we try to find the "Daily" plan, or fallback to any
+  const handleMealPlanSaved = () => {
+    queryClient.invalidateQueries({ queryKey: ['mealPlans'] });
+    queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+  };
+
+  const currentMealPlan = useMemo(() => {
+    // Logic extracted to useMemo for stability
     if (mealPlans?.source === 'custom' && mealPlans.plans) {
-      // We look for 'Daily' or just take the first one found if we are migrating
-      const dailyMeals = mealPlans.plans.filter((m: any) => m.day_of_week === 'Daily' || m.day_of_week === 'Monday') || [];
+      // Filter for relevant days
+      const relevantDetails = mealPlans.plans.filter((m: any) => m.day_of_week === 'Daily' || m.day_of_week === 'Monday');
 
       const getMeal = (type: string) => {
-        const meal = dailyMeals.find((m: any) => m.meal_type === type);
+        // Priority: Daily > Monday
+        let meal = relevantDetails.find((m: any) => m.meal_type === type && m.day_of_week === 'Daily');
+        if (!meal) {
+          meal = relevantDetails.find((m: any) => m.meal_type === type && m.day_of_week === 'Monday');
+        }
+
         return {
           id: meal?.id || `new-${type}`,
           name: meal?.description || '',
@@ -333,12 +343,10 @@ export default function Plans() {
       };
     }
 
-    // If it's a template, we parse the JSON content
+    // Template fallback
     if (mealPlans?.source === 'template' && mealPlans.template) {
       try {
         const content = JSON.parse(mealPlans.template.content);
-        // Map template structure to DayMealPlan
-        // Template has fixed fields: breakfast, lunch, dinner
         return {
           breakfast: { ...content.breakfast, id: `tpl-bf` },
           lunch: { ...content.lunch, id: `tpl-ln` },
@@ -349,15 +357,12 @@ export default function Plans() {
       }
     }
 
-    // Default empty
     return {
       breakfast: { id: 'def-bf', name: '', calories: 0, protein: 0, carbs: 0, fats: 0 },
       lunch: { id: 'def-ln', name: '', calories: 0, protein: 0, carbs: 0, fats: 0 },
       dinner: { id: 'def-dn', name: '', calories: 0, protein: 0, carbs: 0, fats: 0 },
     };
-  };
-
-  const currentMealPlan = getDayMealPlan();
+  }, [mealPlans]);
 
   // Generate default workout plan based on days per week
   const defaultWorkoutPlan = useMemo(() => {
@@ -766,6 +771,12 @@ export default function Plans() {
 
 
 
+
+
+
+
+
+
           {isLoadingMeals ? (
             <div className="flex items-center justify-center min-h-[200px]">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -775,6 +786,9 @@ export default function Plans() {
               key="daily-meal-plan"
               initialPlan={currentMealPlan}
               day="Daily"
+              caloriesTarget={caloriesTarget}
+              dietType={dietType}
+              onSave={handleMealPlanSaved}
             />
           )}
         </TabsContent>
