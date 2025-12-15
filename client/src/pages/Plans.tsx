@@ -87,7 +87,7 @@ const SUB_CATEGORY_LABELS: Record<string, string> = {
   'PHASE_2': 'Phase 2',
 };
 
-const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
 
 export default function Plans() {
   const { user } = useAuth();
@@ -104,7 +104,7 @@ export default function Plans() {
   // Meal plan state
   const [caloriesTarget, setCaloriesTarget] = useState<number>(1200);
   const [dietType, setDietType] = useState<DietType>('Vegetarian');
-  const [selectedMealDay, setSelectedMealDay] = useState("Monday");
+
 
   // Fetch user profile to get active plan
   const { data: userProfile } = useQuery({
@@ -308,13 +308,14 @@ export default function Plans() {
     enabled: !!user,
   });
 
-  const getDayMealPlan = (day: string) => {
-    // If it's a custom plan, we filter by day
+  const getDayMealPlan = () => {
+    // If it's a custom plan, we try to find the "Daily" plan, or fallback to any
     if (mealPlans?.source === 'custom' && mealPlans.plans) {
-      const dayMeals = mealPlans.plans.filter((m: any) => m.day_of_week === day) || [];
-      // Same mapping logic as before
+      // We look for 'Daily' or just take the first one found if we are migrating
+      const dailyMeals = mealPlans.plans.filter((m: any) => m.day_of_week === 'Daily' || m.day_of_week === 'Monday') || [];
+
       const getMeal = (type: string) => {
-        const meal = dayMeals.find((m: any) => m.meal_type === type);
+        const meal = dailyMeals.find((m: any) => m.meal_type === type);
         return {
           id: meal?.id || `new-${type}`,
           name: meal?.description || '',
@@ -324,22 +325,11 @@ export default function Plans() {
           fats: parseFloat(meal?.fats || '0'),
         };
       };
-      const snacks = dayMeals
-        .filter((m: any) => m.meal_type === 'Snacks')
-        .map((s: any) => ({
-          id: s.id,
-          name: s.description || '',
-          calories: s.calories || 0,
-          protein: parseFloat(s.protein || '0'),
-          carbs: parseFloat(s.carbs || '0'),
-          fats: parseFloat(s.fats || '0'),
-        }));
 
       return {
         breakfast: getMeal('Breakfast'),
         lunch: getMeal('Lunch'),
         dinner: getMeal('Dinner'),
-        snacks: snacks,
       };
     }
 
@@ -348,12 +338,11 @@ export default function Plans() {
       try {
         const content = JSON.parse(mealPlans.template.content);
         // Map template structure to DayMealPlan
-        // Template has fixed fields: breakfast, lunch, dinner, snacks (array)
+        // Template has fixed fields: breakfast, lunch, dinner
         return {
           breakfast: { ...content.breakfast, id: `tpl-bf` },
           lunch: { ...content.lunch, id: `tpl-ln` },
           dinner: { ...content.dinner, id: `tpl-dn` },
-          snacks: (content.snacks || []).map((s: any) => ({ ...s, id: s.id || `tpl-sn` })),
         };
       } catch (err) {
         console.error("Error parsing meal template", err);
@@ -365,11 +354,10 @@ export default function Plans() {
       breakfast: { id: 'def-bf', name: '', calories: 0, protein: 0, carbs: 0, fats: 0 },
       lunch: { id: 'def-ln', name: '', calories: 0, protein: 0, carbs: 0, fats: 0 },
       dinner: { id: 'def-dn', name: '', calories: 0, protein: 0, carbs: 0, fats: 0 },
-      snacks: [],
     };
   };
 
-  const currentMealPlan = getDayMealPlan(selectedMealDay);
+  const currentMealPlan = getDayMealPlan();
 
   // Generate default workout plan based on days per week
   const defaultWorkoutPlan = useMemo(() => {
@@ -499,29 +487,20 @@ export default function Plans() {
       // Let's delete existing entries for this calories_target and diet_type.
 
       /* 
-         DESIGN CHOICE: If we just insert, we might duplicate.
-         If we delete everything for this user, they lose OTHER plans.
-         So we only refresh the CURRENTLY SELECTED plan type.
-         If they edit 'Monday', they expect 'Monday' to stay edited. 
-         But 'Confirm' implies 'Reset to Template'. 
+         DESIGN CHOICE: We now save as ONE 'Daily' plan.
+         We delete existing for this user/target/type.
       */
 
       const content = JSON.parse(mealPlans.template.content);
-      const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
       const rows: any[] = [];
+      const day = 'Daily';
 
-      days.forEach(day => {
-        // Breakfast
-        rows.push({ ...content.breakfast, user_id: user.id, day_of_week: day, meal_type: 'Breakfast', description: content.breakfast.name, diet_type: dietType, calories_target: caloriesTarget });
-        // Lunch
-        rows.push({ ...content.lunch, user_id: user.id, day_of_week: day, meal_type: 'Lunch', description: content.lunch.name, diet_type: dietType, calories_target: caloriesTarget });
-        // Dinner
-        rows.push({ ...content.dinner, user_id: user.id, day_of_week: day, meal_type: 'Dinner', description: content.dinner.name, diet_type: dietType, calories_target: caloriesTarget });
-        // Snacks
-        (content.snacks || []).forEach((s: any) => {
-          rows.push({ ...s, user_id: user.id, day_of_week: day, meal_type: 'Snacks', description: s.name, diet_type: dietType, calories_target: caloriesTarget });
-        });
-      });
+      // Breakfast
+      rows.push({ ...content.breakfast, user_id: user.id, day_of_week: day, meal_type: 'Breakfast', description: content.breakfast.name, diet_type: dietType, calories_target: caloriesTarget });
+      // Lunch
+      rows.push({ ...content.lunch, user_id: user.id, day_of_week: day, meal_type: 'Lunch', description: content.lunch.name, diet_type: dietType, calories_target: caloriesTarget });
+      // Dinner
+      rows.push({ ...content.dinner, user_id: user.id, day_of_week: day, meal_type: 'Dinner', description: content.dinner.name, diet_type: dietType, calories_target: caloriesTarget });
 
       // Delete existing for this config
       const { error: delError } = await supabase
@@ -785,19 +764,7 @@ export default function Plans() {
             </div>
           )}
 
-          <div className="flex flex-wrap gap-2">
-            {dayOrder.map((day) => (
-              <Button
-                key={day}
-                variant={selectedMealDay === day ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedMealDay(day)}
-                className="rounded-lg"
-              >
-                {day}
-              </Button>
-            ))}
-          </div>
+
 
           {isLoadingMeals ? (
             <div className="flex items-center justify-center min-h-[200px]">
@@ -805,9 +772,9 @@ export default function Plans() {
             </div>
           ) : (
             <EditableMealPlan
-              key={selectedMealDay}
+              key="daily-meal-plan"
               initialPlan={currentMealPlan}
-              day={selectedMealDay}
+              day="Daily"
             />
           )}
         </TabsContent>

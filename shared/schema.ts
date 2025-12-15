@@ -216,8 +216,9 @@ export const progressPhotos = pgTable("progress_photos", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   date: date("date").notNull(),
   photoUrl: text("photo_url").notNull(),
-  photoType: varchar("photo_type", { length: 20 }), // 'front', 'side', 'back'
-  notes: text("notes"),
+  dietType: varchar("diet_type", { length: 50 }),
+  caloriesTarget: integer("calories_target"),
+  ingredients: text("ingredients"), // JSON string of specific food items [{name, qty, unit, macros}]
 
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -283,3 +284,23 @@ export const workoutLogs = pgTable("workout_logs", {
 export const insertWorkoutLogSchema = createInsertSchema(workoutLogs);
 export type InsertWorkoutLog = z.infer<typeof insertWorkoutLogSchema>;
 export type WorkoutLog = typeof workoutLogs.$inferSelect;
+
+// ============================================================================
+// FOOD DATABASE TABLE
+// ============================================================================
+export const foodItems = pgTable("food_items", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull(),
+  servingSize: decimal("serving_size", { precision: 10, scale: 2 }).default("100"), // Standard reference amount (usually 100g)
+  servingUnit: varchar("serving_unit", { length: 20 }).default("g"), // 'g', 'ml', 'pcs'
+  calories: integer("calories").notNull(),
+  protein: decimal("protein", { precision: 5, scale: 1 }).notNull(),
+  carbs: decimal("carbs", { precision: 5, scale: 1 }).notNull(),
+  fats: decimal("fats", { precision: 5, scale: 1 }).notNull(),
+
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertFoodItemSchema = createInsertSchema(foodItems);
+export type InsertFoodItem = z.infer<typeof insertFoodItemSchema>;
+export type FoodItem = typeof foodItems.$inferSelect;
