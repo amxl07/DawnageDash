@@ -6,6 +6,7 @@ import { Activity, TrendingDown, TrendingUp, Award } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { processCheckInHistory } from "@/lib/checkin-utils";
 
 export default function CheckIns() {
   const { user } = useAuth();
@@ -17,7 +18,7 @@ export default function CheckIns() {
       const { data, error } = await supabase
         .from('daily_check_ins')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', user!.id)
         .order('date', { ascending: false });
 
       if (error) throw error;
@@ -26,25 +27,49 @@ export default function CheckIns() {
     enabled: !!user,
   });
 
-  // Transform check-ins for the card display
-  const checkInHistory = checkIns?.map((checkIn, index) => {
-    const prevWeight = checkIns[index + 1]?.morning_weight || checkIn.morning_weight;
-    const weightChange = checkIn.morning_weight
-      ? parseFloat(checkIn.morning_weight) - parseFloat(prevWeight || checkIn.morning_weight)
-      : 0;
+  // Transform check-ins for the card display using the utility
+  const processedHistory = checkIns ? processCheckInHistory(checkIns) : [];
 
-    // Calculate day number if missing (assuming checkIns are sorted descending by date)
-    // If checkIns are Newest First, then the oldest checkIn is at index checkIns.length - 1 (Day 1)
-    // So current checkIn day number = total - index
-    const calculatedDayNumber = checkIns.length - index;
-    const displayDayNumber = checkIn.day_number || calculatedDayNumber;
+  const checkInHistory = processedHistory.map((item, index) => {
+    // For missed days, we return a minimal structure that the Card can handle or we handle it here
+    if (item.status === 'missed') {
+      return {
+        date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        dayNumber: item.dayNumber,
+        status: 'missed' as const,
+        vitals: { morningWeight: 0, sleepHours: 0, weightChange: 0 },
+        workout: { status: 'no' as const },
+        nutrition: { score: 0, calorieIntake: 0, waterLiters: 0, dailySteps: 0 },
+        wellbeing: { energyLevel: 0, hungerLevel: 0, stressLevel: 0, digestion: 'none' as const },
+      };
+    }
+
+    const checkIn = item.originalCheckIn!;
+
+    // Find previous check-in (which might be earlier in the processed list since it's reversed)
+    // Actually, finding strict previous weight requires looking at the raw sorted list or searching here.
+    // For simplicity, let's look at the next valid item in the processed list that has weight
+    let prevWeight = checkIn.morning_weight?.toString();
+    for (let i = index + 1; i < processedHistory.length; i++) {
+      const candidateCheckIn = processedHistory[i];
+      if (candidateCheckIn.status === 'done' && candidateCheckIn.originalCheckIn?.morning_weight != null) {
+        prevWeight = candidateCheckIn.originalCheckIn.morning_weight.toString();
+        break;
+      }
+    }
+
+    const currentWeightStr = checkIn.morning_weight?.toString();
+    const weightChange = currentWeightStr
+      ? parseFloat(currentWeightStr) - parseFloat(prevWeight || currentWeightStr)
+      : 0;
 
     return {
       date: new Date(checkIn.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      dayNumber: displayDayNumber,
+      dayNumber: item.dayNumber,
+      status: 'done' as const,
       vitals: {
-        morningWeight: parseFloat(checkIn.morning_weight || '0'),
-        sleepHours: parseFloat(checkIn.sleep_hours || '0'),
+        morningWeight: parseFloat(checkIn.morning_weight?.toString() || '0'),
+        sleepHours: parseFloat(checkIn.sleep_hours?.toString() || '0'),
         weightChange: weightChange,
       },
       workout: {
@@ -60,7 +85,7 @@ export default function CheckIns() {
       nutrition: {
         score: checkIn.nutrition_score || 0,
         calorieIntake: checkIn.calorie_intake || 0,
-        waterLiters: parseFloat(checkIn.water_liters || '0'),
+        waterLiters: parseFloat(checkIn.water_liters?.toString() || '0'),
         dailySteps: checkIn.daily_steps || 0,
       },
       wellbeing: {
@@ -70,9 +95,9 @@ export default function CheckIns() {
         digestion: (checkIn.digestion || 'none') as 'none' | 'bloated' | 'constipated' | 'diarrhea',
       },
     };
-  }) || [];
+  });
 
-  // Better approach: Derive trendData from checkInHistory to reuse dayNumber logic
+  // Calculate trendData from formatted history
   const trendData = checkInHistory.slice(0, 7).reverse().map(checkIn => ({
     day: `D${checkIn.dayNumber}`,
     weight: checkIn.vitals.morningWeight,
@@ -96,8 +121,9 @@ export default function CheckIns() {
     ? (workoutDays.reduce((sum, c) => sum + (c.workout_performance || 0), 0) / workoutDays.length).toFixed(1)
     : '0';
 
-  const totalDays = checkIns?.length || 0;
-  const trackedDays = checkIns?.filter(c => c.nutrition_score || c.workout_status).length || 0;
+  const totalDays = processedHistory.length || 0;
+  const trackedDays = checkIns?.length || 0;
+  // Consistency is strictly (tracked / total elapsed days) * 100
   const consistencyRate = totalDays > 0 ? Math.round((trackedDays / totalDays) * 100) : 0;
 
   const firstWeight = checkIns?.[checkIns.length - 1]?.morning_weight || 0;

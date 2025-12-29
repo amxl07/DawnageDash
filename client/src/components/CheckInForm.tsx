@@ -34,7 +34,13 @@ export function CheckInForm() {
     if (!user) return;
 
     const fetchTodayCheckIn = async () => {
-      const today = new Date().toISOString().split("T")[0];
+      // Use local date string YYYY-MM-DD
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const today = `${year}-${month}-${day}`;
+
       const { data, error } = await supabase
         .from("daily_check_ins")
         .select("*")
@@ -75,9 +81,16 @@ export function CheckInForm() {
 
     setIsLoading(true);
     try {
+      // Use local date string YYYY-MM-DD
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const today = `${year}-${month}-${day}`;
+
       const payload = {
         user_id: user.id,
-        date: new Date().toISOString().split("T")[0],
+        date: today,
         morning_weight: formData.morningWeight ? parseFloat(formData.morningWeight) : null,
         workout_status: formData.workoutStatus || null,
         workout_performance: formData.workoutPerformance ? parseInt(formData.workoutPerformance) : null,

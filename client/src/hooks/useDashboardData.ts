@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { processCheckInHistory } from '@/lib/checkin-utils';
+import { format } from 'date-fns';
 
 export function useDashboardData() {
   const { user } = useAuth();
@@ -94,12 +96,18 @@ export function useDashboardData() {
       : 0,
   };
 
-  // Get last 7 days of check-ins for trends
-  const last7Days = checkIns?.slice(-7) || [];
+  // Process check-ins to identify missed days
+  const processedCheckIns = checkIns ? processCheckInHistory(checkIns) : [];
 
-  // Calculate weight trend
-  const weightTrend = last7Days.length >= 2
-    ? parseFloat(last7Days[0].morning_weight || '0') - parseFloat(last7Days[last7Days.length - 1].morning_weight || '0')
+  // Get last 7 days from the *processed* history to include missed days
+  // processedCheckIns is typically returned newest first by the utility
+  const last7DaysProcessed = processedCheckIns.slice(0, 7).reverse();
+
+  // Calculate weight trend (still using actual check-ins for weight delta)
+  // We need to find the latest and oldest weight within the range, but simple method:
+  const last7DaysRaw = checkIns?.slice(-7) || [];
+  const weightTrend = last7DaysRaw.length >= 2
+    ? parseFloat(last7DaysRaw[0].morning_weight || '0') - parseFloat(last7DaysRaw[last7DaysRaw.length - 1].morning_weight || '0')
     : 0;
 
   // Transform check-ins data for charts
@@ -108,12 +116,22 @@ export function useDashboardData() {
     weight: parseFloat(m.weight || '0'),
   })) || [];
 
-  const performanceChartData = last7Days.map(c => ({
-    day: new Date(c.date).toLocaleDateString('en-US', { weekday: 'short' }),
-    performance: c.workout_performance || 0,
-    nutrition: c.nutrition_score || 0,
-    energy: c.energy_level || 0,
-  }));
+  const performanceChartData = last7DaysProcessed.map(c => {
+    if (c.status === 'missed') {
+      return {
+        day: format(new Date(c.date), 'EEE'),
+        performance: 0,
+        nutrition: 0,
+        energy: 0,
+      };
+    }
+    return {
+      day: format(new Date(c.date), 'EEE'),
+      performance: c.originalCheckIn?.workout_performance || 0,
+      nutrition: c.originalCheckIn?.nutrition_score || 0,
+      energy: c.originalCheckIn?.energy_level || 0,
+    };
+  });
 
   // Calculate daily nutrition breakdown (average or latest)
   const latestCheckIn = checkIns?.[checkIns.length - 1];
