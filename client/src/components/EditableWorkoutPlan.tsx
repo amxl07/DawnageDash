@@ -46,7 +46,9 @@ export function EditableWorkoutPlan({
   daysPerWeek,
   onSave
 }: EditableWorkoutPlanProps) {
-  const { user } = useAuth();
+  const { user, viewedUserId, isCoachView } = useAuth();
+  const targetUserId = viewedUserId || user?.id;
+
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -60,7 +62,7 @@ export function EditableWorkoutPlan({
   }, [initialPlan]);
 
   const handleSave = async () => {
-    if (!user) return;
+    if (!targetUserId) return;
     setIsLoading(true);
 
     try {
@@ -68,7 +70,7 @@ export function EditableWorkoutPlan({
       let deleteQuery = supabase
         .from('workout_plans')
         .delete()
-        .eq('user_id', user.id)
+        .eq('user_id', targetUserId)
         .eq('level', level)
         .eq('workout_type', workoutType)
         .eq('days_per_week', daysPerWeek);
@@ -83,7 +85,7 @@ export function EditableWorkoutPlan({
       if (deleteError) throw deleteError;
 
       const rows = workoutPlan.map(day => ({
-        user_id: user.id,
+        user_id: targetUserId,
         level: level,
         workout_type: workoutType,
         sub_category: subCategory,

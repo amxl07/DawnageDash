@@ -17,7 +17,7 @@ import { questionnaireSections, Question } from "@/lib/questionnaire-data";
 import { Loader2, CheckCircle2, ChevronRight, ChevronLeft, Save } from "lucide-react";
 
 export function QuestionnaireWizard({ onComplete }: { onComplete?: () => void }) {
-    const { user } = useAuth();
+    const { user, viewedUserId } = useAuth();
     const { toast } = useToast();
     const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
     const [answers, setAnswers] = useState<Record<string, any>>({});
@@ -25,21 +25,24 @@ export function QuestionnaireWizard({ onComplete }: { onComplete?: () => void })
     const [isSaving, setIsSaving] = useState(false);
     const [completedSections, setCompletedSections] = useState<string[]>([]);
 
+    // Determine the target user ID for fetching/saving data
+    const targetUserId = viewedUserId || user?.id;
+
     const currentSection = questionnaireSections[currentSectionIndex];
     const progress = Math.round(((currentSectionIndex) / questionnaireSections.length) * 100);
 
     useEffect(() => {
-        if (user) {
+        if (targetUserId) {
             fetchProgress();
         }
-    }, [user]);
+    }, [targetUserId]);
 
     const fetchProgress = async () => {
         try {
             const { data, error } = await supabase
                 .from('onboarding_questionnaire')
                 .select('*')
-                .eq('user_id', user?.id)
+                .eq('user_id', targetUserId)
                 .maybeSingle();
 
             if (error) throw error;
@@ -64,7 +67,7 @@ export function QuestionnaireWizard({ onComplete }: { onComplete?: () => void })
     };
 
     const saveProgress = async (markSectionComplete = false) => {
-        if (!user) return;
+        if (!targetUserId) return;
         setIsSaving(true);
 
         try {
@@ -73,7 +76,7 @@ export function QuestionnaireWizard({ onComplete }: { onComplete?: () => void })
                 : completedSections;
 
             const payload = {
-                user_id: user.id,
+                user_id: targetUserId,
                 answers: JSON.stringify(answers),
                 completed_sections: JSON.stringify(updatedCompletedSections),
                 status: updatedCompletedSections.length === questionnaireSections.length ? 'completed' : 'in_progress'
@@ -83,7 +86,7 @@ export function QuestionnaireWizard({ onComplete }: { onComplete?: () => void })
             const { data: existing } = await supabase
                 .from('onboarding_questionnaire')
                 .select('id')
-                .eq('user_id', user.id)
+                .eq('user_id', targetUserId)
                 .maybeSingle();
 
             let error;

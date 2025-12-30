@@ -8,70 +8,79 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useMemo } from "react";
 
 export default function Analytics() {
-  const { user } = useAuth();
+  const { user, viewedUserId } = useAuth();
+  const targetUserId = viewedUserId || user?.id;
 
   // Fetch Daily Check-ins
   const { data: checkIns, isLoading: loadingCheckIns } = useQuery({
-    queryKey: ['analytics-checkins', user?.id],
+    queryKey: ['analytics-checkins', targetUserId],
     queryFn: async () => {
+      if (!targetUserId) return [];
+
       const { data, error } = await supabase
         .from('daily_check_ins')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', targetUserId)
         .order('date', { ascending: true });
 
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!targetUserId,
   });
 
   // Fetch Body Measurements
   const { data: measurements, isLoading: loadingMeasurements } = useQuery({
-    queryKey: ['analytics-measurements', user?.id],
+    queryKey: ['analytics-measurements', targetUserId],
     queryFn: async () => {
+      if (!targetUserId) return [];
+
       const { data, error } = await supabase
         .from('body_measurements')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', targetUserId)
         .order('date', { ascending: true });
 
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!targetUserId,
   });
 
   // Fetch User Goals
   const { data: goals, isLoading: loadingGoals } = useQuery({
-    queryKey: ['analytics-goals', user?.id],
+    queryKey: ['analytics-goals', targetUserId],
     queryFn: async () => {
+      if (!targetUserId) return [];
+
       const { data, error } = await supabase
         .from('user_goals')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', targetUserId)
         .eq('status', 'active');
 
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!targetUserId,
   });
 
   // Fetch Workout Logs
   const { data: workoutLogs, isLoading: loadingWorkouts } = useQuery({
-    queryKey: ['analytics-workouts', user?.id],
+    queryKey: ['analytics-workouts', targetUserId],
     queryFn: async () => {
+      if (!targetUserId) return [];
+
       const { data, error } = await supabase
         .from('workout_logs')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', targetUserId)
         .order('date', { ascending: true });
 
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!targetUserId,
   });
 
   // Process data for charts

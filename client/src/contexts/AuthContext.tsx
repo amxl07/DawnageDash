@@ -7,6 +7,9 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  viewedUserId: string | null;
+  setViewedUserId: (id: string | null) => void;
+  isCoachView: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -15,6 +18,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [viewedUserId, setViewedUserId] = useState<string | null>(null);
 
   useEffect(() => {
     // Get initial session
@@ -38,10 +42,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setViewedUserId(null); // Clear view on sign out
   };
 
+  const isCoachView = !!viewedUserId;
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, signOut, viewedUserId, setViewedUserId, isCoachView }}>
       {children}
     </AuthContext.Provider>
   );

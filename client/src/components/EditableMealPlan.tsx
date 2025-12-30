@@ -389,7 +389,9 @@ const MealComposer = ({
 };
 
 export function EditableMealPlan({ initialPlan, day = "Monday", caloriesTarget, dietType, onSave }: EditableMealPlanProps) {
-  const { user } = useAuth();
+  const { user, viewedUserId } = useAuth();
+  const targetUserId = viewedUserId || user?.id;
+
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -407,7 +409,7 @@ export function EditableMealPlan({ initialPlan, day = "Monday", caloriesTarget, 
   };
 
   const handleSave = async () => {
-    if (!user) return;
+    if (!targetUserId) return;
     setIsLoading(true);
 
     try {
@@ -421,7 +423,7 @@ export function EditableMealPlan({ initialPlan, day = "Monday", caloriesTarget, 
       let deleteQuery = supabase
         .from('meal_plans')
         .delete()
-        .eq('user_id', user.id)
+        .eq('user_id', targetUserId)
         .eq('day_of_week', day);
 
       if (caloriesTarget) deleteQuery = deleteQuery.eq('calories_target', caloriesTarget);
@@ -433,7 +435,7 @@ export function EditableMealPlan({ initialPlan, day = "Monday", caloriesTarget, 
 
       // 2. Prepare new rows
       const baseRow = {
-        user_id: user.id,
+        user_id: targetUserId,
         day_of_week: day,
         calories_target: caloriesTarget,
         diet_type: dietType

@@ -3,6 +3,8 @@ import { Link, useLocation } from "wouter";
 import logoUrl from "@assets/dashboard_1762285477469.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 import {
   Sidebar,
   SidebarContent,
@@ -26,8 +28,24 @@ const menuItems = [
 ];
 
 export function AppSidebar() {
-  const [location] = useLocation();
-  const { signOut, user } = useAuth();
+  const [location, setLocation] = useLocation();
+  const { signOut, user, viewedUserId, setViewedUserId } = useAuth();
+
+  // Fetch viewed user details if in view mode
+  const { data: viewedClient } = useQuery({
+    queryKey: ['viewedClient', viewedUserId],
+    queryFn: async () => {
+      if (!viewedUserId) return null;
+      const { data, error } = await supabase
+        .from('users')
+        .select('full_name')
+        .eq('id', viewedUserId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!viewedUserId,
+  });
 
   return (
     <Sidebar>
@@ -57,6 +75,29 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      {/* View Mode Banner */}
+      {viewedUserId && (
+        <div className="px-4 py-2 bg-amber-100 border-t border-b border-amber-200">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2 text-amber-800">
+              <User className="w-4 h-4" />
+              <span className="text-xs font-semibold">Viewing: {viewedClient?.full_name || 'Client'}</span>
+            </div>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="w-full text-xs h-8 bg-amber-200 hover:bg-amber-300 text-amber-900 border-none"
+              onClick={() => {
+                setViewedUserId(null);
+                setLocation('/');
+              }}
+            >
+              Exit View Mode
+            </Button>
+          </div>
+        </div>
+      )}
 
       <SidebarFooter>
         <div className="px-4 py-4 border-t">

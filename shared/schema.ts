@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, date, timestamp, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, date, timestamp, uuid, foreignKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -15,10 +15,20 @@ export const users = pgTable("users", {
   phoneNumber: text("phone_number"),
   countryCode: text("country_code"), // e.g., '+1', '+91', '+44'
   avatarUrl: text("avatar_url"),
+  role: text("role").default("client"), // 'client' or 'coach'
+  coachId: uuid("coach_id"),
   activeWorkoutPlan: text("active_workout_plan"), // JSON string of { level, workoutType, subCategory, daysPerWeek }
   activeMealPlan: text("active_meal_plan"), // JSON string of { calories, dietType }
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    coachReference: foreignKey({
+      columns: [table.coachId],
+      foreignColumns: [table.id],
+      name: "users_coach_id_fk"
+    })
+  }
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -28,6 +38,8 @@ export const insertUserSchema = createInsertSchema(users).pick({
   phoneNumber: true,
   countryCode: true,
   avatarUrl: true,
+  role: true,
+  coachId: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import logoUrl from "@assets/dashboard_1762285477469.png";
-import { Mail, Loader2, User, Phone, Lock } from "lucide-react";
+import { Mail, Loader2, User, Phone, Lock, Key } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -54,6 +54,8 @@ export default function Login() {
   const [countryCode, setCountryCode] = useState("+1");
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isCoachSignup, setIsCoachSignup] = useState(false);
+  const [accessKey, setAccessKey] = useState("");
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -87,6 +89,11 @@ export default function Login() {
           throw new Error("Passwords do not match");
         }
 
+        // Validate Coach Access Key
+        if (isCoachSignup && accessKey !== "Dawnagedash2025@") {
+          throw new Error("Invalid Coach Access Key");
+        }
+
         // Combine country code and phone number into single field
         const fullPhoneNumber = `${countryCode}${phoneNumber}`;
 
@@ -99,6 +106,7 @@ export default function Login() {
             data: {
               full_name: fullName,
               phone_number: fullPhoneNumber,
+              role: isCoachSignup ? 'coach' : 'client',
             }
           }
         });
@@ -213,6 +221,53 @@ export default function Login() {
                 </div>
               </div>
             </>
+          )}
+
+          {isSignUp && (
+            <div className="space-y-4">
+              <div className="flex gap-4 p-1 bg-muted rounded-xl">
+                <Button
+                  type="button"
+                  variant={!isCoachSignup ? "default" : "ghost"}
+                  className={`flex-1 rounded-lg ${!isCoachSignup ? 'bg-primary text-primary-foreground' : 'hover:bg-background/50'}`}
+                  onClick={() => setIsCoachSignup(false)}
+                >
+                  Client
+                </Button>
+                <Button
+                  type="button"
+                  variant={isCoachSignup ? "default" : "ghost"}
+                  className={`flex-1 rounded-lg ${isCoachSignup ? 'bg-primary text-primary-foreground' : 'hover:bg-background/50'}`}
+                  onClick={() => setIsCoachSignup(true)}
+                >
+                  Coach
+                </Button>
+              </div>
+
+              {isCoachSignup && (
+                <div className="space-y-2">
+                  <Label htmlFor="accessKey">Coach Access Key</Label>
+                  <div className="relative">
+                    <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      id="accessKey"
+                      type="password"
+                      placeholder="Enter access key"
+                      value={accessKey}
+                      onChange={(e) => setAccessKey(e.target.value)}
+                      className="rounded-xl pl-11"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {isSignUp && isCoachSignup && (
+            <div className="space-y-4 mb-4">
+              {/* Spacing for visual separation */}
+            </div>
           )}
 
           <div className="space-y-2">

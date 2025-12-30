@@ -5,15 +5,21 @@ import { processCheckInHistory } from '@/lib/checkin-utils';
 import { format } from 'date-fns';
 
 export function useDashboardData() {
-  const { user } = useAuth();
+  const { user, viewedUserId } = useAuth();
+
+  // Use the viewed user ID if available, otherwise fallback to the authenticated user ID
+  const targetUserId = viewedUserId || user?.id;
 
   // Fetch daily check-ins
   const { data: checkIns, isLoading: checkInsLoading } = useQuery({
-    queryKey: ['dailyCheckIns', user?.id],
+    queryKey: ['dailyCheckIns', targetUserId],
     queryFn: async () => {
+      if (!targetUserId) return [];
+
       const { data, error } = await supabase
         .from('daily_check_ins')
         .select('*')
+        .eq('user_id', targetUserId) // Explicitly filter by targetUserId
         .order('date', { ascending: true });
 
       if (error) {
@@ -22,18 +28,21 @@ export function useDashboardData() {
       }
       return data || [];
     },
-    enabled: !!user,
+    enabled: !!targetUserId,
     retry: false, // Don't retry on failure
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   // Fetch body measurements
   const { data: measurements, isLoading: measurementsLoading } = useQuery({
-    queryKey: ['bodyMeasurements', user?.id],
+    queryKey: ['bodyMeasurements', targetUserId],
     queryFn: async () => {
+      if (!targetUserId) return [];
+
       const { data, error } = await supabase
         .from('body_measurements')
         .select('*')
+        .eq('user_id', targetUserId)
         .order('date', { ascending: true });
 
       if (error) {
@@ -42,17 +51,20 @@ export function useDashboardData() {
       }
       return data || [];
     },
-    enabled: !!user,
+    enabled: !!targetUserId,
     retry: false,
   });
 
   // Fetch workout plans
   const { data: workoutPlans, isLoading: workoutPlansLoading } = useQuery({
-    queryKey: ['workoutPlans', user?.id],
+    queryKey: ['workoutPlans', targetUserId],
     queryFn: async () => {
+      if (!targetUserId) return [];
+
       const { data, error } = await supabase
         .from('workout_plans')
         .select('*')
+        .eq('user_id', targetUserId)
         .order('day_of_week', { ascending: true });
 
       if (error) {
@@ -61,17 +73,20 @@ export function useDashboardData() {
       }
       return data || [];
     },
-    enabled: !!user,
+    enabled: !!targetUserId,
     retry: false,
   });
 
   // Fetch meal plans
   const { data: mealPlans, isLoading: mealPlansLoading } = useQuery({
-    queryKey: ['mealPlans', user?.id],
+    queryKey: ['mealPlans', targetUserId],
     queryFn: async () => {
+      if (!targetUserId) return [];
+
       const { data, error } = await supabase
         .from('meal_plans')
         .select('*')
+        .eq('user_id', targetUserId)
         .order('day_of_week', { ascending: true });
 
       if (error) {
@@ -80,7 +95,7 @@ export function useDashboardData() {
       }
       return data || [];
     },
-    enabled: !!user,
+    enabled: !!targetUserId,
     retry: false,
   });
 

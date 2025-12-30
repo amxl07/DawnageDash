@@ -16,7 +16,9 @@ import { calculateWeeklyAverages } from "@/lib/checkin-utils";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Measurements() {
-  const { user } = useAuth();
+  const { user, viewedUserId } = useAuth();
+  const targetUserId = viewedUserId || user?.id; // Use viewed user or current user
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -33,18 +35,20 @@ export default function Measurements() {
 
   // Fetch measurements from Supabase
   const { data: bodyMeasurements, isLoading } = useQuery({
-    queryKey: ['bodyMeasurements', user?.id],
+    queryKey: ['bodyMeasurements', targetUserId],
     queryFn: async () => {
+      if (!targetUserId) return [];
+
       const { data, error } = await supabase
         .from('body_measurements')
         .select('*')
-        .eq('user_id', user!.id)
+        .eq('user_id', targetUserId)
         .order('date', { ascending: false });
 
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!targetUserId,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -90,7 +90,10 @@ const SUB_CATEGORY_LABELS: Record<string, string> = {
 
 
 export default function Plans() {
-  const { user } = useAuth();
+  const { user, viewedUserId } = useAuth();
+  const isCoach = user?.user_metadata?.role === 'coach';
+  const targetUserId = viewedUserId || user?.id; // Use viewed user or current user
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -108,17 +111,19 @@ export default function Plans() {
 
   // Fetch user profile to get active plan
   const { data: userProfile } = useQuery({
-    queryKey: ['userProfile', user?.id],
+    queryKey: ['userProfile', targetUserId],
     queryFn: async () => {
+      if (!targetUserId) return null;
+
       const { data, error } = await supabase
         .from('users')
         .select('active_workout_plan, active_meal_plan')
-        .eq('id', user!.id)
+        .eq('id', targetUserId)
         .single();
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!targetUserId,
   });
 
   // Load active plan on mount
@@ -215,13 +220,13 @@ export default function Plans() {
   // Query workout plans based on selections
   // First tries user's custom plans, then falls back to global templates
   const { data: workoutPlans, isLoading: isLoadingWorkouts } = useQuery({
-    queryKey: ['workoutPlans', user?.id, level, workoutType, subCategory, daysPerWeek],
+    queryKey: ['workoutPlans', targetUserId, level, workoutType, subCategory, daysPerWeek],
     queryFn: async () => {
       // First: Try to get user's custom workout plans
       let userQuery = supabase
         .from('workout_plans')
         .select('*')
-        .eq('user_id', user!.id)
+        .eq('user_id', targetUserId)
         .eq('level', level)
         .eq('workout_type', workoutType)
         .eq('days_per_week', daysPerWeek);
@@ -271,17 +276,17 @@ export default function Plans() {
         isTemplate: true, // Flag to indicate this is from templates
       }));
     },
-    enabled: !!user && isSelectionComplete,
+    enabled: !!targetUserId && isSelectionComplete,
   });
 
   const { data: mealPlans, isLoading: isLoadingMeals } = useQuery({
-    queryKey: ['mealPlans', user?.id, caloriesTarget, dietType],
+    queryKey: ['mealPlans', targetUserId, caloriesTarget, dietType],
     queryFn: async () => {
       // 1. Try to get user custom plans for this configuration
       let userQuery = supabase
         .from('meal_plans')
         .select('*')
-        .eq('user_id', user!.id)
+        .eq('user_id', targetUserId)
         .eq('calories_target', caloriesTarget)
         .eq('diet_type', dietType);
 
@@ -305,7 +310,7 @@ export default function Plans() {
 
       return { source: 'template', template };
     },
-    enabled: !!user,
+    enabled: !!targetUserId,
   });
 
   const handleMealPlanSaved = () => {
@@ -377,7 +382,7 @@ export default function Plans() {
 
   // Handle confirming the plan
   const handleConfirmPlan = async () => {
-    if (!user || !isSelectionComplete) return;
+    if (!targetUserId || !isSelectionComplete) return;
 
     try {
       // 1. Update user's active plan preference
@@ -385,7 +390,7 @@ export default function Plans() {
       const { error: updateError } = await supabase
         .from('users')
         .update({ active_workout_plan: JSON.stringify(planConfig) })
-        .eq('id', user.id);
+        .eq('id', targetUserId);
 
       if (updateError) throw updateError;
 
@@ -394,7 +399,7 @@ export default function Plans() {
 
       if (isTemplate && workoutPlans) {
         const rows = workoutPlans.map(day => ({
-          user_id: user.id,
+          user_id: targetUserId,
           level: level,
           workout_type: workoutType,
           sub_category: subCategory || null,
@@ -410,7 +415,7 @@ export default function Plans() {
         let deleteQuery = supabase
           .from('workout_plans')
           .delete()
-          .eq('user_id', user.id)
+          .eq('user_id', targetUserId)
           .eq('level', level)
           .eq('workout_type', workoutType)
           .eq('days_per_week', daysPerWeek);
@@ -473,7 +478,7 @@ export default function Plans() {
   }, [userProfile, caloriesTarget, dietType]);
 
   const handleConfirmMealPlan = async () => {
-    if (!user || !mealPlans?.template) return; // Can only confirm if template exists or fallback logic
+    if (!targetUserId || !mealPlans?.template) return; // Can only confirm if template exists or fallback logic
 
     try {
       // 1. Update active plan
@@ -481,7 +486,7 @@ export default function Plans() {
       const { error: prefError } = await supabase
         .from('users')
         .update({ active_meal_plan: JSON.stringify(planConfig) })
-        .eq('id', user.id);
+        .eq('id', targetUserId);
 
       if (prefError) throw prefError;
 
@@ -501,17 +506,17 @@ export default function Plans() {
       const day = 'Daily';
 
       // Breakfast
-      rows.push({ ...content.breakfast, user_id: user.id, day_of_week: day, meal_type: 'Breakfast', description: content.breakfast.name, diet_type: dietType, calories_target: caloriesTarget });
+      rows.push({ ...content.breakfast, user_id: targetUserId, day_of_week: day, meal_type: 'Breakfast', description: content.breakfast.name, diet_type: dietType, calories_target: caloriesTarget });
       // Lunch
-      rows.push({ ...content.lunch, user_id: user.id, day_of_week: day, meal_type: 'Lunch', description: content.lunch.name, diet_type: dietType, calories_target: caloriesTarget });
+      rows.push({ ...content.lunch, user_id: targetUserId, day_of_week: day, meal_type: 'Lunch', description: content.lunch.name, diet_type: dietType, calories_target: caloriesTarget });
       // Dinner
-      rows.push({ ...content.dinner, user_id: user.id, day_of_week: day, meal_type: 'Dinner', description: content.dinner.name, diet_type: dietType, calories_target: caloriesTarget });
+      rows.push({ ...content.dinner, user_id: targetUserId, day_of_week: day, meal_type: 'Dinner', description: content.dinner.name, diet_type: dietType, calories_target: caloriesTarget });
 
       // Delete existing for this config
       const { error: delError } = await supabase
         .from('meal_plans')
         .delete()
-        .eq('user_id', user.id)
+        .eq('user_id', targetUserId)
         .eq('calories_target', caloriesTarget)
         .eq('diet_type', dietType);
 
@@ -574,93 +579,95 @@ export default function Plans() {
 
         <TabsContent value="workout" className="space-y-6 mt-6">
           {/* Hierarchical Selection */}
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Select Your Workout Plan</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Level */}
-              <div>
-                <label className="text-sm font-medium text-muted-foreground mb-2 block">Level</label>
-                <Select value={level} onValueChange={(v) => handleLevelChange(v as Level)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Beginner">Beginner</SelectItem>
-                    <SelectItem value="Intermediate">Intermediate</SelectItem>
-                    <SelectItem value="Advanced">Advanced</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Workout Type */}
-              <div>
-                <label className="text-sm font-medium text-muted-foreground mb-2 block">Workout Type</label>
-                <Select
-                  value={workoutType}
-                  onValueChange={(v) => handleWorkoutTypeChange(v as WorkoutType)}
-                  disabled={availableWorkoutTypes.length === 0}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableWorkoutTypes.map(type => (
-                      <SelectItem key={type} value={type}>
-                        {WORKOUT_TYPE_LABELS[type]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Sub-Category (conditional) */}
-              {needsSubCategory && (
+          {isCoach && (
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Select Your Workout Plan</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Level */}
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Category</label>
-                  <Select
-                    value={subCategory || ''}
-                    onValueChange={(v) => handleSubCategoryChange(v as SubCategory)}
-                    disabled={!workoutType}
-                  >
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Level</label>
+                  <Select value={level} onValueChange={(v) => handleLevelChange(v as Level)}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select category..." />
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableSubCategories.map(cat => (
-                        <SelectItem key={cat!} value={cat!}>
-                          {SUB_CATEGORY_LABELS[cat!]}
+                      <SelectItem value="Beginner">Beginner</SelectItem>
+                      <SelectItem value="Intermediate">Intermediate</SelectItem>
+                      <SelectItem value="Advanced">Advanced</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Workout Type */}
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Workout Type</label>
+                  <Select
+                    value={workoutType}
+                    onValueChange={(v) => handleWorkoutTypeChange(v as WorkoutType)}
+                    disabled={availableWorkoutTypes.length === 0}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableWorkoutTypes.map(type => (
+                        <SelectItem key={type} value={type}>
+                          {WORKOUT_TYPE_LABELS[type]}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-              )}
 
-              {/* Days Per Week */}
-              <div>
-                <label className="text-sm font-medium text-muted-foreground mb-2 block">Days Per Week</label>
-                <Select
-                  value={daysPerWeek ? String(daysPerWeek) : ''}
-                  onValueChange={(v) => setDaysPerWeek(Number(v))}
-                  disabled={availableDaysOptions.length === 0}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select days..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableDaysOptions.map(days => (
-                      <SelectItem key={days} value={String(days)}>
-                        {days}-day
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {/* Sub-Category (conditional) */}
+                {needsSubCategory && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground mb-2 block">Category</label>
+                    <Select
+                      value={subCategory || ''}
+                      onValueChange={(v) => handleSubCategoryChange(v as SubCategory)}
+                      disabled={!workoutType}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableSubCategories.map(cat => (
+                          <SelectItem key={cat!} value={cat!}>
+                            {SUB_CATEGORY_LABELS[cat!]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Days Per Week */}
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Days Per Week</label>
+                  <Select
+                    value={daysPerWeek ? String(daysPerWeek) : ''}
+                    onValueChange={(v) => setDaysPerWeek(Number(v))}
+                    disabled={availableDaysOptions.length === 0}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select days..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableDaysOptions.map(days => (
+                        <SelectItem key={days} value={String(days)}>
+                          {days}-day
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          )}
 
           {/* Confirm Button Area */}
-          {isSelectionComplete && !isLoadingWorkouts && (
+          {isCoach && isSelectionComplete && !isLoadingWorkouts && (
             <div className="flex justify-end">
               <Button
                 size="lg"
@@ -691,6 +698,7 @@ export default function Plans() {
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
             ) : (
+              // EditableWorkoutPlan now uses AuthContext internally for user ID
               <EditableWorkoutPlan
                 initialPlan={workoutPlans && workoutPlans.length > 0 ? workoutPlans : defaultWorkoutPlan}
                 level={level}
@@ -702,50 +710,54 @@ export default function Plans() {
           ) : (
             <Card className="p-12 text-center">
               <p className="text-muted-foreground">
-                Please complete all selections above to view your workout plan
+                {isCoach
+                  ? "Please complete all selections above to view the workout plan"
+                  : "No workout plan has been assigned yet. Please contact your coach."}
               </p>
             </Card>
           )}
         </TabsContent>
 
         <TabsContent value="meal" className="space-y-6 mt-6">
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Select Your Nutrition Plan</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Calories */}
-              <div>
-                <label className="text-sm font-medium text-muted-foreground mb-2 block">Target Calories</label>
-                <Select value={String(caloriesTarget)} onValueChange={(v) => setCaloriesTarget(Number(v))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CALORIE_OPTIONS.map(cal => (
-                      <SelectItem key={cal} value={String(cal)}>{cal} Calories</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          {isCoach && (
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Select Your Nutrition Plan</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Calories */}
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Target Calories</label>
+                  <Select value={String(caloriesTarget)} onValueChange={(v) => setCaloriesTarget(Number(v))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CALORIE_OPTIONS.map(cal => (
+                        <SelectItem key={cal} value={String(cal)}>{cal} Calories</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              {/* Diet Type */}
-              <div>
-                <label className="text-sm font-medium text-muted-foreground mb-2 block">Dietary Preference</label>
-                <Select value={dietType} onValueChange={(v) => setDietType(v as DietType)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DIET_OPTIONS.map(diet => (
-                      <SelectItem key={diet} value={diet}>{diet}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {/* Diet Type */}
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Dietary Preference</label>
+                  <Select value={dietType} onValueChange={(v) => setDietType(v as DietType)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DIET_OPTIONS.map(diet => (
+                        <SelectItem key={diet} value={diet}>{diet}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          )}
 
           {/* Confirm Button Area */}
-          {!isLoadingMeals && (
+          {isCoach && !isLoadingMeals && (
             <div className="flex justify-end">
               <Button
                 size="lg"

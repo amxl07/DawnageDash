@@ -9,21 +9,25 @@ import { useAuth } from "@/contexts/AuthContext";
 import { MetricCard } from "@/components/MetricCard";
 
 export default function WorkoutLogs() {
-    const { user } = useAuth();
+    const { user, viewedUserId } = useAuth();
+    const targetUserId = viewedUserId || user?.id;
     const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
 
     const { data: logs, isLoading } = useQuery({
-        queryKey: ['workoutLogs', user?.id],
+        queryKey: ['workoutLogs', targetUserId],
         queryFn: async () => {
+            if (!targetUserId) return [];
+
             const { data, error } = await supabase
                 .from('workout_logs')
                 .select('*')
+                .eq('user_id', targetUserId)
                 .order('date', { ascending: false });
 
             if (error) throw error;
             return data;
         },
-        enabled: !!user,
+        enabled: !!targetUserId,
     });
 
     const calculateStats = (logs: any[]) => {

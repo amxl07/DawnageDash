@@ -9,22 +9,25 @@ import { useAuth } from "@/contexts/AuthContext";
 import { processCheckInHistory } from "@/lib/checkin-utils";
 
 export default function CheckIns() {
-  const { user } = useAuth();
+  const { user, viewedUserId } = useAuth();
+  const targetUserId = viewedUserId || user?.id;
 
   // Fetch check-ins from Supabase
   const { data: checkIns, isLoading } = useQuery({
-    queryKey: ['dailyCheckIns', user?.id],
+    queryKey: ['dailyCheckIns', targetUserId],
     queryFn: async () => {
+      if (!targetUserId) return [];
+
       const { data, error } = await supabase
         .from('daily_check_ins')
         .select('*')
-        .eq('user_id', user!.id)
+        .eq('user_id', targetUserId)
         .order('date', { ascending: false });
 
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!targetUserId,
   });
 
   // Transform check-ins for the card display using the utility
@@ -201,6 +204,6 @@ export default function CheckIns() {
           ))}
         </div>
       </div>
-    </div>
+    </div >
   );
 }

@@ -16,55 +16,83 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QuestionnaireWizard } from "@/components/QuestionnaireWizard";
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, viewedUserId } = useAuth();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const targetUserId = viewedUserId || user?.id;
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
-    region: "North America", // Placeholder - not in DB
-    timezone: "EST", // Placeholder - not in DB
-    goal: "Build muscle and lose fat", // Placeholder - not in DB
-    injuries: "None", // Placeholder - not in DB
-    medicalCondition: "None", // Placeholder - not in DB
-    preferredCheckinDay: "Monday", // Placeholder - not in DB
-    preferredCheckinTime: "09:00 AM", // Placeholder - not in DB
-    startDate: new Date().toISOString().split('T')[0], // Placeholder
-    packageLength: "12 weeks", // Placeholder - not in DB
+    region: "North America",
+    timezone: "EST",
+    goal: "Build muscle and lose fat",
+    injuries: "None",
+    medicalCondition: "None",
+    preferredCheckinDay: "Monday",
+    preferredCheckinTime: "09:00 AM",
+    startDate: new Date().toISOString().split('T')[0],
+    packageLength: "12 weeks",
   });
 
+  // Fetch user profile data from DB (better than rely on auth metadata which might be stale or incorrect for viewedUser)
   useEffect(() => {
-    if (user) {
-      setFormData(prev => ({
-        ...prev,
-        name: user.user_metadata?.full_name || "",
-        email: user.email || "",
-        phone: user.phone || "",
-      }));
+    async function fetchProfile() {
+      if (!targetUserId) return;
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', targetUserId)
+          .single();
+
+        if (error) {
+          console.error("Error fetching profile:", error);
+          return;
+        }
+
+        if (data) {
+          setFormData(prev => ({
+            ...prev,
+            name: data.full_name || "",
+            email: data.email || "", // Email might be empty in users table depending on trigger, but usually there
+            phone: data.phone || "",
+            // Other fields would be mapped here if they existed in DB schema
+          }));
+        }
+      } catch (err) {
+        console.error("Fetch profile exception:", err);
+      }
     }
-  }, [user]);
+
+    fetchProfile();
+  }, [targetUserId]);
 
   const handleSave = async () => {
-    if (!user) return;
+    if (!targetUserId) return;
     setIsLoading(true);
 
     try {
-      // Update Supabase Auth Metadata
-      const { error: authError } = await supabase.auth.updateUser({
-        data: { full_name: formData.name }
-      });
-
-      if (authError) throw authError;
+      // Only update Auth User Metadata if we are the user acting on ourselves, NOT if we are a coach viewing a client
+      // Coaches usually cannot update client's auth metadata via client SDK directly without Admin API.
+      // So skip auth update if viewedUserId is set.
+      if (!viewedUserId) {
+        const { error: authError } = await supabase.auth.updateUser({
+          data: { full_name: formData.name }
+        });
+        if (authError) throw authError;
+      }
 
       // Update users table
       const { error: dbError } = await supabase
         .from('users')
         .update({
           full_name: formData.name,
+          phone: formData.phone, // Ensure phone is updated if schema supports it
         })
-        .eq('id', user.id);
+        .eq('id', targetUserId);
 
       if (dbError) throw dbError;
 

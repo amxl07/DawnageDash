@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "@/pages/Dashboard";
+import CoachDashboard from "@/pages/CoachDashboard";
 import CheckIns from "@/pages/CheckIns";
 import Measurements from "@/pages/Measurements";
 import Plans from "@/pages/Plans";
@@ -19,12 +20,18 @@ import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
 
 function Router() {
+  const { user, viewedUserId } = useAuth();
+
   return (
     <Switch>
       <Route path="/login" component={Login} />
       <Route path="/">
         <ProtectedRoute>
-          <Dashboard />
+          {user?.user_metadata?.role === 'coach' && !viewedUserId ? (
+            <CoachDashboard />
+          ) : (
+            <Dashboard />
+          )}
         </ProtectedRoute>
       </Route>
       <Route path="/check-ins">
@@ -86,6 +93,18 @@ function AppContent() {
   if (!user) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center">
+        <Router />
+      </div>
+    );
+  }
+
+  const { viewedUserId } = useAuth();
+  const isCoachDashboard = user?.user_metadata?.role === 'coach' && !viewedUserId;
+
+  // Coach Dashboard (No Sidebar)
+  if (isCoachDashboard) {
+    return (
+      <div className="min-h-screen w-full bg-background">
         <Router />
       </div>
     );
