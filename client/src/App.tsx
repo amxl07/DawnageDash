@@ -125,7 +125,7 @@ function AppContent() {
           <header className="flex items-center justify-between p-4 border-b sticky top-0 z-50 bg-background">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
           </header>
-          <main className="flex-1 overflow-auto p-8">
+          <main className="flex-1 overflow-auto p-4 md:p-8">
             <Router />
           </main>
         </div>

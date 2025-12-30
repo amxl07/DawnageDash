@@ -190,14 +190,14 @@ export default function Analytics() {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold mb-2" data-testid="text-analytics-title">Advanced Analytics</h1>
-          <p className="text-muted-foreground">Insights from your fitness journey</p>
+          <h1 className="text-2xl md:text-3xl font-bold mb-2" data-testid="text-analytics-title">Advanced Analytics</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Insights from your fitness journey</p>
         </div>
         {metrics.adherenceRate && (
-          <Badge variant={Number(metrics.adherenceRate) >= 80 ? "default" : "secondary"} className="text-sm px-4 py-2">
-            <TrendingUp className="w-4 h-4 mr-2" />
+          <Badge variant={Number(metrics.adherenceRate) >= 80 ? "default" : "secondary"} className="text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2 self-start">
+            <TrendingUp className="w-3 h-3 md:w-4 md:h-4 mr-2" />
             {metrics.adherenceRate}% Adherence
           </Badge>
         )}

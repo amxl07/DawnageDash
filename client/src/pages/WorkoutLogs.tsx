@@ -158,10 +158,10 @@ export default function WorkoutLogs() {
         <div className="space-y-8 max-w-6xl mx-auto">
             <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
-                    <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+                    <h1 className="text-2xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
                         Workout Logs
                     </h1>
-                    <p className="text-muted-foreground">Your complete training journey and performance history</p>
+                    <p className="text-sm md:text-base text-muted-foreground">Your complete training journey and performance history</p>
                 </div>
                 {logs && logs.length > 0 && (
                     <Badge variant="outline" className="h-10 px-4 text-base">

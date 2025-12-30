@@ -162,8 +162,8 @@ export default function CheckIns() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-4xl font-bold mb-2" data-testid="text-checkins-title">Daily Check-Ins History</h1>
-        <p className="text-muted-foreground">Comprehensive day-by-day analytics of your fitness journey</p>
+        <h1 className="text-2xl md:text-4xl font-bold mb-2" data-testid="text-checkins-title">Daily Check-Ins History</h1>
+        <p className="text-sm md:text-base text-muted-foreground">Comprehensive day-by-day analytics of your fitness journey</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -220,14 +220,14 @@ export default function Measurements() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold mb-2" data-testid="text-measurements-title">Body Measurements & Progress</h1>
-          <p className="text-muted-foreground">Track your body composition changes and transformation analytics</p>
+          <h1 className="text-2xl md:text-4xl font-bold mb-2" data-testid="text-measurements-title">Body Measurements & Progress</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Track your body composition changes and transformation analytics</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="rounded-xl" data-testid="button-log-measurement">
+            <Button className="rounded-xl w-full md:w-auto" data-testid="button-log-measurement">
               <Plus className="w-4 h-4 mr-2" />
               Log Measurement
             </Button>

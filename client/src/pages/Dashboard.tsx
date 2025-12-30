@@ -193,14 +193,14 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold mb-2" data-testid="text-dashboard-title">Dashboard</h1>
-          <p className="text-muted-foreground">Comprehensive insights into your fitness journey with real-time data tracking</p>
+          <h1 className="text-2xl md:text-4xl font-bold mb-2" data-testid="text-dashboard-title">Dashboard</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Comprehensive insights into your fitness journey with real-time data tracking</p>
         </div>
-        <div className="flex flex-col gap-3 items-end">
-          <Badge className="rounded-full text-sm px-4 py-2">
-            <Activity className="w-4 h-4 mr-2" />
+        <div className="flex flex-row md:flex-col gap-3 items-center md:items-end flex-wrap">
+          <Badge className="rounded-full text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2">
+            <Activity className="w-3 h-3 md:w-4 md:h-4 mr-2" />
             Day {totalDaysTracked} • Week {currentWeek}
           </Badge>
           {/* WhatsApp Activation Button - Top Right */}
@@ -211,11 +211,11 @@ export default function Dashboard() {
               const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
               window.open(whatsappUrl, "_blank");
             }}
-            size="lg"
-            className="bg-green-600 hover:bg-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+            size="default"
+            className="bg-green-600 hover:bg-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all text-sm md:text-base"
           >
-            <MessageCircle className="w-5 h-5 mr-2" />
-            Activate AI on WhatsApp
+            <MessageCircle className="w-4 h-4 md:w-5 md:h-5 mr-2" />
+            <span className="hidden sm:inline">Activate AI on</span> WhatsApp
           </Button>
         </div>
       </div>

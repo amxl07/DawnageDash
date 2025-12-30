@@ -30,8 +30,8 @@ export default function Media() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-4xl font-bold mb-2" data-testid="text-media-title">Progress Photos</h1>
-        <p className="text-muted-foreground">Visual documentation of your transformation journey</p>
+        <h1 className="text-2xl md:text-4xl font-bold mb-2" data-testid="text-media-title">Progress Photos</h1>
+        <p className="text-sm md:text-base text-muted-foreground">Visual documentation of your transformation journey</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">

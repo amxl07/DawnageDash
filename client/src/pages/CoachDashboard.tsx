@@ -86,8 +86,8 @@ export default function CoachDashboard() {
             </div>
 
             <div>
-                <h1 className="text-4xl font-bold mb-2">Coach Dashboard</h1>
-                <p className="text-muted-foreground">Manage your clients and training rosters</p>
+                <h1 className="text-2xl md:text-4xl font-bold mb-2">Coach Dashboard</h1>
+                <p className="text-sm md:text-base text-muted-foreground">Manage your clients and training rosters</p>
             </div>
 
             {/* Stats Overview */}
