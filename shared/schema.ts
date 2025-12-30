@@ -84,18 +84,11 @@ export const bodyMeasurements = pgTable("body_measurements", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   date: date("date").notNull(),
 
-  weight: decimal("weight", { precision: 5, scale: 2 }),
-  bodyFatPercentage: decimal("body_fat_percentage", { precision: 4, scale: 2 }),
-  muscleMass: decimal("muscle_mass", { precision: 5, scale: 2 }),
   chest: decimal("chest", { precision: 5, scale: 2 }),
   waist: decimal("waist", { precision: 5, scale: 2 }),
   hips: decimal("hips", { precision: 5, scale: 2 }),
   thighs: decimal("thighs", { precision: 5, scale: 2 }),
   arms: decimal("arms", { precision: 5, scale: 2 }),
-  neck: decimal("neck", { precision: 5, scale: 2 }),
-  calves: decimal("calves", { precision: 5, scale: 2 }),
-
-  notes: text("notes"),
 
   createdAt: timestamp("created_at").defaultNow(),
 });

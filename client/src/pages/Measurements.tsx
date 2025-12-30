@@ -12,6 +12,7 @@ import { TrendingDown, Ruler, Target, Plus, Loader2 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { calculateWeeklyAverages } from "@/lib/checkin-utils";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Measurements() {
@@ -37,7 +38,7 @@ export default function Measurements() {
       const { data, error } = await supabase
         .from('body_measurements')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', user!.id)
         .order('date', { ascending: false });
 
       if (error) throw error;
@@ -55,7 +56,6 @@ export default function Measurements() {
       const { error } = await supabase.from('body_measurements').insert({
         user_id: user.id,
         date: formData.date,
-        weight: formData.weight ? parseFloat(formData.weight) : null,
         chest: formData.chest ? parseFloat(formData.chest) : null,
         waist: formData.waist ? parseFloat(formData.waist) : null,
         hips: formData.hips ? parseFloat(formData.hips) : null,
@@ -94,30 +94,22 @@ export default function Measurements() {
 
   // Transform measurements for card display
   const measurements = bodyMeasurements?.map((measurement, index) => {
-    const prevMeasurement = bodyMeasurements[index + 1];
-    const weightChange = prevMeasurement
-      ? parseFloat(measurement.weight || '0') - parseFloat(prevMeasurement.weight || '0')
-      : 0;
-
     return {
       date: new Date(measurement.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       weekNumber: bodyMeasurements.length - index,
       measurements: {
-        weight: parseFloat(measurement.weight || '0'),
         chest: parseFloat(measurement.chest || '0'),
         waist: parseFloat(measurement.waist || '0'),
         hip: parseFloat(measurement.hips || '0'),
         thigh: parseFloat(measurement.thighs || '0'),
         arm: parseFloat(measurement.arms || '0'),
       },
-      changes: weightChange !== 0 ? { weight: weightChange } : undefined,
     };
   }) || [];
 
   // Transform measurements for progress chart
   const progressData = bodyMeasurements?.slice().reverse().map((measurement, index) => ({
     week: `W${index + 1}`,
-    weight: parseFloat(measurement.weight || '0'),
     chest: parseFloat(measurement.chest || '0'),
     waist: parseFloat(measurement.waist || '0'),
     hip: parseFloat(measurement.hips || '0'),
@@ -133,7 +125,6 @@ export default function Measurements() {
     current: {
       week: bodyMeasurements?.length || 0,
       date: new Date(currentMeasurement.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      weight: parseFloat(currentMeasurement.weight || '0'),
       chest: parseFloat(currentMeasurement.chest || '0'),
       waist: parseFloat(currentMeasurement.waist || '0'),
       hip: parseFloat(currentMeasurement.hips || '0'),
@@ -143,7 +134,6 @@ export default function Measurements() {
     start: {
       week: 1,
       date: new Date(startMeasurement.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      weight: parseFloat(startMeasurement.weight || '0'),
       chest: parseFloat(startMeasurement.chest || '0'),
       waist: parseFloat(startMeasurement.waist || '0'),
       hip: parseFloat(startMeasurement.hips || '0'),
@@ -152,18 +142,60 @@ export default function Measurements() {
     },
   } : null;
 
-  // Calculate metrics
-  const totalWeightLost = currentMeasurement && startMeasurement
-    ? (parseFloat(startMeasurement.weight || '0') - parseFloat(currentMeasurement.weight || '0')).toFixed(1)
-    : '0';
+  // Fetch daily check-ins for weight metrics
+  const { data: checkIns } = useQuery({
+    queryKey: ['dailyCheckIns', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('daily_check_ins')
+        .select('*')
+        .eq('user_id', user!.id);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
 
+  // Calculate metrics from check-ins
+  const weeklyAverages = checkIns ? calculateWeeklyAverages(checkIns) : [];
+
+  // Newest first
+  const currentStat = weeklyAverages[0];
+  const startStat = weeklyAverages[weeklyAverages.length - 1];
+
+  // Calculate weight metrics
+  let totalWeightLost = '0';
+  let avgWeeklyLoss = '0';
+  let totalWeeks = weeklyAverages.length || 0;
+
+  if (checkIns && checkIns.length > 0) {
+    // Sort chronologically for metric calculation
+    const sortedByDate = [...checkIns].sort((a, b) =>
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    // Find first and last valid weight entries
+    const firstWeightEntry = sortedByDate.find(c => c.morning_weight && parseFloat(c.morning_weight.toString()) > 0);
+
+    // Reverse to find last valid entry
+    const lastWeightEntry = [...sortedByDate].reverse().find(c => c.morning_weight && parseFloat(c.morning_weight.toString()) > 0);
+
+    if (firstWeightEntry?.morning_weight && lastWeightEntry?.morning_weight) {
+      const startWeight = parseFloat(firstWeightEntry.morning_weight.toString());
+      const currentWeight = parseFloat(lastWeightEntry.morning_weight.toString());
+
+      const lost = startWeight - currentWeight;
+      totalWeightLost = lost.toFixed(1);
+
+      // Use week count from our averages logic, or default to 1 if very short duration
+      const weeksDivisor = totalWeeks > 0 ? totalWeeks : 1;
+      avgWeeklyLoss = (lost / weeksDivisor).toFixed(1);
+    }
+  }
+
+  // Waist reduction still relies on manual logs
   const waistReduction = currentMeasurement && startMeasurement
     ? (parseFloat(startMeasurement.waist || '0') - parseFloat(currentMeasurement.waist || '0')).toFixed(0)
-    : '0';
-
-  const totalWeeks = bodyMeasurements?.length || 1;
-  const avgWeeklyLoss = totalWeeks > 0
-    ? (parseFloat(totalWeightLost) / totalWeeks).toFixed(1)
     : '0';
 
   if (isLoading) {
@@ -195,31 +227,10 @@ export default function Measurements() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Log New Measurement</DialogTitle>
+              <DialogTitle>Log Measurement (Week {(bodyMeasurements?.length || 0) + 1})</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 pt-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="date">Date</Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="rounded-xl"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="weight">Weight (kg)</Label>
-                  <Input
-                    id="weight"
-                    type="number"
-                    step="0.1"
-                    value={formData.weight}
-                    onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                    className="rounded-xl"
-                  />
-                </div>
                 <div className="space-y-2">
                   <Label htmlFor="chest">Chest (cm)</Label>
                   <Input

@@ -3,7 +3,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 interface MeasurementDataPoint {
   week: string;
-  weight: number;
+  weight?: number;
   chest?: number;
   waist?: number;
   hip?: number;
@@ -25,16 +25,16 @@ export function MeasurementProgressChart({ data }: MeasurementProgressChartProps
       <ResponsiveContainer width="100%" height={350}>
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-          <XAxis 
-            dataKey="week" 
+          <XAxis
+            dataKey="week"
             stroke="hsl(var(--muted-foreground))"
             style={{ fontSize: '12px' }}
           />
-          <YAxis 
+          <YAxis
             stroke="hsl(var(--muted-foreground))"
             style={{ fontSize: '12px' }}
           />
-          <Tooltip 
+          <Tooltip
             contentStyle={{
               backgroundColor: 'hsl(var(--card))',
               border: '1px solid hsl(var(--border))',
@@ -43,7 +43,8 @@ export function MeasurementProgressChart({ data }: MeasurementProgressChartProps
             }}
           />
           <Legend />
-          <Line type="monotone" dataKey="weight" stroke="hsl(var(--chart-1))" strokeWidth={3} name="Weight (kg)" dot={{ r: 5 }} />
+          {/* Weight line removed as weight is no longer part of body measurements */}
+          <Line type="monotone" dataKey="hip" stroke="hsl(var(--chart-4))" strokeWidth={3} name="Hips (cm)" dot={{ r: 5 }} />
           <Line type="monotone" dataKey="waist" stroke="hsl(var(--chart-2))" strokeWidth={3} name="Waist (cm)" dot={{ r: 5 }} />
           <Line type="monotone" dataKey="chest" stroke="hsl(var(--chart-3))" strokeWidth={3} name="Chest (cm)" dot={{ r: 5 }} />
         </LineChart>

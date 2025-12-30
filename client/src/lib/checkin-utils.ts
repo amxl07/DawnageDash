@@ -101,3 +101,67 @@ export function processCheckInHistory(checkIns: RawDailyCheckIn[]): ProcessedChe
     // Return in descending order (newest first) as usually expected by UI
     return processedHistory.reverse();
 }
+
+export interface WeeklyAverage {
+    weekNumber: number;
+    startDate: Date;
+    endDate: Date;
+    averageWeight: number | null;
+    weightCount: number;
+    checkInCount: number;
+}
+
+export function calculateWeeklyAverages(checkIns: RawDailyCheckIn[]): WeeklyAverage[] {
+    if (!checkIns || checkIns.length === 0) return [];
+
+    // Sort by date ascending to process chronologically
+    const sortedCheckIns = [...checkIns].sort((a, b) =>
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    const firstDate = startOfDay(new Date(sortedCheckIns[0].date));
+    const now = startOfDay(new Date());
+
+    // Calculate total full weeks + current partial week
+    const totalDays = differenceInDays(now, firstDate) + 1;
+    const totalWeeks = Math.ceil(totalDays / 7);
+
+    const weeks: WeeklyAverage[] = [];
+
+    for (let i = 0; i < totalWeeks; i++) {
+        const weekStart = addDays(firstDate, i * 7);
+        const weekEnd = addDays(weekStart, 6); // 7 day window
+        const weekNumber = i + 1;
+
+        // Find check-ins in this window
+        const weekCheckIns = sortedCheckIns.filter(c => {
+            const d = new Date(c.date);
+            return d >= weekStart && d < addDays(weekEnd, 1); // < next day start
+        });
+
+        // Calculate average weight
+        let totalWeight = 0;
+        let weightCount = 0;
+
+        weekCheckIns.forEach(c => {
+            if (c.morning_weight) {
+                const w = parseFloat(c.morning_weight.toString());
+                if (!isNaN(w) && w > 0) {
+                    totalWeight += w;
+                    weightCount++;
+                }
+            }
+        });
+
+        weeks.push({
+            weekNumber,
+            startDate: weekStart,
+            endDate: weekEnd,
+            averageWeight: weightCount > 0 ? parseFloat((totalWeight / weightCount).toFixed(2)) : null,
+            weightCount,
+            checkInCount: weekCheckIns.length
+        });
+    }
+
+    return weeks.reverse(); // Newest weeks first
+}

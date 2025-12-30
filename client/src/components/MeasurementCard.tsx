@@ -6,7 +6,7 @@ interface MeasurementCardProps {
   date: string;
   weekNumber: number;
   measurements: {
-    weight: number;
+    weight?: number;
     chest?: number;
     waist?: number;
     hip?: number;
@@ -50,10 +50,12 @@ export function MeasurementCard({ date, weekNumber, measurements, changes }: Mea
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">Weight</p>
-          <p className="text-2xl font-bold font-poppins" data-testid="text-weight-value">{measurements.weight} kg</p>
-        </div>
+        {measurements.weight !== undefined && (
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Weight</p>
+            <p className="text-2xl font-bold font-poppins" data-testid="text-weight-value">{measurements.weight} kg</p>
+          </div>
+        )}
         {measurements.chest && (
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">Chest</p>

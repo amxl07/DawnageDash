@@ -6,7 +6,7 @@ interface ComparisonData {
   current: {
     week: number;
     date: string;
-    weight: number;
+    weight?: number;
     chest: number;
     waist: number;
     hip: number;
@@ -16,7 +16,7 @@ interface ComparisonData {
   start: {
     week: number;
     date: string;
-    weight: number;
+    weight?: number;
     chest: number;
     waist: number;
     hip: number;
@@ -41,7 +41,7 @@ export function MeasurementComparisonCard({ data }: MeasurementComparisonCardPro
 
   const renderChange = (current: number, start: number, isWeightMetric: boolean = false) => {
     const change = calculateChange(current, start);
-    
+
     if (change.value === 0) {
       return (
         <div className="flex items-center gap-1 text-muted-foreground">
@@ -65,7 +65,7 @@ export function MeasurementComparisonCard({ data }: MeasurementComparisonCardPro
   };
 
   const measurements = [
-    { label: 'Weight', current: data.current.weight, start: data.start.weight, unit: 'kg', isWeightMetric: true },
+    // Weight removed
     { label: 'Chest', current: data.current.chest, start: data.start.chest, unit: 'cm', isWeightMetric: false },
     { label: 'Waist', current: data.current.waist, start: data.start.waist, unit: 'cm', isWeightMetric: true },
     { label: 'Hip', current: data.current.hip, start: data.start.hip, unit: 'cm', isWeightMetric: true },
