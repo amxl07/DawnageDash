@@ -42,6 +42,7 @@ interface EditableMealPlanProps {
   caloriesTarget?: number;
   dietType?: string;
   onSave?: (plan: DayMealPlan) => void;
+  isReadOnly?: boolean;
 }
 
 // Advanced Meal Composer Component
@@ -388,7 +389,7 @@ const MealComposer = ({
   );
 };
 
-export function EditableMealPlan({ initialPlan, day = "Monday", caloriesTarget, dietType, onSave }: EditableMealPlanProps) {
+export function EditableMealPlan({ initialPlan, day = "Monday", caloriesTarget, dietType, onSave, isReadOnly = false }: EditableMealPlanProps) {
   const { user, viewedUserId } = useAuth();
   const targetUserId = viewedUserId || user?.id;
 
@@ -599,32 +600,34 @@ export function EditableMealPlan({ initialPlan, day = "Monday", caloriesTarget, 
           <p className="text-sm text-muted-foreground">Your personalized nutrition guide</p>
         </div>
         <div className="flex items-center gap-2">
-          {isEditing ? (
-            <>
+          {!isReadOnly && (
+            isEditing ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleCancel}
+                  className="rounded-xl"
+                  data-testid="button-cancel-edit-meal"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Cancel
+                </Button>
+                <Button onClick={handleSave} className="rounded-xl" data-testid="button-save-meal" disabled={isLoading}>
+                  {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                  Save Changes
+                </Button>
+              </>
+            ) : (
               <Button
+                onClick={() => setIsEditing(true)}
                 variant="outline"
-                onClick={handleCancel}
                 className="rounded-xl"
-                data-testid="button-cancel-edit-meal"
+                data-testid="button-edit-meal"
               >
-                <X className="w-4 h-4 mr-2" />
-                Cancel
+                <Edit2 className="w-4 h-4 mr-2" />
+                Edit Plan
               </Button>
-              <Button onClick={handleSave} className="rounded-xl" data-testid="button-save-meal" disabled={isLoading}>
-                {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                Save Changes
-              </Button>
-            </>
-          ) : (
-            <Button
-              onClick={() => setIsEditing(true)}
-              variant="outline"
-              className="rounded-xl"
-              data-testid="button-edit-meal"
-            >
-              <Edit2 className="w-4 h-4 mr-2" />
-              Edit Plan
-            </Button>
+            )
           )}
         </div>
       </div>

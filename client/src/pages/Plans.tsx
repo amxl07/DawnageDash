@@ -705,6 +705,7 @@ export default function Plans() {
                 workoutType={workoutType as WorkoutType}
                 subCategory={subCategory || null}
                 daysPerWeek={daysPerWeek as number}
+                isReadOnly={!isCoach}
               />
             )
           ) : (
@@ -801,6 +802,7 @@ export default function Plans() {
               caloriesTarget={caloriesTarget}
               dietType={dietType}
               onSave={handleMealPlanSaved}
+              isReadOnly={!isCoach}
             />
           )}
         </TabsContent>

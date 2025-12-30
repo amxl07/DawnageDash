@@ -36,6 +36,7 @@ interface EditableWorkoutPlanProps {
   subCategory: SubCategory;
   daysPerWeek: number;
   onSave?: (plan: DayWorkout[]) => void;
+  isReadOnly?: boolean;
 }
 
 export function EditableWorkoutPlan({
@@ -44,7 +45,8 @@ export function EditableWorkoutPlan({
   workoutType,
   subCategory,
   daysPerWeek,
-  onSave
+  onSave,
+  isReadOnly = false
 }: EditableWorkoutPlanProps) {
   const { user, viewedUserId, isCoachView } = useAuth();
   const targetUserId = viewedUserId || user?.id;
@@ -185,31 +187,43 @@ export function EditableWorkoutPlan({
           <p className="text-sm text-muted-foreground">Your training plan</p>
         </div>
         <div className="flex items-center gap-2">
-          {isEditing ? (
-            <>
+          {!isReadOnly && (
+            isEditing ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleCancel}
+                  size="sm"
+                  data-testid="button-cancel-edit"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSave}
+                  size="sm"
+                  data-testid="button-save-plan"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  Save Plan
+                </Button>
+              </>
+            ) : (
               <Button
                 variant="outline"
-                onClick={handleCancel}
+                onClick={() => setIsEditing(true)}
                 size="sm"
-                data-testid="button-cancel-edit"
+                data-testid="button-edit-plan"
               >
-                <X className="w-4 h-4 mr-2" />
-                Cancel
+                <Edit2 className="w-4 h-4 mr-2" />
+                Edit Plan
               </Button>
-              <Button onClick={handleSave} size="sm" data-testid="button-save-workout" disabled={isLoading}>
-                {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                Save
-              </Button>
-            </>
-          ) : (
-            <Button
-              onClick={() => setIsEditing(true)}
-              size="sm"
-              data-testid="button-edit-workout"
-            >
-              <Edit2 className="w-4 h-4 mr-2" />
-              Edit
-            </Button>
+            )
           )}
         </div>
       </div>
