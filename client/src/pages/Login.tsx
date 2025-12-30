@@ -89,8 +89,9 @@ export default function Login() {
           throw new Error("Passwords do not match");
         }
 
-        // Validate Coach Access Key
-        if (isCoachSignup && accessKey !== "Dawnagedash2025@") {
+        // Validate Coach Access Key from environment variable
+        const coachAccessKey = import.meta.env.VITE_COACH_ACCESS_KEY;
+        if (isCoachSignup && (!coachAccessKey || accessKey !== coachAccessKey)) {
           throw new Error("Invalid Coach Access Key");
         }
 

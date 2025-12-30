@@ -37,7 +37,7 @@ export default function Profile() {
     packageLength: "12 weeks",
   });
 
-  // Fetch user profile data from DB (better than rely on auth metadata which might be stale or incorrect for viewedUser)
+  // Fetch user profile data from DB
   useEffect(() => {
     async function fetchProfile() {
       if (!targetUserId) return;
@@ -54,12 +54,22 @@ export default function Profile() {
         }
 
         if (data) {
+          const profileData = data.profile_data || {};
           setFormData(prev => ({
             ...prev,
             name: data.full_name || "",
-            email: data.email || "", // Email might be empty in users table depending on trigger, but usually there
-            phone: data.phone || "",
-            // Other fields would be mapped here if they existed in DB schema
+            email: data.email || "",
+            phone: data.phone_number || "", // Map phone_number (DB) to phone (State)
+            // Load extra fields from profile_data
+            region: profileData.region || "North America",
+            timezone: profileData.timezone || "EST",
+            goal: profileData.goal || "Build muscle and lose fat",
+            injuries: profileData.injuries || "None",
+            medicalCondition: profileData.medicalCondition || "None",
+            preferredCheckinDay: profileData.preferredCheckinDay || "Monday",
+            preferredCheckinTime: profileData.preferredCheckinTime || "09:00 AM",
+            startDate: profileData.startDate || new Date().toISOString().split('T')[0],
+            packageLength: profileData.packageLength || "12 weeks",
           }));
         }
       } catch (err) {
@@ -75,9 +85,7 @@ export default function Profile() {
     setIsLoading(true);
 
     try {
-      // Only update Auth User Metadata if we are the user acting on ourselves, NOT if we are a coach viewing a client
-      // Coaches usually cannot update client's auth metadata via client SDK directly without Admin API.
-      // So skip auth update if viewedUserId is set.
+      // Only update Auth User Metadata if we are the user acting on ourselves
       if (!viewedUserId) {
         const { error: authError } = await supabase.auth.updateUser({
           data: { full_name: formData.name }
@@ -85,12 +93,26 @@ export default function Profile() {
         if (authError) throw authError;
       }
 
+      // Collect extra fields for profile_data
+      const profileData = {
+        region: formData.region,
+        timezone: formData.timezone,
+        goal: formData.goal,
+        injuries: formData.injuries,
+        medicalCondition: formData.medicalCondition,
+        preferredCheckinDay: formData.preferredCheckinDay,
+        preferredCheckinTime: formData.preferredCheckinTime,
+        startDate: formData.startDate,
+        packageLength: formData.packageLength,
+      };
+
       // Update users table
       const { error: dbError } = await supabase
         .from('users')
         .update({
           full_name: formData.name,
-          phone: formData.phone, // Ensure phone is updated if schema supports it
+          phone_number: formData.phone, // Map phone (State) to phone_number (DB)
+          profile_data: profileData
         })
         .eq('id', targetUserId);
 

@@ -108,7 +108,10 @@ export function AppSidebar() {
           <Button
             variant="outline"
             className="w-full justify-start"
-            onClick={signOut}
+            onClick={async () => {
+              await signOut();
+              setLocation('/login');
+            }}
             data-testid="button-sign-out"
           >
             <LogOut className="w-4 h-4 mr-2" />

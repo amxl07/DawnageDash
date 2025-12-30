@@ -75,7 +75,8 @@ function Router() {
 }
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  // IMPORTANT: All hooks must be called unconditionally at the top
+  const { user, loading, viewedUserId } = useAuth();
 
   // Show full-screen loader while auth is initializing
   if (loading) {
@@ -98,7 +99,7 @@ function AppContent() {
     );
   }
 
-  const { viewedUserId } = useAuth();
+  // Now we can use viewedUserId safely since it was extracted above
   const isCoachDashboard = user?.user_metadata?.role === 'coach' && !viewedUserId;
 
   // Coach Dashboard (No Sidebar)

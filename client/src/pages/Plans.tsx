@@ -382,7 +382,7 @@ export default function Plans() {
 
   // Handle confirming the plan
   const handleConfirmPlan = async () => {
-    if (!targetUserId || !isSelectionComplete) return;
+    if (!targetUserId || !isSelectionComplete || !isCoach) return; // Only coaches can confirm plans
 
     try {
       // 1. Update user's active plan preference
@@ -478,7 +478,7 @@ export default function Plans() {
   }, [userProfile, caloriesTarget, dietType]);
 
   const handleConfirmMealPlan = async () => {
-    if (!targetUserId || !mealPlans?.template) return; // Can only confirm if template exists or fallback logic
+    if (!targetUserId || !mealPlans?.template || !isCoach) return; // Only coaches can confirm plans
 
     try {
       // 1. Update active plan

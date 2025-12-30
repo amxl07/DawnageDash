@@ -65,7 +65,7 @@ export function useDashboardData() {
         .from('workout_plans')
         .select('*')
         .eq('user_id', targetUserId)
-        .order('day_of_week', { ascending: true });
+        .order('day_number', { ascending: true });
 
       if (error) {
         console.error('Workout plans fetch error:', error);

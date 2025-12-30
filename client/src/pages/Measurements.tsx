@@ -24,7 +24,6 @@ export default function Measurements() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    weight: "",
     chest: "",
     waist: "",
     hips: "",
@@ -51,14 +50,19 @@ export default function Measurements() {
     enabled: !!targetUserId,
   });
 
+  /* 
+     Update formData state to remove unused 'weight' field if it isn't being pushed to DB. 
+     Note: I will address the insert logic primarily here.
+  */
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!targetUserId) return; // Changed from !user to !targetUserId
 
     setIsSubmitting(true);
     try {
       const { error } = await supabase.from('body_measurements').insert({
-        user_id: user.id,
+        user_id: targetUserId, // Changed from user.id to targetUserId
         date: formData.date,
         chest: formData.chest ? parseFloat(formData.chest) : null,
         waist: formData.waist ? parseFloat(formData.waist) : null,
@@ -76,7 +80,6 @@ export default function Measurements() {
 
       setIsDialogOpen(false);
       setFormData({
-        weight: "",
         chest: "",
         waist: "",
         hips: "",
