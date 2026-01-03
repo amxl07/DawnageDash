@@ -1,13 +1,15 @@
 export interface Question {
     id: string;
     text: string;
-    type: 'text' | 'number' | 'select' | 'radio' | 'textarea' | 'multiselect';
+    description?: string; // Instructional text
+    type: 'text' | 'number' | 'select' | 'radio' | 'textarea' | 'multiselect' | 'rating';
     options?: string[];
     placeholder?: string;
     required?: boolean;
     step?: string;
     min?: number;
     max?: number;
+    rows?: number; // For textarea
 }
 
 export interface Section {
@@ -19,116 +21,252 @@ export interface Section {
 
 export const questionnaireSections: Section[] = [
     {
-        id: 'general_health',
-        title: 'General Health & Medical History',
-        description: 'Help us understand your current health status to ensure safety.',
+        id: 'basic_details',
+        title: 'Section 1: Your Basic Details',
+        description: ' Let\'s get to know you.',
         questions: [
-            { id: 'q1', text: 'Current Age', type: 'number', required: true },
-            { id: 'q2', text: 'Height (cm)', type: 'number', required: true },
-            { id: 'q3', text: 'Current Weight (kg)', type: 'number', required: true },
-            { id: 'q4', text: 'Do you have any known medical conditions?', type: 'textarea', placeholder: 'e.g., Diabetes, Hypertension, Asthma...' },
-            { id: 'q5', text: 'Are you currently taking any medication?', type: 'textarea', placeholder: 'Please list name and dosage' },
-            { id: 'q6', text: 'Do you have any past surgeries or injuries?', type: 'textarea', placeholder: 'e.g., ACL reconstruction 2020' },
-            { id: 'q7', text: 'Do you experience joint pain?', type: 'multiselect', options: ['None', 'Knees', 'Back', 'Shoulders', 'Elbows', 'Ankles'] },
-            { id: 'q8', text: 'Family history of heart disease?', type: 'radio', options: ['Yes', 'No', 'Unknown'] },
-            { id: 'q9', text: 'Do you smoke?', type: 'radio', options: ['Yes', 'No', 'Occasionally'] },
-            { id: 'q10', text: 'Do you consume alcohol?', type: 'select', options: ['Never', 'Rarely', 'Socially', 'Frequently'] },
-            { id: 'q11', text: 'Resting Heart Rate (if known)', type: 'number', placeholder: 'bpm' },
-            { id: 'q12', text: 'Blood Pressure (if known)', type: 'text', placeholder: 'e.g., 120/80' },
+            { id: 'q1', text: 'Your Name?', type: 'text', required: true },
+            { id: 'q2', text: 'Your Age?', type: 'number', required: true },
+            { id: 'q3', text: 'Your Height?', placeholder: 'in cm', type: 'number', required: true },
+            { id: 'q4', text: 'Your Weight?', placeholder: 'in kg', type: 'number', required: true },
+            { id: 'q5', text: 'Current place of residence?', placeholder: 'City, Country', type: 'text' },
+            {
+                id: 'q6',
+                text: 'What\'s your Occupation?',
+                description: 'This will make us understand your activity level in a day',
+                type: 'text'
+            },
+            { id: 'q7', text: 'Your WhatsApp Number', type: 'text', required: true },
         ]
     },
     {
-        id: 'lifestyle',
-        title: 'Lifestyle & Routine',
-        description: 'Tell us about your daily life and habits.',
+        id: 'body_measurements',
+        title: 'Section 2: Body Measurements',
+        description: 'Enter all measurements in Centimeters. Take empty stomach measurement.',
         questions: [
-            { id: 'q13', text: 'Occupation', type: 'text' },
-            { id: 'q14', text: 'Activity level at work', type: 'select', options: ['Sedentary (Desk job)', 'Lightly Active', 'Active (On feet all day)', 'Very Active (Physical labor)'] },
-            { id: 'q15', text: 'Average daily steps', type: 'select', options: ['< 3,000', '3,000 - 5,000', '5,000 - 8,000', '8,000 - 12,000', '12,000+'] },
-            { id: 'q16', text: 'Average sleep duration (hours)', type: 'number', step: '0.5' },
-            { id: 'q17', text: 'Sleep quality', type: 'select', options: ['Poor', 'Fair', 'Good', 'Excellent'] },
-            { id: 'q18', text: 'Stress levels (1-10)', type: 'number', min: 1, max: 10 },
-            { id: 'q19', text: 'How much time can you dedicate to training per day?', type: 'select', options: ['30 mins', '45 mins', '60 mins', '90 mins+'] },
-            { id: 'q20', text: 'Preferred time to workout', type: 'select', options: ['Morning', 'Afternoon', 'Evening', 'Late Night'] },
-            { id: 'q21', text: 'Days available for training', type: 'multiselect', options: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] },
-            { id: 'q22', text: 'Do you have access to a gym?', type: 'radio', options: ['Yes, full gym', 'Home gym (limited)', 'No, bodyweight only'] },
-            { id: 'q23', text: 'How do you commute?', type: 'select', options: ['Car', 'Public Transport', 'Walk/Bike', 'Work from Home'] },
-        ]
-    },
-    {
-        id: 'nutrition',
-        title: 'Nutrition & Dietary Habits',
-        description: 'Understanding your relationship with food.',
-        questions: [
-            { id: 'q24', text: 'Dietary preference', type: 'select', options: ['No restrictions', 'Vegetarian', 'Vegan', 'Pescatarian', 'Keto', 'Paleo'] },
-            { id: 'q25', text: 'Food allergies or intolerances', type: 'textarea', placeholder: 'e.g., Peanuts, Lactose, Gluten...' },
-            { id: 'q26', text: 'How many meals do you eat per day?', type: 'number' },
-            { id: 'q27', text: 'Do you track calories/macros?', type: 'radio', options: ['Yes, consistently', 'Sometimes', 'No, never'] },
-            { id: 'q28', text: 'Daily water intake (Liters)', type: 'number', step: '0.5' },
-            { id: 'q29', text: 'Do you take supplements?', type: 'textarea', placeholder: 'e.g., Whey, Creatine, Multivitamins...' },
-            { id: 'q30', text: 'Frequency of eating out/ordering in', type: 'select', options: ['Rarely', '1-2 times/week', '3-5 times/week', 'Daily'] },
-            { id: 'q31', text: 'Do you crave sweets/salty foods?', type: 'text', placeholder: 'Describe cravings' },
-            { id: 'q32', text: 'Do you cook your own meals?', type: 'radio', options: ['Mostly yes', '50/50', 'Mostly no'] },
-            { id: 'q33', text: 'Coffee/Tea consumption (cups/day)', type: 'number' },
-            { id: 'q34', text: 'Alcohol consumption per week (drinks)', type: 'number' },
-        ]
-    },
-    {
-        id: 'fitness_history',
-        title: 'Fitness History & Experience',
-        description: 'Your past experience with exercise.',
-        questions: [
-            { id: 'q35', text: 'Training experience (years)', type: 'select', options: ['Beginner (<1 year)', 'Intermediate (1-3 years)', 'Advanced (3+ years)'] },
-            { id: 'q36', text: 'Have you worked with a coach before?', type: 'radio', options: ['Yes', 'No'] },
-            { id: 'q37', text: 'What types of exercise do you enjoy?', type: 'textarea', placeholder: 'e.g., Weightlifting, Running, Yoga...' },
-            { id: 'q38', text: 'What types of exercise do you dislike?', type: 'textarea' },
-            { id: 'q39', text: 'Can you perform a squat?', type: 'radio', options: ['Yes, with weight', 'Bodyweight only', 'With difficulty', 'No'] },
-            { id: 'q40', text: 'Can you perform a pushup?', type: 'radio', options: ['Yes, multiple', 'Yes, a few', 'On knees', 'No'] },
-            { id: 'q41', text: 'Cardio preference', type: 'select', options: ['Running', 'Cycling', 'Swimming', 'Walking', 'HIIT', 'None'] },
-            { id: 'q42', text: 'Current 1RM Bench Press (if known)', type: 'text' },
-            { id: 'q43', text: 'Current 1RM Squat (if known)', type: 'text' },
-            { id: 'q44', text: 'Current 1RM Deadlift (if known)', type: 'text' },
+            {
+                id: 'q8',
+                text: 'Waist',
+                description: '(Measure with a tape, half a cam above your belly button)',
+                type: 'number'
+            },
+            {
+                id: 'q9',
+                text: 'Hip',
+                description: '(Measure around the widest portion of your hipbone)',
+                type: 'number'
+            },
+            { id: 'q10', text: 'Neck', type: 'number' },
+            { id: 'q11', text: 'Quad', type: 'number' },
+            { id: 'q12', text: 'Chest', type: 'number' },
+            {
+                id: 'q13',
+                text: 'Arms',
+                description: '(Mid point of elbow and shoulder)',
+                type: 'number'
+            },
         ]
     },
     {
         id: 'goals',
-        title: 'Goals & Motivation',
-        description: 'What do you want to achieve?',
+        title: 'Section 3: Your Goals',
+        description: 'Ensure that your goal follows the SMARTS framework (Specific, Measurable, Achievable, Realistic, Time-oriented, Sustainable).',
         questions: [
-            { id: 'q45', text: 'Primary Goal', type: 'select', options: ['Fat Loss', 'Muscle Gain', 'Strength', 'Endurance', 'General Health'] },
-            { id: 'q46', text: 'Target Weight (kg)', type: 'number' },
-            { id: 'q47', text: 'Timeline for this goal', type: 'select', options: ['3 months', '6 months', '1 year', 'No deadline'] },
-            { id: 'q48', text: 'Why is this goal important to you?', type: 'textarea', required: true },
-            { id: 'q49', text: 'What has stopped you in the past?', type: 'textarea' },
-            { id: 'q50', text: 'How committed are you? (1-10)', type: 'number', min: 1, max: 10 },
-            { id: 'q51', text: 'Specific body parts to focus on', type: 'textarea' },
-            { id: 'q52', text: 'Do you want to track body measurements?', type: 'radio', options: ['Yes', 'No'] },
-            { id: 'q53', text: 'Do you want to take progress photos?', type: 'radio', options: ['Yes', 'No'] },
+            { id: 'q14', text: 'What’s your fitness goal?', type: 'textarea', required: true, rows: 4 },
+            { id: 'q15', text: 'Have you attempted to reach these goals in the past?', type: 'radio', options: ['Yes', 'No'] },
+            { id: 'q16', text: 'Did you reach them?', type: 'radio', options: ['Yes', 'No', 'Partially'] },
+            { id: 'q17', text: 'Why did you revert after reaching your goal?', type: 'textarea' },
+            { id: 'q18', text: 'Why weren\'t you able to reach?', type: 'textarea' },
+            { id: 'q19', text: 'What did you do to reach/try and reach your goal?', type: 'textarea' },
+            { id: 'q20', text: 'What is different this time around?', type: 'textarea' },
+            { id: 'q21', text: 'What do you feel worked and didn’t work last time and why?', type: 'textarea' },
+            { id: 'q22', text: 'What were your biggest hurdles/disappointments?', type: 'textarea' },
+            { id: 'q23', text: 'What were your biggest successes?', type: 'textarea' },
+            { id: 'q24', text: 'How will you feel if you reach your goal this time?', type: 'textarea' },
+            { id: 'q25', text: 'How will you feel if you don’t reach your goal?', type: 'textarea' },
+            { id: 'q26', text: 'What is your plan when you reach your goal?', type: 'textarea' },
+            { id: 'q27', text: 'How do you feel reaching your goal will impact your life?', type: 'textarea' },
         ]
     },
     {
-        id: 'mental_wellbeing',
-        title: 'Mental Wellbeing & Mindset',
-        description: 'Your mindset is key to success.',
+        id: 'lifestyle',
+        title: 'Section 4: Lifestyle Commitment',
+        description: 'Understanding your habits.',
         questions: [
-            { id: 'q54', text: 'How would you rate your current motivation?', type: 'select', options: ['Low', 'Moderate', 'High', 'Unstoppable'] },
-            { id: 'q55', text: 'Do you struggle with body image?', type: 'radio', options: ['Yes', 'Sometimes', 'No'] },
-            { id: 'q56', text: 'Do you have a support system?', type: 'radio', options: ['Yes', 'No'] },
-            { id: 'q57', text: 'How do you handle setbacks?', type: 'textarea' },
-            { id: 'q58', text: 'Are you willing to change your habits?', type: 'radio', options: ['Yes, absolutely', 'Yes, but slowly', 'Not sure'] },
+            { id: 'q28', text: 'Do you have the habit of drinking alcohol?', type: 'radio', options: ['Yes', 'No'] },
+            {
+                id: 'q29',
+                text: 'How often do you consume alcohol?',
+                description: 'In a week? Monthly? How much quantity?',
+                type: 'text'
+            },
+            { id: 'q30', text: 'Are you willing to give up drinking to reach your goal or for the sake of your health?', type: 'radio', options: ['Yes', 'No', 'Maybe'] },
+            { id: 'q31', text: 'Are you willing to cut down the consumption of processed junk food?', type: 'radio', options: ['Yes', 'No'] },
+            {
+                id: 'q32',
+                text: 'What will be the one thing that will be very hard for you to give up?',
+                description: 'Be honest so we can understand you more',
+                type: 'textarea'
+            },
+            { id: 'q33', text: 'How many days in a week can you work out?', type: 'select', options: ['1-2 days', '3-4 days', '5-6 days', 'Every day'] },
+            { id: 'q34', text: 'Do you have access to a gym? Or are you preferring Home workouts?', type: 'select', options: ['Gym Access', 'Home Workouts'] },
         ]
     },
     {
-        id: 'final',
-        title: 'Final Details',
-        description: 'Almost done!',
+        id: 'training_history',
+        title: 'Section 5: Training History',
+        description: 'Your past experience with exercise.',
         questions: [
-            { id: 'q59', text: 'Any other information we should know?', type: 'textarea' },
-            { id: 'q60', text: 'Preferred communication method', type: 'select', options: ['WhatsApp', 'Email', 'App Chat'] },
-            { id: 'q61', text: 'How did you hear about us?', type: 'text' },
-            { id: 'q62', text: 'Referral Code (if any)', type: 'text' },
-            { id: 'q63', text: 'I agree to the terms and conditions', type: 'radio', options: ['Yes'] },
-            { id: 'q64', text: 'Ready to start?', type: 'radio', options: ['Yes!'] },
+            { id: 'q35', text: 'Have you attended a gym before?', type: 'radio', options: ['Yes', 'No'] },
+            {
+                id: 'q36',
+                text: 'Have you lost a good amount of weight before?',
+                description: 'If your goal is to GAIN weight just mention those stats',
+                type: 'radio',
+                options: ['Yes', 'No']
+            },
+            { id: 'q37', text: 'When was it?', type: 'text' },
+            { id: 'q38', text: 'How much weight difference were you able to acheive?', type: 'text' },
+            { id: 'q39', text: 'Over what timeframe?', type: 'text' },
+            { id: 'q40', text: 'If you have put the weight back on ,then how long did it take?', type: 'text' },
+            { id: 'q41', text: 'How did you feel when you had lost the weight?', type: 'textarea' },
+            { id: 'q42', text: 'Did losing weight create problems you didn’t anticipate?', type: 'textarea' },
+            {
+                id: 'q43',
+                text: 'What forms of exercise were you indulged in the past?',
+                description: 'Was it just cardio? general weight training/bodyweight training/ crossfit ?',
+                type: 'textarea'
+            },
+            {
+                id: 'q44',
+                text: 'Throughout your life, when did you feel your best emotionally / mentally / physically?',
+                description: '-What were you doing then that contributed to that? -What were you not doing then that contributed to that?',
+                type: 'textarea',
+                rows: 4
+            },
+            { id: 'q45', text: 'What are you currently doing for exercise? (Give a brief about your routine)', type: 'textarea' },
+        ]
+    },
+    {
+        id: 'nutrition_history',
+        title: 'Section 6: Your Nutrition History',
+        description: '',
+        questions: [
+            { id: 'q46', text: 'Have you been on a nutrition plan before?', type: 'radio', options: ['Yes', 'No'] },
+            { id: 'q47', text: 'WHEN WAS IT?', type: 'text' },
+            { id: 'q48', text: 'FOR HOW LONG DID YOU STAY ON IT?', type: 'text' },
+            { id: 'q49', text: 'How many diets or nutrition plans have you tried before?', type: 'text' },
+            { id: 'q50', text: 'Have you ever tracked calories before?', type: 'radio', options: ['Yes', 'No'] },
+            {
+                id: 'q51',
+                text: 'Do you know how to properly track calories?',
+                description: '0-3: Never heard/tried. 3-5: Tried/don\'t know much. 5-7: Tried for some time/basics. 7-10: Well informed/experienced.',
+                type: 'rating',
+                min: 0,
+                max: 10
+            },
+            { id: 'q52', text: 'Are you willing to track calories once you’re in our program if we teach you?', type: 'radio', options: ['Yes', 'No'] },
+            {
+                id: 'q53',
+                text: 'What does your food look like on a really good eating day?',
+                description: 'You can give an example of a full day of eating which makes you feel you ate in a healthy manner',
+                type: 'textarea'
+            },
+            { id: 'q54', text: 'What does your food look like on a really bad eating day?', type: 'textarea' },
+            { id: 'q55', text: 'List the most common foods that you eat (meats, vegetables, dishes, etc.) on a daily basis?', type: 'textarea' },
+        ]
+    },
+    {
+        id: 'health_medical',
+        title: 'Section 7: Health & Medical Background',
+        description: '',
+        questions: [
+            { id: 'q56', text: 'Do you have any current injuries that can hinder your workouts?', type: 'textarea' },
+            { id: 'q57', text: 'Did you have any injuries in the past?', type: 'textarea' },
+            { id: 'q58', text: 'Have you ever undergone any surgeries?', type: 'radio', options: ['Yes', 'No'] },
+            { id: 'q59', text: 'What was it?', type: 'text' },
+            { id: 'q60', text: 'Do you have any addiction that you are aware of? (Alcohol, drugs, porn, etc.)', type: 'text' },
+            { id: 'q61', text: 'Do you have any known hormonal or vitamin deficiencies?', type: 'text' },
+            { id: 'q62', text: 'Do you have any current health issues?', type: 'text' },
+            { id: 'q63', text: 'Do you have a family history of:', type: 'textarea', placeholder: 'Heart disease, diabetes, etc.' },
+            { id: 'q64', text: 'Do you have any known food allergies?', type: 'text' },
+            { id: 'q65', text: 'Are you taking any supplementation?', type: 'radio', options: ['Yes', 'No'] },
+            { id: 'q66', text: 'What all are you taking , how often, and why?', type: 'textarea' },
+            { id: 'q67', text: 'Do you have anything against taking supplementation if we recommend it?', type: 'text' },
+            { id: 'q68', text: 'List all current medications and how long you’ve been on them.', type: 'textarea' },
+        ]
+    },
+    {
+        id: 'daily_activity',
+        title: 'Section 8: Daily Activity & Habits',
+        description: '',
+        questions: [
+            {
+                id: 'q69',
+                text: 'What is your current level of activity?',
+                type: 'select',
+                options: [
+                    'Sedentary-Desk job with little to no exercise',
+                    'Light Activity- Exercise moderately 1–3 times a week',
+                    'Moderately active- Exercise 2-3 times + sedentary job',
+                    'Active - Physical work, hard exercise 5+ days a week',
+                    'Highly Active-Physical work, exercise very hard 6+ days a week'
+                ]
+            },
+            {
+                id: 'q70',
+                text: 'How many litres of water do you consume each day?',
+                description: 'If you haven\'t thought about it, mention that. If you\'re aware of it, mention that.',
+                type: 'text'
+            },
+            {
+                id: 'q71',
+                text: 'How many caffeinated drinks do you consume per day?',
+                description: '(Coffee, Soft Drinks, Energy Drinks, Green Tea)',
+                type: 'text'
+            },
+        ]
+    },
+    {
+        id: 'sleep_recovery',
+        title: 'Section 9: Sleep & Recovery',
+        description: '',
+        questions: [
+            { id: 'q72', text: 'How many hours of sleep do you get daily?', type: 'select', options: ['4 hours', '5 hours', '6 hours', '7 hours', '8+ hours'] },
+            {
+                id: 'q73',
+                text: 'How is your quality of sleep on average?',
+                description: '0- You being tired after waking up. 5-You\'re well rested and energetic.',
+                type: 'rating',
+                min: 0,
+                max: 5
+            },
+            { id: 'q74', text: 'Do you have dark circles under your eyes?', type: 'radio', options: ['Yes', 'No'] },
+            { id: 'q75', text: 'Do you keep waking up in the middle of sleep at night?', type: 'radio', options: ['Yes', 'No'] },
+            { id: 'q76', text: 'How is your memory?', description: 'Do you frequently misplace things or forget conversations?', type: 'text' },
+        ]
+    },
+    {
+        id: 'stress_gut',
+        title: 'Section 10: Stress & Gut Health',
+        description: 'Allocate stars (1=Rarely, 5=Severe)',
+        questions: [
+            {
+                id: 'q77',
+                text: 'Do you have sugar cravings?',
+                type: 'select',
+                options: ['Very rarely here and there', 'A bit frequent but still manageable', 'A lot! Very hard to restrict myself']
+            },
+            { id: 'q78', text: 'Do you feel anxious often?', type: 'radio', options: ['Yes', 'No'] },
+            { id: 'q79', text: 'Are you easily agitated?', type: 'radio', options: ['Yes', 'No'] },
+            { id: 'q80', text: 'Do you get sick often?', type: 'radio', options: ['Yes', 'No'] },
+            { id: 'q81', text: 'List the 3 biggest stresses in your life (relationships, work, family, finance, etc.)', type: 'textarea' },
+            { id: 'q82', text: 'Burping', description: '1 star = Symptom is not present / rarely present. 5 star = Severe / almost always', type: 'rating', min: 1, max: 5 },
+            { id: 'q83', text: 'Fullness for an extended time after meals', type: 'rating', min: 1, max: 5 },
+            { id: 'q84', text: 'Bloating', type: 'rating', min: 1, max: 5 },
+            { id: 'q85', text: 'Poor appetite', type: 'rating', min: 1, max: 5 },
+            { id: 'q86', text: 'Stomach upsets really easily', type: 'rating', min: 1, max: 5 },
+            { id: 'q87', text: 'Do you have constipation?', type: 'radio', options: ['Yes', 'No'] },
         ]
     }
 ];

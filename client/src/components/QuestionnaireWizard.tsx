@@ -232,10 +232,26 @@ export function QuestionnaireWizard({ onComplete }: { onComplete?: () => void })
                         ))}
                     </div>
                 );
+            case 'rating':
+                return (
+                    <div className="flex flex-wrap gap-2">
+                        {Array.from({ length: (question.max || 5) - (question.min || 1) + 1 }, (_, i) => (question.min || 1) + i).map((num) => (
+                            <Button
+                                key={num}
+                                variant={value === num ? "default" : "outline"}
+                                className={value === num ? "ring-2 ring-primary" : ""}
+                                onClick={() => setAnswers({ ...answers, [question.id]: num })}
+                            >
+                                {num} {num === question.min ? '' : ''}
+                            </Button>
+                        ))}
+                    </div>
+                );
             default:
                 return null;
         }
     };
+
 
     if (isLoading) {
         return (
@@ -270,6 +286,9 @@ export function QuestionnaireWizard({ onComplete }: { onComplete?: () => void })
                             <Label className="text-base font-medium">
                                 {question.text} {question.required && <span className="text-destructive">*</span>}
                             </Label>
+                            {question.description && (
+                                <p className="text-sm text-muted-foreground -mt-1">{question.description}</p>
+                            )}
                             {renderQuestionInput(question)}
                         </div>
                     ))}

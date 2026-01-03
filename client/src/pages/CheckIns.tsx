@@ -1,19 +1,26 @@
-import { DailyCheckInCard } from "@/components/DailyCheckInCard";
+import { WeeklyCheckInTable } from "@/components/WeeklyCheckInTable";
 import { CheckInTrendsChart } from "@/components/CheckInTrendsChart";
 import { MetricCard } from "@/components/MetricCard";
 import { Card } from "@/components/ui/card";
-import { Activity, TrendingDown, TrendingUp, Award } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Activity, TrendingDown, TrendingUp, Award, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { processCheckInHistory } from "@/lib/checkin-utils";
+import { useState } from "react";
+import { CheckInDialog } from "@/components/CheckInDialog";
 
 export default function CheckIns() {
   const { user, viewedUserId } = useAuth();
   const targetUserId = viewedUserId || user?.id;
 
+  // Dialog state
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+
   // Fetch check-ins from Supabase
-  const { data: checkIns, isLoading } = useQuery({
+  const { data: checkIns, isLoading, refetch } = useQuery({
     queryKey: ['dailyCheckIns', targetUserId],
     queryFn: async () => {
       if (!targetUserId) return [];
@@ -29,6 +36,20 @@ export default function CheckIns() {
     },
     enabled: !!targetUserId,
   });
+
+  const handleAddCheckIn = () => {
+    setSelectedDate(undefined); // Default to today/empty in dialog logic
+    setIsDialogOpen(true);
+  };
+
+  const handleEditCheckIn = (date: Date) => {
+    setSelectedDate(date);
+    setIsDialogOpen(true);
+  };
+
+  const handleSuccess = () => {
+    refetch();
+  };
 
   // Transform check-ins for the card display using the utility
   const processedHistory = checkIns ? processCheckInHistory(checkIns) : [];
@@ -146,64 +167,86 @@ export default function CheckIns() {
     );
   }
 
-  if (!checkIns || checkIns.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="p-8 text-center max-w-md">
-          <h2 className="text-2xl font-bold mb-4">No Check-Ins Yet</h2>
-          <p className="text-muted-foreground">
-            You haven't recorded any daily check-ins yet. Start tracking your progress today!
-          </p>
-        </Card>
-      </div>
-    );
-  }
+  // Handle empty state separately but include Add button
+  const isEmpty = !checkIns || checkIns.length === 0;
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl md:text-4xl font-bold mb-2" data-testid="text-checkins-title">Daily Check-Ins History</h1>
-        <p className="text-sm md:text-base text-muted-foreground">Comprehensive day-by-day analytics of your fitness journey</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricCard
-          title="Avg Nutrition Score"
-          value={avgNutrition}
-          icon={Activity}
-          subtitle="Last 7 days"
-        />
-        <MetricCard
-          title="Avg Performance"
-          value={avgPerformance}
-          icon={TrendingUp}
-          subtitle="When tracked"
-        />
-        <MetricCard
-          title="Consistency Rate"
-          value={`${consistencyRate}%`}
-          icon={Award}
-          subtitle="Check-ins completed"
-        />
-        <MetricCard
-          title="Weight Progress"
-          value={`${parseFloat(weightLost) >= 0 ? '-' : '+'}${Math.abs(parseFloat(weightLost))} kg`}
-          icon={TrendingDown}
-          trend={parseFloat(weightLost) !== 0 ? { value: Math.abs(parseFloat(weightLost)), isPositive: parseFloat(weightLost) > 0 } : undefined}
-          subtitle="Total change"
-        />
-      </div>
-
-      <CheckInTrendsChart data={trendData} />
-
-      <div>
-        <h3 className="text-2xl font-bold mb-6">Recent Check-Ins</h3>
-        <div className="space-y-6">
-          {checkInHistory.map((checkIn) => (
-            <DailyCheckInCard key={checkIn.dayNumber} data={checkIn} />
-          ))}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-4xl font-bold mb-2" data-testid="text-checkins-title">Daily Check-Ins History</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Comprehensive day-by-day analytics of your fitness journey</p>
         </div>
+        {!viewedUserId && ( // Only show Add button if viewing own data
+          <Button onClick={handleAddCheckIn} className="rounded-xl">
+            <Plus className="w-4 h-4 mr-2" />
+            Log Check-In
+          </Button>
+        )}
       </div>
-    </div >
+
+      {isEmpty ? (
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <Card className="p-8 text-center max-w-md">
+            <h2 className="text-2xl font-bold mb-4">No Check-Ins Yet</h2>
+            <p className="text-muted-foreground mb-6">
+              You haven't recorded any daily check-ins yet. Start tracking your progress today!
+            </p>
+            {!viewedUserId && (
+              <Button onClick={handleAddCheckIn}>
+                Log First Check-In
+              </Button>
+            )}
+          </Card>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <MetricCard
+              title="Avg Nutrition Score"
+              value={avgNutrition}
+              icon={Activity}
+              subtitle="Last 7 days"
+            />
+            <MetricCard
+              title="Avg Performance"
+              value={avgPerformance}
+              icon={TrendingUp}
+              subtitle="When tracked"
+            />
+            <MetricCard
+              title="Consistency Rate"
+              value={`${consistencyRate}%`}
+              icon={Award}
+              subtitle="Check-ins completed"
+            />
+            <MetricCard
+              title="Weight Progress"
+              value={`${parseFloat(weightLost) >= 0 ? '-' : '+'}${Math.abs(parseFloat(weightLost))} kg`}
+              icon={TrendingDown}
+              trend={parseFloat(weightLost) !== 0 ? { value: Math.abs(parseFloat(weightLost)), isPositive: parseFloat(weightLost) > 0 } : undefined}
+              subtitle="Total change"
+            />
+          </div>
+
+          <CheckInTrendsChart data={trendData} />
+
+          <div>
+            <h3 className="text-2xl font-bold mb-6">Check-In History</h3>
+            <WeeklyCheckInTable
+              checkIns={processedHistory}
+              onEdit={!viewedUserId ? handleEditCheckIn : undefined}
+            />
+          </div>
+        </>
+      )}
+
+      <CheckInDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        selectedDate={selectedDate}
+        onSuccess={handleSuccess}
+      />
+    </div>
   );
 }

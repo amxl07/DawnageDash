@@ -3,34 +3,21 @@ import { MeasurementCard } from "@/components/MeasurementCard";
 import { MeasurementProgressChart } from "@/components/MeasurementProgressChart";
 import { MeasurementComparisonCard } from "@/components/MeasurementComparisonCard";
 import { MetricCard } from "@/components/MetricCard";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { TrendingDown, Ruler, Target, Plus, Loader2 } from "lucide-react";
+import { TrendingDown, Ruler, Target, Plus } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { calculateWeeklyAverages } from "@/lib/checkin-utils";
-import { useToast } from "@/hooks/use-toast";
+import { MeasurementDialog } from "@/components/MeasurementDialog";
 
 export default function Measurements() {
   const { user, viewedUserId } = useAuth();
   const targetUserId = viewedUserId || user?.id; // Use viewed user or current user
 
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    chest: "",
-    waist: "",
-    hips: "",
-    thighs: "",
-    arms: "",
-    date: new Date().toISOString().split('T')[0],
-  });
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   // Fetch measurements from Supabase
   const { data: bodyMeasurements, isLoading } = useQuery({
@@ -50,58 +37,24 @@ export default function Measurements() {
     enabled: !!targetUserId,
   });
 
-  /* 
-     Update formData state to remove unused 'weight' field if it isn't being pushed to DB. 
-     Note: I will address the insert logic primarily here.
-  */
+  const handleAddMeasurement = () => {
+    setSelectedDate(undefined);
+    setIsDialogOpen(true);
+  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!targetUserId) return; // Changed from !user to !targetUserId
+  const handleEditMeasurement = (dateStr: string) => {
+    setSelectedDate(new Date(dateStr));
+    setIsDialogOpen(true);
+  };
 
-    setIsSubmitting(true);
-    try {
-      const { error } = await supabase.from('body_measurements').insert({
-        user_id: targetUserId, // Changed from user.id to targetUserId
-        date: formData.date,
-        chest: formData.chest ? parseFloat(formData.chest) : null,
-        waist: formData.waist ? parseFloat(formData.waist) : null,
-        hips: formData.hips ? parseFloat(formData.hips) : null,
-        thighs: formData.thighs ? parseFloat(formData.thighs) : null,
-        arms: formData.arms ? parseFloat(formData.arms) : null,
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Measurements logged successfully!",
-      });
-
-      setIsDialogOpen(false);
-      setFormData({
-        chest: "",
-        waist: "",
-        hips: "",
-        thighs: "",
-        arms: "",
-        date: new Date().toISOString().split('T')[0],
-      });
-      queryClient.invalidateQueries({ queryKey: ['bodyMeasurements'] });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to log measurements",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['bodyMeasurements'] });
   };
 
   // Transform measurements for card display
   const measurements = bodyMeasurements?.map((measurement, index) => {
     return {
+      rawDate: measurement.date, // Keep raw date for editing
       date: new Date(measurement.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       weekNumber: bodyMeasurements.length - index,
       measurements: {
@@ -110,6 +63,9 @@ export default function Measurements() {
         hip: parseFloat(measurement.hips || '0'),
         thigh: parseFloat(measurement.thighs || '0'),
         arm: parseFloat(measurement.arms || '0'),
+        // NOTE: Weight comes from check-ins logic usually, but here we just show what might be in body_measurements or skip it
+        // Since we removed weight from dialog and it's handled in check-ins, we might not show it here if it's not in DB
+        // But the previous implementation mapped it. Assuming undefined if not present.
       },
     };
   }) || [];
@@ -151,29 +107,26 @@ export default function Measurements() {
 
   // Fetch daily check-ins for weight metrics
   const { data: checkIns } = useQuery({
-    queryKey: ['dailyCheckIns', user?.id],
+    queryKey: ['dailyCheckIns', targetUserId],
     queryFn: async () => {
+      if (!targetUserId) return [];
       const { data, error } = await supabase
         .from('daily_check_ins')
         .select('*')
-        .eq('user_id', user!.id);
+        .eq('user_id', targetUserId);
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!targetUserId,
   });
 
   // Calculate metrics from check-ins
   const weeklyAverages = checkIns ? calculateWeeklyAverages(checkIns) : [];
-
-  // Newest first
-  const currentStat = weeklyAverages[0];
-  const startStat = weeklyAverages[weeklyAverages.length - 1];
+  const totalWeeks = weeklyAverages.length || 0;
 
   // Calculate weight metrics
   let totalWeightLost = '0';
   let avgWeeklyLoss = '0';
-  let totalWeeks = weeklyAverages.length || 0;
 
   if (checkIns && checkIns.length > 0) {
     // Sort chronologically for metric calculation
@@ -216,8 +169,6 @@ export default function Measurements() {
     );
   }
 
-
-
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -225,82 +176,12 @@ export default function Measurements() {
           <h1 className="text-2xl md:text-4xl font-bold mb-2" data-testid="text-measurements-title">Body Measurements & Progress</h1>
           <p className="text-sm md:text-base text-muted-foreground">Track your body composition changes and transformation analytics</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="rounded-xl w-full md:w-auto" data-testid="button-log-measurement">
-              <Plus className="w-4 h-4 mr-2" />
-              Log Measurement
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Log Measurement (Week {(bodyMeasurements?.length || 0) + 1})</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="chest">Chest (cm)</Label>
-                  <Input
-                    id="chest"
-                    type="number"
-                    step="0.1"
-                    value={formData.chest}
-                    onChange={(e) => setFormData({ ...formData, chest: e.target.value })}
-                    className="rounded-xl"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="waist">Waist (cm)</Label>
-                  <Input
-                    id="waist"
-                    type="number"
-                    step="0.1"
-                    value={formData.waist}
-                    onChange={(e) => setFormData({ ...formData, waist: e.target.value })}
-                    className="rounded-xl"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="hips">Hips (cm)</Label>
-                  <Input
-                    id="hips"
-                    type="number"
-                    step="0.1"
-                    value={formData.hips}
-                    onChange={(e) => setFormData({ ...formData, hips: e.target.value })}
-                    className="rounded-xl"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="thighs">Thighs (cm)</Label>
-                  <Input
-                    id="thighs"
-                    type="number"
-                    step="0.1"
-                    value={formData.thighs}
-                    onChange={(e) => setFormData({ ...formData, thighs: e.target.value })}
-                    className="rounded-xl"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="arms">Arms (cm)</Label>
-                  <Input
-                    id="arms"
-                    type="number"
-                    step="0.1"
-                    value={formData.arms}
-                    onChange={(e) => setFormData({ ...formData, arms: e.target.value })}
-                    className="rounded-xl"
-                  />
-                </div>
-              </div>
-              <Button type="submit" className="w-full rounded-xl" disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                Save Measurement
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+        {!viewedUserId && (
+          <Button className="rounded-xl w-full md:w-auto" onClick={handleAddMeasurement} data-testid="button-log-measurement">
+            <Plus className="w-4 h-4 mr-2" />
+            Log Measurement
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -333,10 +214,21 @@ export default function Measurements() {
         <h3 className="text-2xl font-bold mb-6">Measurement History</h3>
         <div className="space-y-6">
           {measurements.map((measurement, index) => (
-            <MeasurementCard key={index} {...measurement} />
+            <MeasurementCard
+              key={index}
+              {...measurement}
+              onEdit={!viewedUserId ? () => handleEditMeasurement(measurement.rawDate) : undefined}
+            />
           ))}
         </div>
       </div>
+
+      <MeasurementDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        selectedDate={selectedDate}
+        onSuccess={handleSuccess}
+      />
     </div>
   );
 }

@@ -3,14 +3,23 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, UserPlus, ArrowRight } from "lucide-react";
+import { Users, UserPlus, ArrowRight, WalletCards } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import logoUrl from "@assets/dashboard_1762285477469.png";
 import { LogOut } from "lucide-react";
+import { useState } from "react";
+import { PackageSelectDialog, PackageType } from "@/components/PackageSelectDialog";
+import { cn } from "@/lib/utils";
 
 export default function CoachDashboard() {
     const { user, setViewedUserId, signOut } = useAuth();
     const { toast } = useToast();
+
+    // Dialog state
+    const [isClaimDialogOpen, setIsClaimDialogOpen] = useState(false);
+    const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+    const [selectedClientName, setSelectedClientName] = useState("");
+    const [isClaiming, setIsClaiming] = useState(false);
 
     // Fetch all clients (both assigned and unassigned)
     const { data: clients, isLoading, refetch } = useQuery({
@@ -34,19 +43,32 @@ export default function CoachDashboard() {
     const assignedClients = clients?.filter(c => c.coach_id === user?.id) || [];
     const unassignedClients = clients?.filter(c => !c.coach_id) || [];
 
-    const handleClaimClient = async (clientId: string) => {
+    const openClaimDialog = (clientId: string, clientName: string) => {
+        setSelectedClientId(clientId);
+        setSelectedClientName(clientName || "Client");
+        setIsClaimDialogOpen(true);
+    };
+
+    const handleClaimConfirmation = async (packageType: PackageType) => {
+        if (!selectedClientId) return;
+
+        setIsClaiming(true);
         try {
             const { error } = await supabase
                 .from('users')
-                .update({ coach_id: user?.id })
-                .eq('id', clientId);
+                .update({
+                    coach_id: user?.id,
+                    package_type: packageType
+                })
+                .eq('id', selectedClientId);
 
             if (error) throw error;
 
             toast({
                 title: "Success",
-                description: "Client assigned to your roster!",
+                description: `Client assigned with ${packageType} package!`,
             });
+            setIsClaimDialogOpen(false);
             refetch();
         } catch (error: any) {
             toast({
@@ -54,6 +76,21 @@ export default function CoachDashboard() {
                 description: "Failed to claim client",
                 variant: "destructive",
             });
+        } finally {
+            setIsClaiming(false);
+        }
+    };
+
+    const getPackageStyle = (packageType: string | null) => {
+        switch (packageType) {
+            case 'premium':
+                return "border-gold border-2 shadow-gold/10 shadow-lg";
+            case 'intermediate':
+                return "border-blue-500 border-2 shadow-blue-500/10 shadow-lg";
+            case 'basic':
+                return "border-muted border-2";
+            default:
+                return "";
         }
     };
 
@@ -131,33 +168,38 @@ export default function CoachDashboard() {
                                 </CardContent>
                             </Card>
                         ) : (
-                            assignedClients.map((client) => (
-                                <Card key={client.id} className="rounded-2xl">
-                                    <CardContent className="p-6 flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            {client.avatar_url ? (
-                                                <img src={client.avatar_url} alt={client.full_name} className="w-10 h-10 rounded-full bg-muted" />
-                                            ) : (
-                                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                                                    {client.full_name?.charAt(0) || "U"}
+                            assignedClients.map((client) => {
+                                // @ts-ignore - package_type is dynamically added
+                                const packageStyle = getPackageStyle(client.package_type);
+
+                                return (
+                                    <Card key={client.id} className={cn("rounded-2xl transition-all", packageStyle)}>
+                                        <CardContent className="p-6 flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                {client.avatar_url ? (
+                                                    <img src={client.avatar_url} alt={client.full_name} className="w-10 h-10 rounded-full bg-muted" />
+                                                ) : (
+                                                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                                                        {client.full_name?.charAt(0) || "U"}
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <h3 className="font-bold">{client.full_name || "Unknown User"}</h3>
+                                                    <p className="text-sm text-muted-foreground">{client.email}</p>
                                                 </div>
-                                            )}
-                                            <div>
-                                                <h3 className="font-bold">{client.full_name || "Unknown User"}</h3>
-                                                <p className="text-sm text-muted-foreground">{client.email}</p>
                                             </div>
-                                        </div>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="rounded-full"
-                                            onClick={() => handleViewClient(client.id)}
-                                        >
-                                            <ArrowRight className="w-4 h-4" />
-                                        </Button>
-                                    </CardContent>
-                                </Card>
-                            ))
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="rounded-full"
+                                                onClick={() => handleViewClient(client.id)}
+                                            >
+                                                <ArrowRight className="w-4 h-4" />
+                                            </Button>
+                                        </CardContent>
+                                    </Card>
+                                )
+                            })
                         )}
                     </div>
                 </div>
@@ -186,7 +228,7 @@ export default function CoachDashboard() {
                                         </div>
                                         <Button
                                             className="rounded-xl"
-                                            onClick={() => handleClaimClient(client.id)}
+                                            onClick={() => openClaimDialog(client.id, client.full_name || "")}
                                         >
                                             Claim Client
                                         </Button>
@@ -197,6 +239,14 @@ export default function CoachDashboard() {
                     </div>
                 </div>
             </div>
+
+            <PackageSelectDialog
+                open={isClaimDialogOpen}
+                onOpenChange={setIsClaimDialogOpen}
+                onConfirm={handleClaimConfirmation}
+                isLoading={isClaiming}
+                clientName={selectedClientName}
+            />
         </div>
     );
 }

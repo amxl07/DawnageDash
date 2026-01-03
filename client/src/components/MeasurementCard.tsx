@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { TrendingDown, TrendingUp, Minus, Edit2 } from "lucide-react";
 
 interface MeasurementCardProps {
   date: string;
@@ -16,9 +17,10 @@ interface MeasurementCardProps {
   changes?: {
     weight: number;
   };
+  onEdit?: () => void;
 }
 
-export function MeasurementCard({ date, weekNumber, measurements, changes }: MeasurementCardProps) {
+export function MeasurementCard({ date, weekNumber, measurements, changes, onEdit }: MeasurementCardProps) {
   const renderChange = (value: number | undefined) => {
     if (!value || value === 0) return <Minus className="w-3 h-3 text-muted-foreground" />;
     if (value < 0) return (
@@ -46,7 +48,14 @@ export function MeasurementCard({ date, weekNumber, measurements, changes }: Mea
             </Badge>
           </div>
         </div>
-        {changes && renderChange(changes.weight)}
+        <div className="flex items-center gap-2">
+          {changes && renderChange(changes.weight)}
+          {onEdit && (
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={onEdit}>
+              <Edit2 className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">

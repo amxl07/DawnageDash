@@ -19,6 +19,7 @@ export const users = pgTable("users", {
   coachId: uuid("coach_id"),
   activeWorkoutPlan: text("active_workout_plan"), // JSON string of { level, workoutType, subCategory, daysPerWeek }
   activeMealPlan: text("active_meal_plan"), // JSON string of { calories, dietType }
+  packageType: text("package_type"), // 'premium', 'intermediate', 'basic'
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => {
@@ -309,3 +310,22 @@ export const foodItems = pgTable("food_items", {
 export const insertFoodItemSchema = createInsertSchema(foodItems);
 export type InsertFoodItem = z.infer<typeof insertFoodItemSchema>;
 export type FoodItem = typeof foodItems.$inferSelect;
+
+// ============================================================================
+// WEEKLY PROGRESS PHOTOS TABLE
+// ============================================================================
+export const weeklyProgressPhotos = pgTable("weekly_progress_photos", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  date: date("date").notNull(),
+  frontUrl: text("front_url"),
+  backUrl: text("back_url"),
+  sideLeftUrl: text("side_left_url"),
+  sideRightUrl: text("side_right_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertWeeklyProgressPhotoSchema = createInsertSchema(weeklyProgressPhotos);
+export type InsertWeeklyProgressPhoto = z.infer<typeof insertWeeklyProgressPhotoSchema>;
+export type WeeklyProgressPhoto = typeof weeklyProgressPhotos.$inferSelect;
+
