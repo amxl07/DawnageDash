@@ -2,16 +2,18 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Dumbbell, Clock, TrendingUp, Flame, Target, Award, CheckCircle2, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { Calendar, Dumbbell, Clock, TrendingUp, Flame, Target, Award, CheckCircle2, Loader2, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { MetricCard } from "@/components/MetricCard";
+import { WorkoutLogDialog } from "@/components/WorkoutLogDialog";
 
 export default function WorkoutLogs() {
     const { user, viewedUserId } = useAuth();
     const targetUserId = viewedUserId || user?.id;
     const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
+    const [isLogDialogOpen, setIsLogDialogOpen] = useState(false);
 
     const { data: logs, isLoading } = useQuery({
         queryKey: ['workoutLogs', targetUserId],
@@ -71,11 +73,17 @@ export default function WorkoutLogs() {
             return (
                 <div className="space-y-3">
                     {parsedContent.map((exercise, idx) => {
+                        // Handle simple string format or old object format
                         if (typeof exercise !== 'object') {
                             return <div key={idx} className="text-sm">{String(exercise)}</div>;
                         }
 
+                        // Handle new structured format with multiple sets
+                        const isNewFormat = Array.isArray(exercise.sets);
+
                         const exerciseName = exercise.Exercise || exercise.exercise || exercise.name || `Exercise ${idx + 1}`;
+
+                        // For old format
                         const sets = exercise.Sets || exercise.sets;
                         const reps = exercise.Reps || exercise.reps;
                         const weight = exercise.Weight || exercise.weight;
@@ -105,32 +113,59 @@ export default function WorkoutLogs() {
                                     </Badge>
                                 </div>
 
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                    {sets && (
-                                        <div className="bg-background/60 rounded-lg p-2.5 text-center border border-border/30">
-                                            <p className="text-xs font-medium text-muted-foreground mb-0.5">Sets</p>
-                                            <p className="text-lg font-bold text-foreground">{sets}</p>
-                                        </div>
-                                    )}
-                                    {reps && (
-                                        <div className="bg-background/60 rounded-lg p-2.5 text-center border border-border/30">
-                                            <p className="text-xs font-medium text-muted-foreground mb-0.5">Reps</p>
-                                            <p className="text-lg font-bold text-foreground">{reps}</p>
-                                        </div>
-                                    )}
-                                    {weight && (
-                                        <div className="bg-background/60 rounded-lg p-2.5 text-center border border-border/30">
-                                            <p className="text-xs font-medium text-muted-foreground mb-0.5">Weight</p>
-                                            <p className="text-lg font-bold text-primary">{weight}</p>
-                                        </div>
-                                    )}
-                                    {rest && (
-                                        <div className="bg-background/60 rounded-lg p-2.5 text-center border border-border/30">
-                                            <p className="text-xs font-medium text-muted-foreground mb-0.5">Rest</p>
-                                            <p className="text-lg font-bold text-foreground">{rest}</p>
-                                        </div>
-                                    )}
-                                </div>
+                                {isNewFormat ? (
+                                    // Render table for new format
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm text-center">
+                                            <thead>
+                                                <tr className="text-xs text-muted-foreground border-b border-border/30">
+                                                    <th className="py-1 font-medium">Set</th>
+                                                    <th className="py-1 font-medium">Reps</th>
+                                                    <th className="py-1 font-medium">Weight</th>
+                                                    <th className="py-1 font-medium">RPE</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {exercise.sets.map((set: any, sIdx: number) => (
+                                                    <tr key={sIdx} className="border-b border-border/10 last:border-0 hover:bg-muted/30">
+                                                        <td className="py-1.5 font-bold text-muted-foreground">{set.setNumber}</td>
+                                                        <td className="py-1.5 font-medium">{set.reps || '-'}</td>
+                                                        <td className="py-1.5 text-primary font-medium">{set.weight ? `${set.weight}` : '-'}</td>
+                                                        <td className="py-1.5 text-muted-foreground">{set.rpe || '-'}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    // Old format grid
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                        {sets && (
+                                            <div className="bg-background/60 rounded-lg p-2.5 text-center border border-border/30">
+                                                <p className="text-xs font-medium text-muted-foreground mb-0.5">Sets</p>
+                                                <p className="text-lg font-bold text-foreground">{sets}</p>
+                                            </div>
+                                        )}
+                                        {reps && (
+                                            <div className="bg-background/60 rounded-lg p-2.5 text-center border border-border/30">
+                                                <p className="text-xs font-medium text-muted-foreground mb-0.5">Reps</p>
+                                                <p className="text-lg font-bold text-foreground">{reps}</p>
+                                            </div>
+                                        )}
+                                        {weight && (
+                                            <div className="bg-background/60 rounded-lg p-2.5 text-center border border-border/30">
+                                                <p className="text-xs font-medium text-muted-foreground mb-0.5">Weight</p>
+                                                <p className="text-lg font-bold text-primary">{weight}</p>
+                                            </div>
+                                        )}
+                                        {rest && (
+                                            <div className="bg-background/60 rounded-lg p-2.5 text-center border border-border/30">
+                                                <p className="text-xs font-medium text-muted-foreground mb-0.5">Rest</p>
+                                                <p className="text-lg font-bold text-foreground">{rest}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         );
                     })}
@@ -163,12 +198,22 @@ export default function WorkoutLogs() {
                     </h1>
                     <p className="text-sm md:text-base text-muted-foreground">Your complete training journey and performance history</p>
                 </div>
-                {logs && logs.length > 0 && (
-                    <Badge variant="outline" className="h-10 px-4 text-base">
-                        <Flame className="w-4 h-4 mr-2 text-orange-500" />
-                        {stats?.last7Days} workouts this week
-                    </Badge>
-                )}
+
+                <div className="flex items-center gap-2">
+                    {logs && logs.length > 0 && (
+                        <Badge variant="outline" className="hidden sm:flex h-10 px-4 text-base mr-2">
+                            <Flame className="w-4 h-4 mr-2 text-orange-500" />
+                            {stats?.last7Days} workouts this week
+                        </Badge>
+                    )}
+
+                    {!viewedUserId && (
+                        <Button className="rounded-xl shadow-lg hover:shadow-primary/20" onClick={() => setIsLogDialogOpen(true)}>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Log Workout
+                        </Button>
+                    )}
+                </div>
             </div>
 
             {logs && logs.length > 0 && stats && (
@@ -206,9 +251,15 @@ export default function WorkoutLogs() {
                         <Dumbbell className="w-10 h-10 text-primary" />
                     </div>
                     <h3 className="text-2xl font-bold mb-3">No Logs Found</h3>
-                    <p className="text-muted-foreground max-w-md mx-auto">
+                    <p className="text-muted-foreground max-w-md mx-auto mb-6">
                         Your workout history will appear here once you start logging. Track your progress and watch your gains grow!
                     </p>
+                    {!viewedUserId && (
+                        <Button onClick={() => setIsLogDialogOpen(true)}>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Log First Workout
+                        </Button>
+                    )}
                 </Card>
             ) : (
                 <div className="grid grid-cols-1 gap-6">
@@ -290,6 +341,11 @@ export default function WorkoutLogs() {
                     })}
                 </div>
             )}
+
+            <WorkoutLogDialog
+                open={isLogDialogOpen}
+                onOpenChange={setIsLogDialogOpen}
+            />
         </div>
     );
 }

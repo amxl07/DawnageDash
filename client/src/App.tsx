@@ -12,7 +12,7 @@ import CoachDashboard from "@/pages/CoachDashboard";
 import CheckIns from "@/pages/CheckIns";
 import Measurements from "@/pages/Measurements";
 import Plans from "@/pages/Plans";
-import Analytics from "@/pages/Analytics";
+import WeeklyFeedback from "@/pages/WeeklyFeedback";
 import Media from "@/pages/Media";
 import Profile from "@/pages/Profile";
 import WorkoutLogs from "@/pages/WorkoutLogs";
@@ -49,9 +49,9 @@ function Router() {
           <Plans />
         </ProtectedRoute>
       </Route>
-      <Route path="/analytics">
+      <Route path="/weekly-feedback">
         <ProtectedRoute>
-          <Analytics />
+          <WeeklyFeedback />
         </ProtectedRoute>
       </Route>
       <Route path="/media">

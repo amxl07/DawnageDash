@@ -22,7 +22,7 @@ const menuItems = [
   { title: "Measurements", url: "/measurements", icon: Ruler },
   { title: "Plans", url: "/plans", icon: Calendar },
   { title: "Workout Logs", url: "/workout-logs", icon: Dumbbell },
-  { title: "Analytics", url: "/analytics", icon: BarChart3 },
+  { title: "Weekly Feedback", url: "/weekly-feedback", icon: BarChart3 },
   { title: "Media", url: "/media", icon: Image },
   { title: "Profile", url: "/profile", icon: User },
 ];

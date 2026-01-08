@@ -7,7 +7,6 @@ export interface RawDailyCheckIn {
     id: string;
     user_id: string;
     date: string;
-    day_number?: number | null;
 
     morning_weight?: string | number | null;
     sleep_hours?: string | number | null;

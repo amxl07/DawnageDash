@@ -54,7 +54,6 @@ CREATE TABLE daily_check_ins (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   date DATE NOT NULL,
-  day_number INTEGER,
 
   -- Vitals
   morning_weight DECIMAL(5, 2),
