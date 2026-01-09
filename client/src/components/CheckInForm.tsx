@@ -121,6 +121,20 @@ export function CheckInForm() {
 
       if (error) throw error;
 
+      // Check if this is the first check-in (or if start date is not set)
+      const { data: userData } = await supabase
+        .from('users')
+        .select('package_start_date')
+        .eq('id', user.id)
+        .single();
+
+      if (userData && !userData.package_start_date) {
+        await supabase
+          .from('users')
+          .update({ package_start_date: today })
+          .eq('id', user.id);
+      }
+
       toast({
         title: "Success",
         description: checkInId ? "Daily check-in updated!" : "Daily check-in saved successfully!",

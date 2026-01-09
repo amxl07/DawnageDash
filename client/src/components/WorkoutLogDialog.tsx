@@ -13,7 +13,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { Database } from "@/lib/database.types";
+
 
 interface WorkoutLogDialogProps {
     open: boolean;
@@ -39,6 +39,8 @@ export function WorkoutLogDialog({ open, onOpenChange }: WorkoutLogDialogProps) 
     const [selectedPlanId, setSelectedPlanId] = useState<string>("custom");
     const [workoutTitle, setWorkoutTitle] = useState("");
     const [exercises, setExercises] = useState<ExerciseRow[]>([]);
+    const [existingLogId, setExistingLogId] = useState<string | null>(null);
+    const [isLoadingLog, setIsLoadingLog] = useState(false);
 
     // Fetch user's workout plans
     const { data: workoutPlans } = useQuery({
@@ -56,25 +58,90 @@ export function WorkoutLogDialog({ open, onOpenChange }: WorkoutLogDialogProps) 
         enabled: !!user?.id,
     });
 
-    // Auto-select plan based on day of week or default to Day 1
+    // Check for existing log when date or user changes
     useEffect(() => {
-        if (open && workoutPlans && workoutPlans.length > 0) {
+        const checkExistingLog = async () => {
+            if (!user?.id || !date) return;
+
+            setIsLoadingLog(true);
+            try {
+                const formattedDate = format(date, 'yyyy-MM-dd');
+                const { data, error } = await supabase
+                    .from('workout_logs')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .eq('date', formattedDate)
+                    .maybeSingle();
+
+                if (error) throw error;
+
+                if (data) {
+                    // Existing log found
+                    setExistingLogId(data.id);
+                    setWorkoutTitle(data.title);
+
+                    // Parse content
+                    try {
+                        let parsedContent = typeof data.content === 'string'
+                            ? JSON.parse(data.content)
+                            : data.content;
+
+                        // Map stored structure to UI structure
+                        if (Array.isArray(parsedContent)) {
+                            const loadedExercises: ExerciseRow[] = parsedContent.map((ex: any) => ({
+                                id: crypto.randomUUID(),
+                                name: ex.exercise || "",
+                                sets: ex.sets.map((s: any) => ({
+                                    reps: s.reps || "",
+                                    weight: s.weight || "",
+                                    rpe: s.rpe || ""
+                                }))
+                            }));
+                            setExercises(loadedExercises);
+                        }
+                    } catch (e) {
+                        console.error("Error parsing log content", e);
+                    }
+                } else {
+                    // No existing log - reset to default plan logic
+                    setExistingLogId(null);
+                    loadDefaultPlanForDate();
+                }
+            } catch (error) {
+                console.error("Error checking existing log:", error);
+                // Fallback to default behavior on error
+                setExistingLogId(null);
+                loadDefaultPlanForDate();
+            } finally {
+                setIsLoadingLog(false);
+            }
+        };
+
+        checkExistingLog();
+    }, [date, user?.id, workoutPlans]); // Re-run if date, user, or loaded plans change
+
+    const loadDefaultPlanForDate = () => {
+        if (workoutPlans && workoutPlans.length > 0) {
             const dayName = format(date, 'EEEE');
             // Try to find plan for specific day, otherwise default to the first plan (Day 1)
             const planToSelect = workoutPlans.find(p => p.day_of_week === dayName) || workoutPlans[0];
 
             if (planToSelect) {
                 // If switching to a new plan ID (or if nothing selected yet), load it
-                if (planToSelect.id !== selectedPlanId || selectedPlanId === "custom") {
-                    setSelectedPlanId(planToSelect.id);
-                    // Find index for title
-                    const idx = workoutPlans.findIndex(p => p.id === planToSelect.id);
-                    setWorkoutTitle(`Day ${idx + 1} - ${planToSelect.focus || 'Workout'}`);
-                    loadPlanData(planToSelect);
-                }
+                // We default to "custom" if we manually changed it, but here we are resetting context
+                setSelectedPlanId(planToSelect.id);
+
+                // Find index for title
+                const idx = workoutPlans.findIndex(p => p.id === planToSelect.id);
+                setWorkoutTitle(`Day ${idx + 1} - ${planToSelect.focus || 'Workout'}`);
+                loadPlanData(planToSelect);
             }
+        } else {
+            // Reset if no plans available
+            setWorkoutTitle("");
+            setExercises([]);
         }
-    }, [open, date, workoutPlans]);
+    };
 
     const createEmptySet = (): WorkoutSet => ({ reps: "", weight: "", rpe: "" });
 
@@ -108,6 +175,10 @@ export function WorkoutLogDialog({ open, onOpenChange }: WorkoutLogDialogProps) 
     };
 
     const handlePlanChange = (planId: string) => {
+        // If user manually changes plan, we are arguably "overwriting" the log intent with a new template
+        // But for editing an existing log, this might be weird. 
+        // For now, allow it, but it stays as "editing" the same log ID if it exists.
+
         setSelectedPlanId(planId);
         const plan = workoutPlans?.find(p => p.id === planId);
         if (plan) {
@@ -143,14 +214,28 @@ export function WorkoutLogDialog({ open, onOpenChange }: WorkoutLogDialogProps) 
                 }))
             }));
 
-            const { error } = await supabase
-                .from('workout_logs')
-                .insert({
-                    user_id: user.id,
-                    date: format(date, 'yyyy-MM-dd'),
-                    title: workoutTitle,
-                    content: JSON.stringify(content)
-                });
+            const payload = {
+                user_id: user.id,
+                date: format(date, 'yyyy-MM-dd'),
+                title: workoutTitle,
+                content: JSON.stringify(content)
+            };
+
+            let error;
+            if (existingLogId) {
+                // Update existing
+                const res = await supabase
+                    .from('workout_logs')
+                    .update(payload)
+                    .eq('id', existingLogId);
+                error = res.error;
+            } else {
+                // Insert new
+                const res = await supabase
+                    .from('workout_logs')
+                    .insert(payload);
+                error = res.error;
+            }
 
             if (error) throw error;
         },
@@ -232,8 +317,8 @@ export function WorkoutLogDialog({ open, onOpenChange }: WorkoutLogDialogProps) 
                                             <th key={i} className="p-2 text-center border-b border-l min-w-[180px]">
                                                 <div className="font-semibold text-primary mb-1">SET {i + 1}</div>
                                                 <div className="grid grid-cols-3 gap-1 text-[10px] text-muted-foreground uppercase tracking-wider">
-                                                    <span>Reps</span>
                                                     <span>Kg</span>
+                                                    <span>Reps</span>
                                                     <span>RPE</span>
                                                 </div>
                                             </th>
@@ -256,15 +341,15 @@ export function WorkoutLogDialog({ open, onOpenChange }: WorkoutLogDialogProps) 
                                                             <div className="grid grid-cols-3 gap-1">
                                                                 <Input
                                                                     placeholder="0"
-                                                                    value={set.reps}
-                                                                    onChange={(e) => updateSet(idx, setIdx, 'reps', e.target.value)}
-                                                                    className="h-9 text-center px-1 font-medium"
-                                                                />
-                                                                <Input
-                                                                    placeholder="0"
                                                                     value={set.weight}
                                                                     onChange={(e) => updateSet(idx, setIdx, 'weight', e.target.value)}
                                                                     className="h-9 text-center px-1 font-medium text-primary"
+                                                                />
+                                                                <Input
+                                                                    placeholder="0"
+                                                                    value={set.reps}
+                                                                    onChange={(e) => updateSet(idx, setIdx, 'reps', e.target.value)}
+                                                                    className="h-9 text-center px-1 font-medium"
                                                                 />
                                                                 <Input
                                                                     placeholder="-"

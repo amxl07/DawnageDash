@@ -122,7 +122,8 @@ export default function CheckIns() {
   });
 
   // Calculate trendData from formatted history
-  const trendData = checkInHistory.slice(0, 7).reverse().map(checkIn => ({
+  // We pass all data to the chart component which handles the filtering
+  const trendData = [...checkInHistory].reverse().map(checkIn => ({
     day: `D${checkIn.dayNumber}`,
     weight: checkIn.vitals.morningWeight,
     nutrition: checkIn.nutrition.score,

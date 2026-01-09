@@ -31,10 +31,8 @@ export default function Profile() {
     goal: "Build muscle and lose fat",
     injuries: "None",
     medicalCondition: "None",
-    preferredCheckinDay: "Monday",
-    preferredCheckinTime: "09:00 AM",
     startDate: new Date().toISOString().split('T')[0],
-    packageLength: "12 weeks",
+    packageEndDate: "", // Calculated
   });
 
   // Fetch user profile data from DB
@@ -55,21 +53,32 @@ export default function Profile() {
 
         if (data) {
           const profileData = data.profile_data || {};
+
+          // Calculate End Date
+          let endDateStr = "Not set";
+          // @ts-ignore
+          const pkgStart = data.package_start_date;
+          // @ts-ignore
+          const pkgDuration = data.package_duration;
+
+          if (pkgStart && pkgDuration) {
+            const start = new Date(pkgStart);
+            const end = new Date(start.setMonth(start.getMonth() + pkgDuration));
+            endDateStr = end.toLocaleDateString();
+          }
+
           setFormData(prev => ({
             ...prev,
             name: data.full_name || "",
             email: data.email || "",
-            phone: data.phone_number || "", // Map phone_number (DB) to phone (State)
-            // Load extra fields from profile_data
+            phone: data.phone_number || "",
             region: profileData.region || "North America",
             timezone: profileData.timezone || "EST",
             goal: profileData.goal || "Build muscle and lose fat",
             injuries: profileData.injuries || "None",
             medicalCondition: profileData.medicalCondition || "None",
-            preferredCheckinDay: profileData.preferredCheckinDay || "Monday",
-            preferredCheckinTime: profileData.preferredCheckinTime || "09:00 AM",
-            startDate: profileData.startDate || new Date().toISOString().split('T')[0],
-            packageLength: profileData.packageLength || "12 weeks",
+            startDate: pkgStart || "Not started", // Use package start date or fallback
+            packageEndDate: endDateStr,
           }));
         }
       } catch (err) {
@@ -100,10 +109,7 @@ export default function Profile() {
         goal: formData.goal,
         injuries: formData.injuries,
         medicalCondition: formData.medicalCondition,
-        preferredCheckinDay: formData.preferredCheckinDay,
-        preferredCheckinTime: formData.preferredCheckinTime,
-        startDate: formData.startDate,
-        packageLength: formData.packageLength,
+        // Removed packageLength, preferredTime/Day
       };
 
       // Update users table
@@ -111,7 +117,7 @@ export default function Profile() {
         .from('users')
         .update({
           full_name: formData.name,
-          phone_number: formData.phone, // Map phone (State) to phone_number (DB)
+          phone_number: formData.phone,
           profile_data: profileData
         })
         .eq('id', targetUserId);
@@ -167,10 +173,7 @@ export default function Profile() {
               </div>
               <div>
                 <h2 className="text-2xl font-bold mb-1">{formData.name || "User"}</h2>
-                <div className="flex items-center gap-2">
-                  <Badge className="rounded-full">Active Client</Badge>
-                  <Badge variant="outline" className="rounded-full">Week 4</Badge>
-                </div>
+
               </div>
             </div>
 
@@ -286,72 +289,13 @@ export default function Profile() {
                     <Label htmlFor="startDate">Start Date</Label>
                     <div className="flex items-center gap-3">
                       <Calendar className="w-5 h-5 text-muted-foreground" />
-                      {isEditing ? (
-                        <Input
-                          id="startDate"
-                          type="date"
-                          value={formData.startDate}
-                          onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                          className="rounded-xl flex-1"
-                          data-testid="input-start-date"
-                        />
-                      ) : (
-                        <span className="text-foreground">{formData.startDate}</span>
-                      )}
+                      <span className="text-foreground">{formData.startDate}</span>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="packageLength">Package Length</Label>
-                    {isEditing ? (
-                      <Input
-                        id="packageLength"
-                        value={formData.packageLength}
-                        onChange={(e) => setFormData({ ...formData, packageLength: e.target.value })}
-                        className="rounded-xl"
-                        data-testid="input-package-length"
-                      />
-                    ) : (
-                      <span className="text-foreground flex items-center h-10">{formData.packageLength}</span>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="preferredCheckinDay">Preferred Check-in Day</Label>
-                    {isEditing ? (
-                      <Select value={formData.preferredCheckinDay} onValueChange={(value) => setFormData({ ...formData, preferredCheckinDay: value })}>
-                        <SelectTrigger className="rounded-xl" data-testid="select-checkin-day">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Monday">Monday</SelectItem>
-                          <SelectItem value="Tuesday">Tuesday</SelectItem>
-                          <SelectItem value="Wednesday">Wednesday</SelectItem>
-                          <SelectItem value="Thursday">Thursday</SelectItem>
-                          <SelectItem value="Friday">Friday</SelectItem>
-                          <SelectItem value="Saturday">Saturday</SelectItem>
-                          <SelectItem value="Sunday">Sunday</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <span className="text-foreground flex items-center h-10">{formData.preferredCheckinDay}</span>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="preferredCheckinTime">Preferred Check-in Time</Label>
-                    {isEditing ? (
-                      <Input
-                        id="preferredCheckinTime"
-                        type="time"
-                        value={formData.preferredCheckinTime}
-                        onChange={(e) => setFormData({ ...formData, preferredCheckinTime: e.target.value })}
-                        className="rounded-xl"
-                        data-testid="input-checkin-time"
-                      />
-                    ) : (
-                      <span className="text-foreground flex items-center h-10">{formData.preferredCheckinTime}</span>
-                    )}
+                    <Label htmlFor="packageEnd">End Date</Label>
+                    <span className="text-foreground flex items-center h-10">{formData.packageEndDate}</span>
                   </div>
                 </div>
               </div>

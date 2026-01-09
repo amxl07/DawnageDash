@@ -20,6 +20,8 @@ export const users = pgTable("users", {
   activeWorkoutPlan: text("active_workout_plan"), // JSON string of { level, workoutType, subCategory, daysPerWeek }
   activeMealPlan: text("active_meal_plan"), // JSON string of { calories, dietType }
   packageType: text("package_type"), // 'premium', 'intermediate', 'basic'
+  packageDuration: integer("package_duration"), // 3 or 6 (months)
+  packageStartDate: date("package_start_date"), // Set on first check-in
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => {

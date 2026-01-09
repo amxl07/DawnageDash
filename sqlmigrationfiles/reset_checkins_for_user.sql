@@ -1,7 +1,7 @@
--- Reset daily check-ins for user 950030ed-fef7-46dc-9547-dcd994be27c4
--- Generated on 2026-01-08 18:48:48.681642
+-- Reset daily check-ins for user 27807160-f27e-407c-b186-21cc6d3b977f
+-- Generated on 2026-01-10 04:41:58.373618
 
-DELETE FROM daily_check_ins WHERE user_id = '950030ed-fef7-46dc-9547-dcd994be27c4';
+DELETE FROM daily_check_ins WHERE user_id = '27807160-f27e-407c-b186-21cc6d3b977f';
 
 INSERT INTO daily_check_ins (
     user_id, date, morning_weight, sleep_hours,
@@ -10,10 +10,75 @@ INSERT INTO daily_check_ins (
     protein, carbs, fats,
     energy_level, hunger_level, stress_level, digestion
 ) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-01', 92.38, 7.1,
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-01', 91.74, 6.7,
     'done', 8,
-    10, 2276, 3.0, 8564,
-    167.6, 197.3, 69.2,
+    10, 2002, 2.4, 7129,
+    145.2, 158.7, 75.2,
+    9, 5, 6, 'bloated'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-02', 92.18, 8.3,
+    'rest_day', NULL,
+    7, 1915, 2.9, 5138,
+    155.8, 220.5, 75.4,
+    9, 7, 6, 'none'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-03', 91.85, 8.2,
+    'done', 10,
+    7, 2362, 3.1, 9690,
+    143.7, 177.1, 51.6,
+    7, 6, 6, 'none'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-04', 91.95, 8.2,
+    'done', 10,
+    8, 2217, 2.6, 8588,
+    159.3, 238.3, 58.5,
+    6, 4, 2, 'bloated'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-05', 91.82, 7.3,
+    'no', NULL,
+    7, 2395, 2.8, 3824,
+    147.2, 230.6, 78.3,
+    9, 7, 3, 'none'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-06', 91.63, 8.3,
+    'done', 9,
+    6, 2083, 2.9, 8054,
+    151.6, 203.5, 69.5,
     9, 4, 3, 'none'
 );
 INSERT INTO daily_check_ins (
@@ -23,127 +88,10 @@ INSERT INTO daily_check_ins (
     protein, carbs, fats,
     energy_level, hunger_level, stress_level, digestion
 ) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-02', 91.75, 7.8,
-    'done', 7,
-    9, 1804, 3.3, 9462,
-    161.0, 192.2, 79.7,
-    9, 4, 5, 'none'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-03', 91.94, 7.6,
-    'no', NULL,
-    9, 2137, 2.5, 5327,
-    141.4, 210.2, 73.7,
-    9, 6, 2, 'bloated'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-04', 91.47, 6.7,
-    'done', 7,
-    10, 2014, 2.8, 9236,
-    156.6, 235.7, 58.6,
-    7, 6, 2, 'none'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-05', 91.71, 8.4,
-    'done', 9,
-    8, 2324, 2.6, 6404,
-    153.8, 174.9, 70.5,
-    7, 7, 4, 'none'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-06', 91.64, 8.2,
-    'done', 9,
-    7, 2217, 2.9, 7949,
-    152.7, 178.6, 58.1,
-    7, 5, 5, 'bloated'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-07', 91.03, 7.1,
-    'rest_day', NULL,
-    9, 1924, 2.4, 4730,
-    166.2, 225.0, 54.0,
-    6, 4, 2, 'none'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-08', 91.2, 7.5,
-    'done', 9,
-    7, 1896, 2.6, 6781,
-    151.1, 177.9, 55.2,
-    7, 7, 6, 'bloated'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-09', 91.0, 7.4,
-    'done', 8,
-    6, 1987, 3.2, 6634,
-    168.3, 160.1, 62.1,
-    7, 6, 2, 'bloated'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-10', 90.72, 7.3,
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-07', 91.57, 6.8,
     'done', 10,
-    9, 1862, 2.9, 7532,
-    145.1, 243.6, 56.4,
-    6, 6, 6, 'none'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-11', 90.69, 7.8,
-    'done', 10,
-    8, 1845, 2.0, 9414,
-    149.7, 171.2, 52.9,
+    8, 1934, 2.8, 6479,
+    173.1, 174.2, 77.0,
     8, 4, 2, 'none'
 );
 INSERT INTO daily_check_ins (
@@ -153,62 +101,10 @@ INSERT INTO daily_check_ins (
     protein, carbs, fats,
     energy_level, hunger_level, stress_level, digestion
 ) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-12', 90.9, 8.1,
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-08', 91.26, 6.9,
     'rest_day', NULL,
-    7, 2336, 3.3, 4557,
-    177.8, 231.0, 78.7,
-    8, 6, 2, 'bloated'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-13', 90.71, 7.1,
-    'no', NULL,
-    9, 2394, 2.1, 4905,
-    151.5, 245.1, 52.3,
-    7, 7, 4, 'none'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-14', 90.81, 6.7,
-    'done', 10,
-    9, 2308, 2.5, 7242,
-    140.3, 171.3, 57.6,
-    8, 5, 3, 'none'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-15', 90.92, 8.5,
-    'done', 7,
-    7, 2002, 2.9, 7821,
-    170.4, 201.4, 55.0,
-    8, 5, 4, 'none'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-16', 90.72, 7.5,
-    'rest_day', NULL,
-    8, 1883, 3.3, 4370,
-    173.0, 167.2, 50.3,
+    7, 1945, 2.3, 5812,
+    159.9, 171.6, 79.5,
     6, 6, 3, 'none'
 );
 INSERT INTO daily_check_ins (
@@ -218,89 +114,11 @@ INSERT INTO daily_check_ins (
     protein, carbs, fats,
     energy_level, hunger_level, stress_level, digestion
 ) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-17', 90.21, 8.4,
-    'done', 10,
-    6, 2013, 2.1, 9024,
-    158.1, 224.5, 52.3,
-    7, 7, 3, 'none'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-18', 89.86, 7.2,
-    'done', 8,
-    7, 2122, 3.2, 9967,
-    150.4, 234.9, 75.5,
-    6, 4, 6, 'none'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-19', 89.99, 6.6,
-    'done', 10,
-    7, 1830, 2.7, 8432,
-    144.1, 204.6, 60.1,
-    7, 6, 2, 'none'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-20', 89.98, 7.7,
-    'done', 10,
-    6, 2115, 2.8, 7006,
-    171.8, 158.8, 56.1,
-    9, 5, 3, 'none'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-21', 89.91, 6.8,
-    'done', 8,
-    8, 2400, 2.5, 8775,
-    149.4, 233.1, 61.0,
-    7, 5, 6, 'none'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-22', 89.79, 6.8,
-    'rest_day', NULL,
-    7, 2340, 2.5, 5288,
-    147.4, 201.9, 51.5,
-    6, 7, 3, 'none'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-23', 89.4, 7.9,
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-09', 91.25, 7.2,
     'cardio_day', NULL,
-    8, 2376, 2.4, 8368,
-    153.2, 190.9, 53.1,
-    9, 5, 3, 'none'
+    8, 2333, 3.3, 8480,
+    171.4, 154.5, 71.2,
+    8, 4, 4, 'none'
 );
 INSERT INTO daily_check_ins (
     user_id, date, morning_weight, sleep_hours,
@@ -309,11 +127,11 @@ INSERT INTO daily_check_ins (
     protein, carbs, fats,
     energy_level, hunger_level, stress_level, digestion
 ) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-24', 89.43, 6.5,
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-10', 90.88, 7.2,
     'done', 10,
-    7, 1884, 3.3, 6654,
-    145.6, 226.4, 59.9,
-    6, 4, 5, 'none'
+    7, 2326, 2.4, 9220,
+    157.8, 171.4, 54.1,
+    9, 6, 4, 'none'
 );
 INSERT INTO daily_check_ins (
     user_id, date, morning_weight, sleep_hours,
@@ -322,36 +140,10 @@ INSERT INTO daily_check_ins (
     protein, carbs, fats,
     energy_level, hunger_level, stress_level, digestion
 ) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-25', 89.18, 8.4,
-    'done', 7,
-    8, 1967, 2.4, 7129,
-    171.4, 219.2, 60.9,
-    6, 7, 4, 'bloated'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-26', 89.69, 6.9,
-    'done', 7,
-    6, 2146, 3.5, 9548,
-    174.8, 152.9, 66.4,
-    6, 5, 5, 'none'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-27', 89.42, 7.3,
-    'done', 8,
-    6, 1846, 3.3, 7409,
-    158.1, 179.8, 78.0,
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-11', 91.28, 8.2,
+    'cardio_day', NULL,
+    8, 2036, 2.5, 9450,
+    152.6, 200.4, 76.3,
     9, 7, 5, 'none'
 );
 INSERT INTO daily_check_ins (
@@ -361,128 +153,11 @@ INSERT INTO daily_check_ins (
     protein, carbs, fats,
     energy_level, hunger_level, stress_level, digestion
 ) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-28', 89.56, 7.5,
-    'no', NULL,
-    10, 2259, 2.6, 4239,
-    142.2, 236.6, 72.0,
-    8, 4, 6, 'none'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-29', 88.98, 8.3,
-    'done', 10,
-    9, 2281, 3.3, 9954,
-    178.1, 151.0, 78.9,
-    8, 4, 5, 'none'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-30', 88.83, 7.9,
-    'done', 10,
-    6, 2291, 2.6, 6366,
-    157.8, 181.3, 55.2,
-    9, 4, 6, 'none'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2025-12-31', 88.53, 7.6,
-    'rest_day', NULL,
-    10, 2289, 2.0, 5270,
-    168.8, 219.2, 56.4,
-    8, 6, 6, 'none'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2026-01-01', 88.73, 7.5,
-    'done', 7,
-    8, 1837, 2.8, 6650,
-    144.5, 167.4, 74.8,
-    9, 5, 3, 'bloated'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2026-01-02', 88.92, 6.7,
-    'done', 10,
-    10, 1864, 2.7, 8960,
-    170.4, 216.9, 69.1,
-    7, 5, 2, 'bloated'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2026-01-03', 88.85, 7.3,
-    'done', 9,
-    7, 1835, 2.9, 6046,
-    175.7, 158.4, 63.8,
-    9, 7, 6, 'bloated'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2026-01-04', 88.18, 8.3,
-    'done', 7,
-    10, 2340, 2.1, 7181,
-    143.8, 221.6, 56.4,
-    8, 4, 2, 'none'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2026-01-05', 88.27, 7.2,
-    'done', 10,
-    6, 2278, 3.1, 9719,
-    168.4, 248.1, 52.7,
-    6, 6, 2, 'none'
-);
-INSERT INTO daily_check_ins (
-    user_id, date, morning_weight, sleep_hours,
-    workout_status, workout_performance,
-    nutrition_score, calorie_intake, water_liters, daily_steps,
-    protein, carbs, fats,
-    energy_level, hunger_level, stress_level, digestion
-) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2026-01-06', 88.02, 6.6,
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-12', 91.11, 7.1,
     'done', 8,
-    7, 2229, 2.9, 9336,
-    144.3, 230.8, 78.3,
-    9, 4, 3, 'bloated'
+    10, 2004, 2.7, 8559,
+    148.2, 200.9, 71.0,
+    9, 4, 5, 'none'
 );
 INSERT INTO daily_check_ins (
     user_id, date, morning_weight, sleep_hours,
@@ -491,10 +166,49 @@ INSERT INTO daily_check_ins (
     protein, carbs, fats,
     energy_level, hunger_level, stress_level, digestion
 ) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2026-01-07', 87.89, 8.2,
-    'no', NULL,
-    7, 2072, 3.2, 5559,
-    157.5, 195.2, 57.5,
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-13', 90.43, 7.1,
+    'done', 9,
+    8, 2035, 2.2, 8188,
+    140.5, 159.3, 57.7,
+    6, 4, 5, 'bloated'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-14', 90.3, 6.8,
+    'done', 9,
+    7, 1895, 3.3, 6761,
+    153.4, 201.9, 76.4,
+    7, 7, 6, 'none'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-15', 90.88, 6.9,
+    'done', 7,
+    8, 1823, 3.1, 7659,
+    143.5, 175.2, 55.7,
+    7, 5, 5, 'bloated'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-16', 90.21, 7.0,
+    'done', 10,
+    7, 2340, 2.5, 9186,
+    154.7, 198.8, 53.9,
     8, 7, 4, 'none'
 );
 INSERT INTO daily_check_ins (
@@ -504,9 +218,295 @@ INSERT INTO daily_check_ins (
     protein, carbs, fats,
     energy_level, hunger_level, stress_level, digestion
 ) VALUES (
-    '950030ed-fef7-46dc-9547-dcd994be27c4', '2026-01-08', 88.26, 8.0,
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-17', 90.66, 6.6,
+    'done', 9,
+    8, 2354, 2.2, 8327,
+    176.0, 175.2, 61.1,
+    9, 4, 5, 'none'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-18', 90.42, 6.9,
+    'done', 7,
+    6, 2213, 3.4, 6435,
+    150.4, 171.9, 73.3,
+    7, 5, 3, 'none'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-19', 90.42, 6.6,
     'done', 8,
-    7, 2263, 2.1, 7709,
-    177.8, 150.7, 67.7,
-    9, 5, 4, 'none'
+    7, 1804, 2.2, 9675,
+    176.8, 221.8, 71.1,
+    7, 7, 3, 'none'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-20', 90.13, 8.3,
+    'done', 10,
+    9, 1955, 2.5, 9925,
+    162.8, 243.0, 58.9,
+    6, 5, 6, 'none'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-21', 89.65, 6.9,
+    'done', 10,
+    7, 2240, 2.4, 6532,
+    167.5, 216.3, 75.2,
+    8, 4, 5, 'none'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-22', 89.71, 6.6,
+    'rest_day', NULL,
+    10, 1901, 2.1, 5876,
+    141.4, 246.6, 58.8,
+    9, 7, 6, 'none'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-23', 89.98, 6.6,
+    'done', 8,
+    8, 2209, 3.1, 9869,
+    140.2, 169.5, 64.0,
+    6, 5, 5, 'none'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-24', 89.56, 6.9,
+    'done', 8,
+    6, 2012, 2.4, 8033,
+    146.2, 185.9, 51.1,
+    7, 6, 3, 'none'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-25', 89.34, 7.5,
+    'done', 10,
+    9, 2339, 3.2, 6879,
+    165.4, 208.7, 58.9,
+    8, 5, 6, 'none'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-26', 89.1, 6.9,
+    'done', 7,
+    9, 1800, 3.4, 7610,
+    159.9, 242.3, 75.6,
+    9, 4, 3, 'bloated'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-27', 89.35, 7.8,
+    'done', 9,
+    6, 1826, 2.6, 9440,
+    151.0, 194.8, 51.5,
+    6, 6, 6, 'bloated'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-28', 89.19, 7.4,
+    'done', 10,
+    8, 1865, 2.5, 8959,
+    176.6, 165.3, 71.4,
+    7, 6, 6, 'none'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-29', 88.68, 7.9,
+    'rest_day', NULL,
+    10, 1879, 2.7, 5619,
+    147.5, 155.9, 52.8,
+    7, 6, 4, 'none'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-30', 88.6, 7.9,
+    'done', 8,
+    7, 2287, 2.2, 9634,
+    161.3, 188.3, 54.8,
+    7, 6, 2, 'none'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2025-12-31', 88.82, 7.6,
+    'done', 9,
+    8, 2306, 2.1, 7578,
+    153.7, 154.2, 63.2,
+    7, 6, 5, 'none'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2026-01-01', 88.69, 8.2,
+    'rest_day', NULL,
+    8, 2134, 3.1, 4339,
+    146.2, 189.0, 70.0,
+    7, 4, 3, 'none'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2026-01-02', 88.95, 7.6,
+    'no', NULL,
+    9, 1970, 2.0, 3927,
+    140.1, 212.3, 60.0,
+    8, 5, 6, 'none'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2026-01-03', 88.81, 8.2,
+    'done', 10,
+    9, 1835, 2.8, 7404,
+    143.7, 249.3, 75.5,
+    9, 5, 6, 'none'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2026-01-04', 88.81, 7.2,
+    'no', NULL,
+    8, 2210, 3.2, 5963,
+    150.5, 174.1, 50.4,
+    7, 4, 5, 'none'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2026-01-05', 87.98, 8.4,
+    'done', 10,
+    8, 1935, 3.1, 9570,
+    157.1, 179.5, 50.2,
+    6, 4, 5, 'bloated'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2026-01-06', 88.05, 7.3,
+    'done', 10,
+    10, 2258, 2.3, 7959,
+    174.0, 180.9, 63.0,
+    7, 4, 6, 'none'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2026-01-07', 87.77, 7.0,
+    'rest_day', NULL,
+    8, 2021, 2.9, 5881,
+    177.6, 244.7, 76.4,
+    9, 6, 4, 'none'
+);
+INSERT INTO daily_check_ins (
+    user_id, date, morning_weight, sleep_hours,
+    workout_status, workout_performance,
+    nutrition_score, calorie_intake, water_liters, daily_steps,
+    protein, carbs, fats,
+    energy_level, hunger_level, stress_level, digestion
+) VALUES (
+    '27807160-f27e-407c-b186-21cc6d3b977f', '2026-01-08', 88.29, 7.4,
+    'done', 9,
+    6, 2222, 3.0, 8589,
+    144.8, 168.5, 57.1,
+    8, 7, 4, 'none'
 );

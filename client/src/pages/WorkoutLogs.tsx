@@ -1,13 +1,21 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Dumbbell, Clock, TrendingUp, Flame, Target, Award, CheckCircle2, Loader2, ChevronDown, ChevronUp, Plus } from "lucide-react";
+import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Calendar, Dumbbell, Clock, TrendingUp, Flame, Target, Award, CheckCircle2, Loader2, ChevronDown, ChevronUp, Plus, CalendarRange } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { MetricCard } from "@/components/MetricCard";
 import { WorkoutLogDialog } from "@/components/WorkoutLogDialog";
+import { startOfWeek, endOfWeek, format, parseISO, isSameWeek } from "date-fns";
+import { cn } from "@/lib/utils";
 
 export default function WorkoutLogs() {
     const { user, viewedUserId } = useAuth();
@@ -31,6 +39,38 @@ export default function WorkoutLogs() {
         },
         enabled: !!targetUserId,
     });
+
+    // Group logs by week
+    const weeklyLogs = useMemo(() => {
+        if (!logs) return [];
+
+        const groups = new Map<string, typeof logs>();
+
+        logs.forEach(log => {
+            const date = parseISO(log.date);
+            // Get Monday of the week
+            const weekStart = startOfWeek(date, { weekStartsOn: 1 });
+            const key = format(weekStart, 'yyyy-MM-dd');
+
+            if (!groups.has(key)) {
+                groups.set(key, []);
+            }
+            groups.get(key)?.push(log);
+        });
+
+        // Convert to array and sort by date descending
+        return Array.from(groups.entries())
+            .map(([weekStartStr, weekLogs]) => {
+                const weekStart = parseISO(weekStartStr);
+                const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
+                return {
+                    weekStart,
+                    weekEnd,
+                    logs: weekLogs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                };
+            })
+            .sort((a, b) => b.weekStart.getTime() - a.weekStart.getTime());
+    }, [logs]);
 
     const calculateStats = (logs: any[]) => {
         const totalWorkouts = logs.length;
@@ -120,8 +160,8 @@ export default function WorkoutLogs() {
                                             <thead>
                                                 <tr className="text-xs text-muted-foreground border-b border-border/30">
                                                     <th className="py-1 font-medium">Set</th>
-                                                    <th className="py-1 font-medium">Reps</th>
                                                     <th className="py-1 font-medium">Weight</th>
+                                                    <th className="py-1 font-medium">Reps</th>
                                                     <th className="py-1 font-medium">RPE</th>
                                                 </tr>
                                             </thead>
@@ -129,8 +169,8 @@ export default function WorkoutLogs() {
                                                 {exercise.sets.map((set: any, sIdx: number) => (
                                                     <tr key={sIdx} className="border-b border-border/10 last:border-0 hover:bg-muted/30">
                                                         <td className="py-1.5 font-bold text-muted-foreground">{set.setNumber}</td>
-                                                        <td className="py-1.5 font-medium">{set.reps || '-'}</td>
                                                         <td className="py-1.5 text-primary font-medium">{set.weight ? `${set.weight}` : '-'}</td>
+                                                        <td className="py-1.5 font-medium">{set.reps || '-'}</td>
                                                         <td className="py-1.5 text-muted-foreground">{set.rpe || '-'}</td>
                                                     </tr>
                                                 ))}
@@ -262,83 +302,126 @@ export default function WorkoutLogs() {
                     )}
                 </Card>
             ) : (
-                <div className="grid grid-cols-1 gap-6">
-                    {logs.map((log, index) => {
-                        const isExpanded = expandedLogId === log.id;
-                        const logDate = new Date(log.date);
+                <div className="space-y-6">
+                    <Accordion
+                        type="multiple"
+                        className="space-y-4"
+                        defaultValue={weeklyLogs.length > 0 ? [format(weeklyLogs[0].weekStart, 'yyyy-MM-dd')] : undefined}
+                    >
+                        {weeklyLogs.map(({ weekStart, weekEnd, logs }, weekIndex) => {
+                            const weekLabel = `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}`;
+                            const isCurrentWeek = isSameWeek(new Date(), weekStart, { weekStartsOn: 1 });
+                            const uniqueKey = format(weekStart, 'yyyy-MM-dd');
 
-                        let exerciseCount = 0;
-                        try {
-                            const content = JSON.parse(log.content);
-                            exerciseCount = Array.isArray(content) ? content.length : 0;
-                        } catch { }
-
-                        return (
-                            <Card key={log.id} className={`overflow-hidden transition-all duration-300 ${isExpanded ? 'ring-2 ring-primary/20' : ''} hover:shadow-lg`}>
-                                <div className="relative border-b bg-gradient-to-br from-muted/30 to-background p-6">
-                                    <div className="flex items-start gap-6">
-                                        <div className="relative">
-                                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex flex-col items-center justify-center text-white shadow-lg">
-                                                <span className="text-2xl font-bold leading-none">{logDate.getDate()}</span>
-                                                <span className="text-[10px] uppercase font-medium opacity-90 leading-none mt-0.5">
-                                                    {logDate.toLocaleDateString('en-US', { month: 'short' })}
-                                                </span>
-                                            </div>
-                                            {index === 0 && (
-                                                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-success rounded-full flex items-center justify-center border-2 border-background">
-                                                    <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                            return (
+                                <AccordionItem key={uniqueKey} value={uniqueKey} className="border-0">
+                                    <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
+                                        <AccordionTrigger className="px-6 py-5 hover:no-underline bg-muted/5 hover:bg-muted/10 transition-colors">
+                                            <div className="flex items-center gap-4">
+                                                <div className={cn(
+                                                    "w-10 h-10 rounded-lg flex items-center justify-center",
+                                                    isCurrentWeek ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                                                )}>
+                                                    <CalendarRange className="w-5 h-5" />
                                                 </div>
-                                            )}
-                                        </div>
-
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="font-bold text-2xl mb-2">{log.title}</h3>
-                                            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                                                <div className="flex items-center gap-1.5">
-                                                    <Calendar className="w-4 h-4" />
-                                                    {logDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                                                <div className="text-left">
+                                                    <div className="font-bold flex items-center gap-2">
+                                                        {weekLabel}
+                                                        {isCurrentWeek && (
+                                                            <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20">
+                                                                Current Week
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-sm text-muted-foreground font-medium">
+                                                        {logs.length} Workout{logs.length !== 1 ? 's' : ''}
+                                                    </div>
                                                 </div>
-                                                {exerciseCount > 0 && (
-                                                    <>
-                                                        <span className="text-muted-foreground/40">•</span>
-                                                        <div className="flex items-center gap-1.5">
-                                                            <Dumbbell className="w-4 h-4" />
-                                                            {exerciseCount} exercise{exerciseCount !== 1 ? 's' : ''}
-                                                        </div>
-                                                    </>
-                                                )}
                                             </div>
-                                        </div>
+                                        </AccordionTrigger>
+                                        <AccordionContent className="px-6 pb-6 pt-2">
+                                            <div className="grid grid-cols-1 gap-6 mt-4">
+                                                {logs.map((log, index) => {
+                                                    const isExpanded = expandedLogId === log.id;
+                                                    const logDate = new Date(log.date);
 
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
-                                            className="rounded-xl"
-                                        >
-                                            {isExpanded ? (
-                                                <>
-                                                    <ChevronUp className="w-4 h-4 mr-2" />
-                                                    Collapse
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <ChevronDown className="w-4 h-4 mr-2" />
-                                                    View Details
-                                                </>
-                                            )}
-                                        </Button>
-                                    </div>
-                                </div>
+                                                    let exerciseCount = 0;
+                                                    try {
+                                                        const content = JSON.parse(log.content);
+                                                        exerciseCount = Array.isArray(content) ? content.length : 0;
+                                                    } catch { }
 
-                                {isExpanded && (
-                                    <div className="p-6 bg-gradient-to-br from-background to-muted/10">
-                                        {renderExerciseContent(log.content)}
+                                                    return (
+                                                        <Card key={log.id} className={`overflow-hidden transition-all duration-300 ${isExpanded ? 'ring-2 ring-primary/20' : ''} hover:shadow-lg border-muted`}>
+                                                            <div className="relative border-b bg-gradient-to-br from-muted/30 to-background p-6">
+                                                                <div className="flex items-start gap-6">
+                                                                    <div className="relative">
+                                                                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex flex-col items-center justify-center text-white shadow-lg">
+                                                                            <span className="text-2xl font-bold leading-none">{logDate.getDate()}</span>
+                                                                            <span className="text-[10px] uppercase font-medium opacity-90 leading-none mt-0.5">
+                                                                                {logDate.toLocaleDateString('en-US', { month: 'short' })}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-success rounded-full flex items-center justify-center border-2 border-background">
+                                                                            <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <h3 className="font-bold text-2xl mb-2">{log.title}</h3>
+                                                                        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                                                                            <div className="flex items-center gap-1.5">
+                                                                                <Calendar className="w-4 h-4" />
+                                                                                {logDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                                                                            </div>
+                                                                            {exerciseCount > 0 && (
+                                                                                <>
+                                                                                    <span className="text-muted-foreground/40">•</span>
+                                                                                    <div className="flex items-center gap-1.5">
+                                                                                        <Dumbbell className="w-4 h-4" />
+                                                                                        {exerciseCount} exercise{exerciseCount !== 1 ? 's' : ''}
+                                                                                    </div>
+                                                                                </>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
+                                                                        className="rounded-xl"
+                                                                    >
+                                                                        {isExpanded ? (
+                                                                            <>
+                                                                                <ChevronUp className="w-4 h-4 mr-2" />
+                                                                                Collapse
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <ChevronDown className="w-4 h-4 mr-2" />
+                                                                                View Details
+                                                                            </>
+                                                                        )}
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+
+                                                            {isExpanded && (
+                                                                <div className="p-6 bg-gradient-to-br from-background to-muted/10">
+                                                                    {renderExerciseContent(log.content)}
+                                                                </div>
+                                                            )}
+                                                        </Card>
+                                                    );
+                                                })}
+                                            </div>
+                                        </AccordionContent>
                                     </div>
-                                )}
-                            </Card>
-                        );
-                    })}
+                                </AccordionItem>
+                            );
+                        })}
+                    </Accordion>
                 </div>
             )}
 

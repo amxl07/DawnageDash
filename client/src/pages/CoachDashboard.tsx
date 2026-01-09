@@ -3,13 +3,31 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, UserPlus, ArrowRight, WalletCards } from "lucide-react";
+import { Users, UserPlus, ArrowRight, WalletCards, MoreVertical, Settings, UserX, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import logoUrl from "@assets/dashboard_1762285477469.png";
 import { LogOut } from "lucide-react";
 import { useState } from "react";
 import { PackageSelectDialog, PackageType } from "@/components/PackageSelectDialog";
 import { cn } from "@/lib/utils";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function CoachDashboard() {
     const { user, setViewedUserId, signOut } = useAuth();
@@ -20,6 +38,13 @@ export default function CoachDashboard() {
     const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
     const [selectedClientName, setSelectedClientName] = useState("");
     const [isClaiming, setIsClaiming] = useState(false);
+
+    // Edit/Unassign State
+    const [isEditPackageDialogOpen, setIsEditPackageDialogOpen] = useState(false);
+    const [editInitialValues, setEditInitialValues] = useState<{ package: PackageType, duration: number } | null>(null);
+    const [clientToUnassign, setClientToUnassign] = useState<{ id: string, name: string } | null>(null);
+    const [isUnassignDialogOpen, setIsUnassignDialogOpen] = useState(false);
+    const [isUnassigning, setIsUnassigning] = useState(false);
 
     // Fetch all clients (both assigned and unassigned)
     const { data: clients, isLoading, refetch } = useQuery({
@@ -49,7 +74,22 @@ export default function CoachDashboard() {
         setIsClaimDialogOpen(true);
     };
 
-    const handleClaimConfirmation = async (packageType: PackageType) => {
+    const openEditPackageDialog = (client: any) => {
+        setSelectedClientId(client.id);
+        setSelectedClientName(client.full_name || "Client");
+        setEditInitialValues({
+            package: client.package_type as PackageType || 'intermediate',
+            duration: client.package_duration || 3
+        });
+        setIsEditPackageDialogOpen(true);
+    };
+
+    const confirmUnassignClient = (client: any) => {
+        setClientToUnassign({ id: client.id, name: client.full_name || "Client" });
+        setIsUnassignDialogOpen(true);
+    };
+
+    const handleClaimConfirmation = async (packageType: PackageType, duration: number) => {
         if (!selectedClientId) return;
 
         setIsClaiming(true);
@@ -58,7 +98,10 @@ export default function CoachDashboard() {
                 .from('users')
                 .update({
                     coach_id: user?.id,
-                    package_type: packageType
+                    package_type: packageType,
+                    package_duration: duration,
+                    // Note: package_start_date is handled by trigger/logic elsewhere usually
+                    // If it's a new claim, let's assume valid start checks are done.
                 })
                 .eq('id', selectedClientId);
 
@@ -66,7 +109,7 @@ export default function CoachDashboard() {
 
             toast({
                 title: "Success",
-                description: `Client assigned with ${packageType} package!`,
+                description: `Client assigned with ${packageType} package for ${duration} months!`,
             });
             setIsClaimDialogOpen(false);
             refetch();
@@ -81,6 +124,73 @@ export default function CoachDashboard() {
         }
     };
 
+    const handleEditPackageConfirmation = async (packageType: PackageType, duration: number) => {
+        if (!selectedClientId) return;
+
+        setIsClaiming(true); // Re-use loading state
+        try {
+            const { error } = await supabase
+                .from('users')
+                .update({
+                    package_type: packageType,
+                    package_duration: duration
+                })
+                .eq('id', selectedClientId);
+
+            if (error) throw error;
+
+            toast({
+                title: "Package Updated",
+                description: `Client package updated to ${packageType} (${duration} months).`,
+            });
+            setIsEditPackageDialogOpen(false);
+            refetch();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: "Failed to update package",
+                variant: "destructive",
+            });
+        } finally {
+            setIsClaiming(false);
+        }
+    };
+
+    const handleUnassign = async () => {
+        if (!clientToUnassign) return;
+
+        setIsUnassigning(true);
+        try {
+            const { error } = await supabase
+                .from('users')
+                .update({
+                    coach_id: null,
+                    // Optionally clear package details? Usually keep them for record or clear them.
+                    // User request says "unassign", let's just nullify coach_id.
+                    // But if they are unassigned, they go back to the pool.
+                })
+                .eq('id', clientToUnassign.id);
+
+            if (error) throw error;
+
+            toast({
+                title: "Client Unassigned",
+                description: `${clientToUnassign.name} has been removed from your roster.`,
+            });
+            setIsUnassignDialogOpen(false);
+            setClientToUnassign(null);
+            refetch();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: "Failed to unassign client",
+                variant: "destructive",
+            });
+        } finally {
+            setIsUnassigning(false);
+        }
+    };
+
     const getPackageStyle = (packageType: string | null) => {
         switch (packageType) {
             case 'premium':
@@ -92,6 +202,14 @@ export default function CoachDashboard() {
             default:
                 return "";
         }
+    };
+
+    const calculateEndDate = (startDate: string | null, duration: number | null) => {
+        if (!startDate || !duration) return null;
+        const start = new Date(startDate);
+        // Add duration months
+        const end = new Date(start.setMonth(start.getMonth() + duration));
+        return end.toLocaleDateString();
     };
 
     if (isLoading) {
@@ -171,6 +289,11 @@ export default function CoachDashboard() {
                             assignedClients.map((client) => {
                                 // @ts-ignore - package_type is dynamically added
                                 const packageStyle = getPackageStyle(client.package_type);
+                                // @ts-ignore
+                                const startDate = client.package_start_date;
+                                // @ts-ignore
+                                const duration = client.package_duration;
+                                const endDate = calculateEndDate(startDate, duration);
 
                                 return (
                                     <Card key={client.id} className={cn("rounded-2xl transition-all", packageStyle)}>
@@ -185,17 +308,53 @@ export default function CoachDashboard() {
                                                 )}
                                                 <div>
                                                     <h3 className="font-bold">{client.full_name || "Unknown User"}</h3>
-                                                    <p className="text-sm text-muted-foreground">{client.email}</p>
+                                                    <p className="text-sm text-muted-foreground mb-1">{client.email}</p>
+                                                    <div className="text-xs space-y-0.5 text-muted-foreground">
+                                                        {/* @ts-ignore */}
+                                                        <div>Package: <span className="font-medium text-foreground capitalize">{client.package_type || 'None'}</span></div>
+                                                        <div>Start: <span className="font-medium text-foreground">{startDate ? new Date(startDate).toLocaleDateString() : 'Not yet started'}</span></div>
+                                                        {endDate && <div>End: <span className="font-medium text-foreground">{endDate}</span></div>}
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="rounded-full"
-                                                onClick={() => handleViewClient(client.id)}
-                                            >
-                                                <ArrowRight className="w-4 h-4" />
-                                            </Button>
+
+                                            <div className="flex items-center gap-2">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="rounded-full"
+                                                    onClick={() => handleViewClient(client.id)}
+                                                >
+                                                    <ArrowRight className="w-4 h-4" />
+                                                </Button>
+
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="rounded-full h-8 w-8">
+                                                            <MoreVertical className="w-4 h-4" />
+                                                            <span className="sr-only">Open menu</span>
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                        <DropdownMenuItem onClick={() => handleViewClient(client.id)}>
+                                                            View Dashboard
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem onClick={() => openEditPackageDialog(client)}>
+                                                            <Edit className="w-4 h-4 mr-2" />
+                                                            Edit Package
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() => confirmUnassignClient(client)}
+                                                            className="text-destructive focus:text-destructive"
+                                                        >
+                                                            <UserX className="w-4 h-4 mr-2" />
+                                                            Unassign Client
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
                                         </CardContent>
                                     </Card>
                                 )
@@ -246,7 +405,37 @@ export default function CoachDashboard() {
                 onConfirm={handleClaimConfirmation}
                 isLoading={isClaiming}
                 clientName={selectedClientName}
+                mode="claim"
             />
+
+            <PackageSelectDialog
+                open={isEditPackageDialogOpen}
+                onOpenChange={setIsEditPackageDialogOpen}
+                onConfirm={handleEditPackageConfirmation}
+                isLoading={isClaiming}
+                clientName={selectedClientName}
+                mode="edit"
+                initialPackage={editInitialValues?.package}
+                initialDuration={editInitialValues?.duration}
+            />
+
+            <AlertDialog open={isUnassignDialogOpen} onOpenChange={setIsUnassignDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Unassign Client</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to remove <strong>{clientToUnassign?.name}</strong> from your roster?
+                            They will become available for other coaches to claim.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleUnassign} className="bg-destructive hover:bg-destructive/90">
+                            {isUnassigning ? "Unassigning..." : "Unassign Client"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

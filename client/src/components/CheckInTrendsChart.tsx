@@ -1,6 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
 
 interface TrendData {
   day: string;
@@ -19,11 +21,39 @@ interface CheckInTrendsChartProps {
 }
 
 export function CheckInTrendsChart({ data }: CheckInTrendsChartProps) {
+  const [timeRange, setTimeRange] = useState("all");
+
+  const filteredData = (() => {
+    if (timeRange === "all") return data;
+    const days = parseInt(timeRange);
+    if (!isNaN(days)) {
+      // If we have fewer data points than requested, return all
+      if (data.length < days) return data;
+      return data.slice(-days);
+    }
+    return data;
+  })();
+
   return (
     <Card className="p-6 rounded-2xl" data-testid="card-checkin-trends">
-      <div className="mb-6">
-        <h3 className="text-2xl font-bold mb-1">Check-In Trends</h3>
-        <p className="text-sm text-muted-foreground">Analyze your progress patterns over time</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+        <div>
+          <h3 className="text-2xl font-bold mb-1">Check-In Trends</h3>
+          <p className="text-sm text-muted-foreground">Analyze your progress patterns over time</p>
+        </div>
+        <div className="w-full md:w-[180px]">
+          <Select value={timeRange} onValueChange={setTimeRange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select duration" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="30">Last 30 Days</SelectItem>
+              <SelectItem value="14">Last 14 Days</SelectItem>
+              <SelectItem value="5">Last 5 Days</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <Tabs defaultValue="scores" className="w-full">
@@ -36,7 +66,7 @@ export function CheckInTrendsChart({ data }: CheckInTrendsChartProps) {
 
         <TabsContent value="scores">
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={data}>
+            <LineChart data={filteredData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" style={{ fontSize: '12px' }} />
               <YAxis stroke="hsl(var(--muted-foreground))" style={{ fontSize: '12px' }} domain={[0, 10]} />
@@ -58,7 +88,7 @@ export function CheckInTrendsChart({ data }: CheckInTrendsChartProps) {
 
         <TabsContent value="weight">
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={data}>
+            <LineChart data={filteredData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" style={{ fontSize: '12px' }} />
               <YAxis stroke="hsl(var(--muted-foreground))" style={{ fontSize: '12px' }} />
@@ -77,7 +107,7 @@ export function CheckInTrendsChart({ data }: CheckInTrendsChartProps) {
 
         <TabsContent value="activity">
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={data}>
+            <BarChart data={filteredData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" style={{ fontSize: '12px' }} />
               <YAxis stroke="hsl(var(--muted-foreground))" style={{ fontSize: '12px' }} />
@@ -97,7 +127,7 @@ export function CheckInTrendsChart({ data }: CheckInTrendsChartProps) {
 
         <TabsContent value="wellness">
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={data}>
+            <LineChart data={filteredData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" style={{ fontSize: '12px' }} />
               <YAxis stroke="hsl(var(--muted-foreground))" style={{ fontSize: '12px' }} domain={[0, 10]} />

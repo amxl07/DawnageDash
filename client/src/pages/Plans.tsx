@@ -790,20 +790,28 @@ export default function Plans() {
 
 
 
-          {isLoadingMeals ? (
-            <div className="flex items-center justify-center min-h-[200px]">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            </div>
+          {isCoach || userProfile?.active_meal_plan ? (
+            isLoadingMeals ? (
+              <div className="flex items-center justify-center min-h-[200px]">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <EditableMealPlan
+                key="daily-meal-plan"
+                initialPlan={currentMealPlan}
+                day="Daily"
+                caloriesTarget={caloriesTarget}
+                dietType={dietType}
+                onSave={handleMealPlanSaved}
+                isReadOnly={!isCoach}
+              />
+            )
           ) : (
-            <EditableMealPlan
-              key="daily-meal-plan"
-              initialPlan={currentMealPlan}
-              day="Daily"
-              caloriesTarget={caloriesTarget}
-              dietType={dietType}
-              onSave={handleMealPlanSaved}
-              isReadOnly={!isCoach}
-            />
+            <Card className="p-12 text-center">
+              <p className="text-muted-foreground">
+                No nutrition plan has been assigned yet. Please contact your coach.
+              </p>
+            </Card>
           )}
         </TabsContent>
       </Tabs>

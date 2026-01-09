@@ -3,7 +3,7 @@ import random
 import os
 
 # Configuration
-USER_ID = "950030ed-fef7-46dc-9547-dcd994be27c4"
+USER_ID = "27807160-f27e-407c-b186-21cc6d3b977f"
 START_DATE = datetime.date(2025, 12, 1)
 END_DATE = datetime.date(2026, 1, 8)
 START_WEIGHT = 92.0
