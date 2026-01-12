@@ -18,7 +18,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [viewedUserId, setViewedUserId] = useState<string | null>(null);
+  // Initialize from session storage if available
+  const [viewedUserId, setViewedUserIdState] = useState<string | null>(() => {
+    return sessionStorage.getItem('dawnage_viewed_user_id');
+  });
+
+  const setViewedUserId = (id: string | null) => {
+    setViewedUserIdState(id);
+    if (id) {
+      sessionStorage.setItem('dawnage_viewed_user_id', id);
+    } else {
+      sessionStorage.removeItem('dawnage_viewed_user_id');
+    }
+  };
 
   useEffect(() => {
     // Get initial session
@@ -41,8 +53,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setViewedUserId(null); // Clear view on sign out
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    } finally {
+      // Always clear local state even if the server request fails (e.g. 403 Forbidden)
+      setUser(null);
+      setSession(null);
+      setViewedUserId(null); // This will also clear sessionStorage
+    }
   };
 
   const isCoachView = !!viewedUserId;

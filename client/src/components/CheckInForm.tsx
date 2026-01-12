@@ -30,45 +30,52 @@ export function CheckInForm() {
     calorieIntake: "",
   });
 
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+
   useEffect(() => {
     if (!user) return;
 
     const fetchTodayCheckIn = async () => {
-      // Use local date string YYYY-MM-DD
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      const today = `${year}-${month}-${day}`;
+      setIsInitialLoading(true);
+      try {
+        // Use local date string YYYY-MM-DD
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const today = `${year}-${month}-${day}`;
 
-      const { data, error } = await supabase
-        .from("daily_check_ins")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("date", today)
-        .maybeSingle();
+        const { data, error } = await supabase
+          .from("daily_check_ins")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("date", today)
+          .maybeSingle();
 
-      if (error) {
-        console.error("Error fetching check-in:", error);
-        return;
-      }
+        if (error) {
+          console.error("Error fetching check-in:", error);
+          return;
+        }
 
-      if (data) {
-        setCheckInId(data.id);
-        setFormData({
-          morningWeight: data.morning_weight?.toString() || "",
-          workoutStatus: data.workout_status || "",
-          workoutPerformance: data.workout_performance?.toString() || "",
-          nutritionScore: data.nutrition_score?.toString() || "",
-          dailySteps: data.daily_steps?.toString() || "",
-          sleepHours: data.sleep_hours?.toString() || "",
-          waterLiters: data.water_liters?.toString() || "",
-          energyLevel: data.energy_level?.toString() || "",
-          digestion: data.digestion || "",
-          hungerLevel: data.hunger_level?.toString() || "",
-          stressLevel: data.stress_level?.toString() || "",
-          calorieIntake: data.calorie_intake?.toString() || "",
-        });
+        if (data) {
+          setCheckInId(data.id);
+          setFormData({
+            morningWeight: data.morning_weight?.toString() || "",
+            workoutStatus: data.workout_status || "",
+            workoutPerformance: data.workout_performance?.toString() || "",
+            nutritionScore: data.nutrition_score?.toString() || "",
+            dailySteps: data.daily_steps?.toString() || "",
+            sleepHours: data.sleep_hours?.toString() || "",
+            waterLiters: data.water_liters?.toString() || "",
+            energyLevel: data.energy_level?.toString() || "",
+            digestion: data.digestion || "",
+            hungerLevel: data.hunger_level?.toString() || "",
+            stressLevel: data.stress_level?.toString() || "",
+            calorieIntake: data.calorie_intake?.toString() || "",
+          });
+        }
+      } finally {
+        setIsInitialLoading(false);
       }
     };
 
@@ -357,9 +364,9 @@ export function CheckInForm() {
         </div>
 
         <div className="flex justify-end pt-4">
-          <Button type="submit" size="lg" className="rounded-xl px-8" data-testid="button-submit-checkin" disabled={isLoading}>
-            {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-            Submit Check-In
+          <Button type="submit" size="lg" className="rounded-xl px-8" data-testid="button-submit-checkin" disabled={isLoading || isInitialLoading}>
+            {isLoading || isInitialLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+            {isInitialLoading ? "Loading..." : "Submit Check-In"}
           </Button>
         </div>
       </form>

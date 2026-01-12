@@ -5,11 +5,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Dumbbell, UtensilsCrossed, CheckCircle2 } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
 // Types for hierarchical structure
@@ -773,7 +772,7 @@ export default function Plans() {
               <Button
                 size="lg"
                 onClick={handleConfirmMealPlan}
-                disabled={isCurrentActiveMeal || mealPlans?.source !== 'template'} // Disable if active OR if it's already a custom plan (meaning they should edit instead) -- actually allow confirm to Reset
+                disabled={isCurrentActiveMeal && mealPlans?.source === 'custom'} // Only disable if it IS active and IS custom. If it's template, we can confirm. If it's custom and NOT active, we can confirm (set as active). If we want to reset, we need to allow valid click.
                 variant={isCurrentActiveMeal ? "outline" : "default"}
                 className={isCurrentActiveMeal ? "border-green-500 text-green-600 hover:text-green-700 bg-green-50" : ""}
               >
