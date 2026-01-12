@@ -168,121 +168,170 @@ export function WeeklyCheckInTable({ checkIns, onEdit }: WeeklyCheckInTableProps
     return (
         <div className="space-y-6">
             {weeks.map((week) => (
-                <Card key={week.weekNumber} className="overflow-hidden rounded-2xl">
-                    <div className="bg-gradient-to-r from-primary/10 to-primary/5 px-4 py-3 border-b">
-                        <h3 className="text-lg font-bold">WEEK {week.weekNumber}</h3>
+                <div key={week.weekNumber}>
+                    <div className="bg-primary/10 px-4 py-2 rounded-t-2xl border-b border-primary/10 flex justify-between items-center mb-0">
+                        <h3 className="text-sm font-bold uppercase tracking-wider text-primary">Week {week.weekNumber}</h3>
+                        <span className="text-xs text-muted-foreground font-normal">Average Weight: {week.averages.weight ? `${week.averages.weight} kg` : '—'}</span>
                     </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="bg-muted/30 border-b">
-                                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Day</th>
-                                    <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Weight</th>
-                                    <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Nutrition</th>
-                                    <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Workout</th>
-                                    <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Steps</th>
-                                    <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Sleep</th>
-                                    <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Stress</th>
-                                    <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Energy</th>
-                                    <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Hunger</th>
-                                    <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Water</th>
-                                    <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Perf.</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {week.days.map((day, idx) => {
-                                    const c = day.originalCheckIn;
-                                    const isMissed = day.status === 'missed';
+                    {/* Mobile View: Cards */}
+                    <div className="block md:hidden space-y-3 bg-card rounded-b-2xl p-3 border border-t-0 shadow-sm">
+                        {week.days.map((day) => {
+                            const c = day.originalCheckIn;
+                            const isMissed = day.status === 'missed';
 
-                                    return (
-                                        <tr
-                                            key={day.dayNumber}
-                                            className={`border-b transition-colors hover:bg-muted/20 ${idx % 2 === 0 ? 'bg-background' : 'bg-muted/10'} ${isMissed ? 'opacity-50' : ''} cursor-pointer hover:bg-muted/40`}
-                                            onClick={() => onEdit?.(new Date(day.date))}
-                                        >
-                                            <td className="px-3 py-3 font-medium">
-                                                <div className="flex flex-col">
-                                                    <span>Day {day.dayNumber}</span>
-                                                    <span className="text-xs text-muted-foreground">
-                                                        {new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="px-3 py-3 text-center font-semibold">
-                                                {c?.morning_weight ? `${parseFloat(c.morning_weight.toString()).toFixed(1)} kg` : '—'}
-                                            </td>
-                                            <td className="px-3 py-3 text-center">
-                                                <ScoreCell value={c?.nutrition_score} />
-                                            </td>
-                                            <td className="px-3 py-3 text-center">
-                                                <WorkoutCell status={c?.workout_status} />
-                                            </td>
-                                            <td className="px-3 py-3 text-center font-medium">
-                                                {c?.daily_steps ? c.daily_steps.toLocaleString() : '—'}
-                                            </td>
-                                            <td className="px-3 py-3 text-center font-medium">
-                                                {c?.sleep_hours ? `${parseFloat(c.sleep_hours.toString()).toFixed(1)}h` : '—'}
-                                            </td>
-                                            <td className="px-3 py-3 text-center">
-                                                <ScoreCell value={c?.stress_level} />
-                                            </td>
-                                            <td className="px-3 py-3 text-center">
-                                                <ScoreCell value={c?.energy_level} />
-                                            </td>
-                                            <td className="px-3 py-3 text-center">
-                                                <ScoreCell value={c?.hunger_level} />
-                                            </td>
-                                            <td className="px-3 py-3 text-center font-medium">
-                                                {c?.water_liters ? `${parseFloat(c.water_liters.toString()).toFixed(1)}L` : '—'}
-                                            </td>
-                                            <td className="px-3 py-3 text-center">
-                                                <ScoreCell value={c?.workout_performance} />
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
+                            if (isMissed) return null; // Optional: Skip missed days on mobile history to save space, or show minimal
 
-                                {/* Weekly Average Row */}
-                                <tr className="bg-primary/5 font-semibold border-t-2 border-primary/20">
-                                    <td className="px-3 py-3 font-bold text-primary">AVG</td>
-                                    <td className="px-3 py-3 text-center">
-                                        {week.averages.weight ? `${week.averages.weight} kg` : '—'}
-                                    </td>
-                                    <td className="px-3 py-3 text-center">
-                                        <ScoreCell value={week.averages.nutritionScore} />
-                                    </td>
-                                    <td className="px-3 py-3 text-center">
-                                        <span className="text-muted-foreground text-xs">
-                                            {week.averages.workoutsDone}/{week.averages.totalWorkouts}
-                                        </span>
-                                    </td>
-                                    <td className="px-3 py-3 text-center">
-                                        {week.averages.steps ? week.averages.steps.toLocaleString() : '—'}
-                                    </td>
-                                    <td className="px-3 py-3 text-center">
-                                        {week.averages.sleep ? `${week.averages.sleep}h` : '—'}
-                                    </td>
-                                    <td className="px-3 py-3 text-center">
-                                        <ScoreCell value={week.averages.stress} />
-                                    </td>
-                                    <td className="px-3 py-3 text-center">
-                                        <ScoreCell value={week.averages.energy} />
-                                    </td>
-                                    <td className="px-3 py-3 text-center">
-                                        <ScoreCell value={week.averages.hunger} />
-                                    </td>
-                                    <td className="px-3 py-3 text-center">
-                                        {week.averages.water ? `${week.averages.water}L` : '—'}
-                                    </td>
-                                    <td className="px-3 py-3 text-center">
-                                        <ScoreCell value={week.averages.performance} />
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                            return (
+                                <div
+                                    key={day.dayNumber}
+                                    onClick={() => onEdit?.(new Date(day.date))}
+                                    className="bg-muted/30 rounded-xl p-3 space-y-3 active:scale-[0.98] transition-all"
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <div className="font-bold text-sm">Day {day.dayNumber}</div>
+                                            <div className="text-[10px] text-muted-foreground">{new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' })}</div>
+                                        </div>
+                                        <WorkoutCell status={c?.workout_status} />
+                                    </div>
+
+                                    <div className="grid grid-cols-4 gap-2 text-center">
+                                        <div className="bg-background rounded-lg p-1.5 flex flex-col items-center justify-center">
+                                            <span className="text-[9px] text-muted-foreground uppercase">Weight</span>
+                                            <span className="text-xs font-bold">{c?.morning_weight ? c.morning_weight : '—'}</span>
+                                        </div>
+                                        <div className="bg-background rounded-lg p-1.5 flex flex-col items-center justify-center">
+                                            <span className="text-[9px] text-muted-foreground uppercase">Nutri</span>
+                                            <span className={`text-xs font-bold ${c?.nutrition_score && c.nutrition_score >= 8 ? 'text-success' : 'text-primary'}`}>{c?.nutrition_score || '—'}</span>
+                                        </div>
+                                        <div className="bg-background rounded-lg p-1.5 flex flex-col items-center justify-center">
+                                            <span className="text-[9px] text-muted-foreground uppercase">Steps</span>
+                                            <span className="text-xs font-bold">{c?.daily_steps ? (c.daily_steps / 1000).toFixed(1) + 'k' : '—'}</span>
+                                        </div>
+                                        <div className="bg-background rounded-lg p-1.5 flex flex-col items-center justify-center">
+                                            <span className="text-[9px] text-muted-foreground uppercase">Sleep</span>
+                                            <span className="text-xs font-bold">{c?.sleep_hours || '—'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
-                </Card>
+
+                    {/* Desktop View: Table */}
+                    <Card className="hidden md:block overflow-hidden rounded-b-2xl rounded-t-none border-t-0">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="bg-muted/30 border-b">
+                                        <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Day</th>
+                                        <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Weight</th>
+                                        <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Nutrition</th>
+                                        <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Workout</th>
+                                        <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Steps</th>
+                                        <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Sleep</th>
+                                        <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Stress</th>
+                                        <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Energy</th>
+                                        <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Hunger</th>
+                                        <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Water</th>
+                                        <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Perf.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {week.days.map((day, idx) => {
+                                        const c = day.originalCheckIn;
+                                        const isMissed = day.status === 'missed';
+
+                                        return (
+                                            <tr
+                                                key={day.dayNumber}
+                                                className={`border-b transition-colors hover:bg-muted/20 ${idx % 2 === 0 ? 'bg-background' : 'bg-muted/10'} ${isMissed ? 'opacity-50' : ''} cursor-pointer hover:bg-muted/40`}
+                                                onClick={() => onEdit?.(new Date(day.date))}
+                                            >
+                                                <td className="px-3 py-3 font-medium">
+                                                    <div className="flex flex-col">
+                                                        <span>Day {day.dayNumber}</span>
+                                                        <span className="text-xs text-muted-foreground">
+                                                            {new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-3 py-3 text-center font-semibold">
+                                                    {c?.morning_weight ? `${parseFloat(c.morning_weight.toString()).toFixed(1)} kg` : '—'}
+                                                </td>
+                                                <td className="px-3 py-3 text-center">
+                                                    <ScoreCell value={c?.nutrition_score} />
+                                                </td>
+                                                <td className="px-3 py-3 text-center">
+                                                    <WorkoutCell status={c?.workout_status} />
+                                                </td>
+                                                <td className="px-3 py-3 text-center font-medium">
+                                                    {c?.daily_steps ? c.daily_steps.toLocaleString() : '—'}
+                                                </td>
+                                                <td className="px-3 py-3 text-center font-medium">
+                                                    {c?.sleep_hours ? `${parseFloat(c.sleep_hours.toString()).toFixed(1)}h` : '—'}
+                                                </td>
+                                                <td className="px-3 py-3 text-center">
+                                                    <ScoreCell value={c?.stress_level} />
+                                                </td>
+                                                <td className="px-3 py-3 text-center">
+                                                    <ScoreCell value={c?.energy_level} />
+                                                </td>
+                                                <td className="px-3 py-3 text-center">
+                                                    <ScoreCell value={c?.hunger_level} />
+                                                </td>
+                                                <td className="px-3 py-3 text-center font-medium">
+                                                    {c?.water_liters ? `${parseFloat(c.water_liters.toString()).toFixed(1)}L` : '—'}
+                                                </td>
+                                                <td className="px-3 py-3 text-center">
+                                                    <ScoreCell value={c?.workout_performance} />
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+
+                                    {/* Weekly Average Row */}
+                                    <tr className="bg-primary/5 font-semibold border-t-2 border-primary/20">
+                                        <td className="px-3 py-3 font-bold text-primary">AVG</td>
+                                        <td className="px-3 py-3 text-center">
+                                            {week.averages.weight ? `${week.averages.weight} kg` : '—'}
+                                        </td>
+                                        <td className="px-3 py-3 text-center">
+                                            <ScoreCell value={week.averages.nutritionScore} />
+                                        </td>
+                                        <td className="px-3 py-3 text-center">
+                                            <span className="text-muted-foreground text-xs">
+                                                {week.averages.workoutsDone}/{week.averages.totalWorkouts}
+                                            </span>
+                                        </td>
+                                        <td className="px-3 py-3 text-center">
+                                            {week.averages.steps ? week.averages.steps.toLocaleString() : '—'}
+                                        </td>
+                                        <td className="px-3 py-3 text-center">
+                                            {week.averages.sleep ? `${week.averages.sleep}h` : '—'}
+                                        </td>
+                                        <td className="px-3 py-3 text-center">
+                                            <ScoreCell value={week.averages.stress} />
+                                        </td>
+                                        <td className="px-3 py-3 text-center">
+                                            <ScoreCell value={week.averages.energy} />
+                                        </td>
+                                        <td className="px-3 py-3 text-center">
+                                            <ScoreCell value={week.averages.hunger} />
+                                        </td>
+                                        <td className="px-3 py-3 text-center">
+                                            {week.averages.water ? `${week.averages.water}L` : '—'}
+                                        </td>
+                                        <td className="px-3 py-3 text-center">
+                                            <ScoreCell value={week.averages.performance} />
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </Card>
+                </div>
             ))}
         </div>
     );

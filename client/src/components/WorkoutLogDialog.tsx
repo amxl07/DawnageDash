@@ -306,9 +306,60 @@ export function WorkoutLogDialog({ open, onOpenChange }: WorkoutLogDialogProps) 
                         </div>
                     </div>
 
-                    {/* Table Area */}
                     <div className="flex-1 overflow-auto px-4 md:px-6 py-2">
-                        <div className="min-w-[800px] border rounded-lg overflow-hidden">
+                        {/* Mobile View: Vertical Cards */}
+                        <div className="block md:hidden space-y-6">
+                            {exercises.map((exercise, idx) => (
+                                <div key={exercise.id} className="bg-muted/10 rounded-xl p-4 border border-border/50">
+                                    <h4 className="font-bold text-base mb-3 text-primary">{exercise.name}</h4>
+
+                                    <div className="space-y-3">
+                                        {exercise.sets.map((set, setIdx) => (
+                                            <div key={setIdx} className="grid grid-cols-[auto_1fr_1fr_1fr] gap-2 items-center">
+                                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                                                    {setIdx + 1}
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <span className="text-[10px] uppercase text-muted-foreground block text-center">Kg</span>
+                                                    <Input
+                                                        placeholder="0"
+                                                        value={set.weight}
+                                                        onChange={(e) => updateSet(idx, setIdx, 'weight', e.target.value)}
+                                                        className="h-9 text-center px-1 font-medium bg-background"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <span className="text-[10px] uppercase text-muted-foreground block text-center">Reps</span>
+                                                    <Input
+                                                        placeholder="0"
+                                                        value={set.reps}
+                                                        onChange={(e) => updateSet(idx, setIdx, 'reps', e.target.value)}
+                                                        className="h-9 text-center px-1 font-medium bg-background"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <span className="text-[10px] uppercase text-muted-foreground block text-center">RPE</span>
+                                                    <Input
+                                                        placeholder="-"
+                                                        value={set.rpe}
+                                                        onChange={(e) => updateSet(idx, setIdx, 'rpe', e.target.value)}
+                                                        className="h-9 text-center px-1 text-muted-foreground bg-background"
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                            {exercises.length === 0 && (
+                                <div className="text-center py-10 text-muted-foreground">
+                                    No exercises in this plan.
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Desktop View: Horizontal Table */}
+                        <div className="hidden md:block min-w-[800px] border rounded-lg overflow-hidden">
                             <table className="w-full text-sm">
                                 <thead className="bg-muted/50 sticky top-0 z-10">
                                     <tr>

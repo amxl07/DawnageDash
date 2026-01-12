@@ -158,7 +158,7 @@ export function CheckInForm() {
   };
 
   return (
-    <Card className="p-8 rounded-2xl max-w-3xl mx-auto" data-testid="form-check-in">
+    <Card className="p-4 sm:p-8 rounded-2xl max-w-3xl mx-auto" data-testid="form-check-in">
       <div className="mb-8">
         <h2 className="text-3xl font-bold mb-2">Daily Check-In</h2>
         <p className="text-muted-foreground">Track your progress and stay on top of your fitness goals</p>

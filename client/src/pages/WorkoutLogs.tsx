@@ -353,32 +353,37 @@ export default function WorkoutLogs() {
 
                                                     return (
                                                         <Card key={log.id} className={`overflow-hidden transition-all duration-300 ${isExpanded ? 'ring-2 ring-primary/20' : ''} hover:shadow-lg border-muted`}>
-                                                            <div className="relative border-b bg-gradient-to-br from-muted/30 to-background p-6">
-                                                                <div className="flex items-start gap-6">
+                                                            <div className="relative border-b bg-gradient-to-br from-muted/30 to-background p-4 sm:p-6">
+                                                                <div className="flex items-start gap-3 sm:gap-6">
                                                                     <div className="relative">
-                                                                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex flex-col items-center justify-center text-white shadow-lg">
-                                                                            <span className="text-2xl font-bold leading-none">{logDate.getDate()}</span>
-                                                                            <span className="text-[10px] uppercase font-medium opacity-90 leading-none mt-0.5">
+                                                                        <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex flex-col items-center justify-center text-white shadow-lg">
+                                                                            <span className="text-lg sm:text-2xl font-bold leading-none">{logDate.getDate()}</span>
+                                                                            <span className="text-[8px] sm:text-[10px] uppercase font-medium opacity-90 leading-none mt-0.5">
                                                                                 {logDate.toLocaleDateString('en-US', { month: 'short' })}
                                                                             </span>
                                                                         </div>
-                                                                        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-success rounded-full flex items-center justify-center border-2 border-background">
-                                                                            <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                                                                        <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-success rounded-full flex items-center justify-center border-2 border-background">
+                                                                            <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" />
                                                                         </div>
                                                                     </div>
 
                                                                     <div className="flex-1 min-w-0">
-                                                                        <h3 className="font-bold text-2xl mb-2">{log.title}</h3>
-                                                                        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                                                                        <h3 className="font-bold text-lg sm:text-2xl mb-1 sm:mb-2">{log.title}</h3>
+                                                                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs sm:text-sm text-muted-foreground">
                                                                             <div className="flex items-center gap-1.5">
-                                                                                <Calendar className="w-4 h-4" />
-                                                                                {logDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                                                                                <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                                                                <span className="block sm:hidden">
+                                                                                    {logDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                                                                                </span>
+                                                                                <span className="hidden sm:block">
+                                                                                    {logDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                                                                                </span>
                                                                             </div>
                                                                             {exerciseCount > 0 && (
                                                                                 <>
-                                                                                    <span className="text-muted-foreground/40">•</span>
+                                                                                    <span className="hidden sm:inline text-muted-foreground/40">•</span>
                                                                                     <div className="flex items-center gap-1.5">
-                                                                                        <Dumbbell className="w-4 h-4" />
+                                                                                        <Dumbbell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                                                                         {exerciseCount} exercise{exerciseCount !== 1 ? 's' : ''}
                                                                                     </div>
                                                                                 </>

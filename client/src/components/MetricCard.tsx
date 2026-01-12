@@ -15,25 +15,25 @@ interface MetricCardProps {
 
 export function MetricCard({ title, value, icon: Icon, trend, subtitle }: MetricCardProps) {
   return (
-    <Card className="p-6 rounded-2xl hover-elevate" data-testid={`card-metric-${title.toLowerCase().replace(/\s+/g, '-')}`}>
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <p className="text-sm text-muted-foreground font-medium mb-2">{title}</p>
-          <div className="flex items-baseline gap-2">
-            <h3 className="text-4xl font-bold font-poppins" data-testid={`text-${title.toLowerCase().replace(/\s+/g, '-')}-value`}>{value}</h3>
+    <Card className="p-4 sm:p-6 rounded-2xl hover-elevate transition-all duration-300" data-testid={`card-metric-${title.toLowerCase().replace(/\s+/g, '-')}`}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <p className="text-xs sm:text-sm text-muted-foreground font-medium mb-1 sm:mb-2 truncate">{title}</p>
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <h3 className="text-2xl sm:text-4xl font-bold font-poppins truncate" data-testid={`text-${title.toLowerCase().replace(/\s+/g, '-')}-value`}>{value}</h3>
             {trend && (
-              <div className={`flex items-center gap-1 text-sm font-semibold ${trend.isPositive ? 'text-success' : 'text-primary'}`}>
-                {trend.isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+              <div className={`flex items-center gap-1 text-xs sm:text-sm font-semibold ${trend.isPositive ? 'text-success' : 'text-primary'}`}>
+                {trend.isPositive ? <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" /> : <TrendingDown className="w-3 h-3 sm:w-4 sm:h-4" />}
                 <span>{Math.abs(trend.value)}%</span>
               </div>
             )}
           </div>
           {subtitle && (
-            <p className="text-xs text-muted-foreground mt-2">{subtitle}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 sm:mt-2 truncate">{subtitle}</p>
           )}
         </div>
-        <div className="p-3 rounded-xl bg-primary/10">
-          <Icon className="w-6 h-6 text-primary" />
+        <div className="p-2 sm:p-3 rounded-xl bg-primary/10 shrink-0">
+          <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
         </div>
       </div>
     </Card>

@@ -591,27 +591,27 @@ export function EditableMealPlan({ initialPlan, day = "Monday", caloriesTarget, 
 
 
       {isEditing ? (
-        <div className="grid grid-cols-4 gap-4 mt-4 pt-4 border-t border-border/50">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-border/50">
           <div className="text-center p-2 rounded-lg bg-muted/30">
-            <span className="block text-xs uppercase tracking-wider text-muted-foreground mb-1">Calories</span>
-            <span className="font-bold text-lg">{meal.calories}</span>
+            <span className="block text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground mb-0.5 sm:mb-1">Calories</span>
+            <span className="font-bold text-base sm:text-lg">{meal.calories}</span>
           </div>
           <div className="text-center p-2 rounded-lg bg-muted/30">
-            <span className="block text-xs uppercase tracking-wider text-muted-foreground mb-1">Protein</span>
-            <span className="font-bold text-lg text-primary">{meal.protein}g</span>
+            <span className="block text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground mb-0.5 sm:mb-1">Protein</span>
+            <span className="font-bold text-base sm:text-lg text-primary">{meal.protein}g</span>
           </div>
           <div className="text-center p-2 rounded-lg bg-muted/30">
-            <span className="block text-xs uppercase tracking-wider text-muted-foreground mb-1">Carbs</span>
-            <span className="font-bold text-lg">{meal.carbs}g</span>
+            <span className="block text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground mb-0.5 sm:mb-1">Carbs</span>
+            <span className="font-bold text-base sm:text-lg">{meal.carbs}g</span>
           </div>
           <div className="text-center p-2 rounded-lg bg-muted/30">
-            <span className="block text-xs uppercase tracking-wider text-muted-foreground mb-1">Fats</span>
-            <span className="font-bold text-lg">{meal.fats}g</span>
+            <span className="block text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground mb-0.5 sm:mb-1">Fats</span>
+            <span className="font-bold text-base sm:text-lg">{meal.fats}g</span>
           </div>
         </div>
       ) : (
-        <div className="flex items-center gap-4 text-sm">
-          <Badge variant="outline" className="rounded-full font-poppins">{meal.calories} cal</Badge>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs sm:text-sm mt-2 sm:mt-0">
+          <Badge variant="outline" className="rounded-full font-poppins text-xs">{meal.calories} cal</Badge>
           <span className="text-muted-foreground">P: {meal.protein}g</span>
           <span className="text-muted-foreground">C: {meal.carbs}g</span>
           <span className="text-muted-foreground">F: {meal.fats}g</span>
@@ -623,13 +623,13 @@ export function EditableMealPlan({ initialPlan, day = "Monday", caloriesTarget, 
   const totalMacros = calculateTotals();
 
   return (
-    <Card className="p-6 rounded-2xl" data-testid="card-meal-plan">
-      <div className="flex items-center justify-between mb-6">
+    <Card className="p-4 sm:p-6 rounded-2xl" data-testid="card-meal-plan">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
         <div>
-          <h3 className="text-2xl font-bold mb-2">Daily Meal Plan</h3>
-          <p className="text-sm text-muted-foreground">Your personalized nutrition guide</p>
+          <h3 className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2">Daily Meal Plan</h3>
+          <p className="text-xs sm:text-sm text-muted-foreground">Your personalized nutrition guide</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           {!isReadOnly && (
             isEditing ? (
               <>

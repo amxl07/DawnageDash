@@ -26,12 +26,12 @@ export default function Profile() {
     name: "",
     email: "",
     phone: "",
-    region: "North America",
-    timezone: "EST",
-    goal: "Build muscle and lose fat",
-    injuries: "None",
-    medicalCondition: "None",
-    startDate: new Date().toISOString().split('T')[0],
+    country: "",
+    timezone: "",
+    goal: "",
+    injuries: "",
+    medicalCondition: "",
+    startDate: "",
     packageEndDate: "", // Calculated
   });
 
@@ -55,7 +55,7 @@ export default function Profile() {
           const profileData = data.profile_data || {};
 
           // Calculate End Date
-          let endDateStr = "Not set";
+          let endDateStr = "";
           // @ts-ignore
           const pkgStart = data.package_start_date;
           // @ts-ignore
@@ -72,12 +72,12 @@ export default function Profile() {
             name: data.full_name || "",
             email: data.email || "",
             phone: data.phone_number || "",
-            region: profileData.region || "North America",
-            timezone: profileData.timezone || "EST",
-            goal: profileData.goal || "Build muscle and lose fat",
-            injuries: profileData.injuries || "None",
-            medicalCondition: profileData.medicalCondition || "None",
-            startDate: pkgStart || "Not started", // Use package start date or fallback
+            country: data.country || "",
+            timezone: profileData.timezone || "",
+            goal: profileData.goal || "",
+            injuries: profileData.injuries || "",
+            medicalCondition: profileData.medicalCondition || "",
+            startDate: pkgStart || "",
             packageEndDate: endDateStr,
           }));
         }
@@ -104,12 +104,11 @@ export default function Profile() {
 
       // Collect extra fields for profile_data
       const profileData = {
-        region: formData.region,
+        // region is replaced by country column
         timezone: formData.timezone,
         goal: formData.goal,
         injuries: formData.injuries,
         medicalCondition: formData.medicalCondition,
-        // Removed packageLength, preferredTime/Day
       };
 
       // Update users table
@@ -118,6 +117,7 @@ export default function Profile() {
         .update({
           full_name: formData.name,
           phone_number: formData.phone,
+          country: formData.country,
           profile_data: profileData
         })
         .eq('id', targetUserId);
@@ -166,14 +166,13 @@ export default function Profile() {
             </Button>
           </div>
 
-          <Card className="p-8 rounded-2xl">
-            <div className="flex items-center gap-6 mb-8">
-              <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
-                <User className="w-12 h-12 text-primary" />
+          <Card className="p-4 sm:p-8 rounded-2xl">
+            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 mb-6 sm:mb-8 text-center sm:text-left">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <User className="w-8 h-8 sm:w-12 sm:h-12 text-primary" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold mb-1">{formData.name || "User"}</h2>
-
+                <h2 className="text-xl sm:text-2xl font-bold mb-1">{formData.name || "User"}</h2>
               </div>
             </div>
 
@@ -196,7 +195,7 @@ export default function Profile() {
                           data-testid="input-name"
                         />
                       ) : (
-                        <span className="text-foreground">{formData.name}</span>
+                        <span className="text-foreground">{formData.name || "-"}</span>
                       )}
                     </div>
                   </div>
@@ -213,24 +212,24 @@ export default function Profile() {
                     <Label htmlFor="phone">Phone Number</Label>
                     <div className="flex items-center gap-3">
                       <Phone className="w-5 h-5 text-muted-foreground" />
-                      <span className="text-foreground">{formData.phone}</span>
+                      <span className="text-foreground">{formData.phone || "-"}</span>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="region">Region</Label>
+                    <Label htmlFor="country">Country</Label>
                     <div className="flex items-center gap-3">
                       <MapPin className="w-5 h-5 text-muted-foreground" />
                       {isEditing ? (
                         <Input
-                          id="region"
-                          value={formData.region}
-                          onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+                          id="country"
+                          value={formData.country}
+                          onChange={(e) => setFormData({ ...formData, country: e.target.value })}
                           className="rounded-xl flex-1"
-                          data-testid="input-region"
+                          data-testid="input-country"
                         />
                       ) : (
-                        <span className="text-foreground">{formData.region}</span>
+                        <span className="text-foreground">{formData.country || "-"}</span>
                       )}
                     </div>
                   </div>

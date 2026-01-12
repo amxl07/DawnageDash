@@ -172,7 +172,7 @@ export default function Login() {
       <div className="fixed top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
       <div className="fixed bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
 
-      <Card className="w-full max-w-md p-8 space-y-8 relative z-10 shadow-2xl border-primary/10 rounded-3xl bg-background/80 backdrop-blur-xl overflow-hidden">
+      <Card className="w-full max-w-md p-6 sm:p-8 space-y-6 sm:space-y-8 relative z-10 shadow-2xl border-primary/10 rounded-3xl bg-background/80 backdrop-blur-xl overflow-hidden">
         <div className="text-center space-y-4">
           <img src={logoUrl} alt="Dawnage AI" className="w-32 mx-auto drop-shadow-md" />
 

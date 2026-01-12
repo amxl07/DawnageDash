@@ -309,13 +309,15 @@ export function EditableWorkoutPlan({
                       <div className="flex-1 space-y-2">
                         {isEditing ? (
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                            <Input
-                              value={exercise.name}
-                              onChange={(e) => updateExercise(day.id, exercise.id, 'name', e.target.value)}
-                              className="h-9 text-sm md:col-span-2"
-                              placeholder="Exercise name"
-                              data-testid={`input-exercise-name-${exercise.id}`}
-                            />
+                            <div className="col-span-2 md:col-span-2">
+                              <Input
+                                value={exercise.name}
+                                onChange={(e) => updateExercise(day.id, exercise.id, 'name', e.target.value)}
+                                className="h-9 text-sm"
+                                placeholder="Exercise name"
+                                data-testid={`input-exercise-name-${exercise.id}`}
+                              />
+                            </div>
                             <Input
                               type="number"
                               value={exercise.sets}
@@ -331,13 +333,15 @@ export function EditableWorkoutPlan({
                               placeholder="Reps"
                               data-testid={`input-exercise-reps-${exercise.id}`}
                             />
-                            <Input
-                              value={exercise.rest || ''}
-                              onChange={(e) => updateExercise(day.id, exercise.id, 'rest', e.target.value)}
-                              className="h-9 text-sm md:col-span-2"
-                              placeholder="Rest (e.g., 60s)"
-                              data-testid={`input-exercise-rest-${exercise.id}`}
-                            />
+                            <div className="col-span-2 md:col-span-4 mt-1">
+                              <Input
+                                value={exercise.rest || ''}
+                                onChange={(e) => updateExercise(day.id, exercise.id, 'rest', e.target.value)}
+                                className="h-9 text-sm"
+                                placeholder="Rest (e.g., 60s)"
+                                data-testid={`input-exercise-rest-${exercise.id}`}
+                              />
+                            </div>
                           </div>
                         ) : (
                           <>

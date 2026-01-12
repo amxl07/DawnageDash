@@ -56,7 +56,7 @@ export function DailyCheckInCard({ data }: DailyCheckInCardProps) {
   };
 
   return (
-    <Card className="p-6 rounded-2xl hover-elevate" data-testid={`card-checkin-day-${data.dayNumber}`}>
+    <Card className="p-4 sm:p-6 rounded-2xl hover-elevate transition-all duration-300" data-testid={`card-checkin-day-${data.dayNumber}`}>
       <div className="flex items-start justify-between mb-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -128,35 +128,35 @@ export function DailyCheckInCard({ data }: DailyCheckInCardProps) {
 
         <Separator />
 
-        <div className="grid grid-cols-4 gap-3 text-center">
-          <div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+          <div className="p-2 rounded-lg bg-muted/20">
             <div className="flex items-center justify-center mb-1">
               <Droplet className="w-4 h-4 text-primary" />
             </div>
-            <p className="text-xs text-muted-foreground mb-1">Water</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mb-1">Water</p>
             <p className="text-sm font-semibold font-poppins">{data.nutrition.waterLiters}L</p>
           </div>
-          <div>
+          <div className="p-2 rounded-lg bg-muted/20">
             <div className="flex items-center justify-center mb-1">
               <Activity className="w-4 h-4 text-success" />
             </div>
-            <p className="text-xs text-muted-foreground mb-1">Steps</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mb-1">Steps</p>
             <p className="text-sm font-semibold font-poppins">{data.nutrition.dailySteps.toLocaleString()}</p>
           </div>
-          <div>
+          <div className="p-2 rounded-lg bg-muted/20">
             <div className="flex items-center justify-center mb-1">
               <Zap className="w-4 h-4 text-gold" />
             </div>
-            <p className="text-xs text-muted-foreground mb-1">Energy</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mb-1">Energy</p>
             <p className={`text-sm font-semibold font-poppins ${getScoreColor(data.wellbeing.energyLevel)}`}>
               {data.wellbeing.energyLevel}/10
             </p>
           </div>
-          <div>
+          <div className="p-2 rounded-lg bg-muted/20">
             <div className="flex items-center justify-center mb-1">
               <Brain className="w-4 h-4 text-primary" />
             </div>
-            <p className="text-xs text-muted-foreground mb-1">Stress</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mb-1">Stress</p>
             <p className={`text-sm font-semibold font-poppins ${data.wellbeing.stressLevel <= 3 ? 'text-success' : data.wellbeing.stressLevel <= 6 ? 'text-gold' : 'text-primary'}`}>
               {data.wellbeing.stressLevel}/10
             </p>

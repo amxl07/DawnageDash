@@ -56,10 +56,10 @@ export function CheckInTrendsChart({ data }: CheckInTrendsChartProps) {
         </div>
       </div>
 
-      <Tabs defaultValue="scores" className="w-full">
+      <Tabs defaultValue="weight" className="w-full">
         <TabsList className="grid w-full grid-cols-4 mb-6">
-          <TabsTrigger value="scores" data-testid="tab-scores">Scores</TabsTrigger>
           <TabsTrigger value="weight" data-testid="tab-weight">Weight</TabsTrigger>
+          <TabsTrigger value="scores" data-testid="tab-scores">Scores</TabsTrigger>
           <TabsTrigger value="activity" data-testid="tab-activity">Activity</TabsTrigger>
           <TabsTrigger value="wellness" data-testid="tab-wellness">Wellness</TabsTrigger>
         </TabsList>

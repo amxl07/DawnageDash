@@ -125,33 +125,33 @@ export default function Dashboard() {
                 </div>
 
                 {/* Features Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-2xl mt-4">
-                  <div className="flex flex-col items-center gap-2 p-4 bg-white/50 dark:bg-green-900/20 rounded-xl">
-                    <div className="w-12 h-12 rounded-lg bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
-                      <MessageCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 w-full max-w-2xl mt-4">
+                  <div className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-white/50 dark:bg-green-900/20 rounded-xl">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
+                      <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />
                     </div>
-                    <span className="font-semibold text-green-900 dark:text-green-100">Daily Check-ins</span>
-                    <span className="text-sm text-green-700 dark:text-green-300 text-center">
+                    <span className="font-semibold text-sm sm:text-base text-green-900 dark:text-green-100">Daily Check-ins</span>
+                    <span className="text-xs sm:text-sm text-green-700 dark:text-green-300 text-center">
                       Log workouts & meals via chat
                     </span>
                   </div>
 
-                  <div className="flex flex-col items-center gap-2 p-4 bg-white/50 dark:bg-green-900/20 rounded-xl">
-                    <div className="w-12 h-12 rounded-lg bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
-                      <Zap className="w-6 h-6 text-green-600 dark:text-green-400" />
+                  <div className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-white/50 dark:bg-green-900/20 rounded-xl">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
+                      <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />
                     </div>
-                    <span className="font-semibold text-green-900 dark:text-green-100">Real-time Coaching</span>
-                    <span className="text-sm text-green-700 dark:text-green-300 text-center">
+                    <span className="font-semibold text-sm sm:text-base text-green-900 dark:text-green-100">Real-time Coaching</span>
+                    <span className="text-xs sm:text-sm text-green-700 dark:text-green-300 text-center">
                       Instant feedback & tips
                     </span>
                   </div>
 
-                  <div className="flex flex-col items-center gap-2 p-4 bg-white/50 dark:bg-green-900/20 rounded-xl">
-                    <div className="w-12 h-12 rounded-lg bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
-                      <Target className="w-6 h-6 text-green-600 dark:text-green-400" />
+                  <div className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-white/50 dark:bg-green-900/20 rounded-xl">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
+                      <Target className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />
                     </div>
-                    <span className="font-semibold text-green-900 dark:text-green-100">Smart Reminders</span>
-                    <span className="text-sm text-green-700 dark:text-green-300 text-center">
+                    <span className="font-semibold text-sm sm:text-base text-green-900 dark:text-green-100">Smart Reminders</span>
+                    <span className="text-xs sm:text-sm text-green-700 dark:text-green-300 text-center">
                       Stay on track daily
                     </span>
                   </div>
@@ -166,13 +166,13 @@ export default function Dashboard() {
                     window.open(whatsappUrl, "_blank");
                   }}
                   size="lg"
-                  className="bg-green-600 hover:bg-green-700 text-white font-bold text-lg px-8 py-6 shadow-xl hover:shadow-2xl transition-all mt-4"
+                  className="bg-green-600 hover:bg-green-700 text-white font-bold text-base sm:text-lg px-6 py-4 sm:px-8 sm:py-6 shadow-xl hover:shadow-2xl transition-all mt-4 w-full sm:w-auto"
                 >
-                  <MessageCircle className="w-6 h-6 mr-3" />
+                  <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3" />
                   Activate on WhatsApp Now
                 </Button>
 
-                <p className="text-sm text-green-700 dark:text-green-300 mt-2">
+                <p className="text-xs sm:text-sm text-green-700 dark:text-green-300 mt-2 text-center">
                   Click to start chatting with your AI coach on WhatsApp
                 </p>
               </div>
@@ -180,7 +180,7 @@ export default function Dashboard() {
 
             {/* Decorative background */}
             <div className="absolute bottom-0 right-0 opacity-10 pointer-events-none">
-              <svg width="200" height="200" viewBox="0 0 200 200" fill="none">
+              <svg width="200" height="200" viewBox="0 0 200 200" fill="none" className="w-[120px] h-[120px] sm:w-[200px] sm:h-[200px]">
                 <circle cx="150" cy="150" r="100" fill="currentColor" className="text-green-600" />
                 <circle cx="180" cy="120" r="60" fill="currentColor" className="text-green-500" />
               </svg>
@@ -192,11 +192,11 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-8">
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-4xl font-bold mb-2" data-testid="text-dashboard-title">Dashboard</h1>
-          <p className="text-sm md:text-base text-muted-foreground">Comprehensive insights into your fitness journey with real-time data tracking</p>
+          <h1 className="text-2xl md:text-4xl font-bold mb-1 sm:mb-2" data-testid="text-dashboard-title">Dashboard</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Comprehensive insights into your fitness journey</p>
         </div>
         <div className="flex flex-row md:flex-col gap-3 items-center md:items-end flex-wrap">
           <Badge className="rounded-full text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2">
@@ -211,18 +211,18 @@ export default function Dashboard() {
               const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
               window.open(whatsappUrl, "_blank");
             }}
-            size="default"
-            className="bg-green-600 hover:bg-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all text-sm md:text-base"
+            size="sm"
+            className="bg-green-600 hover:bg-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all text-xs sm:text-sm md:text-base h-9 sm:h-10"
           >
-            <MessageCircle className="w-4 h-4 md:w-5 md:h-5 mr-2" />
-            <span className="hidden sm:inline">Activate AI on</span> WhatsApp
+            <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 mr-1.5 sm:mr-2" />
+            <span className="inline">Activate AI</span>
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         <MetricCard
-          title="Current Weight"
+          title="Weight"
           value={`${metrics.currentWeight} kg`}
           icon={Weight}
           trend={weightTrend !== 0 ? { value: Math.round(Math.abs(weightTrend)), isPositive: weightTrend < 0 } : undefined}
@@ -235,16 +235,16 @@ export default function Dashboard() {
           subtitle="Total tracked"
         />
         <MetricCard
-          title="Nutrition Score"
+          title="Nutrition"
           value={metrics.avgNutritionScore}
           icon={Trophy}
-          subtitle="Average score"
+          subtitle="Avg score"
         />
         <MetricCard
-          title="Energy Level"
+          title="Energy"
           value={`${metrics.avgEnergyLevel}/10`}
           icon={Zap}
-          subtitle="Average level"
+          subtitle="Avg level"
         />
       </div>
 

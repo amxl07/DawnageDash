@@ -50,8 +50,8 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarContent>
-        <div className="px-6 py-6">
-          <img src={logoUrl} alt="Dawnage AI" className="w-full max-w-[180px]" data-testid="img-logo" />
+        <div className="px-4 py-4 sm:px-6 sm:py-6">
+          <img src={logoUrl} alt="Dawnage AI" className="w-full max-w-[140px] sm:max-w-[180px]" data-testid="img-logo" />
         </div>
 
         <SidebarGroup>
