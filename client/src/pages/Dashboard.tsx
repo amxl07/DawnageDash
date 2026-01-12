@@ -1,5 +1,6 @@
 import { MetricCard } from "@/components/MetricCard";
 import { WeightChart } from "@/components/WeightChart";
+import { format, startOfWeek } from "date-fns";
 import { PerformanceChart } from "@/components/PerformanceChart";
 import { NutritionBreakdownChart } from "@/components/NutritionBreakdownChart";
 import { WeeklyComparisonChart } from "@/components/WeeklyComparisonChart";
@@ -35,12 +36,14 @@ export default function Dashboard() {
 
     checkIns.forEach(checkIn => {
       const date = new Date(checkIn.date);
-      const weekNum = Math.ceil((date.getDate()) / 7);
-      const weekKey = `W${weekNum}`;
+      // Group by week starting Monday so it persists across months/years correctly
+      const weekStart = startOfWeek(date, { weekStartsOn: 1 });
+      const weekKey = format(weekStart, 'yyyy-MM-dd');
+      const weekLabel = `Week of ${format(weekStart, 'MMM d')}`;
 
       if (!weeksData.has(weekKey)) {
         weeksData.set(weekKey, {
-          week: weekKey,
+          week: weekLabel,
           workouts: 0,
           nutritionSum: 0,
           energySum: 0,

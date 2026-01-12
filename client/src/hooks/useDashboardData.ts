@@ -126,10 +126,12 @@ export function useDashboardData() {
     : 0;
 
   // Transform check-ins data for charts
-  const weightChartData = measurements?.map((m, index) => ({
-    date: `W${index + 1}`,
-    weight: parseFloat(m.weight || '0'),
-  })) || [];
+  const weightChartData = checkIns
+    ?.filter(c => c.morning_weight && parseFloat(c.morning_weight) > 0)
+    .map(c => ({
+      date: format(new Date(c.date), 'MMM d'),
+      weight: parseFloat(c.morning_weight || '0'),
+    })) || [];
 
   const performanceChartData = last7DaysProcessed.map(c => {
     if (c.status === 'missed') {
@@ -148,12 +150,24 @@ export function useDashboardData() {
     };
   });
 
-  // Calculate daily nutrition breakdown (average or latest)
-  const latestCheckIn = checkIns?.[checkIns.length - 1];
+  // Calculate daily nutrition breakdown (average of last 7 valid logs)
+  const validNutritionLogs = checkIns?.filter(c =>
+    (c.protein && parseFloat(c.protein) > 0) ||
+    (c.carbs && parseFloat(c.carbs) > 0) ||
+    (c.fats && parseFloat(c.fats) > 0)
+  ).slice(-7) || [];
+
+  const avgNutrition = validNutritionLogs.reduce((acc, c) => ({
+    protein: acc.protein + parseFloat(c.protein || '0'),
+    carbs: acc.carbs + parseFloat(c.carbs || '0'),
+    fats: acc.fats + parseFloat(c.fats || '0'),
+  }), { protein: 0, carbs: 0, fats: 0 });
+
+  const count = validNutritionLogs.length || 1;
   const nutritionBreakdown = {
-    protein: parseFloat(latestCheckIn?.protein || '0'),
-    carbs: parseFloat(latestCheckIn?.carbs || '0'),
-    fats: parseFloat(latestCheckIn?.fats || '0'),
+    protein: Math.round(avgNutrition.protein / count),
+    carbs: Math.round(avgNutrition.carbs / count),
+    fats: Math.round(avgNutrition.fats / count),
   };
 
   return {

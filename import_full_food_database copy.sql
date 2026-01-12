@@ -12,7 +12,7 @@ INSERT INTO food_items (name, serving_size, serving_unit, calories, protein, car
 ('Almond Butter', 100.0, 'g', 614, 21.0, 19.0, 56.0),
 ('Almond Flour', 100.0, 'g', 571, 21.5, 21.0, 50.0),
 ('Almond Milk', 100.0, 'g', 17, 0.64, 0.59, 1.51),
-
+('Almonds', 100.0, 'g', 578, 21.26, 19.74, 50.6),
 ('Aloo Bhujia', 100.0, 'g', 562, 9.0, 46.0, 38.0),
 ('Amaranth', 100.0, 'g', 371, 371.0, 67.0, 15.0),
 ('American Cheese', 100.0, 'g', 371, 18.0, 3.7, 32.0),
@@ -131,7 +131,7 @@ INSERT INTO food_items (name, serving_size, serving_unit, calories, protein, car
 ('Cherries', 100.0, 'g', 360, 0.0, 16.0, 0.0),
 ('Chewing Gum', 100.0, 'g', 486, 17.0, 97.0, 0.3),
 ('Chia Seeds', 100.0, 'g', 165, 31.0, 42.0, 31.0),
-
+('Chicken Breast', 100.0, 'g', 6, 0.6, 0.0, 3.6),
 ('Chicken Broth', 100.0, 'g', 240, 27.0, 0.4, 0.2),
 ('Chicken Raw', 100.0, 'g', 170, 24.0, 0.0, 14.0),
 ('Chicken thigh', 100.0, 'g', 164, 9.0, 0.0, 8.0),
@@ -211,7 +211,8 @@ INSERT INTO food_items (name, serving_size, serving_unit, calories, protein, car
 ('Dried Fruit Snacks', 100.0, 'g', 26, 2.0, 88.4, 0.0),
 ('Drum Stick Veg', 100.0, 'g', 138, 4.54, 3.0, 0.0),
 ('Egg Noodle', 100.0, 'g', 51, 11.0, 25.16, 2.07),
-
+('Egg Whites', 100.0, 'g', 17, 3.6, 0.6, 0.3),
+('Egg Whites', 1.0, 'egg', 140, 12.6, 0.2, 0.1),
 ('Eggs', 100.0, 'g', 196, 14.0, 0.0, 10.0),
 ('Eggs Fried', 100.0, 'g', 46, 0.3, 0.8, 15.0),
 ('Energy Drinks', 100.0, 'g', 76, 8.0, 12.0, 0.1),
@@ -397,7 +398,8 @@ INSERT INTO food_items (name, serving_size, serving_unit, calories, protein, car
 ('Nuggets', 100.0, 'g', 296, 15.0, 14.0, 20.0),
 ('Nutella Spread', 100.0, 'g', 539, 6.3, 58.0, 31.0),
 ('Oat Milk', 100.0, 'ml', 54, 0.8, 12.2, 0.4),
-
+('Oats', 100.0, 'g', 376, 13.0, 66.4, 6.4),
+('Oats', 100.0, 'g', 407, 12.0, 68.5, 9.5),
 ('Olives Canned Small To Large', 100.0, 'g', 115, 0.84, 6.26, 10.6),
 ('Onion Rings', 100.0, 'g', 417, 4.0, 44.0, 25.0),
 ('Onions', 100.0, 'g', 40, 1.1, 9.0, 0.1),
@@ -421,7 +423,7 @@ INSERT INTO food_items (name, serving_size, serving_unit, calories, protein, car
 ('Pasta (Uncooked)', 100.0, 'g', 371, 13.0, 75.0, 1.5),
 ('Pastry (CHOCOLATE)', 100.0, 'g', 430, 8.3, 47.9, 23.2),
 ('Peach', 100.0, 'g', 39, 0.9, 9.5, 0.3),
-
+('Peanut Butter', 100.0, 'g', 588, 22.0, 24.0, 50.0),
 ('Peanut Chikki', 100.0, 'g', 418, 4.0, 76.0, 10.0),
 ('Peanut Chunky Without Salt', 100.0, 'g', 589, 24.06, 21.0, 50.0),
 ('Peanuts Dry Roasted Salt', 100.0, 'g', 585, 23.68, 21.5, 49.6),
@@ -486,7 +488,7 @@ INSERT INTO food_items (name, serving_size, serving_unit, calories, protein, car
 ('Red Wine', 100.0, 'g', 85, 29.0, 2.6, 155.0),
 ('Reduced-Fat Peanut Butter', 100.0, 'g', 25, 36.0, 27.0, 232.0),
 ('Refried Beans', 100.0, 'g', 92, 510.0, 1.2, 27.0),
-
+('Rice', 100.0, 'g', 365, 21.0, 87.25, 0.0),
 ('Rice Bran', 100.0, 'g', 316, 4.0, 50.0, 22820.0),
 ('Rice Cakes', 100.0, 'g', 387, 387.0, 82.0, 13.0),
 ('Rice cooked', 100.0, 'g', 130, 130.0, 29.0, 8.2),
@@ -580,7 +582,7 @@ INSERT INTO food_items (name, serving_size, serving_unit, calories, protein, car
 ('Walnuts', 100.0, 'g', 654, 15.0, 14.0, 65.0),
 ('Water Enhancers', 100.0, 'g', 0, 0.0, 8.0, 0.0),
 ('Watermelon Raw', 100.0, 'g', 30, 0.6, 0.0, 0.2),
-
+('Wheat Bread', 100.0, 'g', 265, 9.0, 49.0, 3.2),
 ('Whey Protein Concentrate', 31.0, 'g', 120, 24.0, 2.5, 1.8),
 ('Whey Protein Isolate', 31.0, 'g', 110, 27.0, 0.0, 0.0),
 ('Whisky', 100.0, 'g', 232, 0.0, 232.0, 0.0),
