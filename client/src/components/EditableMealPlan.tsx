@@ -32,7 +32,9 @@ interface Snack {
 
 interface DayMealPlan {
   breakfast: Meal;
+  mid_morning_snack: Meal;
   lunch: Meal;
+  evening_snack: Meal;
   dinner: Meal;
 }
 
@@ -399,7 +401,13 @@ export function EditableMealPlan({ initialPlan, day = "Monday", caloriesTarget, 
   const [mealPlan, setMealPlan] = useState<DayMealPlan>(initialPlan);
 
   const calculateTotals = () => {
-    const meals = [mealPlan.breakfast, mealPlan.lunch, mealPlan.dinner];
+    const meals = [
+      mealPlan.breakfast,
+      mealPlan.mid_morning_snack,
+      mealPlan.lunch,
+      mealPlan.evening_snack,
+      mealPlan.dinner
+    ];
 
     return {
       calories: meals.reduce((sum, item) => sum + item.calories, 0),
@@ -455,6 +463,17 @@ export function EditableMealPlan({ initialPlan, day = "Monday", caloriesTarget, 
         fats: mealPlan.breakfast.fats,
       });
 
+      // Mid Morning Snack
+      rows.push({
+        ...baseRow,
+        meal_type: 'Mid Morning Snack',
+        description: mealPlan.mid_morning_snack.name,
+        calories: mealPlan.mid_morning_snack.calories,
+        protein: mealPlan.mid_morning_snack.protein,
+        carbs: mealPlan.mid_morning_snack.carbs,
+        fats: mealPlan.mid_morning_snack.fats,
+      });
+
       // Lunch
       rows.push({
         ...baseRow,
@@ -464,6 +483,17 @@ export function EditableMealPlan({ initialPlan, day = "Monday", caloriesTarget, 
         protein: mealPlan.lunch.protein,
         carbs: mealPlan.lunch.carbs,
         fats: mealPlan.lunch.fats,
+      });
+
+      // Evening Snack
+      rows.push({
+        ...baseRow,
+        meal_type: 'Evening Snack',
+        description: mealPlan.evening_snack.name,
+        calories: mealPlan.evening_snack.calories,
+        protein: mealPlan.evening_snack.protein,
+        carbs: mealPlan.evening_snack.carbs,
+        fats: mealPlan.evening_snack.fats,
       });
 
       // Dinner
@@ -509,7 +539,7 @@ export function EditableMealPlan({ initialPlan, day = "Monday", caloriesTarget, 
     setIsEditing(false);
   };
 
-  const updateMeal = (mealType: 'breakfast' | 'lunch' | 'dinner', field: keyof Meal, value: string | number) => {
+  const updateMeal = (mealType: keyof DayMealPlan, field: keyof Meal, value: string | number) => {
     setMealPlan(plan => ({
       ...plan,
       [mealType]: {
@@ -530,7 +560,7 @@ export function EditableMealPlan({ initialPlan, day = "Monday", caloriesTarget, 
   const renderMeal = (
     meal: Meal,
     icon: React.ReactNode,
-    mealType: 'breakfast' | 'lunch' | 'dinner',
+    mealType: keyof DayMealPlan,
     label: string
   ) => (
     <div className="p-4 rounded-xl bg-muted/50 space-y-3" data-testid={`meal-${mealType}`}>
@@ -664,7 +694,9 @@ export function EditableMealPlan({ initialPlan, day = "Monday", caloriesTarget, 
 
       <div className="space-y-4">
         {renderMeal(mealPlan.breakfast, <Coffee className="w-5 h-5 text-primary" />, "breakfast", "Breakfast")}
+        {renderMeal(mealPlan.mid_morning_snack, <Utensils className="w-5 h-5 text-primary" />, "mid_morning_snack", "Mid-Morning Snack")}
         {renderMeal(mealPlan.lunch, <Sun className="w-5 h-5 text-primary" />, "lunch", "Lunch")}
+        {renderMeal(mealPlan.evening_snack, <Utensils className="w-5 h-5 text-primary" />, "evening_snack", "Evening Snack")}
         {renderMeal(mealPlan.dinner, <Moon className="w-5 h-5 text-primary" />, "dinner", "Dinner")}
       </div>
     </Card>

@@ -12,7 +12,9 @@ interface Meal {
 
 interface DayMealPlan {
   breakfast: Meal;
+  mid_morning_snack: Meal;
   lunch: Meal;
+  evening_snack: Meal;
   dinner: Meal;
   snacks?: Meal[];
 }
@@ -78,9 +80,11 @@ export function MealPlan({ dailyPlan, totalMacros }: MealPlanProps) {
 
       <div className="space-y-4">
         {renderMeal(dailyPlan.breakfast, <Coffee className="w-5 h-5 text-primary" />, "Breakfast")}
+        {renderMeal(dailyPlan.mid_morning_snack, <Utensils className="w-5 h-5 text-primary" />, "Mid-Morning Snack")}
         {renderMeal(dailyPlan.lunch, <Sun className="w-5 h-5 text-primary" />, "Lunch")}
+        {renderMeal(dailyPlan.evening_snack, <Utensils className="w-5 h-5 text-primary" />, "Evening Snack")}
         {renderMeal(dailyPlan.dinner, <Moon className="w-5 h-5 text-primary" />, "Dinner")}
-        
+
         {dailyPlan.snacks && dailyPlan.snacks.length > 0 && (
           <div className="space-y-3">
             <h4 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Snacks</h4>

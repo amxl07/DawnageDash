@@ -343,7 +343,9 @@ export default function Plans() {
 
       return {
         breakfast: getMeal('Breakfast'),
+        mid_morning_snack: getMeal('Mid Morning Snack'),
         lunch: getMeal('Lunch'),
+        evening_snack: getMeal('Evening Snack'),
         dinner: getMeal('Dinner'),
       };
     }
@@ -354,7 +356,9 @@ export default function Plans() {
         const content = JSON.parse(mealPlans.template.content);
         return {
           breakfast: { ...content.breakfast, id: `tpl-bf` },
+          mid_morning_snack: { ...content.mid_morning_snack, id: `tpl-mms` },
           lunch: { ...content.lunch, id: `tpl-ln` },
+          evening_snack: { ...content.evening_snack, id: `tpl-evs` },
           dinner: { ...content.dinner, id: `tpl-dn` },
         };
       } catch (err) {
@@ -364,7 +368,9 @@ export default function Plans() {
 
     return {
       breakfast: { id: 'def-bf', name: '', calories: 0, protein: 0, carbs: 0, fats: 0 },
+      mid_morning_snack: { id: 'def-mms', name: '', calories: 0, protein: 0, carbs: 0, fats: 0 },
       lunch: { id: 'def-ln', name: '', calories: 0, protein: 0, carbs: 0, fats: 0 },
+      evening_snack: { id: 'def-evs', name: '', calories: 0, protein: 0, carbs: 0, fats: 0 },
       dinner: { id: 'def-dn', name: '', calories: 0, protein: 0, carbs: 0, fats: 0 },
     };
   }, [mealPlans]);
@@ -507,8 +513,12 @@ export default function Plans() {
 
       // Breakfast
       rows.push({ ...content.breakfast, user_id: targetUserId, day_of_week: day, meal_type: 'Breakfast', description: content.breakfast.name, diet_type: dietType, calories_target: caloriesTarget });
+      // Mid Morning Snack
+      rows.push({ ...content.mid_morning_snack, user_id: targetUserId, day_of_week: day, meal_type: 'Mid Morning Snack', description: content.mid_morning_snack.name, diet_type: dietType, calories_target: caloriesTarget });
       // Lunch
       rows.push({ ...content.lunch, user_id: targetUserId, day_of_week: day, meal_type: 'Lunch', description: content.lunch.name, diet_type: dietType, calories_target: caloriesTarget });
+      // Evening Snack
+      rows.push({ ...content.evening_snack, user_id: targetUserId, day_of_week: day, meal_type: 'Evening Snack', description: content.evening_snack.name, diet_type: dietType, calories_target: caloriesTarget });
       // Dinner
       rows.push({ ...content.dinner, user_id: targetUserId, day_of_week: day, meal_type: 'Dinner', description: content.dinner.name, diet_type: dietType, calories_target: caloriesTarget });
 
