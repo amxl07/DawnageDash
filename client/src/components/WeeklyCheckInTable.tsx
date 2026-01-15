@@ -8,6 +8,7 @@ interface WeekData {
     days: ProcessedCheckIn[];
     averages: {
         weight: number | null;
+        calories: number | null;
         nutritionScore: number | null;
         workoutsDone: number;
         totalWorkouts: number;
@@ -40,6 +41,7 @@ function groupCheckInsByWeek(checkIns: ProcessedCheckIn[]): WeekData[] {
 
         // Calculate averages
         let weightSum = 0, weightCount = 0;
+        let caloriesSum = 0, caloriesCount = 0;
         let nutritionSum = 0, nutritionCount = 0;
         let stepsSum = 0, stepsCount = 0;
         let sleepSum = 0, sleepCount = 0;
@@ -58,6 +60,7 @@ function groupCheckInsByWeek(checkIns: ProcessedCheckIn[]): WeekData[] {
                     const w = parseFloat(c.morning_weight.toString());
                     if (!isNaN(w) && w > 0) { weightSum += w; weightCount++; }
                 }
+                if (c.calorie_intake) { caloriesSum += c.calorie_intake; caloriesCount++; }
                 if (c.nutrition_score) { nutritionSum += c.nutrition_score; nutritionCount++; }
                 if (c.daily_steps) { stepsSum += c.daily_steps; stepsCount++; }
                 if (c.sleep_hours) {
@@ -88,6 +91,7 @@ function groupCheckInsByWeek(checkIns: ProcessedCheckIn[]): WeekData[] {
             days: weekDays,
             averages: {
                 weight: weightCount > 0 ? parseFloat((weightSum / weightCount).toFixed(1)) : null,
+                calories: caloriesCount > 0 ? Math.round(caloriesSum / caloriesCount) : null,
                 nutritionScore: nutritionCount > 0 ? parseFloat((nutritionSum / nutritionCount).toFixed(1)) : null,
                 workoutsDone,
                 totalWorkouts,
@@ -202,6 +206,10 @@ export function WeeklyCheckInTable({ checkIns, onEdit }: WeeklyCheckInTableProps
                                             <span className="text-xs font-bold">{c?.morning_weight ? c.morning_weight : '—'}</span>
                                         </div>
                                         <div className="bg-background rounded-lg p-1.5 flex flex-col items-center justify-center">
+                                            <span className="text-[9px] text-muted-foreground uppercase">Cals</span>
+                                            <span className="text-xs font-bold">{c?.calorie_intake ? c.calorie_intake : '—'}</span>
+                                        </div>
+                                        <div className="bg-background rounded-lg p-1.5 flex flex-col items-center justify-center">
                                             <span className="text-[9px] text-muted-foreground uppercase">Nutri</span>
                                             <span className={`text-xs font-bold ${c?.nutrition_score && c.nutrition_score >= 8 ? 'text-success' : 'text-primary'}`}>{c?.nutrition_score || '—'}</span>
                                         </div>
@@ -212,6 +220,10 @@ export function WeeklyCheckInTable({ checkIns, onEdit }: WeeklyCheckInTableProps
                                         <div className="bg-background rounded-lg p-1.5 flex flex-col items-center justify-center">
                                             <span className="text-[9px] text-muted-foreground uppercase">Sleep</span>
                                             <span className="text-xs font-bold">{c?.sleep_hours || '—'}</span>
+                                        </div>
+                                        <div className="bg-background rounded-lg p-1.5 flex flex-col items-center justify-center">
+                                            <span className="text-[9px] text-muted-foreground uppercase">Digestion</span>
+                                            <span className="text-xs font-bold capitalize truncate max-w-full">{c?.digestion || '—'}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -227,6 +239,7 @@ export function WeeklyCheckInTable({ checkIns, onEdit }: WeeklyCheckInTableProps
                                     <tr className="bg-muted/30 border-b">
                                         <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Day</th>
                                         <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Weight</th>
+                                        <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Calories</th>
                                         <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Nutrition</th>
                                         <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Workout</th>
                                         <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Steps</th>
@@ -234,6 +247,7 @@ export function WeeklyCheckInTable({ checkIns, onEdit }: WeeklyCheckInTableProps
                                         <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Stress</th>
                                         <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Energy</th>
                                         <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Hunger</th>
+                                        <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Digestion</th>
                                         <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Water</th>
                                         <th className="px-3 py-3 text-center font-semibold text-muted-foreground">Perf.</th>
                                     </tr>
@@ -260,6 +274,9 @@ export function WeeklyCheckInTable({ checkIns, onEdit }: WeeklyCheckInTableProps
                                                 <td className="px-3 py-3 text-center font-semibold">
                                                     {c?.morning_weight ? `${parseFloat(c.morning_weight.toString()).toFixed(1)} kg` : '—'}
                                                 </td>
+                                                <td className="px-3 py-3 text-center font-semibold">
+                                                    {c?.calorie_intake ? c.calorie_intake : '—'}
+                                                </td>
                                                 <td className="px-3 py-3 text-center">
                                                     <ScoreCell value={c?.nutrition_score} />
                                                 </td>
@@ -281,6 +298,9 @@ export function WeeklyCheckInTable({ checkIns, onEdit }: WeeklyCheckInTableProps
                                                 <td className="px-3 py-3 text-center">
                                                     <ScoreCell value={c?.hunger_level} />
                                                 </td>
+                                                <td className="px-3 py-3 text-center capitalize">
+                                                    {c?.digestion || '—'}
+                                                </td>
                                                 <td className="px-3 py-3 text-center font-medium">
                                                     {c?.water_liters ? `${parseFloat(c.water_liters.toString()).toFixed(1)}L` : '—'}
                                                 </td>
@@ -296,6 +316,9 @@ export function WeeklyCheckInTable({ checkIns, onEdit }: WeeklyCheckInTableProps
                                         <td className="px-3 py-3 font-bold text-primary">AVG</td>
                                         <td className="px-3 py-3 text-center">
                                             {week.averages.weight ? `${week.averages.weight} kg` : '—'}
+                                        </td>
+                                        <td className="px-3 py-3 text-center">
+                                            {week.averages.calories ? week.averages.calories : '—'}
                                         </td>
                                         <td className="px-3 py-3 text-center">
                                             <ScoreCell value={week.averages.nutritionScore} />
@@ -319,6 +342,9 @@ export function WeeklyCheckInTable({ checkIns, onEdit }: WeeklyCheckInTableProps
                                         </td>
                                         <td className="px-3 py-3 text-center">
                                             <ScoreCell value={week.averages.hunger} />
+                                        </td>
+                                        <td className="px-3 py-3 text-center">
+                                            —
                                         </td>
                                         <td className="px-3 py-3 text-center">
                                             {week.averages.water ? `${week.averages.water}L` : '—'}

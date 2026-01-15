@@ -126,12 +126,15 @@ export function useDashboardData() {
     : 0;
 
   // Transform check-ins data for charts
-  const weightChartData = checkIns
-    ?.filter(c => c.morning_weight && parseFloat(c.morning_weight) > 0)
+  // Explicitly sort by date to guarantee chronological order (Oldest -> Newest)
+  const sortedCheckIns = checkIns ? [...checkIns].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) : [];
+
+  const weightChartData = sortedCheckIns
+    .filter(c => c.morning_weight && parseFloat(c.morning_weight) > 0)
     .map(c => ({
       date: format(new Date(c.date), 'MMM d'),
       weight: parseFloat(c.morning_weight || '0'),
-    })) || [];
+    }));
 
   const performanceChartData = last7DaysProcessed.map(c => {
     if (c.status === 'missed') {
