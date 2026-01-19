@@ -21,6 +21,8 @@ interface MeasurementCardProps {
 }
 
 export function MeasurementCard({ date, weekNumber, measurements, changes, onEdit }: MeasurementCardProps) {
+  const isBaseline = weekNumber === 0;
+
   const renderChange = (value: number | undefined) => {
     if (!value || value === 0) return <Minus className="w-3 h-3 text-muted-foreground" />;
     if (value < 0) return (
@@ -38,11 +40,11 @@ export function MeasurementCard({ date, weekNumber, measurements, changes, onEdi
   };
 
   return (
-    <Card className="p-6 rounded-2xl hover-elevate" data-testid={`card-measurement-week-${weekNumber}`}>
+    <Card className={`p-6 rounded-2xl hover-elevate ${isBaseline ? 'border-2 border-primary/50' : ''}`} data-testid={`card-measurement-week-${weekNumber}`}>
       <div className="flex items-start justify-between mb-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-lg font-bold">Week {weekNumber}</h3>
+            <h3 className="text-lg font-bold">{isBaseline ? 'Week 0 (Baseline)' : `Week ${weekNumber}`}</h3>
             <Badge variant="outline" className="rounded-full">
               {date}
             </Badge>

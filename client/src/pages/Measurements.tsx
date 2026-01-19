@@ -53,10 +53,12 @@ export default function Measurements() {
 
   // Transform measurements for card display
   const measurements = bodyMeasurements?.map((measurement, index) => {
+    // Week 0 is the first/oldest entry (baseline), then Week 1, 2, etc.
+    const weekNum = bodyMeasurements.length - 1 - index;
     return {
       rawDate: measurement.date, // Keep raw date for editing
       date: new Date(measurement.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      weekNumber: bodyMeasurements.length - index,
+      weekNumber: weekNum,
       measurements: {
         chest: parseFloat(measurement.chest || '0'),
         waist: parseFloat(measurement.waist || '0'),
@@ -71,8 +73,9 @@ export default function Measurements() {
   }) || [];
 
   // Transform measurements for progress chart
+  // Week 0 is the first entry (baseline), then Week 1, 2, etc.
   const progressData = bodyMeasurements?.slice().reverse().map((measurement, index) => ({
-    week: `W${index + 1}`,
+    week: `W${index}`,
     chest: parseFloat(measurement.chest || '0'),
     waist: parseFloat(measurement.waist || '0'),
     hip: parseFloat(measurement.hips || '0'),
@@ -86,7 +89,7 @@ export default function Measurements() {
 
   const comparisonData = currentMeasurement && startMeasurement ? {
     current: {
-      week: bodyMeasurements?.length || 0,
+      week: (bodyMeasurements?.length || 1) - 1, // Latest week number (0-indexed)
       date: new Date(currentMeasurement.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       chest: parseFloat(currentMeasurement.chest || '0'),
       waist: parseFloat(currentMeasurement.waist || '0'),
@@ -95,7 +98,7 @@ export default function Measurements() {
       arm: parseFloat(currentMeasurement.arms || '0'),
     },
     start: {
-      week: 1,
+      week: 0, // Week 0 = Baseline
       date: new Date(startMeasurement.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       chest: parseFloat(startMeasurement.chest || '0'),
       waist: parseFloat(startMeasurement.waist || '0'),

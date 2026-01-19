@@ -123,17 +123,19 @@ export default function Media() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {weeklyPhotos?.map((record, index) => {
-            const weekNum = weeklyPhotos.length - index;
+            // Week 0 is the first/oldest entry (baseline), then Week 1, 2, etc.
+            const weekNum = weeklyPhotos.length - 1 - index;
+            const isBaseline = weekNum === 0;
             // Check completeness
             const photosCount = [record.front_url, record.back_url, record.side_left_url, record.side_right_url].filter(Boolean).length;
             const isComplete = photosCount === 4;
 
             return (
-              <Card key={record.id} className="p-4 rounded-2xl hover-elevate group relative">
+              <Card key={record.id} className={`p-4 rounded-2xl hover-elevate group relative ${isBaseline ? 'border-2 border-primary/50' : ''}`}>
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-lg font-bold">Week {weekNum}</h3>
+                      <h3 className="text-lg font-bold">{isBaseline ? 'Week 0 (Baseline)' : `Week ${weekNum}`}</h3>
                       <Badge variant="outline" className="rounded-full">
                         {new Date(record.date).toLocaleDateString()}
                       </Badge>
