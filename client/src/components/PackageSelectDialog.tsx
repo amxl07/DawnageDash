@@ -13,7 +13,7 @@ import { Crown, Star, Shield } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-export type PackageType = 'premium' | 'intermediate' | 'basic';
+export type PackageType = 'elite' | 'standard' | 'beginner';
 
 interface PackageSelectDialogProps {
     open: boolean;
@@ -36,34 +36,24 @@ export function PackageSelectDialog({
     initialPackage,
     initialDuration
 }: PackageSelectDialogProps) {
-    const [selectedPackage, setSelectedPackage] = useState<PackageType>(initialPackage || 'intermediate');
+    // Cast initialPackage to new type if it matches legacy strings, or default to 'standard'
+    // This is a rough safety cast; ideally callers pass correct types.
+    const safeInitialPackage = (
+        ((initialPackage as string) === 'premium' ? 'elite' :
+            (initialPackage as string) === 'intermediate' ? 'standard' :
+                (initialPackage as string) === 'basic' ? 'beginner' :
+                    initialPackage) as PackageType
+    ) || 'standard';
+
+    const [selectedPackage, setSelectedPackage] = useState<PackageType>(safeInitialPackage);
     const [selectedDuration, setSelectedDuration] = useState<number>(initialDuration || 3);
 
-    // Update state when open changes to true or initial values change
-    useState(() => {
-        // This runs once on mount, but we need it on updates too.
-        // So we use an effect below.
-    });
-
-    // We using a key-based re-mount in parent is cleaner, but this effect covers us
-    // in case the dialog stays mounted.
-    if (open && initialPackage && selectedPackage !== initialPackage) {
-        // This is a direct state update during render (derived state pattern)
-        // BUT it's risky if not careful. Let's use useEffect.
-    }
-
-    // Simplest reliable way for dialogs:
-    // When `open` becomes true, reset state to props.
-    // We can use a simpler approach: key={isOpen ? 'open' : 'closed'} in parent,
-    // OR just use an effect here.
-
-    // Using effect to sync when dialog OPENS
+    // Update state when open changes to true
     /* eslint-disable react-hooks/exhaustive-deps */
-    // Trigger when 'open' becomes true
     const [prevOpen, setPrevOpen] = useState(open);
     if (open && !prevOpen) {
         setPrevOpen(true);
-        setSelectedPackage(initialPackage || 'intermediate');
+        setSelectedPackage(safeInitialPackage);
         setSelectedDuration(initialDuration || 3);
     } else if (!open && prevOpen) {
         setPrevOpen(false);
@@ -95,12 +85,12 @@ export function PackageSelectDialog({
                             onValueChange={(value) => setSelectedPackage(value as PackageType)}
                             className="space-y-3"
                         >
-                            {/* Premium Package */}
+                            {/* Elite Package */}
                             <Label
-                                htmlFor="premium"
+                                htmlFor="elite"
                                 className={cn(
                                     "flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all hover:bg-muted/50",
-                                    selectedPackage === 'premium'
+                                    selectedPackage === 'elite'
                                         ? "border-gold bg-gold/5"
                                         : "border-muted"
                                 )}
@@ -108,24 +98,24 @@ export function PackageSelectDialog({
                                 <div className="flex items-center gap-3">
                                     <div className={cn(
                                         "p-2 rounded-full",
-                                        selectedPackage === 'premium' ? "bg-gold text-white" : "bg-muted text-muted-foreground"
+                                        selectedPackage === 'elite' ? "bg-gold text-white" : "bg-muted text-muted-foreground"
                                     )}>
                                         <Crown className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <div className="font-bold text-base">Premium Package</div>
+                                        <div className="font-bold text-base">Elite Package</div>
                                         <div className="text-xs text-muted-foreground">Full coaching suite + priority support</div>
                                     </div>
                                 </div>
-                                <RadioGroupItem value="premium" id="premium" className="text-gold border-gold" />
+                                <RadioGroupItem value="elite" id="elite" className="text-gold border-gold" />
                             </Label>
 
-                            {/* Intermediate Package */}
+                            {/* Standard Package */}
                             <Label
-                                htmlFor="intermediate"
+                                htmlFor="standard"
                                 className={cn(
                                     "flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all hover:bg-muted/50",
-                                    selectedPackage === 'intermediate'
+                                    selectedPackage === 'standard'
                                         ? "border-blue-500 bg-blue-500/5"
                                         : "border-muted"
                                 )}
@@ -133,24 +123,24 @@ export function PackageSelectDialog({
                                 <div className="flex items-center gap-3">
                                     <div className={cn(
                                         "p-2 rounded-full",
-                                        selectedPackage === 'intermediate' ? "bg-blue-500 text-white" : "bg-muted text-muted-foreground"
+                                        selectedPackage === 'standard' ? "bg-blue-500 text-white" : "bg-muted text-muted-foreground"
                                     )}>
                                         <Star className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <div className="font-bold text-base">Intermediate Package</div>
+                                        <div className="font-bold text-base">Standard Package</div>
                                         <div className="text-xs text-muted-foreground">Standard coaching + weekly check-ins</div>
                                     </div>
                                 </div>
-                                <RadioGroupItem value="intermediate" id="intermediate" className="text-blue-500 border-blue-500" />
+                                <RadioGroupItem value="standard" id="standard" className="text-blue-500 border-blue-500" />
                             </Label>
 
-                            {/* Basic Package */}
+                            {/* Beginner Package */}
                             <Label
-                                htmlFor="basic"
+                                htmlFor="beginner"
                                 className={cn(
                                     "flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all hover:bg-muted/50",
-                                    selectedPackage === 'basic'
+                                    selectedPackage === 'beginner'
                                         ? "border-sidebar-foreground/20 bg-muted"
                                         : "border-muted"
                                 )}
@@ -158,16 +148,16 @@ export function PackageSelectDialog({
                                 <div className="flex items-center gap-3">
                                     <div className={cn(
                                         "p-2 rounded-full",
-                                        selectedPackage === 'basic' ? "bg-sidebar-foreground text-sidebar-background" : "bg-muted text-muted-foreground"
+                                        selectedPackage === 'beginner' ? "bg-sidebar-foreground text-sidebar-background" : "bg-muted text-muted-foreground"
                                     )}>
                                         <Shield className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <div className="font-bold text-base">Basic Package</div>
+                                        <div className="font-bold text-base">Student Package</div>
                                         <div className="text-xs text-muted-foreground">Access to plans + monthly review</div>
                                     </div>
                                 </div>
-                                <RadioGroupItem value="basic" id="basic" />
+                                <RadioGroupItem value="beginner" id="beginner" />
                             </Label>
                         </RadioGroup>
                     </div>

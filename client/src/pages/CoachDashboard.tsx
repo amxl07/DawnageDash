@@ -77,8 +77,16 @@ export default function CoachDashboard() {
     const openEditPackageDialog = (client: any) => {
         setSelectedClientId(client.id);
         setSelectedClientName(client.full_name || "Client");
+        // Map legacy values if present
+        const rawPackage = client.package_type;
+        const mappedPackage =
+            rawPackage === 'premium' ? 'elite' :
+                rawPackage === 'intermediate' ? 'standard' :
+                    rawPackage === 'basic' ? 'beginner' :
+                        (rawPackage as PackageType);
+
         setEditInitialValues({
-            package: client.package_type as PackageType || 'intermediate',
+            package: mappedPackage || 'standard',
             duration: client.package_duration || 3
         });
         setIsEditPackageDialogOpen(true);
@@ -111,6 +119,38 @@ export default function CoachDashboard() {
                 title: "Success",
                 description: `Client assigned with ${packageType} package for ${duration} months!`,
             });
+
+            // Send Welcome Email via Edge Function
+            try {
+                const client = clients?.find(c => c.id === selectedClientId);
+                if (client && client.email) {
+                    const { error: emailError } = await supabase.functions.invoke('send-welcome-email', {
+                        body: {
+                            email: client.email,
+                            name: client.full_name || "Valued Client",
+                            packageType: packageType,
+                            coachName: user?.user_metadata?.full_name || "Your Coach",
+                            duration: duration
+                        }
+                    });
+                    if (emailError) {
+                        console.error("Failed to send welcome email:", emailError);
+                        toast({
+                            title: "Email Error",
+                            description: "Client claimed, but welcome email failed to send.",
+                            variant: "destructive"
+                        });
+                    } else {
+                        toast({
+                            title: "Email Sent",
+                            description: "Welcome email with resources sent to client.",
+                        });
+                    }
+                }
+            } catch (emailErr) {
+                console.error("Error invoking email function:", emailErr);
+            }
+
             setIsClaimDialogOpen(false);
             refetch();
         } catch (error: any) {
@@ -192,12 +232,16 @@ export default function CoachDashboard() {
     };
 
     const getPackageStyle = (packageType: string | null) => {
+        // Handle both new and legacy values
         switch (packageType) {
-            case 'premium':
+            case 'elite':
+            case 'premium': // Legacy
                 return "border-gold border-2 shadow-gold/10 shadow-lg";
-            case 'intermediate':
+            case 'standard':
+            case 'intermediate': // Legacy
                 return "border-blue-500 border-2 shadow-blue-500/10 shadow-lg";
-            case 'basic':
+            case 'beginner':
+            case 'basic': // Legacy
                 return "border-muted border-2";
             default:
                 return "";
@@ -383,6 +427,8 @@ export default function CoachDashboard() {
                                             <div>
                                                 <h3 className="font-bold">{client.full_name || "Unknown User"}</h3>
                                                 <p className="text-sm text-muted-foreground">{client.email}</p>
+                                                {/* @ts-ignore */}
+                                                {client.country && <p className="text-xs text-muted-foreground">📍 {client.country}</p>}
                                             </div>
                                         </div>
                                         <Button
