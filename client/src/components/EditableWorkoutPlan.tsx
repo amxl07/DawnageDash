@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Edit2, Save, X, Plus, Trash2, Loader2, ChevronRight } from "lucide-react";
+import { Edit2, Save, X, Plus, Trash2, Loader2, ChevronRight, Video } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/lib/supabase";
@@ -15,7 +15,7 @@ interface Exercise {
   name: string;
   sets: number;
   reps: string;
-  rest?: string;
+  videoLink?: string;
 }
 
 interface DayWorkout {
@@ -152,7 +152,7 @@ export function EditableWorkoutPlan({
             ...day,
             exercises: [
               ...day.exercises,
-              { id: `ex-${Date.now()}`, name: 'New Exercise', sets: 3, reps: '10-12', rest: '60s' },
+              { id: `ex-${Date.now()}`, name: 'New Exercise', sets: 3, reps: '10-12', videoLink: '' },
             ],
           }
           : day
@@ -308,38 +308,41 @@ export function EditableWorkoutPlan({
                       </div>
                       <div className="flex-1 space-y-2">
                         {isEditing ? (
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                            <div className="col-span-2 md:col-span-2">
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                              <div className="col-span-2 md:col-span-2">
+                                <Input
+                                  value={exercise.name}
+                                  onChange={(e) => updateExercise(day.id, exercise.id, 'name', e.target.value)}
+                                  className="h-9 text-sm"
+                                  placeholder="Exercise name"
+                                  data-testid={`input-exercise-name-${exercise.id}`}
+                                />
+                              </div>
                               <Input
-                                value={exercise.name}
-                                onChange={(e) => updateExercise(day.id, exercise.id, 'name', e.target.value)}
+                                type="number"
+                                value={exercise.sets}
+                                onChange={(e) => updateExercise(day.id, exercise.id, 'sets', parseInt(e.target.value))}
                                 className="h-9 text-sm"
-                                placeholder="Exercise name"
-                                data-testid={`input-exercise-name-${exercise.id}`}
+                                placeholder="Sets"
+                                data-testid={`input-exercise-sets-${exercise.id}`}
+                              />
+                              <Input
+                                value={exercise.reps}
+                                onChange={(e) => updateExercise(day.id, exercise.id, 'reps', e.target.value)}
+                                className="h-9 text-sm"
+                                placeholder="Reps"
+                                data-testid={`input-exercise-reps-${exercise.id}`}
                               />
                             </div>
-                            <Input
-                              type="number"
-                              value={exercise.sets}
-                              onChange={(e) => updateExercise(day.id, exercise.id, 'sets', parseInt(e.target.value))}
-                              className="h-9 text-sm"
-                              placeholder="Sets"
-                              data-testid={`input-exercise-sets-${exercise.id}`}
-                            />
-                            <Input
-                              value={exercise.reps}
-                              onChange={(e) => updateExercise(day.id, exercise.id, 'reps', e.target.value)}
-                              className="h-9 text-sm"
-                              placeholder="Reps"
-                              data-testid={`input-exercise-reps-${exercise.id}`}
-                            />
-                            <div className="col-span-2 md:col-span-4 mt-1">
+                            <div className="flex items-center gap-2">
+                              <Video className="w-4 h-4 text-primary shrink-0" />
                               <Input
-                                value={exercise.rest || ''}
-                                onChange={(e) => updateExercise(day.id, exercise.id, 'rest', e.target.value)}
-                                className="h-9 text-sm"
-                                placeholder="Rest (e.g., 60s)"
-                                data-testid={`input-exercise-rest-${exercise.id}`}
+                                value={exercise.videoLink || ''}
+                                onChange={(e) => updateExercise(day.id, exercise.id, 'videoLink', e.target.value)}
+                                className="h-9 text-sm flex-1"
+                                placeholder="Video Link (YouTube URL)"
+                                data-testid={`input-exercise-video-${exercise.id}`}
                               />
                             </div>
                           </div>
@@ -350,10 +353,19 @@ export function EditableWorkoutPlan({
                               <span>{exercise.sets} sets</span>
                               <span>•</span>
                               <span>{exercise.reps} reps</span>
-                              {exercise.rest && (
+                              {exercise.videoLink && (
                                 <>
                                   <span>•</span>
-                                  <span>{exercise.rest} rest</span>
+                                  <a
+                                    href={exercise.videoLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary hover:underline flex items-center gap-1"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Video className="w-3 h-3" />
+                                    Watch Video
+                                  </a>
                                 </>
                               )}
                             </div>

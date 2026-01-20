@@ -8,7 +8,7 @@ import {
     AccordionItem,
     AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Calendar, Dumbbell, Clock, TrendingUp, Flame, Target, Award, CheckCircle2, Loader2, ChevronDown, ChevronUp, Plus, CalendarRange } from "lucide-react";
+import { Calendar, Dumbbell, Clock, TrendingUp, Flame, Target, Award, CheckCircle2, Loader2, ChevronDown, ChevronUp, Plus, CalendarRange, Video } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -129,6 +129,7 @@ export default function WorkoutLogs() {
                         const weight = exercise.Weight || exercise.weight;
                         const duration = exercise.Duration || exercise.duration;
                         const rest = exercise.Rest || exercise.rest;
+                        const videoLink = exercise.VideoLink || exercise.videoLink;
 
                         return (
                             <div key={idx} className="group relative bg-gradient-to-br from-muted/40 to-muted/20 hover:from-primary/5 hover:to-primary/10 p-4 rounded-xl transition-all duration-200 border border-border/50 hover:border-primary/20">
@@ -202,6 +203,20 @@ export default function WorkoutLogs() {
                                             <div className="bg-background/60 rounded-lg p-2.5 text-center border border-border/30">
                                                 <p className="text-xs font-medium text-muted-foreground mb-0.5">Rest</p>
                                                 <p className="text-lg font-bold text-foreground">{rest}</p>
+                                            </div>
+                                        )}
+                                        {videoLink && (
+                                            <div className="col-span-2 sm:col-span-1 bg-background/60 rounded-lg p-2.5 text-center border border-primary/20">
+                                                <p className="text-xs font-medium text-muted-foreground mb-0.5">Video</p>
+                                                <a
+                                                    href={videoLink}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-sm font-bold text-primary hover:underline flex items-center justify-center gap-1"
+                                                >
+                                                    <Video className="w-4 h-4" />
+                                                    Watch
+                                                </a>
                                             </div>
                                         )}
                                     </div>

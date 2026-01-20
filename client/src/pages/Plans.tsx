@@ -241,13 +241,21 @@ export default function Plans() {
 
       // If user has custom plans, return those
       if (userPlans && userPlans.length > 0) {
-        return userPlans.map(plan => ({
-          id: plan.id,
-          dayNumber: plan.day_number,
-          focus: plan.focus || '',
-          exercises: plan.exercises ? JSON.parse(plan.exercises) : [],
-          isTemplate: false,
-        }));
+        return userPlans.map(plan => {
+          const exercises = plan.exercises ? JSON.parse(plan.exercises) : [];
+          // Ensure each exercise has a unique ID
+          const exercisesWithIds = exercises.map((ex: any, idx: number) => ({
+            ...ex,
+            id: ex.id || `ex-${plan.id}-${idx}-${Date.now()}`
+          }));
+          return {
+            id: plan.id,
+            dayNumber: plan.day_number,
+            focus: plan.focus || '',
+            exercises: exercisesWithIds,
+            isTemplate: false,
+          };
+        });
       }
 
       // Second: Fall back to global templates
@@ -267,13 +275,21 @@ export default function Plans() {
       const { data: templates, error: templateError } = await templateQuery.order('day_number', { ascending: true });
       if (templateError) throw templateError;
 
-      return (templates || []).map(plan => ({
-        id: plan.id,
-        dayNumber: plan.day_number,
-        focus: plan.focus || '',
-        exercises: plan.exercises ? JSON.parse(plan.exercises) : [],
-        isTemplate: true, // Flag to indicate this is from templates
-      }));
+      return (templates || []).map(plan => {
+        const exercises = plan.exercises ? JSON.parse(plan.exercises) : [];
+        // Ensure each exercise has a unique ID
+        const exercisesWithIds = exercises.map((ex: any, idx: number) => ({
+          ...ex,
+          id: ex.id || `tpl-ex-${plan.id}-${idx}`
+        }));
+        return {
+          id: plan.id,
+          dayNumber: plan.day_number,
+          focus: plan.focus || '',
+          exercises: exercisesWithIds,
+          isTemplate: true, // Flag to indicate this is from templates
+        };
+      });
     },
     enabled: !!targetUserId && isSelectionComplete,
   });

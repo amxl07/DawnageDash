@@ -1,13 +1,13 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Dumbbell } from "lucide-react";
+import { Dumbbell, Video } from "lucide-react";
 
 interface Exercise {
   name: string;
   sets: number;
   reps: string;
-  rest?: string;
+  videoLink?: string;
 }
 
 interface DayWorkout {
@@ -52,10 +52,18 @@ export function WorkoutPlan({ weeklyPlan }: WorkoutPlanProps) {
                         <span>{exercise.sets} sets</span>
                         <span>•</span>
                         <span>{exercise.reps} reps</span>
-                        {exercise.rest && (
+                        {exercise.videoLink && (
                           <>
                             <span>•</span>
-                            <span>{exercise.rest} rest</span>
+                            <a
+                              href={exercise.videoLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline flex items-center gap-1"
+                            >
+                              <Video className="w-3 h-3" />
+                              Watch Video
+                            </a>
                           </>
                         )}
                       </div>
