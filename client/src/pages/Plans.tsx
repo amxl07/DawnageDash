@@ -731,6 +731,9 @@ export default function Plans() {
                 subCategory={subCategory || null}
                 daysPerWeek={daysPerWeek as number}
                 isReadOnly={!isCoach}
+                onSave={() => {
+                  queryClient.invalidateQueries({ queryKey: ['workoutPlans'] });
+                }}
               />
             )
           ) : (
