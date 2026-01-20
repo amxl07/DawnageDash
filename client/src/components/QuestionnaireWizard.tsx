@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { questionnaireSections, Question } from "@/lib/questionnaire-data";
+import { QuestionnaireSummary } from "@/components/QuestionnaireSummary";
 import { Loader2, CheckCircle2, ChevronRight, ChevronLeft, Save } from "lucide-react";
 
 export function QuestionnaireWizard({ onComplete }: { onComplete?: () => void }) {
@@ -24,6 +25,7 @@ export function QuestionnaireWizard({ onComplete }: { onComplete?: () => void })
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [completedSections, setCompletedSections] = useState<string[]>([]);
+    const [showSummary, setShowSummary] = useState(false); // Show summary when completed
 
     // Determine the target user ID for fetching/saving data
     const targetUserId = viewedUserId || user?.id;
@@ -51,12 +53,15 @@ export function QuestionnaireWizard({ onComplete }: { onComplete?: () => void })
                 setAnswers(JSON.parse(data.answers || '{}'));
                 setCompletedSections(JSON.parse(data.completed_sections || '[]'));
 
-                // Find first incomplete section to resume
-                const firstIncomplete = questionnaireSections.findIndex(s => !JSON.parse(data.completed_sections || '[]').includes(s.id));
-                if (firstIncomplete !== -1) {
-                    setCurrentSectionIndex(firstIncomplete);
-                } else if (data.status === 'completed') {
-                    setCurrentSectionIndex(questionnaireSections.length - 1); // Go to last or show summary
+                // If questionnaire is completed, show the summary view
+                if (data.status === 'completed') {
+                    setShowSummary(true);
+                } else {
+                    // Find first incomplete section to resume
+                    const firstIncomplete = questionnaireSections.findIndex(s => !JSON.parse(data.completed_sections || '[]').includes(s.id));
+                    if (firstIncomplete !== -1) {
+                        setCurrentSectionIndex(firstIncomplete);
+                    }
                 }
             }
         } catch (error) {
@@ -144,6 +149,7 @@ export function QuestionnaireWizard({ onComplete }: { onComplete?: () => void })
             window.scrollTo(0, 0);
         } else {
             // Completed
+            setShowSummary(true);
             if (onComplete) onComplete();
             toast({
                 title: "Questionnaire Completed! 🎉",
@@ -157,6 +163,12 @@ export function QuestionnaireWizard({ onComplete }: { onComplete?: () => void })
             setCurrentSectionIndex(prev => prev - 1);
             window.scrollTo(0, 0);
         }
+    };
+
+    const handleEdit = () => {
+        setShowSummary(false);
+        // Optional: you could scroll to top or set index to 0 or leave as is
+        window.scrollTo(0, 0);
     };
 
     const renderQuestionInput = (question: Question) => {
@@ -259,6 +271,13 @@ export function QuestionnaireWizard({ onComplete }: { onComplete?: () => void })
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
         );
+    }
+
+    // Always show summary view for coaches viewing clients
+    const isCoachViewing = user?.user_metadata?.role === 'coach' && !!viewedUserId;
+
+    if (showSummary || isCoachViewing) {
+        return <QuestionnaireSummary answers={answers} onEdit={handleEdit} />;
     }
 
     return (
