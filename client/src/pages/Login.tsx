@@ -1,30 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import logoUrl from "@assets/dashboard_1762285477469.png";
-import { Mail, Loader2, User, Phone, Lock, Key, Eye, EyeOff, ArrowRight, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Mail, Loader2, User, Phone, Lock, Key, Eye, EyeOff, ArrowRight, ArrowLeft, Search, Check, ChevronDown } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { allCountryCodes } from "@/lib/countryCodes";
-
-// For backward compatibility, use the comprehensive list
-const countryCodes = allCountryCodes;
-
-
-const countries = [
-  "United States", "United Kingdom", "Canada", "Australia", "India", "Germany", "France", "Japan", "China",
-  "Brazil", "Mexico", "Russia", "South Africa", "Italy", "Spain", "Netherlands", "Sweden", "Switzerland",
-  "United Arab Emirates", "Singapore", "Saudi Arabia", "South Korea", "Turkey", "Argentina", "Belgium",
-  "Norway", "Austria", "Denmark", "Ireland", "Poland", "Indonesia", "Malaysia", "Thailand", "Philippines",
-  "Vietnam", "Egypt", "Nigeria", "Kenya", "Pakistan", "Bangladesh", "Other"
-].sort();
+import { allCountryCodes, getCodeByCountry } from "@/lib/countryCodes";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -33,13 +23,17 @@ export default function Login() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [countryCode, setCountryCode] = useState("+1");
-  const [country, setCountry] = useState("");
+  const [selectedCountry, setSelectedCountry] = useState<typeof allCountryCodes[0] | null>(null);
+  const [countryCode, setCountryCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [isCoachSignup, setIsCoachSignup] = useState(false);
   const [accessKey, setAccessKey] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [countryOpen, setCountryOpen] = useState(false);
+  const [countrySearch, setCountrySearch] = useState("");
+
+  const [showVerificationMessage, setShowVerificationMessage] = useState(false);
 
   // Wizard Step: 1 for Identity, 2 for Security
   const [step, setStep] = useState(1);
@@ -47,15 +41,26 @@ export default function Login() {
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // Memoized filtered countries for performance
+  const filteredCountries = useMemo(() => {
+    if (!countrySearch) return allCountryCodes;
+    const search = countrySearch.toLowerCase();
+    return allCountryCodes.filter(c =>
+      c.country.toLowerCase().includes(search) ||
+      c.code.includes(search)
+    );
+  }, [countrySearch]);
+
   useEffect(() => {
-    if (user) {
+    if (user && !showVerificationMessage) {
       setLocation("/");
     }
-  }, [user, setLocation]);
+  }, [user, setLocation, showVerificationMessage]);
 
   // Reset step when toggling between Login/Signup
   useEffect(() => {
     setStep(1);
+    setShowVerificationMessage(false);
   }, [isSignUp]);
 
   const handleNextStep = () => {
@@ -64,7 +69,7 @@ export default function Login() {
       toast({ title: "Name required", description: "Please enter your full name", variant: "destructive" });
       return;
     }
-    if (!country) {
+    if (!selectedCountry) {
       toast({ title: "Country required", description: "Please select your country", variant: "destructive" });
       return;
     }
@@ -102,7 +107,7 @@ export default function Login() {
             data: {
               full_name: fullName,
               phone_number: fullPhoneNumber,
-              country: country,
+              country: selectedCountry?.country || '',
               role: isCoachSignup ? 'coach' : 'client',
             }
           }
@@ -111,11 +116,11 @@ export default function Login() {
         if (error) throw error;
 
         toast({
-          title: "Success!",
-          description: "Account created successfully! Redirecting...",
+          title: "Success! Please check your email.",
+          description: "We've sent a verification link to your inbox.",
         });
 
-        setTimeout(() => setLocation("/"), 1500);
+        setShowVerificationMessage(true);
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -137,6 +142,40 @@ export default function Login() {
       setIsLoading(false);
     }
   };
+
+  if (showVerificationMessage) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
+        <div className="fixed inset-0 z-0 opacity-10 pointer-events-none pattern-grid-lg" />
+        <div className="fixed top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
+        <div className="fixed bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
+
+        <Card className="w-full max-w-md p-6 sm:p-8 space-y-6 sm:space-y-8 relative z-10 shadow-2xl border-primary/10 rounded-3xl bg-background/80 backdrop-blur-xl overflow-hidden">
+          <div className="text-center space-y-4">
+            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+              <Mail className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight">Check your email</h1>
+            <p className="text-muted-foreground">
+              We've sent a verification link to <span className="font-semibold text-foreground">{email}</span>. Please check your inbox and confirm your email to access the dashboard.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <Button
+              onClick={() => setIsSignUp(false)}
+              className="w-full h-12 text-base font-semibold rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all"
+            >
+              Back to Login
+            </Button>
+            <p className="text-xs text-center text-muted-foreground">
+              Didn't receive the email? Check your spam folder or try signing up again.
+            </p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
@@ -190,6 +229,7 @@ export default function Login() {
                 transition={{ duration: 0.2 }}
                 className="space-y-4"
               >
+                {/* Full Name */}
                 <div className="space-y-2">
                   <Label htmlFor="fullName" className="text-sm font-medium">Full Name</Label>
                   <div className="relative">
@@ -205,50 +245,100 @@ export default function Login() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="country" className="text-sm font-medium">Country</Label>
-                    <Select value={country} onValueChange={setCountry}>
-                      <SelectTrigger className="w-full h-12 rounded-2xl bg-muted/30 border-0 focus-visible:ring-primary/20">
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[300px] rounded-2xl">
-                        {countries.map((c) => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                {/* Country Selection - Searchable Combobox */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Country</Label>
+                  <Popover open={countryOpen} onOpenChange={setCountryOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={countryOpen}
+                        className="w-full h-12 justify-between rounded-2xl bg-muted/30 border-0 hover:bg-muted/50 px-4"
+                      >
+                        {selectedCountry ? (
+                          <span className="flex items-center gap-3">
+                            <span className="text-xl">{selectedCountry.flag}</span>
+                            <span className="font-medium">{selectedCountry.country}</span>
+                            <span className="text-muted-foreground text-sm">({selectedCountry.code})</span>
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">Select your country...</span>
+                        )}
+                        <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0 rounded-2xl" align="start">
+                      <Command>
+                        <CommandInput
+                          placeholder="Search country or code..."
+                          value={countrySearch}
+                          onValueChange={setCountrySearch}
+                          className="h-11"
+                        />
+                        <CommandList className="max-h-[280px]">
+                          <CommandEmpty>No country found.</CommandEmpty>
+                          <CommandGroup>
+                            {filteredCountries.slice(0, 50).map((item) => (
+                              <CommandItem
+                                key={`${item.country}-${item.code}`}
+                                value={`${item.country} ${item.code}`}
+                                onSelect={() => {
+                                  setSelectedCountry(item);
+                                  setCountryCode(item.code);
+                                  setCountryOpen(false);
+                                  setCountrySearch("");
+                                }}
+                                className="flex items-center gap-3 px-3 py-2.5 cursor-pointer"
+                              >
+                                <span className="text-xl">{item.flag}</span>
+                                <span className="flex-1 font-medium">{item.country}</span>
+                                <span className="text-muted-foreground text-sm font-mono">{item.code}</span>
+                                <Check
+                                  className={cn(
+                                    "ml-auto h-4 w-4",
+                                    selectedCountry?.country === item.country
+                                      ? "opacity-100 text-primary"
+                                      : "opacity-0"
+                                  )}
+                                />
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-sm font-medium">WhatsApp</Label>
-                    <div className="flex gap-2">
-                      <Select value={countryCode} onValueChange={setCountryCode}>
-                        <SelectTrigger className="w-[90px] h-12 rounded-2xl bg-muted/30 border-0 focus-visible:ring-primary/20 px-2 shrink-0">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-[300px] min-w-[300px] rounded-2xl">
-                          {countryCodes.map((item) => (
-                            <SelectItem key={item.code} value={item.code}>
-                              <span className="flex items-center gap-2">
-                                <span className="text-lg">{item.flag}</span>
-                                <span className="font-mono text-sm">{item.code}</span>
-                                <span className="text-[10px] text-muted-foreground truncate uppercase">{item.country}</span>
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                {/* WhatsApp Number - Full Width */}
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="text-sm font-medium">WhatsApp Number</Label>
+                  <div className="flex gap-2">
+                    {/* Country Code Edit - Auto populated but editable */}
+                    <div className="relative flex items-center h-12 rounded-2xl bg-muted/30 border-0 shrink-0 min-w-[70px] w-[80px] focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+                      <Input
+                        value={countryCode}
+                        onChange={(e) => setCountryCode(e.target.value)}
+                        className="h-full w-full bg-transparent border-0 focus-visible:ring-0 px-2 font-mono font-medium text-sm text-center"
+                        placeholder="+00"
+                      />
+                    </div>
+                    <div className="relative flex-1">
+                      <Phone className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="phone"
                         type="tel"
-                        placeholder="Phone"
+                        placeholder="Enter your number"
                         value={phoneNumber}
                         onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
-                        className="flex-1 h-12 rounded-2xl bg-muted/30 border-0 focus-visible:ring-primary/20"
+                        className="pl-10 h-12 rounded-2xl bg-muted/30 border-0 focus-visible:ring-primary/20"
                       />
                     </div>
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    We'll use this to connect you with your AI coach on WhatsApp
+                  </p>
                 </div>
 
                 <Button
@@ -422,4 +512,3 @@ export default function Login() {
     </div>
   );
 }
-
