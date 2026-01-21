@@ -13,8 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 
 // Types for hierarchical structure
 type Level = 'Beginner' | 'Intermediate' | 'Advanced';
-type WorkoutType = 'GYM_WORKOUT' | 'HOME_WORKOUT' | 'ADVANCE_CALISTHENICS' | 'POWERBUILDING' | 'CALIS_COMPOUND_LIFTS';
-type SubCategory = '0_EXPERIENCE' | '6_MONTH_EXPERIENCE' | 'JUST_BODYWEIGHT' | 'JUST_DBS' | 'JUST_RINGS' | 'DBS_RINGS' | 'PHASE_1' | 'PHASE_2' | null;
+type WorkoutType = 'GYM_WORKOUT' | 'HOME_WORKOUT' | 'ADVANCE_CALISTHENICS' | 'POWERBUILDING' | 'CALIS_COMPOUND_LIFTS' | 'ASSESSMENT';
+type SubCategory = '0_EXPERIENCE' | '6_MONTH_EXPERIENCE' | 'JUST_BODYWEIGHT' | 'JUST_DBS' | 'JUST_RINGS' | 'DBS_RINGS' | 'PHASE_1' | 'PHASE_2' | '5_DAY_PLAN' | null;
 type DietType = 'Vegetarian' | 'Eggetarian' | 'Non-Vegetarian';
 const CALORIE_OPTIONS = [1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800];
 const DIET_OPTIONS: DietType[] = ['Vegetarian', 'Eggetarian', 'Non-Vegetarian'];
@@ -32,6 +32,10 @@ const WORKOUT_HIERARCHY: Record<Level, Partial<Record<WorkoutType, WorkoutConfig
     HOME_WORKOUT: {
       subCategories: ['JUST_BODYWEIGHT', 'JUST_DBS', 'JUST_RINGS', 'DBS_RINGS'],
       daysOptions: [3, 4],
+    },
+    ASSESSMENT: {
+      subCategories: ['5_DAY_PLAN'],
+      daysOptions: [5],
     },
   },
   Intermediate: {
@@ -73,6 +77,7 @@ const WORKOUT_TYPE_LABELS: Record<WorkoutType, string> = {
   ADVANCE_CALISTHENICS: 'Advanced Calisthenics',
   POWERBUILDING: 'Powerbuilding',
   CALIS_COMPOUND_LIFTS: 'Calisthenics + Compound Lifts',
+  ASSESSMENT: 'Assessment Plan',
 };
 
 const SUB_CATEGORY_LABELS: Record<string, string> = {
@@ -84,6 +89,7 @@ const SUB_CATEGORY_LABELS: Record<string, string> = {
   'DBS_RINGS': 'Dumbbells + Rings',
   'PHASE_1': 'Phase 1',
   'PHASE_2': 'Phase 2',
+  '5_DAY_PLAN': '5-Day Plan',
 };
 
 
