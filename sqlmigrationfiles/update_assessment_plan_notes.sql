@@ -1,8 +1,15 @@
 -- ============================================================================
--- ASSESSMENT PLAN
+-- UPDATE ASSESSMENT PLAN NOTES
 -- ============================================================================
--- This template is the basic starting point for new clients.
+-- Updates the 5-Day Assessment Plan with "Alternatives / Notes" and "Alternate Workout Video Links".
 -- ============================================================================
+
+-- 1. Remove existing Assessment Plan templates to avoid duplicates during re-insertion
+DELETE FROM workout_templates 
+WHERE workout_type = 'ASSESSMENT' 
+  AND sub_category = '5_DAY_PLAN';
+
+-- 2. Insert Updated Templates
 
 -- Day 1: Full Body
 INSERT INTO workout_templates (level, workout_type, sub_category, days_per_week, day_number, focus, exercises)

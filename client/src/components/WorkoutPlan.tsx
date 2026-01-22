@@ -8,6 +8,7 @@ interface Exercise {
   sets: number;
   reps: string;
   videoLink?: string;
+  notes?: string;
 }
 
 interface DayWorkout {
@@ -19,6 +20,28 @@ interface DayWorkout {
 interface WorkoutPlanProps {
   weeklyPlan: DayWorkout[];
 }
+
+const renderWithLinks = (text: string) => {
+  if (!text) return null;
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  return parts.map((part, index) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a
+          key={index}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline break-all"
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
 
 export function WorkoutPlan({ weeklyPlan }: WorkoutPlanProps) {
   return (
@@ -48,7 +71,7 @@ export function WorkoutPlan({ weeklyPlan }: WorkoutPlanProps) {
                   <div key={exIndex} className="flex items-start justify-between p-3 rounded-lg bg-muted/50">
                     <div className="flex-1">
                       <p className="font-medium mb-1">{exercise.name}</p>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                         <span>{exercise.sets} sets</span>
                         <span>•</span>
                         <span>{exercise.reps} reps</span>
@@ -67,6 +90,11 @@ export function WorkoutPlan({ weeklyPlan }: WorkoutPlanProps) {
                           </>
                         )}
                       </div>
+                      {exercise.notes && (
+                        <div className="mt-2 text-xs text-muted-foreground bg-background p-2 rounded-md border border-border/50 whitespace-pre-wrap">
+                          {renderWithLinks(exercise.notes)}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

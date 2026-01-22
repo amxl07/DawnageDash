@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Edit2, Save, X, Plus, Trash2, Loader2, ChevronRight, Video } from "lucide-react";
+import { Edit2, Save, X, Plus, Trash2, Loader2, ChevronRight, Video, StickyNote } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/lib/supabase";
@@ -16,6 +17,7 @@ interface Exercise {
   sets: number;
   reps: string;
   videoLink?: string;
+  notes?: string;
 }
 
 interface DayWorkout {
@@ -26,8 +28,8 @@ interface DayWorkout {
   isTemplate?: boolean;
 }
 
-type WorkoutType = 'GYM_WORKOUT' | 'HOME_WORKOUT' | 'ADVANCE_CALISTHENICS' | 'POWERBUILDING' | 'CALIS_COMPOUND_LIFTS';
-type SubCategory = '0_EXPERIENCE' | '6_MONTH_EXPERIENCE' | 'JUST_BODYWEIGHT' | 'JUST_DBS' | 'JUST_RINGS' | 'DBS_RINGS' | 'PHASE_1' | 'PHASE_2' | null;
+type WorkoutType = 'GYM_WORKOUT' | 'HOME_WORKOUT' | 'ADVANCE_CALISTHENICS' | 'POWERBUILDING' | 'CALIS_COMPOUND_LIFTS' | 'ASSESSMENT';
+type SubCategory = '0_EXPERIENCE' | '6_MONTH_EXPERIENCE' | 'JUST_BODYWEIGHT' | 'JUST_DBS' | 'JUST_RINGS' | 'DBS_RINGS' | 'PHASE_1' | 'PHASE_2' | '5_DAY_PLAN' | null;
 
 interface EditableWorkoutPlanProps {
   initialPlan: DayWorkout[];
@@ -38,6 +40,29 @@ interface EditableWorkoutPlanProps {
   onSave?: (plan: DayWorkout[]) => void;
   isReadOnly?: boolean;
 }
+
+const renderWithLinks = (text: string) => {
+  if (!text) return null;
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  return parts.map((part, index) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a
+          key={index}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline break-all"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
 
 export function EditableWorkoutPlan({
   initialPlan,
@@ -152,7 +177,7 @@ export function EditableWorkoutPlan({
             ...day,
             exercises: [
               ...day.exercises,
-              { id: `ex-${Date.now()}`, name: 'New Exercise', sets: 3, reps: '10-12', videoLink: '' },
+              { id: `ex-${Date.now()}`, name: 'New Exercise', sets: 3, reps: '10-12', videoLink: '', notes: '' },
             ],
           }
           : day
@@ -345,11 +370,24 @@ export function EditableWorkoutPlan({
                                 data-testid={`input-exercise-video-${exercise.id}`}
                               />
                             </div>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <StickyNote className="w-3 h-3" />
+                                <span>Notes & Instructions (Optional, Paste links here)</span>
+                              </div>
+                              <Textarea
+                                value={exercise.notes || ''}
+                                onChange={(e) => updateExercise(day.id, exercise.id, 'notes', e.target.value)}
+                                className="min-h-[60px] text-sm resize-y"
+                                placeholder="Add notes, alternate workouts, or additional links..."
+                                data-testid={`textarea-exercise-notes-${exercise.id}`}
+                              />
+                            </div>
                           </div>
                         ) : (
                           <>
                             <p className="font-medium text-sm">{exercise.name}</p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                               <span>{exercise.sets} sets</span>
                               <span>•</span>
                               <span>{exercise.reps} reps</span>
@@ -369,6 +407,11 @@ export function EditableWorkoutPlan({
                                 </>
                               )}
                             </div>
+                            {exercise.notes && (
+                              <div className="mt-2 text-xs text-muted-foreground bg-muted/50 p-2 rounded-md whitespace-pre-wrap">
+                                {renderWithLinks(exercise.notes)}
+                              </div>
+                            )}
                           </>
                         )}
                       </div>
