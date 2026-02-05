@@ -10,6 +10,7 @@ import { LogOut } from "lucide-react";
 import { useState } from "react";
 import { PackageSelectDialog, PackageType } from "@/components/PackageSelectDialog";
 import { cn } from "@/lib/utils";
+import { formatDisplayDate } from "@/lib/date-utils";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -41,7 +42,7 @@ export default function CoachDashboard() {
 
     // Edit/Unassign State
     const [isEditPackageDialogOpen, setIsEditPackageDialogOpen] = useState(false);
-    const [editInitialValues, setEditInitialValues] = useState<{ package: PackageType, duration: number } | null>(null);
+    const [editInitialValues, setEditInitialValues] = useState<{ package: PackageType, duration: number, startDate?: string | null } | null>(null);
     const [clientToUnassign, setClientToUnassign] = useState<{ id: string, name: string } | null>(null);
     const [isUnassignDialogOpen, setIsUnassignDialogOpen] = useState(false);
     const [isUnassigning, setIsUnassigning] = useState(false);
@@ -87,7 +88,8 @@ export default function CoachDashboard() {
 
         setEditInitialValues({
             package: mappedPackage || 'standard',
-            duration: client.package_duration || 3
+            duration: client.package_duration || 3,
+            startDate: client.package_start_date || null
         });
         setIsEditPackageDialogOpen(true);
     };
@@ -164,17 +166,21 @@ export default function CoachDashboard() {
         }
     };
 
-    const handleEditPackageConfirmation = async (packageType: PackageType, duration: number) => {
+    const handleEditPackageConfirmation = async (packageType: PackageType, duration: number, startDate?: string) => {
         if (!selectedClientId) return;
 
         setIsClaiming(true); // Re-use loading state
         try {
+            const updatePayload: any = {
+                package_type: packageType,
+                package_duration: duration
+            };
+            if (startDate) {
+                updatePayload.package_start_date = startDate;
+            }
             const { error } = await supabase
                 .from('users')
-                .update({
-                    package_type: packageType,
-                    package_duration: duration
-                })
+                .update(updatePayload)
                 .eq('id', selectedClientId);
 
             if (error) throw error;
@@ -253,7 +259,7 @@ export default function CoachDashboard() {
         const start = new Date(startDate);
         // Add duration months
         const end = new Date(start.setMonth(start.getMonth() + duration));
-        return end.toLocaleDateString();
+        return formatDisplayDate(end);
     };
 
     if (isLoading) {
@@ -356,7 +362,7 @@ export default function CoachDashboard() {
                                                     <div className="text-xs space-y-0.5 text-muted-foreground">
                                                         {/* @ts-ignore */}
                                                         <div>Package: <span className="font-medium text-foreground capitalize">{client.package_type || 'None'}</span></div>
-                                                        <div>Start: <span className="font-medium text-foreground">{startDate ? new Date(startDate).toLocaleDateString() : 'Not yet started'}</span></div>
+                                                        <div>Start: <span className="font-medium text-foreground">{startDate ? formatDisplayDate(startDate) : 'Not yet started'}</span></div>
                                                         {endDate && <div>End: <span className="font-medium text-foreground">{endDate}</span></div>}
                                                     </div>
                                                 </div>
@@ -463,6 +469,7 @@ export default function CoachDashboard() {
                 mode="edit"
                 initialPackage={editInitialValues?.package}
                 initialDuration={editInitialValues?.duration}
+                initialStartDate={editInitialValues?.startDate}
             />
 
             <AlertDialog open={isUnassignDialogOpen} onOpenChange={setIsUnassignDialogOpen}>

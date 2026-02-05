@@ -9,21 +9,26 @@ import {
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Crown, Star, Shield } from "lucide-react";
+import { Crown, Star, Shield, CalendarIcon } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format, parse, isValid } from "date-fns";
+import { formatDisplayDate } from "@/lib/date-utils";
 
 export type PackageType = 'elite' | 'standard' | 'beginner';
 
 interface PackageSelectDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onConfirm: (packageType: PackageType, duration: number) => void;
+    onConfirm: (packageType: PackageType, duration: number, startDate?: string) => void;
     isLoading?: boolean;
     clientName: string;
     mode?: 'claim' | 'edit';
     initialPackage?: PackageType | null;
     initialDuration?: number | null;
+    initialStartDate?: string | null;
 }
 
 export function PackageSelectDialog({
@@ -34,7 +39,8 @@ export function PackageSelectDialog({
     clientName,
     mode = 'claim',
     initialPackage,
-    initialDuration
+    initialDuration,
+    initialStartDate
 }: PackageSelectDialogProps) {
     // Cast initialPackage to new type if it matches legacy strings, or default to 'standard'
     // This is a rough safety cast; ideally callers pass correct types.
@@ -47,6 +53,11 @@ export function PackageSelectDialog({
 
     const [selectedPackage, setSelectedPackage] = useState<PackageType>(safeInitialPackage);
     const [selectedDuration, setSelectedDuration] = useState<number>(initialDuration || 3);
+    const [selectedStartDate, setSelectedStartDate] = useState<string>(initialStartDate || '');
+    // Separate state for the text input to allow free typing
+    const [dateInputValue, setDateInputValue] = useState<string>(
+        initialStartDate ? formatDisplayDate(initialStartDate) : ''
+    );
 
     // Update state when open changes to true
     /* eslint-disable react-hooks/exhaustive-deps */
@@ -55,12 +66,41 @@ export function PackageSelectDialog({
         setPrevOpen(true);
         setSelectedPackage(safeInitialPackage);
         setSelectedDuration(initialDuration || 3);
+        setSelectedStartDate(initialStartDate || '');
+        setDateInputValue(initialStartDate ? formatDisplayDate(initialStartDate) : '');
     } else if (!open && prevOpen) {
         setPrevOpen(false);
     }
 
+    // Handle date input change - allow free typing
+    const handleDateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setDateInputValue(val);
+
+        // Try to parse when it looks like a complete DD-MM-YYYY date
+        if (/^\d{2}-\d{2}-\d{4}$/.test(val)) {
+            const parsed = parse(val, 'dd-MM-yyyy', new Date());
+            if (isValid(parsed)) {
+                setSelectedStartDate(format(parsed, 'yyyy-MM-dd'));
+            }
+        }
+    };
+
+    // Handle blur - try to parse the date
+    const handleDateInputBlur = () => {
+        if (!dateInputValue) {
+            setSelectedStartDate('');
+            return;
+        }
+        const parsed = parse(dateInputValue, 'dd-MM-yyyy', new Date());
+        if (isValid(parsed)) {
+            setSelectedStartDate(format(parsed, 'yyyy-MM-dd'));
+            setDateInputValue(format(parsed, 'dd-MM-yyyy'));
+        }
+    };
+
     const handleConfirm = () => {
-        onConfirm(selectedPackage, selectedDuration);
+        onConfirm(selectedPackage, selectedDuration, selectedStartDate || undefined);
     };
 
     return (
@@ -200,6 +240,44 @@ export function PackageSelectDialog({
                             </Label>
                         </RadioGroup>
                     </div>
+
+                    {/* Start Date - Only show in Edit mode */}
+                    {mode === 'edit' && (
+                        <div className="space-y-3">
+                            <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Start Date (Optional)</Label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="DD-MM-YYYY"
+                                    value={dateInputValue}
+                                    onChange={handleDateInputChange}
+                                    onBlur={handleDateInputBlur}
+                                    className="flex-1 p-3 rounded-xl border-2 border-muted bg-background text-foreground focus:border-primary focus:outline-none transition-all font-mono"
+                                />
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="icon" className="h-12 w-12 rounded-xl shrink-0">
+                                            <CalendarIcon className="h-5 w-5" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="end">
+                                        <Calendar
+                                            mode="single"
+                                            selected={selectedStartDate ? parse(selectedStartDate, 'yyyy-MM-dd', new Date()) : undefined}
+                                            onSelect={(date) => {
+                                                if (date && isValid(date)) {
+                                                    setSelectedStartDate(format(date, 'yyyy-MM-dd'));
+                                                    setDateInputValue(format(date, 'dd-MM-yyyy'));
+                                                }
+                                            }}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
+                            <p className="text-xs text-muted-foreground">Type the date (DD-MM-YYYY) or click the calendar icon to select.</p>
+                        </div>
+                    )}
                 </div>
 
                 <DialogFooter>

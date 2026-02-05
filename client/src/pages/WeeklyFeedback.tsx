@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ClientWeeklyFeedbackView } from "@/components/ClientWeeklyFeedbackView";
 
 type CheckInFormData = {
   // Step 1: General
@@ -61,12 +62,22 @@ const initialData: CheckInFormData = {
 };
 
 export default function WeeklyFeedback() {
-  const { user } = useAuth();
+  const { user, viewedUserId } = useAuth();
   const { toast } = useToast();
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState<CheckInFormData>(initialData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [issubmitted, setIsSubmitted] = useState(false);
+
+  // If viewing as coach, show read-only view
+  if (viewedUserId) {
+    return (
+      <div className="max-w-3xl mx-auto py-8 px-4">
+        <ClientWeeklyFeedbackView clientId={viewedUserId} />
+      </div>
+    );
+  }
+
 
   // Fetch previous check-ins to determine current week
   const { data: checkIns } = useQuery({
@@ -113,39 +124,15 @@ export default function WeeklyFeedback() {
             </Button>
           </div>
 
-          {/* History Section */}
-          {checkIns && checkIns.length > 0 && (
-            <div className="border-t pt-8 mt-8">
-              <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                <Calendar className="w-5 h-5" /> Previous Check-ins
-              </h3>
-              <ScrollArea className="h-[200px] w-full rounded-md border p-4">
-                <div className="space-y-4">
-                  {checkIns.map((checkIn, index) => {
-                    const checkInWeek = checkIns.length - index;
-                    return (
-                      <div key={checkIn.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-xs font-bold text-green-700 dark:text-green-300">
-                            W{checkInWeek}
-                          </div>
-                          <div>
-                            <p className="font-medium text-sm">Week {checkInWeek} Check-in</p>
-                            <p className="text-xs text-muted-foreground">
-                              {format(new Date(checkIn.created_at), "PPP 'at' p")}
-                            </p>
-                          </div>
-                        </div>
-                        <CheckCircle2 className="w-4 h-4 text-green-600" />
-                      </div>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
+          {/* History Section - Inline Accordion */}
+          {checkIns && checkIns.length > 0 && user?.id && (
+            <div className="border-t pt-8 mt-8 text-left">
+              <ClientWeeklyFeedbackView clientId={user.id} clientName="My" />
             </div>
           )}
         </div>
       )
+
     },
     {
       title: "Weekly Overview",

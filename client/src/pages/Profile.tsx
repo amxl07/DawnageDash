@@ -11,6 +11,7 @@ import { User, Mail, Phone, MapPin, Target, Calendar, Activity, Loader2 } from "
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { formatDisplayDate } from "@/lib/date-utils";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QuestionnaireWizard } from "@/components/QuestionnaireWizard";
@@ -64,7 +65,7 @@ export default function Profile() {
           if (pkgStart && pkgDuration) {
             const start = new Date(pkgStart);
             const end = new Date(start.setMonth(start.getMonth() + pkgDuration));
-            endDateStr = end.toLocaleDateString();
+            endDateStr = formatDisplayDate(end);
           }
 
           setFormData(prev => ({
@@ -77,7 +78,7 @@ export default function Profile() {
             goal: profileData.goal || "",
             injuries: profileData.injuries || "",
             medicalCondition: profileData.medicalCondition || "",
-            startDate: pkgStart || "",
+            startDate: formatDisplayDate(pkgStart),
             packageEndDate: endDateStr,
           }));
         }
@@ -304,7 +305,10 @@ export default function Profile() {
 
                   <div className="space-y-2">
                     <Label htmlFor="packageEnd">End Date</Label>
-                    <span className="text-foreground flex items-center h-10">{formData.packageEndDate}</span>
+                    <div className="flex items-center gap-3">
+                      <Calendar className="w-5 h-5 text-muted-foreground" />
+                      <span className="text-foreground">{formData.packageEndDate || "-"}</span>
+                    </div>
                   </div>
                 </div>
               </div>
