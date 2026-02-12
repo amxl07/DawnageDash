@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Dumbbell, UtensilsCrossed, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { TrainingNote } from "@/components/TrainingNote";
 
 // Types for hierarchical structure
 type Level = 'Beginner' | 'Intermediate' | 'Advanced';
@@ -600,253 +601,291 @@ export default function Plans() {
         <TabsList className="grid w-full max-w-md grid-cols-2 h-12">
           <TabsTrigger value="workout" data-testid="tab-workout" className="text-base">
             <Dumbbell className="w-4 h-4 mr-2" />
-            Workout Plan
+            Training Plan
           </TabsTrigger>
           <TabsTrigger value="meal" data-testid="tab-meal" className="text-base">
             <UtensilsCrossed className="w-4 h-4 mr-2" />
-            Meal Plan
+            Nutrition Plan
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="workout" className="space-y-6 mt-6">
-          {/* Hierarchical Selection */}
-          {isCoach && (
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Select Your Workout Plan</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Level */}
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Level</label>
-                  <Select value={level} onValueChange={(v) => handleLevelChange(v as Level)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Beginner">Beginner</SelectItem>
-                      <SelectItem value="Intermediate">Intermediate</SelectItem>
-                      <SelectItem value="Advanced">Advanced</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+          <Tabs defaultValue="training-workout" className="w-full">
+            <TabsList className="grid w-full max-w-md grid-cols-3 h-10 mb-6">
+              <TabsTrigger value="training-workout">Workout</TabsTrigger>
+              <TabsTrigger value="training-cardio">Cardio</TabsTrigger>
+              <TabsTrigger value="training-steps">Steps</TabsTrigger>
+            </TabsList>
 
-                {/* Workout Type */}
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Workout Type</label>
-                  <Select
-                    value={workoutType}
-                    onValueChange={(v) => handleWorkoutTypeChange(v as WorkoutType)}
-                    disabled={availableWorkoutTypes.length === 0}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select type..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableWorkoutTypes.map(type => (
-                        <SelectItem key={type} value={type}>
-                          {WORKOUT_TYPE_LABELS[type]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            <TabsContent value="training-workout">
+              {/* Hierarchical Selection */}
+              {isCoach && (
+                <Card className="p-6 mb-6">
+                  <h3 className="text-lg font-semibold mb-4">Select Your Workout Plan</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Level */}
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground mb-2 block">Level</label>
+                      <Select value={level} onValueChange={(v) => handleLevelChange(v as Level)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Beginner">Beginner</SelectItem>
+                          <SelectItem value="Intermediate">Intermediate</SelectItem>
+                          <SelectItem value="Advanced">Advanced</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                {/* Sub-Category (conditional) */}
-                {needsSubCategory && (
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground mb-2 block">Category</label>
-                    <Select
-                      value={subCategory || ''}
-                      onValueChange={(v) => handleSubCategoryChange(v as SubCategory)}
-                      disabled={!workoutType}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableSubCategories.map(cat => (
-                          <SelectItem key={cat!} value={cat!}>
-                            {SUB_CATEGORY_LABELS[cat!]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {/* Workout Type */}
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground mb-2 block">Workout Type</label>
+                      <Select
+                        value={workoutType}
+                        onValueChange={(v) => handleWorkoutTypeChange(v as WorkoutType)}
+                        disabled={availableWorkoutTypes.length === 0}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableWorkoutTypes.map(type => (
+                            <SelectItem key={type} value={type}>
+                              {WORKOUT_TYPE_LABELS[type]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Sub-Category (conditional) */}
+                    {needsSubCategory && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground mb-2 block">Category</label>
+                        <Select
+                          value={subCategory || ''}
+                          onValueChange={(v) => handleSubCategoryChange(v as SubCategory)}
+                          disabled={!workoutType}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select category..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableSubCategories.map(cat => (
+                              <SelectItem key={cat!} value={cat!}>
+                                {SUB_CATEGORY_LABELS[cat!]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Days Per Week */}
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground mb-2 block">Days Per Week</label>
+                      <Select
+                        value={daysPerWeek ? String(daysPerWeek) : ''}
+                        onValueChange={(v) => setDaysPerWeek(Number(v))}
+                        disabled={availableDaysOptions.length === 0}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select days..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableDaysOptions.map(days => (
+                            <SelectItem key={days} value={String(days)}>
+                              {days}-day
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                )}
+                </Card>
+              )}
 
-                {/* Days Per Week */}
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Days Per Week</label>
-                  <Select
-                    value={daysPerWeek ? String(daysPerWeek) : ''}
-                    onValueChange={(v) => setDaysPerWeek(Number(v))}
-                    disabled={availableDaysOptions.length === 0}
+              {/* Confirm Button Area */}
+              {isCoach && isSelectionComplete && !isLoadingWorkouts && (
+                <div className="flex justify-end mb-6">
+                  <Button
+                    size="lg"
+                    onClick={handleConfirmPlan}
+                    disabled={isCurrentActive}
+                    variant={isCurrentActive ? "outline" : "default"}
+                    className={isCurrentActive ? "border-green-500 text-green-600 hover:text-green-700 bg-green-50" : ""}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select days..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableDaysOptions.map(days => (
-                        <SelectItem key={days} value={String(days)}>
-                          {days}-day
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    {isCurrentActive ? (
+                      <>
+                        <CheckCircle2 className="w-5 h-5 mr-2" />
+                        Current Active Plan
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-5 h-5 mr-2" />
+                        Confirm & Start This Plan
+                      </>
+                    )}
+                  </Button>
                 </div>
-              </div>
-            </Card>
-          )}
+              )}
 
-          {/* Confirm Button Area */}
-          {isCoach && isSelectionComplete && !isLoadingWorkouts && (
-            <div className="flex justify-end">
-              <Button
-                size="lg"
-                onClick={handleConfirmPlan}
-                disabled={isCurrentActive}
-                variant={isCurrentActive ? "outline" : "default"}
-                className={isCurrentActive ? "border-green-500 text-green-600 hover:text-green-700 bg-green-50" : ""}
-              >
-                {isCurrentActive ? (
-                  <>
-                    <CheckCircle2 className="w-5 h-5 mr-2" />
-                    Current Active Plan
-                  </>
+              {/* Workout Plan Display */}
+              {isSelectionComplete ? (
+                isLoadingWorkouts ? (
+                  <div className="flex items-center justify-center min-h-[200px]">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  </div>
                 ) : (
-                  <>
-                    <CheckCircle2 className="w-5 h-5 mr-2" />
-                    Confirm & Start This Plan
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
+                  // EditableWorkoutPlan now uses AuthContext internally for user ID
+                  <EditableWorkoutPlan
+                    initialPlan={workoutPlans && workoutPlans.length > 0 ? workoutPlans : defaultWorkoutPlan}
+                    level={level}
+                    workoutType={workoutType as WorkoutType}
+                    subCategory={subCategory || null}
+                    daysPerWeek={daysPerWeek as number}
+                    isReadOnly={!isCoach}
+                    onSave={() => {
+                      queryClient.invalidateQueries({ queryKey: ['workoutPlans'] });
+                    }}
+                  />
+                )
+              ) : (
+                <Card className="p-12 text-center">
+                  <p className="text-muted-foreground">
+                    {isCoach
+                      ? "Please complete all selections above to view the workout plan"
+                      : "No workout plan has been assigned yet. Please contact your coach."}
+                  </p>
+                </Card>
+              )}
+            </TabsContent>
 
-          {/* Workout Plan Display */}
-          {isSelectionComplete ? (
-            isLoadingWorkouts ? (
-              <div className="flex items-center justify-center min-h-[200px]">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              </div>
-            ) : (
-              // EditableWorkoutPlan now uses AuthContext internally for user ID
-              <EditableWorkoutPlan
-                initialPlan={workoutPlans && workoutPlans.length > 0 ? workoutPlans : defaultWorkoutPlan}
-                level={level}
-                workoutType={workoutType as WorkoutType}
-                subCategory={subCategory || null}
-                daysPerWeek={daysPerWeek as number}
-                isReadOnly={!isCoach}
-                onSave={() => {
-                  queryClient.invalidateQueries({ queryKey: ['workoutPlans'] });
-                }}
+            <TabsContent value="training-cardio">
+              <TrainingNote
+                userId={targetUserId!}
+                noteType="cardio"
+                title="Cardio Plan"
+                isCoach={isCoach}
               />
-            )
-          ) : (
-            <Card className="p-12 text-center">
-              <p className="text-muted-foreground">
-                {isCoach
-                  ? "Please complete all selections above to view the workout plan"
-                  : "No workout plan has been assigned yet. Please contact your coach."}
-              </p>
-            </Card>
-          )}
+            </TabsContent>
+
+            <TabsContent value="training-steps">
+              <TrainingNote
+                userId={targetUserId!}
+                noteType="steps"
+                title="Steps Target"
+                isCoach={isCoach}
+              />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         <TabsContent value="meal" className="space-y-6 mt-6">
-          {isCoach && (
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Select Your Nutrition Plan</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Calories */}
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Target Calories</label>
-                  <Select value={String(caloriesTarget)} onValueChange={(v) => setCaloriesTarget(Number(v))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CALORIE_OPTIONS.map(cal => (
-                        <SelectItem key={cal} value={String(cal)}>{cal} Calories</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+          <Tabs defaultValue="nutrition-meal" className="w-full">
+            <TabsList className="grid w-full max-w-md grid-cols-2 h-10 mb-6">
+              <TabsTrigger value="nutrition-meal">Meal Plan</TabsTrigger>
+              <TabsTrigger value="nutrition-supplements">Supplements</TabsTrigger>
+            </TabsList>
 
-                {/* Diet Type */}
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Dietary Preference</label>
-                  <Select value={dietType} onValueChange={(v) => setDietType(v as DietType)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DIET_OPTIONS.map(diet => (
-                        <SelectItem key={diet} value={diet}>{diet}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </Card>
-          )}
+            <TabsContent value="nutrition-meal">
+              {isCoach && (
+                <Card className="p-6 mb-6">
+                  <h3 className="text-lg font-semibold mb-4">Select Your Nutrition Plan</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Calories */}
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground mb-2 block">Target Calories</label>
+                      <Select value={String(caloriesTarget)} onValueChange={(v) => setCaloriesTarget(Number(v))}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CALORIE_OPTIONS.map(cal => (
+                            <SelectItem key={cal} value={String(cal)}>{cal} Calories</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-          {/* Confirm Button Area */}
-          {isCoach && !isLoadingMeals && (
-            <div className="flex justify-end">
-              <Button
-                size="lg"
-                onClick={handleConfirmMealPlan}
-                disabled={isCurrentActiveMeal && mealPlans?.source === 'custom'} // Only disable if it IS active and IS custom. If it's template, we can confirm. If it's custom and NOT active, we can confirm (set as active). If we want to reset, we need to allow valid click.
-                variant={isCurrentActiveMeal ? "outline" : "default"}
-                className={isCurrentActiveMeal ? "border-green-500 text-green-600 hover:text-green-700 bg-green-50" : ""}
-              >
-                {isCurrentActiveMeal ? (
-                  <>
-                    <CheckCircle2 className="w-5 h-5 mr-2" />
-                    Current Active Plan
-                  </>
+                    {/* Diet Type */}
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground mb-2 block">Dietary Preference</label>
+                      <Select value={dietType} onValueChange={(v) => setDietType(v as DietType)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DIET_OPTIONS.map(diet => (
+                            <SelectItem key={diet} value={diet}>{diet}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {/* Confirm Button Area */}
+              {isCoach && !isLoadingMeals && (
+                <div className="flex justify-end mb-6">
+                  <Button
+                    size="lg"
+                    onClick={handleConfirmMealPlan}
+                    disabled={isCurrentActiveMeal && mealPlans?.source === 'custom'} // Only disable if it IS active and IS custom. If it's template, we can confirm. If it's custom and NOT active, we can confirm (set as active). If we want to reset, we need to allow valid click.
+                    variant={isCurrentActiveMeal ? "outline" : "default"}
+                    className={isCurrentActiveMeal ? "border-green-500 text-green-600 hover:text-green-700 bg-green-50" : ""}
+                  >
+                    {isCurrentActiveMeal ? (
+                      <>
+                        <CheckCircle2 className="w-5 h-5 mr-2" />
+                        Current Active Plan
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-5 h-5 mr-2" />
+                        {mealPlans?.source === 'custom' ? "Reset to Template" : "Confirm & Start This Plan"}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              {isCoach || userProfile?.active_meal_plan ? (
+                isLoadingMeals ? (
+                  <div className="flex items-center justify-center min-h-[200px]">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  </div>
                 ) : (
-                  <>
-                    <CheckCircle2 className="w-5 h-5 mr-2" />
-                    {mealPlans?.source === 'custom' ? "Reset to Template" : "Confirm & Start This Plan"}
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
+                  <EditableMealPlan
+                    key="daily-meal-plan"
+                    initialPlan={currentMealPlan}
+                    day="Daily"
+                    caloriesTarget={caloriesTarget}
+                    dietType={dietType}
+                    onSave={handleMealPlanSaved}
+                    isReadOnly={!isCoach}
+                  />
+                )
+              ) : (
+                <Card className="p-12 text-center">
+                  <p className="text-muted-foreground">
+                    No nutrition plan has been assigned yet. Please contact your coach.
+                  </p>
+                </Card>
+              )}
+            </TabsContent>
 
-
-
-
-
-
-
-
-
-          {isCoach || userProfile?.active_meal_plan ? (
-            isLoadingMeals ? (
-              <div className="flex items-center justify-center min-h-[200px]">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              </div>
-            ) : (
-              <EditableMealPlan
-                key="daily-meal-plan"
-                initialPlan={currentMealPlan}
-                day="Daily"
-                caloriesTarget={caloriesTarget}
-                dietType={dietType}
-                onSave={handleMealPlanSaved}
-                isReadOnly={!isCoach}
+            <TabsContent value="nutrition-supplements">
+              <TrainingNote
+                userId={targetUserId!}
+                noteType="supplements"
+                title="Supplements Plan"
+                isCoach={isCoach}
               />
-            )
-          ) : (
-            <Card className="p-12 text-center">
-              <p className="text-muted-foreground">
-                No nutrition plan has been assigned yet. Please contact your coach.
-              </p>
-            </Card>
-          )}
+            </TabsContent>
+          </Tabs>
         </TabsContent>
       </Tabs>
     </div>
