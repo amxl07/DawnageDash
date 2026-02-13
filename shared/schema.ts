@@ -22,6 +22,12 @@ export const users = pgTable("users", {
   packageType: text("package_type"), // 'premium', 'intermediate', 'basic'
   packageDuration: integer("package_duration"), // 3 or 6 (months)
   packageStartDate: date("package_start_date"), // Set on first check-in
+  cardioNote: text("cardio_note"), // Cardio plan notes (e.g., "30 mins")
+  stepsNote: text("steps_note"), // Steps target notes (e.g., "10000 steps")
+  supplementsNote: text("supplements_note"), // Supplements notes (legacy text field)
+  supplementsData: text("supplements_data"), // Supplements plan JSON data [{name, serving, timing}]
+  trainingNote: text("training_note"), // General training notes
+  nutritionNote: text("nutrition_note"), // General nutrition notes
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => {

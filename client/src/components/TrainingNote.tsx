@@ -9,7 +9,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface TrainingNoteProps {
     userId: string;
-    noteType: 'cardio' | 'steps' | 'supplements';
+    noteType: 'cardio' | 'steps' | 'supplements' | 'training' | 'nutrition';
     title: string;
     isCoach: boolean;
 }
@@ -22,6 +22,8 @@ export function TrainingNote({ userId, noteType, title, isCoach }: TrainingNoteP
     let dbColumn = 'cardio_note';
     if (noteType === 'steps') dbColumn = 'steps_note';
     if (noteType === 'supplements') dbColumn = 'supplements_note';
+    if (noteType === 'training') dbColumn = 'training_note';
+    if (noteType === 'nutrition') dbColumn = 'nutrition_note';
 
     const { data: noteData, isLoading } = useQuery({
         queryKey: ['trainingNote', userId, noteType],

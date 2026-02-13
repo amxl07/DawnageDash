@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { User, Mail, Phone, MapPin, Target, Calendar, Activity, Loader2 } from "lucide-react";
+import { User, Mail, Phone, MapPin, Target, Calendar, Activity, Loader2, AlertCircle, Dumbbell } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -31,16 +31,19 @@ export default function Profile() {
     timezone: "",
     goal: "",
     injuries: "",
+    allergies: "",
+    workoutDays: "",
     medicalCondition: "",
     startDate: "",
     packageEndDate: "", // Calculated
   });
 
-  // Fetch user profile data from DB
+  // Fetch user profile data from DB and questionnaire
   useEffect(() => {
     async function fetchProfile() {
       if (!targetUserId) return;
       try {
+        // Fetch user data
         const { data, error } = await supabase
           .from('users')
           .select('*')
@@ -51,6 +54,15 @@ export default function Profile() {
           console.error("Error fetching profile:", error);
           return;
         }
+
+        // Fetch questionnaire data
+        const { data: questionnaireData } = await supabase
+          .from('onboarding_questionnaire')
+          .select('answers')
+          .eq('user_id', targetUserId)
+          .maybeSingle();
+
+        const questionnaireAnswers = questionnaireData ? JSON.parse(questionnaireData.answers || '{}') : {};
 
         if (data) {
           const profileData = data.profile_data || {};
@@ -68,6 +80,7 @@ export default function Profile() {
             endDateStr = formatDisplayDate(end);
           }
 
+          // Sync logic: prefer questionnaire answers, fallback to profile_data
           setFormData(prev => ({
             ...prev,
             name: data.full_name || "",
@@ -75,8 +88,10 @@ export default function Profile() {
             phone: data.phone_number || "",
             country: data.country || "",
             timezone: profileData.timezone || "",
-            goal: profileData.goal || "",
-            injuries: profileData.injuries || "",
+            goal: questionnaireAnswers.q14 || profileData.goal || "",
+            injuries: questionnaireAnswers.q56 || profileData.injuries || "",
+            allergies: questionnaireAnswers.q64 || profileData.allergies || "",
+            workoutDays: questionnaireAnswers.q33 || profileData.workoutDays || "",
             medicalCondition: profileData.medicalCondition || "",
             startDate: formatDisplayDate(pkgStart),
             packageEndDate: endDateStr,
@@ -109,6 +124,8 @@ export default function Profile() {
         timezone: formData.timezone,
         goal: formData.goal,
         injuries: formData.injuries,
+        allergies: formData.allergies,
+        workoutDays: formData.workoutDays,
         medicalCondition: formData.medicalCondition,
       };
 
@@ -124,6 +141,28 @@ export default function Profile() {
         .eq('id', targetUserId);
 
       if (dbError) throw dbError;
+
+      // Sync changes back to questionnaire
+      const { data: existingQuestionnaire } = await supabase
+        .from('onboarding_questionnaire')
+        .select('answers')
+        .eq('user_id', targetUserId)
+        .maybeSingle();
+
+      if (existingQuestionnaire) {
+        const answers = JSON.parse(existingQuestionnaire.answers || '{}');
+        answers.q14 = formData.goal;
+        answers.q56 = formData.injuries;
+        answers.q64 = formData.allergies;
+        answers.q33 = formData.workoutDays;
+
+        const { error: questionnaireError } = await supabase
+          .from('onboarding_questionnaire')
+          .update({ answers: JSON.stringify(answers) })
+          .eq('user_id', targetUserId);
+
+        if (questionnaireError) throw questionnaireError;
+      }
 
       toast({
         title: "Success",
@@ -284,6 +323,46 @@ export default function Profile() {
                         />
                       ) : (
                         <span className="text-foreground">{formData.injuries}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="allergies">Food Allergies</Label>
+                    <div className="flex items-center gap-3">
+                      <AlertCircle className="w-5 h-5 text-muted-foreground" />
+                      {isEditing ? (
+                        <Textarea
+                          id="allergies"
+                          value={formData.allergies}
+                          onChange={(e) => setFormData({ ...formData, allergies: e.target.value })}
+                          className="rounded-xl flex-1"
+                          data-testid="input-allergies"
+                        />
+                      ) : (
+                        <span className="text-foreground">{formData.allergies || "None reported"}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="workoutDays">Workout Days Per Week</Label>
+                    <div className="flex items-center gap-3">
+                      <Dumbbell className="w-5 h-5 text-muted-foreground" />
+                      {isEditing ? (
+                        <Select value={formData.workoutDays} onValueChange={(val) => setFormData({ ...formData, workoutDays: val })}>
+                          <SelectTrigger className="rounded-xl flex-1" data-testid="input-workoutDays">
+                            <SelectValue placeholder="Select workout days" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1-2 days">1-2 days</SelectItem>
+                            <SelectItem value="3-4 days">3-4 days</SelectItem>
+                            <SelectItem value="5-6 days">5-6 days</SelectItem>
+                            <SelectItem value="Every day">Every day</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <span className="text-foreground">{formData.workoutDays || "-"}</span>
                       )}
                     </div>
                   </div>

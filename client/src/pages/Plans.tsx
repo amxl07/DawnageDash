@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { EditableWorkoutPlan } from "@/components/EditableWorkoutPlan";
 import { EditableMealPlan } from "@/components/EditableMealPlan";
+import { SupplementsPlan } from "@/components/SupplementsPlan";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
@@ -611,10 +612,9 @@ export default function Plans() {
 
         <TabsContent value="workout" className="space-y-6 mt-6">
           <Tabs defaultValue="training-workout" className="w-full">
-            <TabsList className="grid w-full max-w-md grid-cols-3 h-10 mb-6">
+            <TabsList className="grid w-full max-w-md grid-cols-2 h-10 mb-6">
               <TabsTrigger value="training-workout">Workout</TabsTrigger>
-              <TabsTrigger value="training-cardio">Cardio</TabsTrigger>
-              <TabsTrigger value="training-steps">Steps</TabsTrigger>
+              <TabsTrigger value="training-notes">Notes</TabsTrigger>
             </TabsList>
 
             <TabsContent value="training-workout">
@@ -762,20 +762,11 @@ export default function Plans() {
               )}
             </TabsContent>
 
-            <TabsContent value="training-cardio">
+            <TabsContent value="training-notes">
               <TrainingNote
                 userId={targetUserId!}
-                noteType="cardio"
-                title="Cardio Plan"
-                isCoach={isCoach}
-              />
-            </TabsContent>
-
-            <TabsContent value="training-steps">
-              <TrainingNote
-                userId={targetUserId!}
-                noteType="steps"
-                title="Steps Target"
+                noteType="training"
+                title="Training Notes"
                 isCoach={isCoach}
               />
             </TabsContent>
@@ -784,9 +775,10 @@ export default function Plans() {
 
         <TabsContent value="meal" className="space-y-6 mt-6">
           <Tabs defaultValue="nutrition-meal" className="w-full">
-            <TabsList className="grid w-full max-w-md grid-cols-2 h-10 mb-6">
+            <TabsList className="grid w-full max-w-md grid-cols-3 h-10 mb-6">
               <TabsTrigger value="nutrition-meal">Meal Plan</TabsTrigger>
               <TabsTrigger value="nutrition-supplements">Supplements</TabsTrigger>
+              <TabsTrigger value="nutrition-notes">Notes</TabsTrigger>
             </TabsList>
 
             <TabsContent value="nutrition-meal">
@@ -878,10 +870,17 @@ export default function Plans() {
             </TabsContent>
 
             <TabsContent value="nutrition-supplements">
+              <SupplementsPlan
+                userId={targetUserId!}
+                isCoach={isCoach}
+              />
+            </TabsContent>
+
+            <TabsContent value="nutrition-notes">
               <TrainingNote
                 userId={targetUserId!}
-                noteType="supplements"
-                title="Supplements Plan"
+                noteType="nutrition"
+                title="Nutrition Notes"
                 isCoach={isCoach}
               />
             </TabsContent>

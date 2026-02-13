@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 export default function WorkoutLogs() {
     const { user, viewedUserId } = useAuth();
     const targetUserId = viewedUserId || user?.id;
+    const isCoach = user?.user_metadata?.role === 'coach';
     const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
     const [isLogDialogOpen, setIsLogDialogOpen] = useState(false);
 
@@ -262,12 +263,10 @@ export default function WorkoutLogs() {
                         </Badge>
                     )}
 
-                    {!viewedUserId && (
-                        <Button className="rounded-xl shadow-lg hover:shadow-primary/20" onClick={() => setIsLogDialogOpen(true)}>
-                            <Plus className="w-4 h-4 mr-2" />
-                            Log Workout
-                        </Button>
-                    )}
+                    <Button className="rounded-xl shadow-lg hover:shadow-primary/20" onClick={() => setIsLogDialogOpen(true)}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Log Workout
+                    </Button>
                 </div>
             </div>
 
@@ -307,14 +306,14 @@ export default function WorkoutLogs() {
                     </div>
                     <h3 className="text-2xl font-bold mb-3">No Logs Found</h3>
                     <p className="text-muted-foreground max-w-md mx-auto mb-6">
-                        Your workout history will appear here once you start logging. Track your progress and watch your gains grow!
+                        {viewedUserId && isCoach
+                            ? "This client's workout history will appear here once they start logging. You can log workouts on their behalf."
+                            : "Your workout history will appear here once you start logging. Track your progress and watch your gains grow!"}
                     </p>
-                    {!viewedUserId && (
-                        <Button onClick={() => setIsLogDialogOpen(true)}>
-                            <Plus className="w-4 h-4 mr-2" />
-                            Log First Workout
-                        </Button>
-                    )}
+                    <Button onClick={() => setIsLogDialogOpen(true)}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Log First Workout
+                    </Button>
                 </Card>
             ) : (
                 <div className="space-y-6">

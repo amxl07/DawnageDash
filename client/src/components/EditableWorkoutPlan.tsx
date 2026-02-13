@@ -4,12 +4,30 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Edit2, Save, X, Plus, Trash2, Loader2, ChevronRight, Video, StickyNote } from "lucide-react";
+import { Edit2, Save, X, Plus, Trash2, Loader2, ChevronRight, Video, StickyNote, GripVertical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { CardioStepsInput } from "@/components/CardioStepsInput";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface Exercise {
   id: string;
@@ -63,6 +81,150 @@ const renderWithLinks = (text: string) => {
     return part;
   });
 };
+
+interface SortableExerciseItemProps {
+  exercise: Exercise;
+  exIndex: number;
+  dayId: string;
+  isEditing: boolean;
+  onUpdate: (dayId: string, exerciseId: string, field: keyof Exercise, value: any) => void;
+  onRemove: (dayId: string, exerciseId: string) => void;
+}
+
+function SortableExerciseItem({ exercise, exIndex, dayId, isEditing, onUpdate, onRemove }: SortableExerciseItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: exercise.id, disabled: !isEditing });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-start gap-3 p-3 border rounded-lg bg-background ${
+        isDragging ? 'shadow-lg ring-2 ring-primary/20' : ''
+      }`}
+    >
+      {isEditing && (
+        <button
+          className="mt-1 cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground transition-colors"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="w-5 h-5" />
+        </button>
+      )}
+      <div className="w-6 h-6 rounded bg-muted flex items-center justify-center text-xs font-medium mt-0.5 shrink-0">
+        {exIndex + 1}
+      </div>
+      <div className="flex-1 space-y-2">
+        {isEditing ? (
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div className="col-span-2 md:col-span-2">
+                <Input
+                  value={exercise.name}
+                  onChange={(e) => onUpdate(dayId, exercise.id, 'name', e.target.value)}
+                  className="h-9 text-sm"
+                  placeholder="Exercise name"
+                  data-testid={`input-exercise-name-${exercise.id}`}
+                />
+              </div>
+              <Input
+                type="number"
+                value={exercise.sets}
+                onChange={(e) => onUpdate(dayId, exercise.id, 'sets', parseInt(e.target.value))}
+                className="h-9 text-sm"
+                placeholder="Sets"
+                data-testid={`input-exercise-sets-${exercise.id}`}
+              />
+              <Input
+                value={exercise.reps}
+                onChange={(e) => onUpdate(dayId, exercise.id, 'reps', e.target.value)}
+                className="h-9 text-sm"
+                placeholder="Reps"
+                data-testid={`input-exercise-reps-${exercise.id}`}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Video className="w-4 h-4 text-primary shrink-0" />
+              <Input
+                value={exercise.videoLink || ''}
+                onChange={(e) => onUpdate(dayId, exercise.id, 'videoLink', e.target.value)}
+                className="h-9 text-sm flex-1"
+                placeholder="Video Link (YouTube URL)"
+                data-testid={`input-exercise-video-${exercise.id}`}
+              />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <StickyNote className="w-3 h-3" />
+                <span>Notes & Instructions (Optional, Paste links here)</span>
+              </div>
+              <Textarea
+                value={exercise.notes || ''}
+                onChange={(e) => onUpdate(dayId, exercise.id, 'notes', e.target.value)}
+                className="min-h-[60px] text-sm resize-y"
+                placeholder="Add notes, alternate workouts, or additional links..."
+                data-testid={`textarea-exercise-notes-${exercise.id}`}
+              />
+            </div>
+          </div>
+        ) : (
+          <>
+            <p className="font-medium text-sm">{exercise.name}</p>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span>{exercise.sets} sets</span>
+              <span>•</span>
+              <span>{exercise.reps} reps</span>
+              {exercise.videoLink && (
+                <>
+                  <span>•</span>
+                  <a
+                    href={exercise.videoLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline flex items-center gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Video className="w-3 h-3" />
+                    Watch Video
+                  </a>
+                </>
+              )}
+            </div>
+            {exercise.notes && (
+              <div className="mt-2 text-xs text-muted-foreground bg-muted/50 p-2 rounded-md whitespace-pre-wrap">
+                {renderWithLinks(exercise.notes)}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+      {isEditing && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onRemove(dayId, exercise.id)}
+          className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+          data-testid={`button-remove-exercise-${exercise.id}`}
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      )}
+    </div>
+  );
+}
 
 export function EditableWorkoutPlan({
   initialPlan,
@@ -154,6 +316,33 @@ export function EditableWorkoutPlan({
     setEditingDay(null);
   };
 
+  const handleDragEnd = (event: DragEndEvent, dayId: string) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) return;
+
+    setWorkoutPlan((prevPlan) => {
+      return prevPlan.map(day => {
+        if (day.id !== dayId) return day;
+
+        const oldIndex = day.exercises.findIndex(ex => ex.id === active.id);
+        const newIndex = day.exercises.findIndex(ex => ex.id === over.id);
+
+        return {
+          ...day,
+          exercises: arrayMove(day.exercises, oldIndex, newIndex)
+        };
+      });
+    });
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   const updateExercise = (dayId: string, exerciseId: string, field: keyof Exercise, value: string | number) => {
     setWorkoutPlan(plan =>
       plan.map(day =>
@@ -206,57 +395,67 @@ export function EditableWorkoutPlan({
 
   return (
     <Card className="p-6" data-testid="card-workout-plan">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h3 className="text-xl font-semibold mb-1">{daysPerWeek}-Day Schedule</h3>
-          <p className="text-sm text-muted-foreground">Your training plan</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {!isReadOnly && (
-            isEditing ? (
-              <>
+      <div className="space-y-4 mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-xl font-semibold mb-1">{daysPerWeek}-Day Schedule</h3>
+            <p className="text-sm text-muted-foreground">Your training plan</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {!isReadOnly && (
+              isEditing ? (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={handleCancel}
+                    size="sm"
+                    data-testid="button-cancel-edit"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSave}
+                    size="sm"
+                    data-testid="button-save-plan"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4 mr-2" />
+                    )}
+                    Save Plan
+                  </Button>
+                </>
+              ) : (
                 <Button
                   variant="outline"
-                  onClick={handleCancel}
+                  onClick={() => setIsEditing(true)}
                   size="sm"
-                  data-testid="button-cancel-edit"
+                  data-testid="button-edit-plan"
                 >
-                  <X className="w-4 h-4 mr-2" />
-                  Cancel
+                  <Edit2 className="w-4 h-4 mr-2" />
+                  Edit Plan
                 </Button>
-                <Button
-                  onClick={handleSave}
-                  size="sm"
-                  data-testid="button-save-plan"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4 mr-2" />
-                  )}
-                  Save Plan
-                </Button>
-              </>
-            ) : (
-              <Button
-                variant="outline"
-                onClick={() => setIsEditing(true)}
-                size="sm"
-                data-testid="button-edit-plan"
-              >
-                <Edit2 className="w-4 h-4 mr-2" />
-                Edit Plan
-              </Button>
-            )
-          )}
+              )
+            )}
+          </div>
         </div>
+
+        {/* Cardio & Steps inline section */}
+        {targetUserId && (
+          <div className="pt-3 border-t">
+            <CardioStepsInput userId={targetUserId} isCoach={!isReadOnly} />
+          </div>
+        )}
       </div>
 
       {isEditing && (
         <>
-          <div className="mb-4 p-3 bg-muted rounded-lg text-sm text-muted-foreground">
-            Click on any day to expand and edit exercises
+          <div className="mb-4 p-3 bg-muted rounded-lg text-sm text-muted-foreground flex items-center gap-2">
+            <GripVertical className="w-4 h-4" />
+            <span>Click on any day to expand and edit exercises. Drag exercises to reorder them.</span>
           </div>
           <Separator className="mb-6" />
         </>
@@ -323,111 +522,28 @@ export function EditableWorkoutPlan({
                     No exercises added
                   </p>
                 ) : (
-                  day.exercises.map((exercise, exIndex) => (
-                    <div
-                      key={exercise.id}
-                      className="flex items-start gap-3 p-3 border rounded-lg bg-background"
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={(event) => handleDragEnd(event, day.id)}
+                  >
+                    <SortableContext
+                      items={day.exercises.map(ex => ex.id)}
+                      strategy={verticalListSortingStrategy}
                     >
-                      <div className="w-6 h-6 rounded bg-muted flex items-center justify-center text-xs font-medium mt-0.5">
-                        {exIndex + 1}
-                      </div>
-                      <div className="flex-1 space-y-2">
-                        {isEditing ? (
-                          <div className="space-y-2">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                              <div className="col-span-2 md:col-span-2">
-                                <Input
-                                  value={exercise.name}
-                                  onChange={(e) => updateExercise(day.id, exercise.id, 'name', e.target.value)}
-                                  className="h-9 text-sm"
-                                  placeholder="Exercise name"
-                                  data-testid={`input-exercise-name-${exercise.id}`}
-                                />
-                              </div>
-                              <Input
-                                type="number"
-                                value={exercise.sets}
-                                onChange={(e) => updateExercise(day.id, exercise.id, 'sets', parseInt(e.target.value))}
-                                className="h-9 text-sm"
-                                placeholder="Sets"
-                                data-testid={`input-exercise-sets-${exercise.id}`}
-                              />
-                              <Input
-                                value={exercise.reps}
-                                onChange={(e) => updateExercise(day.id, exercise.id, 'reps', e.target.value)}
-                                className="h-9 text-sm"
-                                placeholder="Reps"
-                                data-testid={`input-exercise-reps-${exercise.id}`}
-                              />
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Video className="w-4 h-4 text-primary shrink-0" />
-                              <Input
-                                value={exercise.videoLink || ''}
-                                onChange={(e) => updateExercise(day.id, exercise.id, 'videoLink', e.target.value)}
-                                className="h-9 text-sm flex-1"
-                                placeholder="Video Link (YouTube URL)"
-                                data-testid={`input-exercise-video-${exercise.id}`}
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <StickyNote className="w-3 h-3" />
-                                <span>Notes & Instructions (Optional, Paste links here)</span>
-                              </div>
-                              <Textarea
-                                value={exercise.notes || ''}
-                                onChange={(e) => updateExercise(day.id, exercise.id, 'notes', e.target.value)}
-                                className="min-h-[60px] text-sm resize-y"
-                                placeholder="Add notes, alternate workouts, or additional links..."
-                                data-testid={`textarea-exercise-notes-${exercise.id}`}
-                              />
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <p className="font-medium text-sm">{exercise.name}</p>
-                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                              <span>{exercise.sets} sets</span>
-                              <span>•</span>
-                              <span>{exercise.reps} reps</span>
-                              {exercise.videoLink && (
-                                <>
-                                  <span>•</span>
-                                  <a
-                                    href={exercise.videoLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-primary hover:underline flex items-center gap-1"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <Video className="w-3 h-3" />
-                                    Watch Video
-                                  </a>
-                                </>
-                              )}
-                            </div>
-                            {exercise.notes && (
-                              <div className="mt-2 text-xs text-muted-foreground bg-muted/50 p-2 rounded-md whitespace-pre-wrap">
-                                {renderWithLinks(exercise.notes)}
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-                      {isEditing && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeExercise(day.id, exercise.id)}
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          data-testid={`button-remove-exercise-${exercise.id}`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  ))
+                      {day.exercises.map((exercise, exIndex) => (
+                        <SortableExerciseItem
+                          key={exercise.id}
+                          exercise={exercise}
+                          exIndex={exIndex}
+                          dayId={day.id}
+                          isEditing={isEditing}
+                          onUpdate={updateExercise}
+                          onRemove={removeExercise}
+                        />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
                 )}
 
                 {isEditing && (

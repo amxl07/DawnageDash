@@ -33,7 +33,8 @@ interface WorkoutSet {
 }
 
 export function WorkoutLogDialog({ open, onOpenChange }: WorkoutLogDialogProps) {
-    const { user } = useAuth();
+    const { user, viewedUserId } = useAuth();
+    const targetUserId = viewedUserId || user?.id;
     const queryClient = useQueryClient();
     const [date, setDate] = useState<Date>(new Date());
     const [selectedPlanId, setSelectedPlanId] = useState<string>("custom");
@@ -44,24 +45,24 @@ export function WorkoutLogDialog({ open, onOpenChange }: WorkoutLogDialogProps) 
 
     // Fetch user's workout plans
     const { data: workoutPlans } = useQuery({
-        queryKey: ['workoutPlans', user?.id],
+        queryKey: ['workoutPlans', targetUserId],
         queryFn: async () => {
-            if (!user?.id) return [];
+            if (!targetUserId) return [];
             const { data, error } = await supabase
                 .from('workout_plans')
                 .select('*')
-                .eq('user_id', user.id)
+                .eq('user_id', targetUserId)
                 .order('day_number', { ascending: true }); // Ensure ordered by day number
             if (error) throw error;
             return data;
         },
-        enabled: !!user?.id,
+        enabled: !!targetUserId,
     });
 
     // Check for existing log when date or user changes
     useEffect(() => {
         const checkExistingLog = async () => {
-            if (!user?.id || !date) return;
+            if (!targetUserId || !date) return;
 
             setIsLoadingLog(true);
             try {
@@ -69,7 +70,7 @@ export function WorkoutLogDialog({ open, onOpenChange }: WorkoutLogDialogProps) 
                 const { data, error } = await supabase
                     .from('workout_logs')
                     .select('*')
-                    .eq('user_id', user.id)
+                    .eq('user_id', targetUserId)
                     .eq('date', formattedDate)
                     .maybeSingle();
 
@@ -118,7 +119,7 @@ export function WorkoutLogDialog({ open, onOpenChange }: WorkoutLogDialogProps) 
         };
 
         checkExistingLog();
-    }, [date, user?.id, workoutPlans]); // Re-run if date, user, or loaded plans change
+    }, [date, targetUserId, workoutPlans]); // Re-run if date, user, or loaded plans change
 
     const loadDefaultPlanForDate = () => {
         if (workoutPlans && workoutPlans.length > 0) {
@@ -201,7 +202,7 @@ export function WorkoutLogDialog({ open, onOpenChange }: WorkoutLogDialogProps) 
     // Save mutation
     const saveLogMutation = useMutation({
         mutationFn: async () => {
-            if (!user?.id) throw new Error("No user");
+            if (!targetUserId) throw new Error("No target user");
 
             // Format content for storage
             const content = exercises.map(ex => ({
@@ -215,7 +216,7 @@ export function WorkoutLogDialog({ open, onOpenChange }: WorkoutLogDialogProps) 
             }));
 
             const payload = {
-                user_id: user.id,
+                user_id: targetUserId,
                 date: format(date, 'yyyy-MM-dd'),
                 title: workoutTitle,
                 content: JSON.stringify(content)
