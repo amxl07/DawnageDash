@@ -5,10 +5,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { CoachSidebar } from "@/components/CoachSidebar";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "@/pages/Dashboard";
-import CoachDashboard from "@/pages/CoachDashboard";
+import CoachClientsPage from "@/pages/CoachClientsPage";
+import CoachClaimPage from "@/pages/CoachClaimPage";
 import CheckIns from "@/pages/CheckIns";
 import Measurements from "@/pages/Measurements";
 import Plans from "@/pages/Plans";
@@ -19,6 +21,16 @@ import WorkoutLogs from "@/pages/WorkoutLogs";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
 
+function CoachRouter() {
+  return (
+    <Switch>
+      <Route path="/" component={CoachClientsPage} />
+      <Route path="/claim-clients" component={CoachClaimPage} />
+      <Route component={CoachClientsPage} />
+    </Switch>
+  );
+}
+
 function Router() {
   const { user, viewedUserId } = useAuth();
 
@@ -28,7 +40,7 @@ function Router() {
       <Route path="/">
         <ProtectedRoute>
           {user?.user_metadata?.role === 'coach' && !viewedUserId ? (
-            <CoachDashboard />
+            <CoachClientsPage />
           ) : (
             <Dashboard />
           )}
@@ -102,23 +114,33 @@ function AppContent() {
   // Now we can use viewedUserId safely since it was extracted above
   const isCoachDashboard = user?.user_metadata?.role === 'coach' && !viewedUserId;
 
-  // Coach Dashboard (No Sidebar)
+  const sidebarStyle = {
+    "--sidebar-width": "16rem",
+    "--sidebar-width-icon": "3rem",
+  } as React.CSSProperties;
+
+  // Coach Dashboard (With Sidebar)
   if (isCoachDashboard) {
     return (
-      <div className="min-h-screen w-full bg-background">
-        <Router />
-      </div>
+      <SidebarProvider style={sidebarStyle}>
+        <div className="flex h-screen w-full bg-background">
+          <CoachSidebar />
+          <div className="flex flex-col flex-1">
+            <header className="flex items-center justify-between p-4 border-b sticky top-0 z-50 bg-background md:hidden">
+              <SidebarTrigger />
+            </header>
+            <main className="flex-1 overflow-auto p-4 md:p-8">
+              <CoachRouter />
+            </main>
+          </div>
+        </div>
+      </SidebarProvider>
     );
   }
 
   // Authenticated layout with sidebar
-  const sidebarStyle = {
-    "--sidebar-width": "16rem",
-    "--sidebar-width-icon": "3rem",
-  };
-
   return (
-    <SidebarProvider style={sidebarStyle as React.CSSProperties}>
+    <SidebarProvider style={sidebarStyle}>
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1">
