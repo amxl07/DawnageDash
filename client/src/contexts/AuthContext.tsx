@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { supabase, clearCorruptAuthData } from '@/lib/supabase';
 
 interface AuthContextType {
   user: User | null;
@@ -33,17 +33,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    // Get initial session with error recovery for corrupt tokens
+    supabase.auth.getSession()
+      .then(({ data: { session }, error }) => {
+        if (error) {
+          console.warn('Session recovery failed, clearing corrupt auth data:', error.message);
+          clearCorruptAuthData();
+          setSession(null);
+          setUser(null);
+        } else {
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.warn('Failed to get session, clearing auth data:', error);
+        clearCorruptAuthData();
+        setSession(null);
+        setUser(null);
+        setLoading(false);
+      });
 
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'TOKEN_REFRESHED') {
+        console.log('Token refreshed successfully');
+      }
+      if (event === 'SIGNED_OUT') {
+        // Ensure corrupt data is cleared on sign out
+        clearCorruptAuthData();
+      }
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -58,7 +80,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Error signing out:', error);
     } finally {
-      // Always clear local state even if the server request fails (e.g. 403 Forbidden)
+      // Always clear local state and corrupt tokens even if the server request fails
+      clearCorruptAuthData();
       setUser(null);
       setSession(null);
       setViewedUserId(null); // This will also clear sessionStorage
