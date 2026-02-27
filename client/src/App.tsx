@@ -1,14 +1,16 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { CoachSidebar } from "@/components/CoachSidebar";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "@/pages/Dashboard";
-import CoachDashboard from "@/pages/CoachDashboard";
+import CoachClientsPage from "@/pages/CoachClientsPage";
+import CoachClaimPage from "@/pages/CoachClaimPage";
 import CheckIns from "@/pages/CheckIns";
 import Measurements from "@/pages/Measurements";
 import Plans from "@/pages/Plans";
@@ -28,10 +30,20 @@ function Router() {
       <Route path="/">
         <ProtectedRoute>
           {user?.user_metadata?.role === 'coach' && !viewedUserId ? (
-            <CoachDashboard />
+            <Redirect to="/coach/clients" />
           ) : (
             <Dashboard />
           )}
+        </ProtectedRoute>
+      </Route>
+      <Route path="/coach/clients">
+        <ProtectedRoute>
+          <CoachClientsPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/coach/claim">
+        <ProtectedRoute>
+          <CoachClaimPage />
         </ProtectedRoute>
       </Route>
       <Route path="/check-ins">
@@ -99,24 +111,34 @@ function AppContent() {
     );
   }
 
-  // Now we can use viewedUserId safely since it was extracted above
-  const isCoachDashboard = user?.user_metadata?.role === 'coach' && !viewedUserId;
-
-  // Coach Dashboard (No Sidebar)
-  if (isCoachDashboard) {
-    return (
-      <div className="min-h-screen w-full bg-background">
-        <Router />
-      </div>
-    );
-  }
-
-  // Authenticated layout with sidebar
   const sidebarStyle = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
   };
 
+  // Now we can use viewedUserId safely since it was extracted above
+  const isCoachDashboard = user?.user_metadata?.role === 'coach' && !viewedUserId;
+
+  // Coach Dashboard with CoachSidebar
+  if (isCoachDashboard) {
+    return (
+      <SidebarProvider style={sidebarStyle as React.CSSProperties}>
+        <div className="flex h-screen w-full">
+          <CoachSidebar />
+          <div className="flex flex-col flex-1">
+            <header className="flex items-center justify-between p-4 border-b sticky top-0 z-50 bg-background">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+            </header>
+            <main className="flex-1 overflow-auto p-4 md:p-8">
+              <Router />
+            </main>
+          </div>
+        </div>
+      </SidebarProvider>
+    );
+  }
+
+  // Authenticated layout with client sidebar (also used when coach views a client)
   return (
     <SidebarProvider style={sidebarStyle as React.CSSProperties}>
       <div className="flex h-screen w-full">
