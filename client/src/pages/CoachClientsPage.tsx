@@ -79,7 +79,7 @@ export default function CoachClientsPage() {
       const isoDate = sixtyDaysAgo.toISOString().split("T")[0];
       const { data, error } = await supabase
         .from("daily_check_ins")
-        .select("id, user_id, date, nutrition_score")
+        .select("id, user_id, date, nutrition_score, morning_weight, workout_status")
         .in("user_id", clientIds)
         .gte("date", isoDate);
       if (error) throw error;
@@ -95,7 +95,7 @@ export default function CoachClientsPage() {
       if (clientIds.length === 0) return [];
       const { data, error } = await supabase
         .from("weekly_check_ins")
-        .select("id, user_id, created_at")
+        .select("id, user_id, created_at, joint_pain, missed_sessions, recovery_issues, training_progress")
         .in("user_id", clientIds)
         .order("created_at", { ascending: false });
       if (error) {
@@ -126,6 +126,45 @@ export default function CoachClientsPage() {
     enabled: clientIds.length > 0,
   });
 
+  // Fetch weekly progress photos — no date filter
+  const { data: progressPhotosData } = useQuery({
+    queryKey: ["coach-client-photos", clientIds],
+    queryFn: async () => {
+      if (clientIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("weekly_progress_photos")
+        .select("id, user_id, date")
+        .in("user_id", clientIds)
+        .order("date", { ascending: false });
+      if (error) {
+        console.error("Failed to fetch progress photos:", error);
+        return [];
+      }
+      return data || [];
+    },
+    enabled: clientIds.length > 0,
+  });
+
+  // Coach notes state
+  const [savingNoteFor, setSavingNoteFor] = useState<string | null>(null);
+
+  const handleSaveNote = async (clientId: string, note: string) => {
+    setSavingNoteFor(clientId);
+    try {
+      const { error } = await supabase
+        .from("users")
+        .update({ coach_note: note })
+        .eq("id", clientId);
+      if (error) throw error;
+      toast({ title: "Note saved" });
+      queryClient.invalidateQueries({ queryKey: ["coach-clients"] });
+    } catch {
+      toast({ title: "Error", description: "Failed to save note", variant: "destructive" });
+    } finally {
+      setSavingNoteFor(null);
+    }
+  };
+
   // Group check-ins by user_id
   const checkInsByClient = useMemo(() => {
     const map: Record<string, any[]> = {};
@@ -153,6 +192,15 @@ export default function CoachClientsPage() {
     });
     return map;
   }, [measurementsData]);
+
+  const photosByClient = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    (progressPhotosData || []).forEach((p: any) => {
+      if (!map[p.user_id]) map[p.user_id] = [];
+      map[p.user_id].push(p);
+    });
+    return map;
+  }, [progressPhotosData]);
 
   // Handlers
   const handleRowClick = (client: any) => {
@@ -290,10 +338,13 @@ export default function CoachClientsPage() {
         checkIns={checkInsByClient}
         weeklyCheckIns={weeklyByClient}
         bodyMeasurements={measurementsByClient}
+        progressPhotos={photosByClient}
         onRowClick={handleRowClick}
         onViewDashboard={handleViewDashboard}
         onEditPackage={handleEditPackage}
         onUnassign={handleUnassignClick}
+        onSaveNote={handleSaveNote}
+        savingNoteFor={savingNoteFor}
       />
 
       {/* Client Details Sheet */}

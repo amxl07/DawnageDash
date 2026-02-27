@@ -1,5 +1,5 @@
 import { formatDisplayDate } from "@/lib/date-utils";
-import { differenceInDays, subDays, isAfter, parseISO } from "date-fns";
+import { differenceInDays, subDays, isAfter, parseISO, startOfWeek, endOfWeek } from "date-fns";
 
 export type PackageName = "elite" | "standard" | "beginner";
 
@@ -174,4 +174,221 @@ export function getLatestDate(dates: (string | null | undefined)[]): string | nu
   const valid = dates.filter((d): d is string => !!d);
   if (valid.length === 0) return null;
   return valid.sort().reverse()[0];
+}
+
+// Calculate weight trend from check-ins (latest vs 7 days ago)
+export function calculateWeightTrend(checkIns: any[]): {
+  direction: "up" | "down" | "flat" | null;
+  delta: number | null;
+  latest: number | null;
+} {
+  if (!checkIns || checkIns.length === 0) return { direction: null, delta: null, latest: null };
+
+  const withWeight = checkIns
+    .filter((c) => c.morning_weight != null && Number(c.morning_weight) > 0)
+    .sort((a, b) => (b.date || b.created_at || "").localeCompare(a.date || a.created_at || ""));
+
+  if (withWeight.length === 0) return { direction: null, delta: null, latest: null };
+
+  const latestWeight = Number(withWeight[0].morning_weight);
+  const sevenDaysAgo = subDays(new Date(), 7);
+
+  // Find the check-in closest to 7 days ago
+  const olderEntries = withWeight.filter((c) => {
+    const d = c.date || c.created_at;
+    return d && !isAfter(parseISO(d), sevenDaysAgo);
+  });
+
+  if (olderEntries.length === 0) return { direction: null, delta: null, latest: latestWeight };
+
+  const olderWeight = Number(olderEntries[0].morning_weight);
+  const delta = Math.round((latestWeight - olderWeight) * 10) / 10;
+
+  let direction: "up" | "down" | "flat";
+  if (Math.abs(delta) <= 0.2) {
+    direction = "flat";
+  } else if (delta > 0) {
+    direction = "up";
+  } else {
+    direction = "down";
+  }
+
+  return { direction, delta, latest: latestWeight };
+}
+
+// Get weekly alerts from latest weekly check-in
+export function getWeeklyAlerts(weeklyCheckIns: any[]): {
+  alerts: string[];
+  hasAlerts: boolean;
+  progress: string | null;
+} {
+  if (!weeklyCheckIns || weeklyCheckIns.length === 0) {
+    return { alerts: [], hasAlerts: false, progress: null };
+  }
+
+  // Sort by created_at desc to get latest
+  const sorted = [...weeklyCheckIns].sort((a, b) =>
+    (b.created_at || "").localeCompare(a.created_at || "")
+  );
+  const latest = sorted[0];
+  const alerts: string[] = [];
+
+  if (latest.joint_pain && latest.joint_pain.toLowerCase() !== "no" && latest.joint_pain.toLowerCase() !== "none") {
+    alerts.push(`Joint pain: ${latest.joint_pain}`);
+  }
+  if (latest.missed_sessions && latest.missed_sessions.toLowerCase() !== "no" && latest.missed_sessions.toLowerCase() !== "none" && latest.missed_sessions !== "0") {
+    alerts.push(`Missed sessions: ${latest.missed_sessions}`);
+  }
+  if (latest.recovery_issues && latest.recovery_issues.toLowerCase() !== "no" && latest.recovery_issues.toLowerCase() !== "none") {
+    alerts.push(`Recovery: ${latest.recovery_issues}`);
+  }
+
+  return {
+    alerts,
+    hasAlerts: alerts.length > 0,
+    progress: latest.training_progress || null,
+  };
+}
+
+// Check progress photo status (similar to body measurement status)
+export function checkProgressPhotoStatus(photos: any[]): {
+  status: "done" | "pending" | "overdue";
+  label: string;
+} {
+  if (!photos || photos.length === 0) {
+    return { status: "overdue", label: "Never" };
+  }
+  const latest = getLatestDate(photos.map((p) => p.date || p.created_at));
+  if (!latest) return { status: "overdue", label: "Never" };
+  const daysSince = differenceInDays(new Date(), parseISO(latest));
+  if (daysSince <= 7) return { status: "done", label: "This week" };
+  if (daysSince <= 14) return { status: "pending", label: `${daysSince}d ago` };
+  return { status: "overdue", label: `${daysSince}d ago` };
+}
+
+// Calculate workout activity for current week
+export function calculateWorkoutActivity(
+  checkIns: any[],
+  targetDays: number = 5
+): { completed: number; target: number } {
+  if (!checkIns || checkIns.length === 0) return { completed: 0, target: targetDays };
+
+  const now = new Date();
+  const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Monday
+  const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+
+  const completed = checkIns.filter((c) => {
+    const d = c.date || c.created_at;
+    if (!d) return false;
+    const date = parseISO(d);
+    return (
+      (isAfter(date, weekStart) || date.getTime() === weekStart.getTime()) &&
+      !isAfter(date, weekEnd) &&
+      c.workout_status === "completed"
+    );
+  }).length;
+
+  return { completed, target: targetDays };
+}
+
+// Calculate attention score — higher means needs more attention
+export function calculateAttentionScore(
+  checkIns: any[],
+  weeklyCheckIns: any[],
+  measurements: any[],
+  photos: any[]
+): { score: number; level: "high" | "medium" | "low"; reasons: string[] } {
+  let score = 0;
+  const reasons: string[] = [];
+
+  // No check-in in 5+ days
+  const lastCheckInDate = getLatestDate((checkIns || []).map((c) => c.date || c.created_at));
+  if (!lastCheckInDate || differenceInDays(new Date(), parseISO(lastCheckInDate)) >= 5) {
+    score += 30;
+    reasons.push("No check-in in 5+ days");
+  }
+
+  // Weekly check-in alerts
+  if (weeklyCheckIns && weeklyCheckIns.length > 0) {
+    const sorted = [...weeklyCheckIns].sort((a, b) =>
+      (b.created_at || "").localeCompare(a.created_at || "")
+    );
+    const latest = sorted[0];
+
+    if (latest.missed_sessions && latest.missed_sessions.toLowerCase() !== "no" && latest.missed_sessions.toLowerCase() !== "none" && latest.missed_sessions !== "0") {
+      score += 15;
+      reasons.push("Missed training sessions");
+    }
+    if (latest.joint_pain && latest.joint_pain.toLowerCase() !== "no" && latest.joint_pain.toLowerCase() !== "none") {
+      score += 20;
+      reasons.push("Joint pain reported");
+    }
+    if (latest.recovery_issues && latest.recovery_issues.toLowerCase() !== "no" && latest.recovery_issues.toLowerCase() !== "none") {
+      score += 10;
+      reasons.push("Recovery issues");
+    }
+  }
+
+  // Low compliance (<50%)
+  const compliance = calculateCompliance(checkIns);
+  if (compliance < 50) {
+    score += 10;
+    reasons.push("Low compliance (<50%)");
+  }
+
+  // No measurements in 14+ days
+  const lastMeasurement = getLatestDate((measurements || []).map((m) => m.date || m.created_at));
+  if (!lastMeasurement || differenceInDays(new Date(), parseISO(lastMeasurement)) >= 14) {
+    score += 5;
+    reasons.push("No measurements in 14+ days");
+  }
+
+  // No photos in 30+ days
+  const lastPhoto = getLatestDate((photos || []).map((p) => p.date || p.created_at));
+  if (!lastPhoto || differenceInDays(new Date(), parseISO(lastPhoto)) >= 30) {
+    score += 10;
+    reasons.push("No progress photos in 30+ days");
+  }
+
+  let level: "high" | "medium" | "low";
+  if (score >= 40) level = "high";
+  else if (score >= 20) level = "medium";
+  else level = "low";
+
+  return { score, level, reasons };
+}
+
+// Parse assigned plan names from JSON strings
+export function parseAssignedPlan(
+  workoutPlanJson: string | null,
+  mealPlanJson: string | null
+): { workout: string | null; meal: string | null } {
+  let workout: string | null = null;
+  let meal: string | null = null;
+
+  if (workoutPlanJson) {
+    try {
+      const parsed = JSON.parse(workoutPlanJson);
+      const parts: string[] = [];
+      if (parsed.level) parts.push(parsed.level);
+      if (parsed.workoutType) parts.push(parsed.workoutType.replace(/_/g, " "));
+      workout = parts.length > 0 ? parts.join(" - ") : null;
+    } catch {
+      workout = null;
+    }
+  }
+
+  if (mealPlanJson) {
+    try {
+      const parsed = JSON.parse(mealPlanJson);
+      const parts: string[] = [];
+      if (parsed.calories) parts.push(`${parsed.calories} cal`);
+      if (parsed.dietType) parts.push(parsed.dietType);
+      meal = parts.length > 0 ? parts.join(" / ") : null;
+    } catch {
+      meal = null;
+    }
+  }
+
+  return { workout, meal };
 }

@@ -28,6 +28,7 @@ export const users = pgTable("users", {
   supplementsData: text("supplements_data"), // Supplements plan JSON data [{name, serving, timing}]
   trainingNote: text("training_note"), // General training notes
   nutritionNote: text("nutrition_note"), // General nutrition notes
+  coachNote: text("coach_note"), // Coach's private notes about this client
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => {
