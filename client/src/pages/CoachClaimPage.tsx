@@ -9,7 +9,8 @@ import { useState } from "react";
 import { PackageSelectDialog, PackageType } from "@/components/PackageSelectDialog";
 
 export default function CoachClaimPage() {
-  const { user } = useAuth();
+  const { user, viewedCoachId } = useAuth();
+  const effectiveCoachId = viewedCoachId || user?.id;
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -49,13 +50,22 @@ export default function CoachClaimPage() {
       const { error } = await supabase
         .from("users")
         .update({
-          coach_id: user?.id,
+          coach_id: effectiveCoachId,
           package_type: packageType,
           package_duration: duration,
         })
         .eq("id", selectedClientId);
 
       if (error) throw error;
+
+      // Log assignment in history for retention tracking
+      await supabase.from("coach_client_history").insert({
+        coach_id: effectiveCoachId,
+        client_id: selectedClientId,
+        event_type: "assigned",
+        package_type: packageType,
+        package_duration: duration,
+      });
 
       toast({
         title: "Success",

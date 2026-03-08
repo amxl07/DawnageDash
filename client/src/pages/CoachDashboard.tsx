@@ -110,12 +110,19 @@ export default function CoachDashboard() {
                     coach_id: user?.id,
                     package_type: packageType,
                     package_duration: duration,
-                    // Note: package_start_date is handled by trigger/logic elsewhere usually
-                    // If it's a new claim, let's assume valid start checks are done.
                 })
                 .eq('id', selectedClientId);
 
             if (error) throw error;
+
+            // Log assignment in history for retention tracking
+            await supabase.from("coach_client_history").insert({
+                coach_id: user?.id,
+                client_id: selectedClientId,
+                event_type: "assigned",
+                package_type: packageType,
+                package_duration: duration,
+            });
 
             toast({
                 title: "Success",
@@ -207,17 +214,24 @@ export default function CoachDashboard() {
 
         setIsUnassigning(true);
         try {
+            // Find client data for history snapshot before unassigning
+            const clientData = clients?.find((c: any) => c.id === clientToUnassign.id);
+
             const { error } = await supabase
                 .from('users')
-                .update({
-                    coach_id: null,
-                    // Optionally clear package details? Usually keep them for record or clear them.
-                    // User request says "unassign", let's just nullify coach_id.
-                    // But if they are unassigned, they go back to the pool.
-                })
+                .update({ coach_id: null })
                 .eq('id', clientToUnassign.id);
 
             if (error) throw error;
+
+            // Log unassignment in history for retention tracking
+            await supabase.from("coach_client_history").insert({
+                coach_id: user?.id,
+                client_id: clientToUnassign.id,
+                event_type: "unassigned",
+                package_type: clientData?.package_type || null,
+                package_duration: clientData?.package_duration || null,
+            });
 
             toast({
                 title: "Client Unassigned",

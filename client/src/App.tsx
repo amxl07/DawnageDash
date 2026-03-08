@@ -6,11 +6,15 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { CoachSidebar } from "@/components/CoachSidebar";
+import { AdminSidebar } from "@/components/AdminSidebar";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "@/pages/Dashboard";
 import CoachClientsPage from "@/pages/CoachClientsPage";
 import CoachClaimPage from "@/pages/CoachClaimPage";
+import AdminDashboard from "@/pages/AdminDashboard";
+import AdminCoachesPage from "@/pages/AdminCoachesPage";
+import AdminClientsPage from "@/pages/AdminClientsPage";
 import CheckIns from "@/pages/CheckIns";
 import Measurements from "@/pages/Measurements";
 import Plans from "@/pages/Plans";
@@ -22,20 +26,42 @@ import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
 
 function Router() {
-  const { user, viewedUserId } = useAuth();
+  const { user, viewedUserId, viewedCoachId } = useAuth();
+  const role = user?.user_metadata?.role;
 
   return (
     <Switch>
       <Route path="/login" component={Login} />
       <Route path="/">
         <ProtectedRoute>
-          {user?.user_metadata?.role === 'coach' && !viewedUserId ? (
+          {role === 'admin' && !viewedCoachId ? (
+            <Redirect to="/admin/dashboard" />
+          ) : role === 'admin' && viewedCoachId && !viewedUserId ? (
+            <Redirect to="/coach/clients" />
+          ) : role === 'coach' && !viewedUserId ? (
             <Redirect to="/coach/clients" />
           ) : (
             <Dashboard />
           )}
         </ProtectedRoute>
       </Route>
+      {/* Admin Routes */}
+      <Route path="/admin/dashboard">
+        <ProtectedRoute>
+          <AdminDashboard />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/coaches">
+        <ProtectedRoute>
+          <AdminCoachesPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/clients">
+        <ProtectedRoute>
+          <AdminClientsPage />
+        </ProtectedRoute>
+      </Route>
+      {/* Coach Routes */}
       <Route path="/coach/clients">
         <ProtectedRoute>
           <CoachClientsPage />
@@ -88,7 +114,7 @@ function Router() {
 
 function AppContent() {
   // IMPORTANT: All hooks must be called unconditionally at the top
-  const { user, loading, viewedUserId } = useAuth();
+  const { user, loading, viewedUserId, viewedCoachId } = useAuth();
 
   // Show full-screen loader while auth is initializing
   if (loading) {
@@ -117,7 +143,29 @@ function AppContent() {
   };
 
   // Now we can use viewedUserId safely since it was extracted above
-  const isCoachDashboard = user?.user_metadata?.role === 'coach' && !viewedUserId;
+  const userRole = user?.user_metadata?.role;
+  const isAdminViewingCoach = userRole === 'admin' && !!viewedCoachId;
+  const isAdminDashboard = userRole === 'admin' && !viewedCoachId;
+  const isCoachDashboard = (userRole === 'coach' && !viewedUserId) || (isAdminViewingCoach && !viewedUserId);
+
+  // Admin Dashboard with AdminSidebar
+  if (isAdminDashboard) {
+    return (
+      <SidebarProvider style={sidebarStyle as React.CSSProperties}>
+        <div className="flex h-screen w-full">
+          <AdminSidebar />
+          <div className="flex flex-col flex-1">
+            <header className="flex items-center justify-between p-4 border-b sticky top-0 z-50 bg-background">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+            </header>
+            <main className="flex-1 overflow-auto p-4 md:p-8">
+              <Router />
+            </main>
+          </div>
+        </div>
+      </SidebarProvider>
+    );
+  }
 
   // Coach Dashboard with CoachSidebar
   if (isCoachDashboard) {

@@ -29,7 +29,8 @@ const menuItems = [
 
 export function AppSidebar() {
   const [location, setLocation] = useLocation();
-  const { signOut, user, viewedUserId, setViewedUserId } = useAuth();
+  const { signOut, user, viewedUserId, setViewedUserId, viewedCoachId, setViewedCoachId } = useAuth();
+  const isAdminViewing = user?.user_metadata?.role === 'admin' && !!viewedCoachId;
 
   // Fetch viewed user details if in view mode
   const { data: viewedClient } = useQuery({
@@ -90,11 +91,29 @@ export function AppSidebar() {
               className="w-full text-xs h-8 bg-amber-200 hover:bg-amber-300 text-amber-900 border-none"
               onClick={() => {
                 setViewedUserId(null);
-                setLocation('/');
+                if (isAdminViewing) {
+                  setLocation('/coach/clients');
+                } else {
+                  setLocation('/');
+                }
               }}
             >
-              Exit View Mode
+              {isAdminViewing ? 'Back to Coach View' : 'Exit View Mode'}
             </Button>
+            {isAdminViewing && (
+              <Button
+                size="sm"
+                variant="secondary"
+                className="w-full text-xs h-8 bg-red-200 hover:bg-red-300 text-red-900 border-none"
+                onClick={() => {
+                  setViewedUserId(null);
+                  setViewedCoachId(null);
+                  setLocation('/admin/coaches');
+                }}
+              >
+                Back to Admin
+              </Button>
+            )}
           </div>
         </div>
       )}

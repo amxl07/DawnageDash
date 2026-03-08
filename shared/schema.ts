@@ -338,3 +338,21 @@ export const insertWeeklyProgressPhotoSchema = createInsertSchema(weeklyProgress
 export type InsertWeeklyProgressPhoto = z.infer<typeof insertWeeklyProgressPhotoSchema>;
 export type WeeklyProgressPhoto = typeof weeklyProgressPhotos.$inferSelect;
 
+// ============================================================================
+// COACH CLIENT HISTORY TABLE (Retention Tracking)
+// ============================================================================
+export const coachClientHistory = pgTable("coach_client_history", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  coachId: uuid("coach_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  clientId: uuid("client_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  eventType: varchar("event_type", { length: 20 }).notNull(), // 'assigned', 'unassigned'
+  packageType: text("package_type"),      // Snapshot at time of event
+  packageDuration: integer("package_duration"), // Snapshot at time of event
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertCoachClientHistorySchema = createInsertSchema(coachClientHistory);
+export type InsertCoachClientHistory = z.infer<typeof insertCoachClientHistorySchema>;
+export type CoachClientHistory = typeof coachClientHistory.$inferSelect;
+

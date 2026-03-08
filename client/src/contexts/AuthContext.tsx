@@ -9,6 +9,8 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   viewedUserId: string | null;
   setViewedUserId: (id: string | null) => void;
+  viewedCoachId: string | null;
+  setViewedCoachId: (id: string | null) => void;
   isCoachView: boolean;
 }
 
@@ -22,6 +24,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [viewedUserId, setViewedUserIdState] = useState<string | null>(() => {
     return sessionStorage.getItem('dawnage_viewed_user_id');
   });
+  const [viewedCoachId, setViewedCoachIdState] = useState<string | null>(() => {
+    return sessionStorage.getItem('dawnage_viewed_coach_id');
+  });
 
   const setViewedUserId = (id: string | null) => {
     setViewedUserIdState(id);
@@ -29,6 +34,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       sessionStorage.setItem('dawnage_viewed_user_id', id);
     } else {
       sessionStorage.removeItem('dawnage_viewed_user_id');
+    }
+  };
+
+  const setViewedCoachId = (id: string | null) => {
+    setViewedCoachIdState(id);
+    if (id) {
+      sessionStorage.setItem('dawnage_viewed_coach_id', id);
+    } else {
+      sessionStorage.removeItem('dawnage_viewed_coach_id');
     }
   };
 
@@ -84,14 +98,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearCorruptAuthData();
       setUser(null);
       setSession(null);
-      setViewedUserId(null); // This will also clear sessionStorage
+      setViewedUserId(null);
+      setViewedCoachId(null);
     }
   };
 
   const isCoachView = !!viewedUserId;
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signOut, viewedUserId, setViewedUserId, isCoachView }}>
+    <AuthContext.Provider value={{ user, session, loading, signOut, viewedUserId, setViewedUserId, viewedCoachId, setViewedCoachId, isCoachView }}>
       {children}
     </AuthContext.Provider>
   );

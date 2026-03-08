@@ -22,7 +22,8 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function CoachClientsPage() {
-  const { user, setViewedUserId } = useAuth();
+  const { user, setViewedUserId, viewedCoachId } = useAuth();
+  const effectiveCoachId = viewedCoachId || user?.id;
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -58,7 +59,7 @@ export default function CoachClientsPage() {
         .from("users")
         .select("*")
         .eq("role", "client")
-        .eq("coach_id", user?.id);
+        .eq("coach_id", effectiveCoachId);
       if (error) throw error;
       return data || [];
     },
@@ -275,11 +276,23 @@ export default function CoachClientsPage() {
     if (!clientToUnassign) return;
     setIsUnassigning(true);
     try {
+      // Find client data for history snapshot before unassigning
+      const clientData = clients?.find((c: any) => c.id === clientToUnassign.id);
+
       const { error } = await supabase
         .from("users")
         .update({ coach_id: null })
         .eq("id", clientToUnassign.id);
       if (error) throw error;
+
+      // Log unassignment in history for retention tracking
+      await supabase.from("coach_client_history").insert({
+        coach_id: effectiveCoachId,
+        client_id: clientToUnassign.id,
+        event_type: "unassigned",
+        package_type: clientData?.package_type || null,
+        package_duration: clientData?.package_duration || null,
+      });
 
       toast({
         title: "Client Unassigned",
