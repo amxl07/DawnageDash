@@ -99,15 +99,20 @@ export function useDashboardData() {
     retry: false,
   });
 
-  // Calculate derived metrics from check-ins
+  // Transform check-ins data for charts
+  // Explicitly sort by date to guarantee chronological order (Oldest -> Newest)
+  // This is necessary because CheckIns.tsx shares the same query key with a different sort order
+  const sortedCheckIns = checkIns ? [...checkIns].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) : [];
+
+  // Calculate derived metrics from sorted check-ins (sort-order-independent)
   const metrics = {
-    currentWeight: checkIns?.[checkIns.length - 1]?.morning_weight || 0,
-    totalWorkouts: checkIns?.filter(c => c.workout_status === 'done').length || 0,
-    avgNutritionScore: checkIns?.length
-      ? (checkIns.reduce((sum, c) => sum + (c.nutrition_score || 0), 0) / checkIns.length).toFixed(1)
+    currentWeight: sortedCheckIns.length > 0 ? sortedCheckIns[sortedCheckIns.length - 1]?.morning_weight || 0 : 0,
+    totalWorkouts: sortedCheckIns.filter(c => c.workout_status === 'done').length || 0,
+    avgNutritionScore: sortedCheckIns.length
+      ? (sortedCheckIns.reduce((sum, c) => sum + (c.nutrition_score || 0), 0) / sortedCheckIns.length).toFixed(1)
       : '0',
-    avgEnergyLevel: checkIns?.length
-      ? Math.round(checkIns.reduce((sum, c) => sum + (c.energy_level || 0), 0) / checkIns.length)
+    avgEnergyLevel: sortedCheckIns.length
+      ? Math.round(sortedCheckIns.reduce((sum, c) => sum + (c.energy_level || 0), 0) / sortedCheckIns.length)
       : 0,
   };
 
@@ -118,16 +123,11 @@ export function useDashboardData() {
   // processedCheckIns is typically returned newest first by the utility
   const last7DaysProcessed = processedCheckIns.slice(0, 7).reverse();
 
-  // Calculate weight trend (still using actual check-ins for weight delta)
-  // We need to find the latest and oldest weight within the range, but simple method:
-  const last7DaysRaw = checkIns?.slice(-7) || [];
+  // Calculate weight trend using explicitly sorted data (newest - oldest of last 7)
+  const last7DaysRaw = sortedCheckIns.slice(-7);
   const weightTrend = last7DaysRaw.length >= 2
-    ? parseFloat(last7DaysRaw[0].morning_weight || '0') - parseFloat(last7DaysRaw[last7DaysRaw.length - 1].morning_weight || '0')
+    ? parseFloat(last7DaysRaw[last7DaysRaw.length - 1].morning_weight || '0') - parseFloat(last7DaysRaw[0].morning_weight || '0')
     : 0;
-
-  // Transform check-ins data for charts
-  // Explicitly sort by date to guarantee chronological order (Oldest -> Newest)
-  const sortedCheckIns = checkIns ? [...checkIns].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) : [];
 
   const weightChartData = sortedCheckIns
     .filter(c => c.morning_weight && parseFloat(c.morning_weight) > 0)

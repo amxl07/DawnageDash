@@ -271,8 +271,8 @@ export default function CoachDashboard() {
     const calculateEndDate = (startDate: string | null, duration: number | null) => {
         if (!startDate || !duration) return null;
         const start = new Date(startDate);
-        // Add duration months
-        const end = new Date(start.setMonth(start.getMonth() + duration));
+        const end = new Date(start);
+        end.setMonth(end.getMonth() + duration);
         return formatDisplayDate(end);
     };
 

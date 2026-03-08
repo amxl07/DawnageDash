@@ -23,7 +23,7 @@ import {
 
 export default function CoachClientsPage() {
   const { user, setViewedUserId, viewedCoachId } = useAuth();
-  const effectiveCoachId = viewedCoachId || user?.id;
+  const effectiveCoachId = viewedCoachId || user?.id || null;
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -53,16 +53,17 @@ export default function CoachClientsPage() {
 
   // Fetch assigned clients
   const { data: clients, isLoading: clientsLoading } = useQuery({
-    queryKey: ["coach-clients"],
+    queryKey: ["coach-clients", effectiveCoachId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("users")
         .select("*")
         .eq("role", "client")
-        .eq("coach_id", effectiveCoachId);
+        .eq("coach_id", effectiveCoachId!);
       if (error) throw error;
       return data || [];
     },
+    enabled: !!effectiveCoachId,
   });
 
   // Fetch recent check-ins for all assigned clients (last 30 days)
@@ -273,11 +274,16 @@ export default function CoachClientsPage() {
   };
 
   const handleUnassign = async () => {
-    if (!clientToUnassign) return;
+    if (!clientToUnassign || !effectiveCoachId) return;
     setIsUnassigning(true);
     try {
-      // Find client data for history snapshot before unassigning
-      const clientData = clients?.find((c: any) => c.id === clientToUnassign.id);
+      // Fetch client data directly for history snapshot before unassigning
+      // (don't rely on cached query which may not be loaded yet)
+      const { data: clientData } = await supabase
+        .from("users")
+        .select("package_type, package_duration")
+        .eq("id", clientToUnassign.id)
+        .single();
 
       const { error } = await supabase
         .from("users")

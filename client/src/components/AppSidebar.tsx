@@ -42,7 +42,7 @@ export function AppSidebar() {
         .select('full_name')
         .eq('id', viewedUserId)
         .single();
-      if (error) throw error;
+      if (error) return null;
       return data;
     },
     enabled: !!viewedUserId,
@@ -94,6 +94,7 @@ export function AppSidebar() {
                 if (isAdminViewing) {
                   setLocation('/coach/clients');
                 } else {
+                  setViewedCoachId(null);
                   setLocation('/');
                 }
               }}

@@ -10,7 +10,7 @@ import { PackageSelectDialog, PackageType } from "@/components/PackageSelectDial
 
 export default function CoachClaimPage() {
   const { user, viewedCoachId } = useAuth();
-  const effectiveCoachId = viewedCoachId || user?.id;
+  const effectiveCoachId = viewedCoachId || user?.id || null;
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -43,7 +43,7 @@ export default function CoachClaimPage() {
     packageType: PackageType,
     duration: number
   ) => {
-    if (!selectedClientId) return;
+    if (!selectedClientId || !effectiveCoachId) return;
 
     setIsClaiming(true);
     try {

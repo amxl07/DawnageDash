@@ -72,13 +72,19 @@ export function calculateCompliance(
   days: number = 30
 ): number {
   if (!checkIns || checkIns.length === 0) return 0;
-  const cutoff = subDays(new Date(), days);
+  const now = new Date();
+  const cutoff = subDays(now, days);
   const recentCheckIns = checkIns.filter((c) => {
     const d = getRecordDate(c);
     return d && isAfter(parseISO(d), cutoff);
   });
-  // Expected: roughly 1 check-in per day for the period
-  const expected = days;
+  if (recentCheckIns.length === 0) return 0;
+  // Use earliest check-in date to determine actual active days
+  // so new users aren't penalized for not having 30 days of history
+  const dates = recentCheckIns.map((c) => parseISO(getRecordDate(c)!));
+  const earliest = dates.reduce((a, b) => (a < b ? a : b));
+  const activeDays = Math.max(1, differenceInDays(now, earliest) + 1);
+  const expected = Math.min(days, activeDays);
   return Math.min(100, Math.round((recentCheckIns.length / expected) * 100));
 }
 
@@ -284,7 +290,7 @@ export function calculateWorkoutActivity(
     return (
       (isAfter(date, weekStart) || date.getTime() === weekStart.getTime()) &&
       !isAfter(date, weekEnd) &&
-      c.workout_status === "completed"
+      (c.workout_status === "done" || c.workout_status === "completed" || c.workout_status === "cardio_day")
     );
   }).length;
 

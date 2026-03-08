@@ -283,7 +283,7 @@ export default function AdminCoachesPage() {
   const hasAnyHistory = (historyData || []).length > 0;
   const coachesWithHistory = coachMetrics.filter((cm) => cm.retention.hasData);
   const avgPlatformRetention = coachesWithHistory.length > 0
-    ? Math.round(coachesWithHistory.reduce((sum, cm) => sum + cm.retention.rate, 0) / coachesWithHistory.length)
+    ? Math.round(coachesWithHistory.reduce((sum, cm) => sum + Math.min(100, cm.retention.rate), 0) / coachesWithHistory.length)
     : 0;
 
   const isLoading = coachesLoading || clientsLoading;

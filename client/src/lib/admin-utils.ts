@@ -271,7 +271,7 @@ export function calculateRetentionFromHistory(
 ): { rate: number; totalEverAssigned: number; currentlyAssigned: number; lost: number; hasData: boolean } {
   const coachHistory = history.filter((h: any) => h.coach_id === coachId);
 
-  // Get all unique client IDs ever assigned to this coach
+  // Get all unique client IDs ever assigned to this coach (from history)
   const everAssigned = new Set<string>();
   coachHistory.forEach((h: any) => {
     if (h.event_type === "assigned") {
@@ -280,17 +280,29 @@ export function calculateRetentionFromHistory(
   });
 
   // Current clients assigned to this coach
-  const currentlyAssigned = currentClients.filter((c: any) => c.coach_id === coachId).length;
+  const currentCoachClients = currentClients.filter((c: any) => c.coach_id === coachId);
+  const currentlyAssigned = currentCoachClients.length;
+
+  // Also count current clients as "ever assigned" even if no history record exists
+  // (handles clients assigned before history tracking was enabled)
+  currentCoachClients.forEach((c: any) => {
+    everAssigned.add(c.id);
+  });
 
   const totalEverAssigned = everAssigned.size;
 
-  // If no history data exists, we can't calculate retention
+  // If no history data and no current clients, we can't calculate retention
   if (totalEverAssigned === 0) {
     return { rate: 0, totalEverAssigned: 0, currentlyAssigned, lost: 0, hasData: false };
   }
 
-  const lost = totalEverAssigned - currentlyAssigned;
-  const rate = Math.round((currentlyAssigned / totalEverAssigned) * 100);
+  // If there's no history data at all (only current clients, no events), mark as no data
+  if (coachHistory.length === 0) {
+    return { rate: 0, totalEverAssigned: 0, currentlyAssigned, lost: 0, hasData: false };
+  }
+
+  const lost = Math.max(0, totalEverAssigned - currentlyAssigned);
+  const rate = Math.min(100, Math.round((currentlyAssigned / totalEverAssigned) * 100));
 
   return { rate, totalEverAssigned, currentlyAssigned, lost, hasData: true };
 }

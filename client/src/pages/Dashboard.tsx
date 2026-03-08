@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
+import { useAuth } from "@/contexts/AuthContext";
 import { VideoDialog } from "@/components/VideoDialog";
 import {
   DropdownMenu,
@@ -35,7 +36,9 @@ export default function Dashboard() {
     isLoading,
   } = useDashboardData();
 
+  const { viewedUserId } = useAuth();
   const { step: onboardingStep, isLoading: onboardingLoading } = useOnboarding();
+  const isViewingClient = !!viewedUserId;
 
   // Calculate weekly comparison data
   const weeklyComparisonData: Array<{
@@ -95,7 +98,7 @@ export default function Dashboard() {
     ? Math.round(last7CheckIns.reduce((sum, c) => sum + (c.daily_steps || 0), 0) / last7CheckIns.length)
     : 0;
 
-  if (isLoading || onboardingLoading) {
+  if (isLoading || (!isViewingClient && onboardingLoading)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -106,8 +109,8 @@ export default function Dashboard() {
     );
   }
 
-  // New Onboarding Flow
-  if (onboardingStep < 3) {
+  // New Onboarding Flow — skip when coach/admin is viewing a client's dashboard
+  if (!isViewingClient && onboardingStep < 3) {
     return (
       <div className="flex items-center justify-center min-h-screen p-4 sm:p-6 bg-background/50 backdrop-blur-sm">
         <OnboardingFlow />

@@ -37,7 +37,7 @@ export function CoachSidebar() {
         .select('full_name, email')
         .eq('id', viewedCoachId)
         .single();
-      if (error) throw error;
+      if (error) return null;
       return data;
     },
     enabled: !!viewedCoachId,
