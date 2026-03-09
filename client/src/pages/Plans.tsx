@@ -96,6 +96,19 @@ const SUB_CATEGORY_LABELS: Record<string, string> = {
 
 
 
+// Deduplicate rows by day_number, keeping the most recent entry (last by id/created_at)
+function deduplicateByDayNumber(rows: any[]): any[] {
+  const seen = new Map<number, any>();
+  for (const row of rows) {
+    const existing = seen.get(row.day_number);
+    // Keep the latest entry (higher id = more recent)
+    if (!existing || row.id > existing.id) {
+      seen.set(row.day_number, row);
+    }
+  }
+  return Array.from(seen.values()).sort((a, b) => a.day_number - b.day_number);
+}
+
 export default function Plans() {
   const { user, viewedUserId } = useAuth();
   const isCoach = user?.user_metadata?.role === 'coach';
@@ -247,11 +260,11 @@ export default function Plans() {
       const { data: userPlans, error: userError } = await userQuery.order('day_number', { ascending: true });
       if (userError) throw userError;
 
-      // If user has custom plans, return those
+      // If user has custom plans, return those (deduplicated by day_number)
       if (userPlans && userPlans.length > 0) {
-        return userPlans.map(plan => {
+        const deduped = deduplicateByDayNumber(userPlans);
+        return deduped.map(plan => {
           const exercises = plan.exercises ? JSON.parse(plan.exercises) : [];
-          // Ensure each exercise has a unique ID
           const exercisesWithIds = exercises.map((ex: any, idx: number) => ({
             ...ex,
             id: ex.id || `ex-${plan.id}-${idx}-${Date.now()}`
@@ -283,9 +296,10 @@ export default function Plans() {
       const { data: templates, error: templateError } = await templateQuery.order('day_number', { ascending: true });
       if (templateError) throw templateError;
 
-      return (templates || []).map(plan => {
+      // Deduplicate templates by day_number as well
+      const dedupedTemplates = deduplicateByDayNumber(templates || []);
+      return dedupedTemplates.map(plan => {
         const exercises = plan.exercises ? JSON.parse(plan.exercises) : [];
-        // Ensure each exercise has a unique ID
         const exercisesWithIds = exercises.map((ex: any, idx: number) => ({
           ...ex,
           id: ex.id || `tpl-ex-${plan.id}-${idx}`
@@ -295,7 +309,7 @@ export default function Plans() {
           dayNumber: plan.day_number,
           focus: plan.focus || '',
           exercises: exercisesWithIds,
-          isTemplate: true, // Flag to indicate this is from templates
+          isTemplate: true,
         };
       });
     },
