@@ -14,7 +14,6 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Copy, Search, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface CopyPlanToClientDialogProps {
     open: boolean;
@@ -158,7 +157,7 @@ export function CopyPlanToClientDialog({
                             </div>
 
                             {/* Client List */}
-                            <ScrollArea className="max-h-[300px] pr-3">
+                            <div className="max-h-[300px] overflow-y-auto pr-1">
                                 <div className="space-y-1">
                                     {filteredClients.map((client) => (
                                         <label
@@ -185,7 +184,7 @@ export function CopyPlanToClientDialog({
                                         </label>
                                     ))}
                                 </div>
-                            </ScrollArea>
+                            </div>
                         </>
                     )}
                 </div>
