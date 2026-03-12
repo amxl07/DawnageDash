@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { EditableWorkoutPlan } from "@/components/EditableWorkoutPlan";
 import { EditableMealPlan } from "@/components/EditableMealPlan";
 import { SupplementsPlan } from "@/components/SupplementsPlan";
+import { CopyPlanToClientDialog } from "@/components/CopyPlanToClientDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
@@ -9,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, Dumbbell, UtensilsCrossed, CheckCircle2 } from "lucide-react";
+import { Loader2, Dumbbell, UtensilsCrossed, CheckCircle2, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { TrainingNote } from "@/components/TrainingNote";
 
@@ -124,9 +125,12 @@ export default function Plans() {
   const [daysPerWeek, setDaysPerWeek] = useState<number | ''>('');
 
   // Meal plan state
-  // Meal plan state
   const [caloriesTarget, setCaloriesTarget] = useState<number>(1200);
   const [dietType, setDietType] = useState<DietType>('Vegetarian');
+
+  // Copy plan dialog state
+  const [isCopyWorkoutDialogOpen, setIsCopyWorkoutDialogOpen] = useState(false);
+  const [isCopyMealDialogOpen, setIsCopyMealDialogOpen] = useState(false);
 
 
   // Fetch user profile to get active plan
@@ -603,6 +607,152 @@ export default function Plans() {
     }
   };
 
+  // Copy workout plan from current client to selected clients
+  const handleCopyWorkoutPlan = async (targetClientIds: string[]) => {
+    if (!targetUserId || !isSelectionComplete || !workoutPlans || workoutPlans.length === 0) return;
+
+    try {
+      const planConfig = JSON.stringify({ level, workoutType, subCategory, daysPerWeek });
+
+      for (const clientId of targetClientIds) {
+        // 1. Update target client's active workout plan
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ active_workout_plan: planConfig })
+          .eq('id', clientId);
+
+        if (updateError) throw updateError;
+
+        // 2. Delete existing workout plans for this config
+        let deleteQuery = supabase
+          .from('workout_plans')
+          .delete()
+          .eq('user_id', clientId)
+          .eq('level', level)
+          .eq('workout_type', workoutType)
+          .eq('days_per_week', daysPerWeek);
+
+        if (subCategory) {
+          deleteQuery = deleteQuery.eq('sub_category', subCategory);
+        } else {
+          deleteQuery = deleteQuery.is('sub_category', null);
+        }
+        const { error: delError } = await deleteQuery;
+        if (delError) throw delError;
+
+        // 3. Insert copied workout plan rows
+        const rows = workoutPlans.map(day => ({
+          user_id: clientId,
+          level: level,
+          workout_type: workoutType,
+          sub_category: subCategory || null,
+          days_per_week: daysPerWeek,
+          day_number: day.dayNumber,
+          focus: day.focus,
+          exercises: JSON.stringify(day.exercises),
+        }));
+
+        const { error: insertError } = await supabase
+          .from('workout_plans')
+          .insert(rows);
+
+        if (insertError) throw insertError;
+      }
+
+      toast({
+        title: "Workout Plan Copied",
+        description: `Plan copied to ${targetClientIds.length} client${targetClientIds.length > 1 ? 's' : ''} successfully.`,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['workoutPlans'] });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to copy workout plan",
+        variant: "destructive",
+      });
+      throw error; // Re-throw so dialog knows it failed
+    }
+  };
+
+  // Copy meal plan from current client to selected clients
+  const handleCopyMealPlan = async (targetClientIds: string[]) => {
+    if (!targetUserId || !currentMealPlan) return;
+
+    try {
+      const planConfig = JSON.stringify({ calories: caloriesTarget, dietType });
+
+      for (const clientId of targetClientIds) {
+        // 1. Update target client's active meal plan
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ active_meal_plan: planConfig })
+          .eq('id', clientId);
+
+        if (updateError) throw updateError;
+
+        // 2. Delete existing meal plans for this config
+        const { error: delError } = await supabase
+          .from('meal_plans')
+          .delete()
+          .eq('user_id', clientId)
+          .eq('calories_target', caloriesTarget)
+          .eq('diet_type', dietType);
+
+        if (delError) throw delError;
+
+        // 3. Insert copied meal plan rows
+        const mealTypes = [
+          { key: 'breakfast', type: 'Breakfast' },
+          { key: 'mid_morning_snack', type: 'Mid Morning Snack' },
+          { key: 'lunch', type: 'Lunch' },
+          { key: 'evening_snack', type: 'Evening Snack' },
+          { key: 'dinner', type: 'Dinner' },
+        ] as const;
+
+        const rows = mealTypes.map(({ key, type }) => {
+          const meal = currentMealPlan[key];
+          return {
+            user_id: clientId,
+            day_of_week: 'Daily',
+            meal_type: type,
+            description: meal.name,
+            calories: meal.calories,
+            protein: meal.protein,
+            carbs: meal.carbs,
+            fats: meal.fats,
+            diet_type: dietType,
+            calories_target: caloriesTarget,
+          };
+        });
+
+        const { error: insertError } = await supabase
+          .from('meal_plans')
+          .insert(rows);
+
+        if (insertError) throw insertError;
+      }
+
+      toast({
+        title: "Meal Plan Copied",
+        description: `Plan copied to ${targetClientIds.length} client${targetClientIds.length > 1 ? 's' : ''} successfully.`,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['mealPlans'] });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to copy meal plan",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  // Check if the current plan has actual content (not empty defaults)
+  const hasWorkoutPlanContent = workoutPlans && workoutPlans.length > 0 && !workoutPlans[0]?.isTemplate;
+  const hasMealPlanContent = mealPlans?.source === 'custom' && mealPlans.plans && mealPlans.plans.length > 0;
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       <div>
@@ -722,7 +872,17 @@ export default function Plans() {
 
               {/* Confirm Button Area */}
               {isCoach && isSelectionComplete && !isLoadingWorkouts && (
-                <div className="flex justify-end mb-6">
+                <div className="flex justify-end gap-3 mb-6">
+                  {hasWorkoutPlanContent && viewedUserId && (
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      onClick={() => setIsCopyWorkoutDialogOpen(true)}
+                    >
+                      <Copy className="w-5 h-5 mr-2" />
+                      Copy to Another Client
+                    </Button>
+                  )}
                   <Button
                     size="lg"
                     onClick={handleConfirmPlan}
@@ -835,11 +995,21 @@ export default function Plans() {
 
               {/* Confirm Button Area */}
               {isCoach && !isLoadingMeals && (
-                <div className="flex justify-end mb-6">
+                <div className="flex justify-end gap-3 mb-6">
+                  {hasMealPlanContent && viewedUserId && (
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      onClick={() => setIsCopyMealDialogOpen(true)}
+                    >
+                      <Copy className="w-5 h-5 mr-2" />
+                      Copy to Another Client
+                    </Button>
+                  )}
                   <Button
                     size="lg"
                     onClick={handleConfirmMealPlan}
-                    disabled={isCurrentActiveMeal && mealPlans?.source === 'custom'} // Only disable if it IS active and IS custom. If it's template, we can confirm. If it's custom and NOT active, we can confirm (set as active). If we want to reset, we need to allow valid click.
+                    disabled={isCurrentActiveMeal && mealPlans?.source === 'custom'}
                     variant={isCurrentActiveMeal ? "outline" : "default"}
                     className={isCurrentActiveMeal ? "border-green-500 text-green-600 hover:text-green-700 bg-green-50" : ""}
                   >
@@ -901,6 +1071,23 @@ export default function Plans() {
           </Tabs>
         </TabsContent>
       </Tabs>
+
+      {/* Copy Plan Dialogs */}
+      <CopyPlanToClientDialog
+        open={isCopyWorkoutDialogOpen}
+        onOpenChange={setIsCopyWorkoutDialogOpen}
+        onConfirm={handleCopyWorkoutPlan}
+        planType="workout"
+        excludeClientId={targetUserId || undefined}
+      />
+
+      <CopyPlanToClientDialog
+        open={isCopyMealDialogOpen}
+        onOpenChange={setIsCopyMealDialogOpen}
+        onConfirm={handleCopyMealPlan}
+        planType="meal"
+        excludeClientId={targetUserId || undefined}
+      />
     </div>
   );
 }
