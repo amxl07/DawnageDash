@@ -15,6 +15,7 @@ import CoachClaimPage from "@/pages/CoachClaimPage";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminCoachesPage from "@/pages/AdminCoachesPage";
 import AdminClientsPage from "@/pages/AdminClientsPage";
+import AdminBusinessPage from "@/pages/AdminBusinessPage";
 import CheckIns from "@/pages/CheckIns";
 import Measurements from "@/pages/Measurements";
 import Plans from "@/pages/Plans";
@@ -59,6 +60,11 @@ function Router() {
       <Route path="/admin/clients">
         <ProtectedRoute>
           <AdminClientsPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/business">
+        <ProtectedRoute>
+          <AdminBusinessPage />
         </ProtectedRoute>
       </Route>
       {/* Coach Routes */}

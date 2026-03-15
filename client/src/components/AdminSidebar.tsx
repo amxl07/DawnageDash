@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, UserCheck, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, UserCheck, LogOut, IndianRupee } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import logoUrl from "@assets/dashboard_1762285477469.png";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,6 +18,7 @@ const menuItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
   { title: "Coaches", url: "/admin/coaches", icon: UserCheck },
   { title: "All Clients", url: "/admin/clients", icon: Users },
+  { title: "Business", url: "/admin/business", icon: IndianRupee },
 ];
 
 export function AdminSidebar() {

@@ -356,3 +356,52 @@ export const insertCoachClientHistorySchema = createInsertSchema(coachClientHist
 export type InsertCoachClientHistory = z.infer<typeof insertCoachClientHistorySchema>;
 export type CoachClientHistory = typeof coachClientHistory.$inferSelect;
 
+// ============================================================================
+// COACH COMMISSIONS TABLE (Business / Finance)
+// ============================================================================
+export const coachCommissions = pgTable("coach_commissions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  coachId: uuid("coach_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  commissionPercentage: decimal("commission_percentage", { precision: 5, scale: 2 }).notNull().default("15.00"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCoachCommissionSchema = createInsertSchema(coachCommissions);
+export type InsertCoachCommission = z.infer<typeof insertCoachCommissionSchema>;
+export type CoachCommission = typeof coachCommissions.$inferSelect;
+
+// ============================================================================
+// CLIENT PAYMENTS TABLE (Business / Finance)
+// ============================================================================
+export const clientPayments = pgTable("client_payments", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: uuid("client_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  paymentStatus: varchar("payment_status", { length: 20 }).notNull().default("pending"), // 'paid', 'partial', 'pending'
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertClientPaymentSchema = createInsertSchema(clientPayments);
+export type InsertClientPayment = z.infer<typeof insertClientPaymentSchema>;
+export type ClientPayment = typeof clientPayments.$inferSelect;
+
+// ============================================================================
+// PAYMENT TRANSACTIONS TABLE (Installments / Individual Payments)
+// ============================================================================
+export const paymentTransactions = pgTable("payment_transactions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientPaymentId: uuid("client_payment_id").notNull().references(() => clientPayments.id, { onDelete: "cascade" }),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  paymentDate: date("payment_date").notNull().default(sql`CURRENT_DATE`),
+  paymentMethod: varchar("payment_method", { length: 50 }), // 'cash', 'bank_transfer', 'upi', 'card'
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertPaymentTransactionSchema = createInsertSchema(paymentTransactions);
+export type InsertPaymentTransaction = z.infer<typeof insertPaymentTransactionSchema>;
+export type PaymentTransaction = typeof paymentTransactions.$inferSelect;
+
