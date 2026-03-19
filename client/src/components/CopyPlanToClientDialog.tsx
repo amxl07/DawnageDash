@@ -19,9 +19,17 @@ interface CopyPlanToClientDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onConfirm: (clientIds: string[]) => Promise<void>;
-    planType: 'workout' | 'meal';
+    planType: 'workout' | 'meal' | 'training_notes' | 'nutrition_notes' | 'supplements';
     excludeClientId?: string;
 }
+
+const PLAN_TYPE_LABELS: Record<CopyPlanToClientDialogProps['planType'], string> = {
+    workout: 'Workout Plan',
+    meal: 'Meal Plan',
+    training_notes: 'Training Notes',
+    nutrition_notes: 'Nutrition Notes',
+    supplements: 'Supplements Plan',
+};
 
 export function CopyPlanToClientDialog({
     open,
@@ -110,11 +118,11 @@ export function CopyPlanToClientDialog({
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Copy className="w-5 h-5" />
-                        Copy {planType === 'workout' ? 'Workout Plan' : 'Meal Plan'}
+                        Copy {PLAN_TYPE_LABELS[planType]}
                     </DialogTitle>
                     <DialogDescription>
-                        Select clients to copy this {planType === 'workout' ? 'workout' : 'meal'} plan to.
-                        Their existing {planType} plan will be replaced.
+                        Select clients to copy this {PLAN_TYPE_LABELS[planType].toLowerCase()} to.
+                        Their existing {PLAN_TYPE_LABELS[planType].toLowerCase()} will be replaced.
                     </DialogDescription>
                 </DialogHeader>
 

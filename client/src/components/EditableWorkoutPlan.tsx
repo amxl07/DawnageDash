@@ -246,7 +246,16 @@ export function EditableWorkoutPlan({
 
 
   useEffect(() => {
-    const sorted = [...initialPlan].sort((a, b) => a.dayNumber - b.dayNumber);
+    const sorted = [...initialPlan]
+      .map(day => ({
+        ...day,
+        exercises: Array.isArray(day.exercises)
+          ? day.exercises
+          : typeof day.exercises === 'string'
+            ? JSON.parse(day.exercises)
+            : [],
+      }))
+      .sort((a, b) => a.dayNumber - b.dayNumber);
     setWorkoutPlan(sorted);
   }, [initialPlan]);
 

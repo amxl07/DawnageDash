@@ -14,6 +14,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 const menuItems = [
@@ -24,6 +25,7 @@ const menuItems = [
 export function CoachSidebar() {
   const [location, setLocation] = useLocation();
   const { signOut, user, viewedCoachId, setViewedCoachId } = useAuth();
+  const { isMobile, setOpenMobile } = useSidebar();
 
   const isAdminViewing = user?.user_metadata?.role === 'admin' && !!viewedCoachId;
 
@@ -89,7 +91,7 @@ export function CoachSidebar() {
                     asChild
                     isActive={location === item.url}
                   >
-                    <Link href={item.url}>
+                    <Link href={item.url} onClick={() => isMobile && setOpenMobile(false)}>
                       <item.icon className="w-5 h-5" />
                       <span className="font-medium">{item.title}</span>
                     </Link>

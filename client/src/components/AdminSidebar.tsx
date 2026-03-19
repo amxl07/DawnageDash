@@ -12,6 +12,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 const menuItems = [
@@ -24,6 +25,7 @@ const menuItems = [
 export function AdminSidebar() {
   const [location, setLocation] = useLocation();
   const { signOut, user } = useAuth();
+  const { isMobile, setOpenMobile } = useSidebar();
 
   return (
     <Sidebar>
@@ -45,7 +47,7 @@ export function AdminSidebar() {
                     asChild
                     isActive={location === item.url}
                   >
-                    <Link href={item.url}>
+                    <Link href={item.url} onClick={() => isMobile && setOpenMobile(false)}>
                       <item.icon className="w-5 h-5" />
                       <span className="font-medium">{item.title}</span>
                     </Link>

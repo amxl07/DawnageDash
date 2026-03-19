@@ -5,6 +5,52 @@ import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
+const MAX_WIDTH = 1200;
+const MAX_HEIGHT = 1600;
+const JPEG_QUALITY = 0.75;
+
+function compressImage(file: File): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            let { width, height } = img;
+
+            // Scale down if exceeds max dimensions
+            if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+                const ratio = Math.min(MAX_WIDTH / width, MAX_HEIGHT / height);
+                width = Math.round(width * ratio);
+                height = Math.round(height * ratio);
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                reject(new Error('Failed to get canvas context'));
+                return;
+            }
+
+            ctx.drawImage(img, 0, 0, width, height);
+
+            canvas.toBlob(
+                (blob) => {
+                    if (blob) {
+                        resolve(blob);
+                    } else {
+                        reject(new Error('Failed to compress image'));
+                    }
+                },
+                'image/jpeg',
+                JPEG_QUALITY
+            );
+        };
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = URL.createObjectURL(file);
+    });
+}
+
 interface PhotoUploadCardProps {
     label: string;
     currentUrl?: string | null;
@@ -47,11 +93,11 @@ export function PhotoUploadCard({
             return;
         }
 
-        // Validate size (e.g. 5MB)
-        if (file.size > 5 * 1024 * 1024) {
+        // Validate size (e.g. 10MB before compression)
+        if (file.size > 10 * 1024 * 1024) {
             toast({
                 title: "File too large",
-                description: "Image size must be less than 5MB",
+                description: "Image size must be less than 10MB",
                 variant: "destructive",
             });
             return;
@@ -59,14 +105,17 @@ export function PhotoUploadCard({
 
         setIsUploading(true);
         try {
-            const fileExt = file.name.split('.').pop();
-            // Create a unique path: userId/date/label_timestamp.ext
-            const fileName = `${userId}/${dateStr}/${label.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}.${fileExt}`;
+            // Compress the image before uploading
+            const compressedBlob = await compressImage(file);
+
+            // Create a unique path: userId/date/label_timestamp.jpg
+            const fileName = `${userId}/${dateStr}/${label.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}.jpg`;
 
             const { error: uploadError } = await supabase.storage
                 .from(bucket)
-                .upload(fileName, file, {
-                    upsert: true
+                .upload(fileName, compressedBlob, {
+                    upsert: true,
+                    contentType: 'image/jpeg',
                 });
 
             if (uploadError) throw uploadError;
@@ -78,7 +127,7 @@ export function PhotoUploadCard({
             onUpload(publicUrl);
             toast({
                 title: "Success",
-                description: "Photo uploaded successfully",
+                description: `Photo compressed & uploaded (${(compressedBlob.size / 1024).toFixed(0)}KB)`,
             });
 
         } catch (error: any) {

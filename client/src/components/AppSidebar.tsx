@@ -14,6 +14,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 const menuItems = [
@@ -30,6 +31,7 @@ const menuItems = [
 export function AppSidebar() {
   const [location, setLocation] = useLocation();
   const { signOut, user, viewedUserId, setViewedUserId, viewedCoachId, setViewedCoachId } = useAuth();
+  const { isMobile, setOpenMobile } = useSidebar();
   const isAdminViewing = user?.user_metadata?.role === 'admin' && !!viewedCoachId;
 
   // Fetch viewed user details if in view mode
@@ -65,7 +67,7 @@ export function AppSidebar() {
                     isActive={location === item.url}
                     data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
                   >
-                    <Link href={item.url}>
+                    <Link href={item.url} onClick={() => isMobile && setOpenMobile(false)}>
                       <item.icon className="w-5 h-5" />
                       <span className="font-medium">{item.title}</span>
                     </Link>

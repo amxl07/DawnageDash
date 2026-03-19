@@ -131,6 +131,9 @@ export default function Plans() {
   // Copy plan dialog state
   const [isCopyWorkoutDialogOpen, setIsCopyWorkoutDialogOpen] = useState(false);
   const [isCopyMealDialogOpen, setIsCopyMealDialogOpen] = useState(false);
+  const [isCopyTrainingNotesDialogOpen, setIsCopyTrainingNotesDialogOpen] = useState(false);
+  const [isCopyNutritionNotesDialogOpen, setIsCopyNutritionNotesDialogOpen] = useState(false);
+  const [isCopySupplementsDialogOpen, setIsCopySupplementsDialogOpen] = useState(false);
 
 
   // Fetch user profile to get active plan
@@ -749,6 +752,115 @@ export default function Plans() {
     }
   };
 
+  // Copy training notes to selected clients
+  const handleCopyTrainingNotes = async (targetClientIds: string[]) => {
+    if (!targetUserId) return;
+
+    try {
+      // Fetch current user's training note
+      const { data: sourceData, error: fetchError } = await supabase
+        .from('users')
+        .select('training_note')
+        .eq('id', targetUserId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      for (const clientId of targetClientIds) {
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ training_note: sourceData?.training_note || '' })
+          .eq('id', clientId);
+
+        if (updateError) throw updateError;
+      }
+
+      toast({
+        title: "Training Notes Copied",
+        description: `Notes copied to ${targetClientIds.length} client${targetClientIds.length > 1 ? 's' : ''} successfully.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to copy training notes",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  // Copy nutrition notes to selected clients
+  const handleCopyNutritionNotes = async (targetClientIds: string[]) => {
+    if (!targetUserId) return;
+
+    try {
+      const { data: sourceData, error: fetchError } = await supabase
+        .from('users')
+        .select('nutrition_note')
+        .eq('id', targetUserId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      for (const clientId of targetClientIds) {
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ nutrition_note: sourceData?.nutrition_note || '' })
+          .eq('id', clientId);
+
+        if (updateError) throw updateError;
+      }
+
+      toast({
+        title: "Nutrition Notes Copied",
+        description: `Notes copied to ${targetClientIds.length} client${targetClientIds.length > 1 ? 's' : ''} successfully.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to copy nutrition notes",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  // Copy supplements to selected clients
+  const handleCopySupplements = async (targetClientIds: string[]) => {
+    if (!targetUserId) return;
+
+    try {
+      const { data: sourceData, error: fetchError } = await supabase
+        .from('users')
+        .select('supplements_data')
+        .eq('id', targetUserId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      for (const clientId of targetClientIds) {
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ supplements_data: sourceData?.supplements_data || null })
+          .eq('id', clientId);
+
+        if (updateError) throw updateError;
+      }
+
+      toast({
+        title: "Supplements Plan Copied",
+        description: `Supplements copied to ${targetClientIds.length} client${targetClientIds.length > 1 ? 's' : ''} successfully.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to copy supplements plan",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   // Check if the current plan has actual content (not empty defaults)
   const hasWorkoutPlanContent = workoutPlans && workoutPlans.length > 0 && !workoutPlans[0]?.isTemplate;
   const hasMealPlanContent = mealPlans?.source === 'custom' && mealPlans.plans && mealPlans.plans.length > 0;
@@ -937,6 +1049,17 @@ export default function Plans() {
             </TabsContent>
 
             <TabsContent value="training-notes">
+              {isCoach && viewedUserId && (
+                <div className="flex justify-end mb-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsCopyTrainingNotesDialogOpen(true)}
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy to Another Client
+                  </Button>
+                </div>
+              )}
               <TrainingNote
                 userId={targetUserId!}
                 noteType="training"
@@ -1054,6 +1177,17 @@ export default function Plans() {
             </TabsContent>
 
             <TabsContent value="nutrition-supplements">
+              {isCoach && viewedUserId && (
+                <div className="flex justify-end mb-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsCopySupplementsDialogOpen(true)}
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy to Another Client
+                  </Button>
+                </div>
+              )}
               <SupplementsPlan
                 userId={targetUserId!}
                 isCoach={isCoach}
@@ -1061,6 +1195,17 @@ export default function Plans() {
             </TabsContent>
 
             <TabsContent value="nutrition-notes">
+              {isCoach && viewedUserId && (
+                <div className="flex justify-end mb-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsCopyNutritionNotesDialogOpen(true)}
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy to Another Client
+                  </Button>
+                </div>
+              )}
               <TrainingNote
                 userId={targetUserId!}
                 noteType="nutrition"
@@ -1086,6 +1231,30 @@ export default function Plans() {
         onOpenChange={setIsCopyMealDialogOpen}
         onConfirm={handleCopyMealPlan}
         planType="meal"
+        excludeClientId={targetUserId || undefined}
+      />
+
+      <CopyPlanToClientDialog
+        open={isCopyTrainingNotesDialogOpen}
+        onOpenChange={setIsCopyTrainingNotesDialogOpen}
+        onConfirm={handleCopyTrainingNotes}
+        planType="training_notes"
+        excludeClientId={targetUserId || undefined}
+      />
+
+      <CopyPlanToClientDialog
+        open={isCopyNutritionNotesDialogOpen}
+        onOpenChange={setIsCopyNutritionNotesDialogOpen}
+        onConfirm={handleCopyNutritionNotes}
+        planType="nutrition_notes"
+        excludeClientId={targetUserId || undefined}
+      />
+
+      <CopyPlanToClientDialog
+        open={isCopySupplementsDialogOpen}
+        onOpenChange={setIsCopySupplementsDialogOpen}
+        onConfirm={handleCopySupplements}
+        planType="supplements"
         excludeClientId={targetUserId || undefined}
       />
     </div>

@@ -8,7 +8,7 @@ import {
     AccordionItem,
     AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Calendar, Dumbbell, Clock, TrendingUp, Flame, Target, Award, CheckCircle2, Loader2, ChevronDown, ChevronUp, Plus, CalendarRange, Video } from "lucide-react";
+import { Calendar, Dumbbell, Clock, TrendingUp, Flame, Target, Award, CheckCircle2, Loader2, ChevronDown, ChevronUp, Plus, CalendarRange, Video, Pencil } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,6 +23,17 @@ export default function WorkoutLogs() {
     const isCoach = user?.user_metadata?.role === 'coach';
     const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
     const [isLogDialogOpen, setIsLogDialogOpen] = useState(false);
+    const [editDate, setEditDate] = useState<Date | undefined>(undefined);
+
+    const handleEditLog = (logDate: string) => {
+        setEditDate(parseISO(logDate));
+        setIsLogDialogOpen(true);
+    };
+
+    const handleNewLog = () => {
+        setEditDate(undefined);
+        setIsLogDialogOpen(true);
+    };
 
     const { data: logs, isLoading } = useQuery({
         queryKey: ['workoutLogs', targetUserId],
@@ -263,7 +274,7 @@ export default function WorkoutLogs() {
                         </Badge>
                     )}
 
-                    <Button className="rounded-xl shadow-lg hover:shadow-primary/20" onClick={() => setIsLogDialogOpen(true)}>
+                    <Button className="rounded-xl shadow-lg hover:shadow-primary/20" onClick={handleNewLog}>
                         <Plus className="w-4 h-4 mr-2" />
                         Log Workout
                     </Button>
@@ -310,7 +321,7 @@ export default function WorkoutLogs() {
                             ? "This client's workout history will appear here once they start logging. You can log workouts on their behalf."
                             : "Your workout history will appear here once you start logging. Track your progress and watch your gains grow!"}
                     </p>
-                    <Button onClick={() => setIsLogDialogOpen(true)}>
+                    <Button onClick={handleNewLog}>
                         <Plus className="w-4 h-4 mr-2" />
                         Log First Workout
                     </Button>
@@ -405,24 +416,35 @@ export default function WorkoutLogs() {
                                                                         </div>
                                                                     </div>
 
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="sm"
-                                                                        onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
-                                                                        className="rounded-xl"
-                                                                    >
-                                                                        {isExpanded ? (
-                                                                            <>
-                                                                                <ChevronUp className="w-4 h-4 mr-2" />
-                                                                                Collapse
-                                                                            </>
-                                                                        ) : (
-                                                                            <>
-                                                                                <ChevronDown className="w-4 h-4 mr-2" />
-                                                                                View Details
-                                                                            </>
-                                                                        )}
-                                                                    </Button>
+                                                                    <div className="flex items-center gap-1">
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="sm"
+                                                                            onClick={() => handleEditLog(log.date)}
+                                                                            className="rounded-xl"
+                                                                        >
+                                                                            <Pencil className="w-4 h-4 mr-2" />
+                                                                            Edit
+                                                                        </Button>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="sm"
+                                                                            onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
+                                                                            className="rounded-xl"
+                                                                        >
+                                                                            {isExpanded ? (
+                                                                                <>
+                                                                                    <ChevronUp className="w-4 h-4 mr-2" />
+                                                                                    Collapse
+                                                                                </>
+                                                                            ) : (
+                                                                                <>
+                                                                                    <ChevronDown className="w-4 h-4 mr-2" />
+                                                                                    View Details
+                                                                                </>
+                                                                            )}
+                                                                        </Button>
+                                                                    </div>
                                                                 </div>
                                                             </div>
 
@@ -447,6 +469,7 @@ export default function WorkoutLogs() {
             <WorkoutLogDialog
                 open={isLogDialogOpen}
                 onOpenChange={setIsLogDialogOpen}
+                initialDate={editDate}
             />
         </div>
     );
