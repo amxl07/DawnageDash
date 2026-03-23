@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import logoUrl from "@assets/dashboard_1762285477469.png";
+import logoUrl from "@assets/logo.png";
 import { Mail, Loader2, User, Phone, Lock, Key, Eye, EyeOff, ArrowRight, ArrowLeft, Search, Check, ChevronDown } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";

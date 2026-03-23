@@ -1,6 +1,6 @@
 import { LayoutDashboard, Users, UserCheck, LogOut, IndianRupee } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import logoUrl from "@assets/dashboard_1762285477469.png";
+import logoUrl from "@assets/logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
