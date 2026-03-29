@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase, clearCorruptAuthData } from '@/lib/supabase';
 
@@ -28,23 +28,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return sessionStorage.getItem('dawnage_viewed_coach_id');
   });
 
-  const setViewedUserId = (id: string | null) => {
+  const setViewedUserId = useCallback((id: string | null) => {
     setViewedUserIdState(id);
     if (id) {
       sessionStorage.setItem('dawnage_viewed_user_id', id);
     } else {
       sessionStorage.removeItem('dawnage_viewed_user_id');
     }
-  };
+  }, []);
 
-  const setViewedCoachId = (id: string | null) => {
+  const setViewedCoachId = useCallback((id: string | null) => {
     setViewedCoachIdState(id);
     if (id) {
       sessionStorage.setItem('dawnage_viewed_coach_id', id);
     } else {
       sessionStorage.removeItem('dawnage_viewed_coach_id');
     }
-  };
+  }, []);
 
   useEffect(() => {
     // Get initial session with error recovery for corrupt tokens
@@ -88,25 +88,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     try {
       await supabase.auth.signOut();
     } catch (error) {
       console.error('Error signing out:', error);
     } finally {
-      // Always clear local state and corrupt tokens even if the server request fails
       clearCorruptAuthData();
       setUser(null);
       setSession(null);
       setViewedUserId(null);
       setViewedCoachId(null);
     }
-  };
+  }, [setViewedUserId, setViewedCoachId]);
 
   const isCoachView = !!viewedUserId;
 
+  const contextValue = useMemo(() => ({
+    user, session, loading, signOut, viewedUserId, setViewedUserId, viewedCoachId, setViewedCoachId, isCoachView,
+  }), [user, session, loading, signOut, viewedUserId, setViewedUserId, viewedCoachId, setViewedCoachId, isCoachView]);
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, signOut, viewedUserId, setViewedUserId, viewedCoachId, setViewedCoachId, isCoachView }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

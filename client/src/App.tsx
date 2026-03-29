@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -9,112 +10,124 @@ import { CoachSidebar } from "@/components/CoachSidebar";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import Dashboard from "@/pages/Dashboard";
-import CoachClientsPage from "@/pages/CoachClientsPage";
-import CoachClaimPage from "@/pages/CoachClaimPage";
-import AdminDashboard from "@/pages/AdminDashboard";
-import AdminCoachesPage from "@/pages/AdminCoachesPage";
-import AdminClientsPage from "@/pages/AdminClientsPage";
-import AdminBusinessPage from "@/pages/AdminBusinessPage";
-import CheckIns from "@/pages/CheckIns";
-import Measurements from "@/pages/Measurements";
-import Plans from "@/pages/Plans";
-import WeeklyFeedback from "@/pages/WeeklyFeedback";
-import Media from "@/pages/Media";
-import Profile from "@/pages/Profile";
-import WorkoutLogs from "@/pages/WorkoutLogs";
-import Login from "@/pages/Login";
-import NotFound from "@/pages/not-found";
+
+// Lazy-loaded pages — each loads only when navigated to
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const CoachClientsPage = lazy(() => import("@/pages/CoachClientsPage"));
+const CoachClaimPage = lazy(() => import("@/pages/CoachClaimPage"));
+const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
+const AdminCoachesPage = lazy(() => import("@/pages/AdminCoachesPage"));
+const AdminClientsPage = lazy(() => import("@/pages/AdminClientsPage"));
+const AdminBusinessPage = lazy(() => import("@/pages/AdminBusinessPage"));
+const CheckIns = lazy(() => import("@/pages/CheckIns"));
+const Measurements = lazy(() => import("@/pages/Measurements"));
+const Plans = lazy(() => import("@/pages/Plans"));
+const WeeklyFeedback = lazy(() => import("@/pages/WeeklyFeedback"));
+const Media = lazy(() => import("@/pages/Media"));
+const Profile = lazy(() => import("@/pages/Profile"));
+const WorkoutLogs = lazy(() => import("@/pages/WorkoutLogs"));
+const Login = lazy(() => import("@/pages/Login"));
+const NotFound = lazy(() => import("@/pages/not-found"));
+
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-[50vh] w-full">
+      <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
 
 function Router() {
   const { user, viewedUserId, viewedCoachId } = useAuth();
   const role = user?.user_metadata?.role;
 
   return (
-    <Switch>
-      <Route path="/login" component={Login} />
-      <Route path="/">
-        <ProtectedRoute>
-          {role === 'admin' && !viewedCoachId ? (
-            <Redirect to="/admin/dashboard" />
-          ) : role === 'admin' && viewedCoachId && !viewedUserId ? (
-            <Redirect to="/coach/clients" />
-          ) : role === 'coach' && !viewedUserId ? (
-            <Redirect to="/coach/clients" />
-          ) : (
-            <Dashboard />
-          )}
-        </ProtectedRoute>
-      </Route>
-      {/* Admin Routes */}
-      <Route path="/admin/dashboard">
-        <ProtectedRoute>
-          <AdminDashboard />
-        </ProtectedRoute>
-      </Route>
-      <Route path="/admin/coaches">
-        <ProtectedRoute>
-          <AdminCoachesPage />
-        </ProtectedRoute>
-      </Route>
-      <Route path="/admin/clients">
-        <ProtectedRoute>
-          <AdminClientsPage />
-        </ProtectedRoute>
-      </Route>
-      <Route path="/admin/business">
-        <ProtectedRoute>
-          <AdminBusinessPage />
-        </ProtectedRoute>
-      </Route>
-      {/* Coach Routes */}
-      <Route path="/coach/clients">
-        <ProtectedRoute>
-          <CoachClientsPage />
-        </ProtectedRoute>
-      </Route>
-      <Route path="/coach/claim">
-        <ProtectedRoute>
-          <CoachClaimPage />
-        </ProtectedRoute>
-      </Route>
-      <Route path="/check-ins">
-        <ProtectedRoute>
-          <CheckIns />
-        </ProtectedRoute>
-      </Route>
-      <Route path="/measurements">
-        <ProtectedRoute>
-          <Measurements />
-        </ProtectedRoute>
-      </Route>
-      <Route path="/plans">
-        <ProtectedRoute>
-          <Plans />
-        </ProtectedRoute>
-      </Route>
-      <Route path="/weekly-feedback">
-        <ProtectedRoute>
-          <WeeklyFeedback />
-        </ProtectedRoute>
-      </Route>
-      <Route path="/media">
-        <ProtectedRoute>
-          <Media />
-        </ProtectedRoute>
-      </Route>
-      <Route path="/workout-logs">
-        <ProtectedRoute>
-          <WorkoutLogs />
-        </ProtectedRoute>
-      </Route>
-      <Route path="/profile">
-        <ProtectedRoute>
-          <Profile />
-        </ProtectedRoute>
-      </Route>
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense fallback={<PageLoader />}>
+      <Switch>
+        <Route path="/login" component={Login} />
+        <Route path="/">
+          <ProtectedRoute>
+            {role === 'admin' && !viewedCoachId ? (
+              <Redirect to="/admin/dashboard" />
+            ) : role === 'admin' && viewedCoachId && !viewedUserId ? (
+              <Redirect to="/coach/clients" />
+            ) : role === 'coach' && !viewedUserId ? (
+              <Redirect to="/coach/clients" />
+            ) : (
+              <Dashboard />
+            )}
+          </ProtectedRoute>
+        </Route>
+        {/* Admin Routes */}
+        <Route path="/admin/dashboard">
+          <ProtectedRoute>
+            <AdminDashboard />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/admin/coaches">
+          <ProtectedRoute>
+            <AdminCoachesPage />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/admin/clients">
+          <ProtectedRoute>
+            <AdminClientsPage />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/admin/business">
+          <ProtectedRoute>
+            <AdminBusinessPage />
+          </ProtectedRoute>
+        </Route>
+        {/* Coach Routes */}
+        <Route path="/coach/clients">
+          <ProtectedRoute>
+            <CoachClientsPage />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/coach/claim">
+          <ProtectedRoute>
+            <CoachClaimPage />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/check-ins">
+          <ProtectedRoute>
+            <CheckIns />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/measurements">
+          <ProtectedRoute>
+            <Measurements />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/plans">
+          <ProtectedRoute>
+            <Plans />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/weekly-feedback">
+          <ProtectedRoute>
+            <WeeklyFeedback />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/media">
+          <ProtectedRoute>
+            <Media />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/workout-logs">
+          <ProtectedRoute>
+            <WorkoutLogs />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/profile">
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        </Route>
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 
