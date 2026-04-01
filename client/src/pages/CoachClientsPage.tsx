@@ -1,6 +1,15 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/lib/supabase";
+import {
+  fetchCoachClientsFullList,
+  fetchClientCheckIns,
+  fetchClientWeeklyCheckIns,
+  fetchClientMeasurements,
+  fetchClientPhotos,
+  saveCoachNote,
+  updateClientPackage,
+  unassignClient,
+} from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -55,13 +64,22 @@ export default function CoachClientsPage() {
   const { data: clients, isLoading: clientsLoading } = useQuery({
     queryKey: ["coach-clients", effectiveCoachId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("users")
-        .select("*")
-        .eq("role", "client")
-        .eq("coach_id", effectiveCoachId!);
-      if (error) throw error;
-      return data || [];
+      const data = await fetchCoachClientsFullList();
+      // Map camelCase API response to snake_case for existing UI components
+      return (data || []).map((c: any) => ({
+        ...c,
+        full_name: c.fullName ?? c.full_name,
+        coach_id: c.coachId ?? c.coach_id,
+        package_type: c.packageType ?? c.package_type,
+        package_duration: c.packageDuration ?? c.package_duration,
+        package_start_date: c.packageStartDate ?? c.package_start_date,
+        active_workout_plan: c.activeWorkoutPlan ?? c.active_workout_plan,
+        active_meal_plan: c.activeMealPlan ?? c.active_meal_plan,
+        avatar_url: c.avatarUrl ?? c.avatar_url,
+        coach_note: c.coachNote ?? c.coach_note,
+        country_code: c.countryCode ?? c.country_code,
+        created_at: c.createdAt ?? c.created_at,
+      }));
     },
     enabled: !!effectiveCoachId,
   });
@@ -74,76 +92,28 @@ export default function CoachClientsPage() {
 
   const { data: checkInsData } = useQuery({
     queryKey: ["coach-client-checkins", clientIds],
-    queryFn: async () => {
-      if (clientIds.length === 0) return [];
-      const sixtyDaysAgo = new Date();
-      sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
-      const isoDate = sixtyDaysAgo.toISOString().split("T")[0];
-      const { data, error } = await supabase
-        .from("daily_check_ins")
-        .select("id, user_id, date, nutrition_score, morning_weight, workout_status")
-        .in("user_id", clientIds)
-        .gte("date", isoDate);
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => fetchClientCheckIns(clientIds, 60),
     enabled: clientIds.length > 0,
   });
 
   // Fetch weekly check-ins — no date filter so we always get the latest entry per client
   const { data: weeklyData } = useQuery({
     queryKey: ["coach-client-weekly", clientIds],
-    queryFn: async () => {
-      if (clientIds.length === 0) return [];
-      const { data, error } = await supabase
-        .from("weekly_check_ins")
-        .select("id, user_id, created_at, joint_pain, missed_sessions, recovery_issues, training_progress")
-        .in("user_id", clientIds)
-        .order("created_at", { ascending: false });
-      if (error) {
-        console.error("Failed to fetch weekly check-ins:", error);
-        throw error;
-      }
-      return data || [];
-    },
+    queryFn: () => fetchClientWeeklyCheckIns(clientIds),
     enabled: clientIds.length > 0,
   });
 
   // Fetch body measurements — no date filter so we always get the latest entry per client
   const { data: measurementsData } = useQuery({
     queryKey: ["coach-client-measurements", clientIds],
-    queryFn: async () => {
-      if (clientIds.length === 0) return [];
-      const { data, error } = await supabase
-        .from("body_measurements")
-        .select("id, user_id, date")
-        .in("user_id", clientIds)
-        .order("date", { ascending: false });
-      if (error) {
-        console.error("Failed to fetch body measurements:", error);
-        throw error;
-      }
-      return data || [];
-    },
+    queryFn: () => fetchClientMeasurements(clientIds),
     enabled: clientIds.length > 0,
   });
 
   // Fetch weekly progress photos — no date filter
   const { data: progressPhotosData } = useQuery({
     queryKey: ["coach-client-photos", clientIds],
-    queryFn: async () => {
-      if (clientIds.length === 0) return [];
-      const { data, error } = await supabase
-        .from("weekly_progress_photos")
-        .select("id, user_id, date")
-        .in("user_id", clientIds)
-        .order("date", { ascending: false });
-      if (error) {
-        console.error("Failed to fetch progress photos:", error);
-        return [];
-      }
-      return data || [];
-    },
+    queryFn: () => fetchClientPhotos(clientIds),
     enabled: clientIds.length > 0,
   });
 
@@ -153,11 +123,7 @@ export default function CoachClientsPage() {
   const handleSaveNote = async (clientId: string, note: string) => {
     setSavingNoteFor(clientId);
     try {
-      const { error } = await supabase
-        .from("users")
-        .update({ coach_note: note })
-        .eq("id", clientId);
-      if (error) throw error;
+      await saveCoachNote(clientId, note);
       toast({ title: "Note saved" });
       queryClient.invalidateQueries({ queryKey: ["coach-clients"] });
     } catch {
@@ -167,21 +133,24 @@ export default function CoachClientsPage() {
     }
   };
 
-  // Group check-ins by user_id
+  // Group check-ins by userId (Drizzle camelCase)
   const checkInsByClient = useMemo(() => {
     const map: Record<string, any[]> = {};
     (checkInsData || []).forEach((c: any) => {
-      if (!map[c.user_id]) map[c.user_id] = [];
-      map[c.user_id].push(c);
+      const uid = c.userId ?? c.user_id;
+      if (!map[uid]) map[uid] = [];
+      map[uid].push(c);
     });
     return map;
   }, [checkInsData]);
 
+  // Weekly check-ins come from raw SQL (snake_case user_id)
   const weeklyByClient = useMemo(() => {
     const map: Record<string, any[]> = {};
     (weeklyData || []).forEach((w: any) => {
-      if (!map[w.user_id]) map[w.user_id] = [];
-      map[w.user_id].push(w);
+      const uid = w.userId ?? w.user_id;
+      if (!map[uid]) map[uid] = [];
+      map[uid].push(w);
     });
     return map;
   }, [weeklyData]);
@@ -189,8 +158,9 @@ export default function CoachClientsPage() {
   const measurementsByClient = useMemo(() => {
     const map: Record<string, any[]> = {};
     (measurementsData || []).forEach((m: any) => {
-      if (!map[m.user_id]) map[m.user_id] = [];
-      map[m.user_id].push(m);
+      const uid = m.userId ?? m.user_id;
+      if (!map[uid]) map[uid] = [];
+      map[uid].push(m);
     });
     return map;
   }, [measurementsData]);
@@ -198,8 +168,9 @@ export default function CoachClientsPage() {
   const photosByClient = useMemo(() => {
     const map: Record<string, any[]> = {};
     (progressPhotosData || []).forEach((p: any) => {
-      if (!map[p.user_id]) map[p.user_id] = [];
-      map[p.user_id].push(p);
+      const uid = p.userId ?? p.user_id;
+      if (!map[uid]) map[uid] = [];
+      map[uid].push(p);
     });
     return map;
   }, [progressPhotosData]);
@@ -235,18 +206,11 @@ export default function CoachClientsPage() {
     if (!editClientId) return;
     setIsUpdating(true);
     try {
-      const updatePayload: any = {
-        package_type: packageType,
-        package_duration: duration,
-      };
-      if (startDate) {
-        updatePayload.package_start_date = startDate;
-      }
-      const { error } = await supabase
-        .from("users")
-        .update(updatePayload)
-        .eq("id", editClientId);
-      if (error) throw error;
+      await updateClientPackage(editClientId, {
+        packageType,
+        packageDuration: duration,
+        ...(startDate ? { packageStartDate: startDate } : {}),
+      });
 
       toast({
         title: "Package Updated",
@@ -277,28 +241,7 @@ export default function CoachClientsPage() {
     if (!clientToUnassign || !effectiveCoachId) return;
     setIsUnassigning(true);
     try {
-      // Fetch client data directly for history snapshot before unassigning
-      // (don't rely on cached query which may not be loaded yet)
-      const { data: clientData } = await supabase
-        .from("users")
-        .select("package_type, package_duration")
-        .eq("id", clientToUnassign.id)
-        .single();
-
-      const { error } = await supabase
-        .from("users")
-        .update({ coach_id: null })
-        .eq("id", clientToUnassign.id);
-      if (error) throw error;
-
-      // Log unassignment in history for retention tracking
-      await supabase.from("coach_client_history").insert({
-        coach_id: effectiveCoachId,
-        client_id: clientToUnassign.id,
-        event_type: "unassigned",
-        package_type: clientData?.package_type || null,
-        package_duration: clientData?.package_duration || null,
-      });
+      await unassignClient(clientToUnassign.id);
 
       toast({
         title: "Client Unassigned",

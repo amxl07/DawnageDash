@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Utensils, Coffee, Sun, Moon, Edit2, Save, X, Plus, Trash2, Loader2, Sparkles, Search } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
-import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { fetchFoodItems, saveMealPlan } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
@@ -65,7 +65,7 @@ const MealComposer = ({
   // Load Food DB on mount
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from('food_items').select('*');
+      const data = await fetchFoodItems();
       if (data) setFoodDb(data);
     })();
   }, []);
@@ -422,99 +422,29 @@ export function EditableMealPlan({ initialPlan, day = "Monday", caloriesTarget, 
     setIsLoading(true);
 
     try {
-      // 1. Delete existing meals for this day AND config
-      // Note: Plans.tsx deletes by config, so we should allow this component to do the same to be consistent.
-      // BUT, if we delete by DAY, we might delete other configs if not careful?
-      // Actually, standard usage is: User has ONE active plan config (e.g. 1500 Veg).
-      // If we just save 'Daily' for this user without specifying target/type, it's ambiguous.
-      // We MUST save with target/type.
+      const mealTypes = [
+        { key: 'breakfast' as const, type: 'Breakfast' },
+        { key: 'mid_morning_snack' as const, type: 'Mid Morning Snack' },
+        { key: 'lunch' as const, type: 'Lunch' },
+        { key: 'evening_snack' as const, type: 'Evening Snack' },
+        { key: 'dinner' as const, type: 'Dinner' },
+      ];
 
-      let deleteQuery = supabase
-        .from('meal_plans')
-        .delete()
-        .eq('user_id', targetUserId)
-        .eq('day_of_week', day);
+      const meals = mealTypes.map(({ key, type }) => ({
+        dayOfWeek: day,
+        mealType: type,
+        description: mealPlan[key].name,
+        calories: mealPlan[key].calories,
+        protein: mealPlan[key].protein,
+        carbs: mealPlan[key].carbs,
+        fats: mealPlan[key].fats,
+      }));
 
-      if (caloriesTarget) deleteQuery = deleteQuery.eq('calories_target', caloriesTarget);
-      if (dietType) deleteQuery = deleteQuery.eq('diet_type', dietType);
-
-      const { error: deleteError } = await deleteQuery;
-
-      if (deleteError) throw deleteError;
-
-      // 2. Prepare new rows
-      const baseRow = {
-        user_id: targetUserId,
-        day_of_week: day,
-        calories_target: caloriesTarget,
-        diet_type: dietType
-      };
-
-      const rows = [];
-
-      // Breakfast
-      rows.push({
-        ...baseRow,
-        meal_type: 'Breakfast',
-        description: mealPlan.breakfast.name,
-        calories: mealPlan.breakfast.calories,
-        protein: mealPlan.breakfast.protein,
-        carbs: mealPlan.breakfast.carbs,
-        fats: mealPlan.breakfast.fats,
+      await saveMealPlan(targetUserId, {
+        caloriesTarget: caloriesTarget || 0,
+        dietType: dietType || '',
+        meals,
       });
-
-      // Mid Morning Snack
-      rows.push({
-        ...baseRow,
-        meal_type: 'Mid Morning Snack',
-        description: mealPlan.mid_morning_snack.name,
-        calories: mealPlan.mid_morning_snack.calories,
-        protein: mealPlan.mid_morning_snack.protein,
-        carbs: mealPlan.mid_morning_snack.carbs,
-        fats: mealPlan.mid_morning_snack.fats,
-      });
-
-      // Lunch
-      rows.push({
-        ...baseRow,
-        meal_type: 'Lunch',
-        description: mealPlan.lunch.name,
-        calories: mealPlan.lunch.calories,
-        protein: mealPlan.lunch.protein,
-        carbs: mealPlan.lunch.carbs,
-        fats: mealPlan.lunch.fats,
-      });
-
-      // Evening Snack
-      rows.push({
-        ...baseRow,
-        meal_type: 'Evening Snack',
-        description: mealPlan.evening_snack.name,
-        calories: mealPlan.evening_snack.calories,
-        protein: mealPlan.evening_snack.protein,
-        carbs: mealPlan.evening_snack.carbs,
-        fats: mealPlan.evening_snack.fats,
-      });
-
-      // Dinner
-      rows.push({
-        ...baseRow,
-        meal_type: 'Dinner',
-        description: mealPlan.dinner.name,
-        calories: mealPlan.dinner.calories,
-        protein: mealPlan.dinner.protein,
-        carbs: mealPlan.dinner.carbs,
-        fats: mealPlan.dinner.fats,
-      });
-
-
-
-      // 3. Insert new rows
-      const { error: insertError } = await supabase
-        .from('meal_plans')
-        .insert(rows);
-
-      if (insertError) throw insertError;
 
       toast({
         title: "Success",

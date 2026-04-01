@@ -8,8 +8,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  fetchUserProfile,
+  fetchWorkoutPlan,
+  fetchMealPlan,
+  saveWorkoutPlan,
+  saveMealPlan,
+  copyWorkoutPlan,
+  copyMealPlan,
+  copyNotes,
+  updateActiveWorkout,
+} from "@/lib/api";
 import { Loader2, Dumbbell, UtensilsCrossed, CheckCircle2, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { TrainingNote } from "@/components/TrainingNote";
@@ -139,17 +149,7 @@ export default function Plans() {
   // Fetch user profile to get active plan
   const { data: userProfile } = useQuery({
     queryKey: ['userProfile', targetUserId],
-    queryFn: async () => {
-      if (!targetUserId) return null;
-
-      const { data, error } = await supabase
-        .from('users')
-        .select('active_workout_plan, active_meal_plan')
-        .eq('id', targetUserId)
-        .single();
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => fetchUserProfile(targetUserId!),
     enabled: !!targetUserId,
   });
 
@@ -157,9 +157,9 @@ export default function Plans() {
   useEffect(() => {
     if (userProfile) {
       // Workout Plan
-      if (userProfile.active_workout_plan) {
+      if (userProfile.activeWorkoutPlan) {
         try {
-          const plan = JSON.parse(userProfile.active_workout_plan);
+          const plan = JSON.parse(userProfile.activeWorkoutPlan);
           if (plan) {
             setLevel(plan.level);
             setWorkoutType(plan.workoutType);
@@ -172,9 +172,9 @@ export default function Plans() {
       }
 
       // Meal Plan
-      if (userProfile.active_meal_plan) {
+      if (userProfile.activeMealPlan) {
         try {
-          const plan = JSON.parse(userProfile.active_meal_plan);
+          const plan = JSON.parse(userProfile.activeMealPlan);
           if (plan) {
             if (plan.calories) setCaloriesTarget(plan.calories);
             if (plan.dietType) setDietType(plan.dietType);
@@ -249,74 +249,30 @@ export default function Plans() {
   const { data: workoutPlans, isLoading: isLoadingWorkouts } = useQuery({
     queryKey: ['workoutPlans', targetUserId, level, workoutType, subCategory, daysPerWeek],
     queryFn: async () => {
-      // First: Try to get user's custom workout plans
-      let userQuery = supabase
-        .from('workout_plans')
-        .select('*')
-        .eq('user_id', targetUserId)
-        .eq('level', level)
-        .eq('workout_type', workoutType)
-        .eq('days_per_week', daysPerWeek);
+      const result = await fetchWorkoutPlan(targetUserId!, {
+        level,
+        workoutType: workoutType as string,
+        daysPerWeek: daysPerWeek as number,
+        subCategory: subCategory || undefined,
+      });
 
-      if (subCategory) {
-        userQuery = userQuery.eq('sub_category', subCategory);
-      } else {
-        userQuery = userQuery.is('sub_category', null);
-      }
+      const isTemplate = result.source === 'template';
+      const plans = result.plans || [];
+      const deduped = deduplicateByDayNumber(plans);
 
-      const { data: userPlans, error: userError } = await userQuery.order('day_number', { ascending: true });
-      if (userError) throw userError;
-
-      // If user has custom plans, return those (deduplicated by day_number)
-      if (userPlans && userPlans.length > 0) {
-        const deduped = deduplicateByDayNumber(userPlans);
-        return deduped.map(plan => {
-          const exercises = plan.exercises ? JSON.parse(plan.exercises) : [];
-          const exercisesWithIds = exercises.map((ex: any, idx: number) => ({
-            ...ex,
-            id: ex.id || `ex-${plan.id}-${idx}-${Date.now()}`
-          }));
-          return {
-            id: plan.id,
-            dayNumber: plan.day_number,
-            focus: plan.focus || '',
-            exercises: exercisesWithIds,
-            isTemplate: false,
-          };
-        });
-      }
-
-      // Second: Fall back to global templates
-      let templateQuery = supabase
-        .from('workout_templates')
-        .select('*')
-        .eq('level', level)
-        .eq('workout_type', workoutType)
-        .eq('days_per_week', daysPerWeek);
-
-      if (subCategory) {
-        templateQuery = templateQuery.eq('sub_category', subCategory);
-      } else {
-        templateQuery = templateQuery.is('sub_category', null);
-      }
-
-      const { data: templates, error: templateError } = await templateQuery.order('day_number', { ascending: true });
-      if (templateError) throw templateError;
-
-      // Deduplicate templates by day_number as well
-      const dedupedTemplates = deduplicateByDayNumber(templates || []);
-      return dedupedTemplates.map(plan => {
-        const exercises = plan.exercises ? JSON.parse(plan.exercises) : [];
+      return deduped.map((plan: any) => {
+        const exercises = plan.exercises ? (typeof plan.exercises === 'string' ? JSON.parse(plan.exercises) : plan.exercises) : [];
+        const prefix = isTemplate ? 'tpl-ex' : 'ex';
         const exercisesWithIds = exercises.map((ex: any, idx: number) => ({
           ...ex,
-          id: ex.id || `tpl-ex-${plan.id}-${idx}`
+          id: ex.id || `${prefix}-${plan.id}-${idx}-${Date.now()}`
         }));
         return {
           id: plan.id,
-          dayNumber: plan.day_number,
+          dayNumber: plan.dayNumber ?? plan.day_number,
           focus: plan.focus || '',
           exercises: exercisesWithIds,
-          isTemplate: true,
+          isTemplate,
         };
       });
     },
@@ -326,33 +282,23 @@ export default function Plans() {
   const { data: mealPlans, isLoading: isLoadingMeals } = useQuery({
     queryKey: ['mealPlans', targetUserId, caloriesTarget, dietType],
     queryFn: async () => {
-      // 1. Try to get user custom plans for this configuration
-      let userQuery = supabase
-        .from('meal_plans')
-        .select('*')
-        .eq('user_id', targetUserId)
-        .eq('calories_target', caloriesTarget)
-        .eq('diet_type', dietType);
+      const result = await fetchMealPlan(targetUserId!, { caloriesTarget, dietType });
 
-      const { data: userPlans, error: userError } = await userQuery;
-      if (userError) throw userError;
-
-      if (userPlans && userPlans.length > 0) {
-        return { source: 'custom', plans: userPlans };
+      if (result.source === 'custom' && result.plans.length > 0) {
+        // Map camelCase fields from API to snake_case that currentMealPlan expects
+        const plans = result.plans.map((p: any) => ({
+          ...p,
+          day_of_week: p.dayOfWeek ?? p.day_of_week,
+          meal_type: p.mealType ?? p.meal_type,
+          calories_target: p.caloriesTarget ?? p.calories_target,
+          diet_type: p.dietType ?? p.diet_type,
+        }));
+        return { source: 'custom' as const, plans };
       }
 
-      // 2. Fallback to templates
-      const { data: template, error: templateError } = await supabase
-        .from('meal_templates')
-        .select('*')
-        .eq('calories_target', caloriesTarget)
-        .eq('diet_type', dietType)
-        .single();
-
-      // If no template found (e.g. for higher calorie targets not yet added), return empty
-      if (templateError && templateError.code !== 'PGRST116') throw templateError;
-
-      return { source: 'template', template };
+      // Template fallback: API returns plans array with template data
+      const template = result.plans[0] || null;
+      return { source: 'template' as const, template };
     },
     enabled: !!targetUserId,
   });
@@ -432,60 +378,37 @@ export default function Plans() {
 
   // Handle confirming the plan
   const handleConfirmPlan = async () => {
-    if (!targetUserId || !isSelectionComplete || !isCoach) return; // Only coaches can confirm plans
+    if (!targetUserId || !isSelectionComplete || !isCoach) return;
 
     try {
-      // 1. Update user's active plan preference
-      const planConfig = { level, workoutType, subCategory, daysPerWeek };
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ active_workout_plan: JSON.stringify(planConfig) })
-        .eq('id', targetUserId);
-
-      if (updateError) throw updateError;
-
-      // 2. If it's a template, copy to workout_plans
       const isTemplate = workoutPlans?.[0]?.isTemplate;
 
       if (isTemplate && workoutPlans) {
-        const rows = workoutPlans.map(day => ({
-          user_id: targetUserId,
-          level: level,
-          workout_type: workoutType,
-          sub_category: subCategory || null,
-          days_per_week: daysPerWeek,
-          day_number: day.dayNumber,
-          focus: day.focus,
-          exercises: JSON.stringify(day.exercises),
-        }));
-
-        // First delete any existing to avoid duplicates if they click multiple times or overwrite
-        // Actually EditableWorkoutPlan does delete-insert, so we can do same or just insert if empty.
-        // Let's use delete-then-insert to be safe and consistent with "Reset to template" logic.
-        let deleteQuery = supabase
-          .from('workout_plans')
-          .delete()
-          .eq('user_id', targetUserId)
-          .eq('level', level)
-          .eq('workout_type', workoutType)
-          .eq('days_per_week', daysPerWeek);
-
-        if (subCategory) {
-          deleteQuery = deleteQuery.eq('sub_category', subCategory);
-        } else {
-          deleteQuery = deleteQuery.is('sub_category', null);
-        }
-        await deleteQuery;
-
-        const { error: insertError } = await supabase
-          .from('workout_plans')
-          .insert(rows);
-
-        if (insertError) throw insertError;
-
-        queryClient.invalidateQueries({ queryKey: ['workoutPlans'] });
-        queryClient.invalidateQueries({ queryKey: ['userProfile'] }); // Refresh profile to confirm active logic
+        // Save template as custom plan + update active preference in one atomic call
+        await saveWorkoutPlan(targetUserId, {
+          level,
+          workoutType: workoutType as string,
+          daysPerWeek: daysPerWeek as number,
+          subCategory: subCategory || null,
+          days: workoutPlans.map(day => ({
+            dayNumber: day.dayNumber,
+            focus: day.focus,
+            exercises: JSON.stringify(day.exercises),
+          })),
+          updateActivePreference: true,
+        });
+      } else {
+        // Just update active preference
+        await updateActiveWorkout(targetUserId, {
+          level,
+          workoutType: workoutType as string,
+          subCategory: subCategory || null,
+          daysPerWeek: daysPerWeek as number,
+        });
       }
+
+      queryClient.invalidateQueries({ queryKey: ['workoutPlans'] });
+      queryClient.invalidateQueries({ queryKey: ['userProfile'] });
 
       toast({
         title: "Plan Confirmed",
@@ -503,9 +426,9 @@ export default function Plans() {
 
   // Check if current selection matches active plan
   const isCurrentActive = useMemo(() => {
-    if (!userProfile?.active_workout_plan) return false;
+    if (!userProfile?.activeWorkoutPlan) return false;
     try {
-      const active = JSON.parse(userProfile.active_workout_plan);
+      const active = JSON.parse(userProfile.activeWorkoutPlan);
       return (
         active.level === level &&
         active.workoutType === workoutType &&
@@ -518,9 +441,9 @@ export default function Plans() {
   }, [userProfile, level, workoutType, subCategory, daysPerWeek]);
 
   const isCurrentActiveMeal = useMemo(() => {
-    if (!userProfile?.active_meal_plan) return false;
+    if (!userProfile?.activeMealPlan) return false;
     try {
-      const active = JSON.parse(userProfile.active_meal_plan);
+      const active = JSON.parse(userProfile.activeMealPlan);
       return active.calories === caloriesTarget && active.dietType === dietType;
     } catch {
       return false;
@@ -528,70 +451,34 @@ export default function Plans() {
   }, [userProfile, caloriesTarget, dietType]);
 
   const handleConfirmMealPlan = async () => {
-    if (!targetUserId || !mealPlans?.template || !isCoach) return; // Only coaches can confirm plans
+    if (!targetUserId || !mealPlans?.template || !isCoach) return;
 
     try {
-      // 1. Update active plan
-      const planConfig = { calories: caloriesTarget, dietType };
-      const { error: prefError } = await supabase
-        .from('users')
-        .update({ active_meal_plan: JSON.stringify(planConfig) })
-        .eq('id', targetUserId);
-
-      if (prefError) throw prefError;
-
-      // 2. Populate meal_plans for all 7 days with this template
-      // We first delete existing plans for this configuration or ALL plans?
-      // Let's delete plans for this specific target/type to keep it clean, or update them.
-      // Usually users want this to be their schedule.
-      // Let's delete existing entries for this calories_target and diet_type.
-
-      /* 
-         DESIGN CHOICE: We now save as ONE 'Daily' plan.
-         We delete existing for this user/target/type.
-      */
-
       const content = JSON.parse(mealPlans.template.content);
-      const rows: any[] = [];
-      const day = 'Daily';
+      const mealTypes = [
+        { key: 'breakfast', type: 'Breakfast' },
+        { key: 'mid_morning_snack', type: 'Mid Morning Snack' },
+        { key: 'lunch', type: 'Lunch' },
+        { key: 'evening_snack', type: 'Evening Snack' },
+        { key: 'dinner', type: 'Dinner' },
+      ] as const;
 
-      // Breakfast
-      rows.push({ ...content.breakfast, user_id: targetUserId, day_of_week: day, meal_type: 'Breakfast', description: content.breakfast.name, diet_type: dietType, calories_target: caloriesTarget });
-      // Mid Morning Snack
-      rows.push({ ...content.mid_morning_snack, user_id: targetUserId, day_of_week: day, meal_type: 'Mid Morning Snack', description: content.mid_morning_snack.name, diet_type: dietType, calories_target: caloriesTarget });
-      // Lunch
-      rows.push({ ...content.lunch, user_id: targetUserId, day_of_week: day, meal_type: 'Lunch', description: content.lunch.name, diet_type: dietType, calories_target: caloriesTarget });
-      // Evening Snack
-      rows.push({ ...content.evening_snack, user_id: targetUserId, day_of_week: day, meal_type: 'Evening Snack', description: content.evening_snack.name, diet_type: dietType, calories_target: caloriesTarget });
-      // Dinner
-      rows.push({ ...content.dinner, user_id: targetUserId, day_of_week: day, meal_type: 'Dinner', description: content.dinner.name, diet_type: dietType, calories_target: caloriesTarget });
-
-      // Delete existing for this config
-      const { error: delError } = await supabase
-        .from('meal_plans')
-        .delete()
-        .eq('user_id', targetUserId)
-        .eq('calories_target', caloriesTarget)
-        .eq('diet_type', dietType);
-
-      if (delError) throw delError;
-
-      // Clean up rows to match schema (remove extra fields from JSON spread)
-      const cleanRows = rows.map(r => ({
-        user_id: r.user_id,
-        day_of_week: r.day_of_week,
-        meal_type: r.meal_type,
-        description: r.description,
-        calories: r.calories,
-        protein: r.protein,
-        carbs: r.carbs,
-        fats: r.fats,
-        diet_type: r.diet_type,
-        calories_target: r.calories_target
+      const meals = mealTypes.map(({ key, type }) => ({
+        dayOfWeek: 'Daily',
+        mealType: type,
+        description: content[key]?.name || '',
+        calories: content[key]?.calories || 0,
+        protein: content[key]?.protein || 0,
+        carbs: content[key]?.carbs || 0,
+        fats: content[key]?.fats || 0,
       }));
 
-      const { error: insError } = await supabase.from('meal_plans').insert(cleanRows);
-      if (insError) throw insError;
+      await saveMealPlan(targetUserId, {
+        caloriesTarget,
+        dietType,
+        meals,
+        updateActivePreference: true,
+      });
 
       queryClient.invalidateQueries({ queryKey: ['mealPlans'] });
       queryClient.invalidateQueries({ queryKey: ['userProfile'] });
@@ -615,52 +502,18 @@ export default function Plans() {
     if (!targetUserId || !isSelectionComplete || !workoutPlans || workoutPlans.length === 0) return;
 
     try {
-      const planConfig = JSON.stringify({ level, workoutType, subCategory, daysPerWeek });
-
-      for (const clientId of targetClientIds) {
-        // 1. Update target client's active workout plan
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({ active_workout_plan: planConfig })
-          .eq('id', clientId);
-
-        if (updateError) throw updateError;
-
-        // 2. Delete existing workout plans for this config
-        let deleteQuery = supabase
-          .from('workout_plans')
-          .delete()
-          .eq('user_id', clientId)
-          .eq('level', level)
-          .eq('workout_type', workoutType)
-          .eq('days_per_week', daysPerWeek);
-
-        if (subCategory) {
-          deleteQuery = deleteQuery.eq('sub_category', subCategory);
-        } else {
-          deleteQuery = deleteQuery.is('sub_category', null);
-        }
-        const { error: delError } = await deleteQuery;
-        if (delError) throw delError;
-
-        // 3. Insert copied workout plan rows
-        const rows = workoutPlans.map(day => ({
-          user_id: clientId,
-          level: level,
-          workout_type: workoutType,
-          sub_category: subCategory || null,
-          days_per_week: daysPerWeek,
-          day_number: day.dayNumber,
+      await copyWorkoutPlan(targetUserId, {
+        level,
+        workoutType: workoutType as string,
+        daysPerWeek: daysPerWeek as number,
+        subCategory: subCategory || null,
+        days: workoutPlans.map(day => ({
+          dayNumber: day.dayNumber,
           focus: day.focus,
           exercises: JSON.stringify(day.exercises),
-        }));
-
-        const { error: insertError } = await supabase
-          .from('workout_plans')
-          .insert(rows);
-
-        if (insertError) throw insertError;
-      }
+        })),
+        targetClientIds,
+      });
 
       toast({
         title: "Workout Plan Copied",
@@ -674,7 +527,7 @@ export default function Plans() {
         description: error.message || "Failed to copy workout plan",
         variant: "destructive",
       });
-      throw error; // Re-throw so dialog knows it failed
+      throw error;
     }
   };
 
@@ -683,58 +536,33 @@ export default function Plans() {
     if (!targetUserId || !currentMealPlan) return;
 
     try {
-      const planConfig = JSON.stringify({ calories: caloriesTarget, dietType });
+      const mealTypes = [
+        { key: 'breakfast', type: 'Breakfast' },
+        { key: 'mid_morning_snack', type: 'Mid Morning Snack' },
+        { key: 'lunch', type: 'Lunch' },
+        { key: 'evening_snack', type: 'Evening Snack' },
+        { key: 'dinner', type: 'Dinner' },
+      ] as const;
 
-      for (const clientId of targetClientIds) {
-        // 1. Update target client's active meal plan
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({ active_meal_plan: planConfig })
-          .eq('id', clientId);
+      const meals = mealTypes.map(({ key, type }) => {
+        const meal = currentMealPlan[key];
+        return {
+          dayOfWeek: 'Daily',
+          mealType: type,
+          description: meal.name,
+          calories: meal.calories,
+          protein: meal.protein,
+          carbs: meal.carbs,
+          fats: meal.fats,
+        };
+      });
 
-        if (updateError) throw updateError;
-
-        // 2. Delete existing meal plans for this config
-        const { error: delError } = await supabase
-          .from('meal_plans')
-          .delete()
-          .eq('user_id', clientId)
-          .eq('calories_target', caloriesTarget)
-          .eq('diet_type', dietType);
-
-        if (delError) throw delError;
-
-        // 3. Insert copied meal plan rows
-        const mealTypes = [
-          { key: 'breakfast', type: 'Breakfast' },
-          { key: 'mid_morning_snack', type: 'Mid Morning Snack' },
-          { key: 'lunch', type: 'Lunch' },
-          { key: 'evening_snack', type: 'Evening Snack' },
-          { key: 'dinner', type: 'Dinner' },
-        ] as const;
-
-        const rows = mealTypes.map(({ key, type }) => {
-          const meal = currentMealPlan[key];
-          return {
-            user_id: clientId,
-            day_of_week: 'Daily',
-            meal_type: type,
-            description: meal.name,
-            calories: meal.calories,
-            protein: meal.protein,
-            carbs: meal.carbs,
-            fats: meal.fats,
-            diet_type: dietType,
-            calories_target: caloriesTarget,
-          };
-        });
-
-        const { error: insertError } = await supabase
-          .from('meal_plans')
-          .insert(rows);
-
-        if (insertError) throw insertError;
-      }
+      await copyMealPlan(targetUserId, {
+        caloriesTarget,
+        dietType,
+        meals,
+        targetClientIds,
+      });
 
       toast({
         title: "Meal Plan Copied",
@@ -757,24 +585,7 @@ export default function Plans() {
     if (!targetUserId) return;
 
     try {
-      // Fetch current user's training note
-      const { data: sourceData, error: fetchError } = await supabase
-        .from('users')
-        .select('training_note')
-        .eq('id', targetUserId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      for (const clientId of targetClientIds) {
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({ training_note: sourceData?.training_note || '' })
-          .eq('id', clientId);
-
-        if (updateError) throw updateError;
-      }
-
+      await copyNotes(targetUserId, 'training_note', targetClientIds);
       toast({
         title: "Training Notes Copied",
         description: `Notes copied to ${targetClientIds.length} client${targetClientIds.length > 1 ? 's' : ''} successfully.`,
@@ -794,23 +605,7 @@ export default function Plans() {
     if (!targetUserId) return;
 
     try {
-      const { data: sourceData, error: fetchError } = await supabase
-        .from('users')
-        .select('nutrition_note')
-        .eq('id', targetUserId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      for (const clientId of targetClientIds) {
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({ nutrition_note: sourceData?.nutrition_note || '' })
-          .eq('id', clientId);
-
-        if (updateError) throw updateError;
-      }
-
+      await copyNotes(targetUserId, 'nutrition_note', targetClientIds);
       toast({
         title: "Nutrition Notes Copied",
         description: `Notes copied to ${targetClientIds.length} client${targetClientIds.length > 1 ? 's' : ''} successfully.`,
@@ -830,23 +625,7 @@ export default function Plans() {
     if (!targetUserId) return;
 
     try {
-      const { data: sourceData, error: fetchError } = await supabase
-        .from('users')
-        .select('supplements_data')
-        .eq('id', targetUserId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      for (const clientId of targetClientIds) {
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({ supplements_data: sourceData?.supplements_data || null })
-          .eq('id', clientId);
-
-        if (updateError) throw updateError;
-      }
-
+      await copyNotes(targetUserId, 'supplements_data', targetClientIds);
       toast({
         title: "Supplements Plan Copied",
         description: `Supplements copied to ${targetClientIds.length} client${targetClientIds.length > 1 ? 's' : ''} successfully.`,
@@ -1151,7 +930,7 @@ export default function Plans() {
                 </div>
               )}
 
-              {isCoach || userProfile?.active_meal_plan ? (
+              {isCoach || userProfile?.activeMealPlan ? (
                 isLoadingMeals ? (
                   <div className="flex items-center justify-center min-h-[200px]">
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />

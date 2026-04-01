@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase";
+import { fetchNote, updateNote } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Activity, TrendingUp, Loader2, Save } from "lucide-react";
 
@@ -21,14 +21,14 @@ export function CardioStepsInput({ userId, isCoach }: CardioStepsInputProps) {
     const { data, isLoading } = useQuery({
         queryKey: ['cardioSteps', userId],
         queryFn: async () => {
-            const { data, error } = await supabase
-                .from('users')
-                .select('cardio_note, steps_note')
-                .eq('id', userId)
-                .single();
-
-            if (error) throw error;
-            return data;
+            const [cardioResult, stepsResult] = await Promise.all([
+                fetchNote(userId, 'cardio_note'),
+                fetchNote(userId, 'steps_note'),
+            ]);
+            return {
+                cardio_note: cardioResult?.value || null,
+                steps_note: stepsResult?.value || null,
+            };
         },
         enabled: !!userId
     });
@@ -42,15 +42,10 @@ export function CardioStepsInput({ userId, isCoach }: CardioStepsInputProps) {
 
     const updateMutation = useMutation({
         mutationFn: async () => {
-            const { error } = await supabase
-                .from('users')
-                .update({
-                    cardio_note: cardio,
-                    steps_note: steps
-                })
-                .eq('id', userId);
-
-            if (error) throw error;
+            await Promise.all([
+                updateNote(userId, 'cardio_note', cardio),
+                updateNote(userId, 'steps_note', steps),
+            ]);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['cardioSteps', userId] });

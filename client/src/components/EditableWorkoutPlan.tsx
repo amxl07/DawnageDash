@@ -7,8 +7,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Edit2, Save, X, Plus, Trash2, Loader2, ChevronRight, Video, StickyNote, GripVertical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { saveWorkoutPlan } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { CardioStepsInput } from "@/components/CardioStepsInput";
 import {
@@ -264,40 +264,17 @@ export function EditableWorkoutPlan({
     setIsLoading(true);
 
     try {
-      // Delete existing plans for this hierarchy path
-      let deleteQuery = supabase
-        .from('workout_plans')
-        .delete()
-        .eq('user_id', targetUserId)
-        .eq('level', level)
-        .eq('workout_type', workoutType)
-        .eq('days_per_week', daysPerWeek);
-
-      if (subCategory) {
-        deleteQuery = deleteQuery.eq('sub_category', subCategory);
-      } else {
-        deleteQuery = deleteQuery.is('sub_category', null);
-      }
-
-      const { error: deleteError } = await deleteQuery;
-      if (deleteError) throw deleteError;
-
-      const rows = workoutPlan.map(day => ({
-        user_id: targetUserId,
-        level: level,
-        workout_type: workoutType,
-        sub_category: subCategory,
-        days_per_week: daysPerWeek,
-        day_number: day.dayNumber,
-        focus: day.focus,
-        exercises: JSON.stringify(day.exercises),
-      }));
-
-      const { error: insertError } = await supabase
-        .from('workout_plans')
-        .insert(rows);
-
-      if (insertError) throw insertError;
+      await saveWorkoutPlan(targetUserId, {
+        level,
+        workoutType,
+        daysPerWeek,
+        subCategory: subCategory || null,
+        days: workoutPlan.map(day => ({
+          dayNumber: day.dayNumber,
+          focus: day.focus,
+          exercises: JSON.stringify(day.exercises),
+        })),
+      });
 
       toast({
         title: "Success",

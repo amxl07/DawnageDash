@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/lib/supabase";
+import { fetchCheckIn, saveCheckIn } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
@@ -45,35 +45,27 @@ export function CheckInForm() {
         const day = String(now.getDate()).padStart(2, '0');
         const today = `${year}-${month}-${day}`;
 
-        const { data, error } = await supabase
-          .from("daily_check_ins")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("date", today)
-          .maybeSingle();
-
-        if (error) {
-          console.error("Error fetching check-in:", error);
-          return;
-        }
+        const data = await fetchCheckIn(user.id, today);
 
         if (data) {
           setCheckInId(data.id);
           setFormData({
-            morningWeight: data.morning_weight?.toString() || "",
-            workoutStatus: data.workout_status || "",
-            workoutPerformance: data.workout_performance?.toString() || "",
-            nutritionScore: data.nutrition_score?.toString() || "",
-            dailySteps: data.daily_steps?.toString() || "",
-            sleepHours: data.sleep_hours?.toString() || "",
-            waterLiters: data.water_liters?.toString() || "",
-            energyLevel: data.energy_level?.toString() || "",
+            morningWeight: data.morningWeight?.toString() || "",
+            workoutStatus: data.workoutStatus || "",
+            workoutPerformance: data.workoutPerformance?.toString() || "",
+            nutritionScore: data.nutritionScore?.toString() || "",
+            dailySteps: data.dailySteps?.toString() || "",
+            sleepHours: data.sleepHours?.toString() || "",
+            waterLiters: data.waterLiters?.toString() || "",
+            energyLevel: data.energyLevel?.toString() || "",
             digestion: data.digestion || "",
-            hungerLevel: data.hunger_level?.toString() || "",
-            stressLevel: data.stress_level?.toString() || "",
-            calorieIntake: data.calorie_intake?.toString() || "",
+            hungerLevel: data.hungerLevel?.toString() || "",
+            stressLevel: data.stressLevel?.toString() || "",
+            calorieIntake: data.calorieIntake?.toString() || "",
           });
         }
+      } catch (error) {
+        console.error("Error fetching check-in:", error);
       } finally {
         setIsInitialLoading(false);
       }
@@ -95,63 +87,34 @@ export function CheckInForm() {
       const day = String(now.getDate()).padStart(2, '0');
       const today = `${year}-${month}-${day}`;
 
-      const payload = {
-        user_id: user.id,
+      const wasUpdate = !!checkInId;
+
+      const result = await saveCheckIn(user.id, {
+        id: checkInId,
         date: today,
-        morning_weight: formData.morningWeight ? parseFloat(formData.morningWeight) : null,
-        workout_status: formData.workoutStatus || null,
-        workout_performance: formData.workoutPerformance ? parseInt(formData.workoutPerformance) : null,
-        nutrition_score: formData.nutritionScore ? parseInt(formData.nutritionScore) : null,
-        daily_steps: formData.dailySteps ? parseInt(formData.dailySteps) : null,
-        sleep_hours: formData.sleepHours ? parseFloat(formData.sleepHours) : null,
-        water_liters: formData.waterLiters ? parseFloat(formData.waterLiters) : null,
-        energy_level: formData.energyLevel ? parseInt(formData.energyLevel) : null,
+        morningWeight: formData.morningWeight ? parseFloat(formData.morningWeight) : null,
+        workoutStatus: formData.workoutStatus || null,
+        workoutPerformance: formData.workoutPerformance ? parseInt(formData.workoutPerformance) : null,
+        nutritionScore: formData.nutritionScore ? parseInt(formData.nutritionScore) : null,
+        dailySteps: formData.dailySteps ? parseInt(formData.dailySteps) : null,
+        sleepHours: formData.sleepHours ? parseFloat(formData.sleepHours) : null,
+        waterLiters: formData.waterLiters ? parseFloat(formData.waterLiters) : null,
+        energyLevel: formData.energyLevel ? parseInt(formData.energyLevel) : null,
         digestion: formData.digestion || null,
-        hunger_level: formData.hungerLevel ? parseInt(formData.hungerLevel) : null,
-        stress_level: formData.stressLevel ? parseInt(formData.stressLevel) : null,
-        calorie_intake: formData.calorieIntake ? parseInt(formData.calorieIntake) : null,
-      };
+        hungerLevel: formData.hungerLevel ? parseInt(formData.hungerLevel) : null,
+        stressLevel: formData.stressLevel ? parseInt(formData.stressLevel) : null,
+        calorieIntake: formData.calorieIntake ? parseInt(formData.calorieIntake) : null,
+      });
 
-      let error;
-      if (checkInId) {
-        const { error: updateError } = await supabase
-          .from("daily_check_ins")
-          .update(payload)
-          .eq("id", checkInId);
-        error = updateError;
-      } else {
-        const { error: insertError } = await supabase
-          .from("daily_check_ins")
-          .insert(payload);
-        error = insertError;
-      }
-
-      if (error) throw error;
-
-      // Check if this is the first check-in (or if start date is not set)
-      const { data: userData } = await supabase
-        .from('users')
-        .select('package_start_date')
-        .eq('id', user.id)
-        .single();
-
-      if (userData && !userData.package_start_date) {
-        await supabase
-          .from('users')
-          .update({ package_start_date: today })
-          .eq('id', user.id);
+      // Set the ID after a successful insert so subsequent saves become updates
+      if (!checkInId && result.id) {
+        setCheckInId(result.id);
       }
 
       toast({
         title: "Success",
-        description: checkInId ? "Daily check-in updated!" : "Daily check-in saved successfully!",
+        description: wasUpdate ? "Daily check-in updated!" : "Daily check-in saved successfully!",
       });
-
-      // Refresh to ensure ID is set if it was an insert
-      if (!checkInId) {
-        // Ideally we would get the ID back from insert, but for now a reload or re-fetch would work.
-        // Or just let the user continue editing.
-      }
 
     } catch (error: any) {
       toast({

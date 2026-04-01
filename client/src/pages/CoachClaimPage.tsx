@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/lib/supabase";
+import { fetchUnassignedClients, claimClient } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { UserPlus } from "lucide-react";
@@ -22,15 +22,7 @@ export default function CoachClaimPage() {
   // Fetch only unassigned clients
   const { data: unassignedClients, isLoading } = useQuery({
     queryKey: ["unassigned-clients"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("users")
-        .select("*")
-        .eq("role", "client")
-        .is("coach_id", null);
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => fetchUnassignedClients(),
   });
 
   const openClaimDialog = (clientId: string, clientName: string) => {
@@ -47,77 +39,27 @@ export default function CoachClaimPage() {
 
     setIsClaiming(true);
     try {
-      const { error } = await supabase
-        .from("users")
-        .update({
-          coach_id: effectiveCoachId,
-          package_type: packageType,
-          package_duration: duration,
-        })
-        .eq("id", selectedClientId);
-
-      if (error) throw error;
-
-      // Log assignment in history for retention tracking
-      await supabase.from("coach_client_history").insert({
-        coach_id: effectiveCoachId,
-        client_id: selectedClientId,
-        event_type: "assigned",
-        package_type: packageType,
-        package_duration: duration,
-      });
+      const result = await claimClient(selectedClientId, packageType, duration);
 
       toast({
         title: "Success",
         description: `Client assigned with ${packageType} package for ${duration} months!`,
       });
 
-      // Send welcome email
-      try {
-        const client = unassignedClients?.find(
-          (c) => c.id === selectedClientId
-        );
-        if (client?.email) {
-          const { error: emailError } = await supabase.functions.invoke(
-            "send-welcome-email",
-            {
-              body: {
-                email: client.email,
-                name: client.full_name || "Valued Client",
-                packageType,
-                coachName:
-                  user?.user_metadata?.full_name || "Your Coach",
-                duration,
-              },
-            }
-          );
-          if (emailError) {
-            console.error("Failed to send welcome email:", emailError);
-            toast({
-              title: "Email Error",
-              description:
-                "Client claimed, but welcome email failed to send.",
-              variant: "destructive",
-            });
-          } else {
-            toast({
-              title: "Email Sent",
-              description: "Welcome email with resources sent to client.",
-            });
-          }
-        }
-      } catch (emailErr) {
-        console.error("Error invoking email function:", emailErr);
+      if (result.emailSent) {
+        toast({
+          title: "Email Sent",
+          description: "Welcome email with resources sent to client.",
+        });
       }
 
       setIsClaimDialogOpen(false);
-      // Invalidate both queries
       queryClient.invalidateQueries({ queryKey: ["unassigned-clients"] });
       queryClient.invalidateQueries({ queryKey: ["coach-clients"] });
     } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to claim client",
+        description: error.message || "Failed to claim client",
         variant: "destructive",
       });
     } finally {
@@ -179,18 +121,18 @@ export default function CoachClaimPage() {
               <CardContent className="p-6">
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center text-muted-foreground font-bold shrink-0">
-                    {client.full_name?.charAt(0) || "U"}
+                    {client.fullName?.charAt(0) || "U"}
                   </div>
                   <div className="min-w-0">
                     <h3 className="font-bold truncate">
-                      {client.full_name || "Unknown User"}
+                      {client.fullName || "Unknown User"}
                     </h3>
                     <p className="text-sm text-muted-foreground truncate">
                       {client.email}
                     </p>
-                    {client.country && (
+                    {client.countryCode && (
                       <p className="text-xs text-muted-foreground">
-                        {client.country}
+                        {client.countryCode}
                       </p>
                     )}
                   </div>
@@ -198,7 +140,7 @@ export default function CoachClaimPage() {
                 <Button
                   className="w-full rounded-xl"
                   onClick={() =>
-                    openClaimDialog(client.id, client.full_name || "")
+                    openClaimDialog(client.id, client.fullName || "")
                   }
                 >
                   Claim Client

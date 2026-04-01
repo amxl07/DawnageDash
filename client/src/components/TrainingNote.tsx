@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase";
+import { fetchNote, updateNote } from "@/lib/api";
 import { Loader2, Save } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -28,14 +28,8 @@ export function TrainingNote({ userId, noteType, title, isCoach }: TrainingNoteP
     const { data: noteData, isLoading } = useQuery({
         queryKey: ['trainingNote', userId, noteType],
         queryFn: async () => {
-            const { data, error } = await supabase
-                .from('users')
-                .select(dbColumn)
-                .eq('id', userId)
-                .single();
-
-            if (error) throw error;
-            return (data as any)?.[dbColumn] || "";
+            const result = await fetchNote(userId, dbColumn);
+            return result?.value || "";
         },
         enabled: !!userId
     });
@@ -48,12 +42,7 @@ export function TrainingNote({ userId, noteType, title, isCoach }: TrainingNoteP
 
     const updateNoteMutation = useMutation({
         mutationFn: async (newNote: string) => {
-            const { error } = await supabase
-                .from('users')
-                .update({ [dbColumn]: newNote })
-                .eq('id', userId);
-
-            if (error) throw error;
+            await updateNote(userId, dbColumn, newNote);
             return newNote;
         },
         onSuccess: () => {

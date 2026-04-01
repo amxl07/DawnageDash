@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Dumbbell, Loader2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { fetchUserProfile, fetchWorkoutPlan, fetchWorkoutLog, saveWorkoutLog } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -235,15 +235,10 @@ export function WorkoutLogDialog({ open, onOpenChange, initialDate }: WorkoutLog
         queryKey: ['activePlanConfig', targetUserId],
         queryFn: async () => {
             if (!targetUserId) return null;
-            const { data, error } = await supabase
-                .from('users')
-                .select('active_workout_plan')
-                .eq('id', targetUserId)
-                .single();
-            if (error) throw error;
-            if (!data?.active_workout_plan) return null;
+            const profile = await fetchUserProfile(targetUserId);
+            if (!profile?.activeWorkoutPlan) return null;
             try {
-                return JSON.parse(data.active_workout_plan) as {
+                return JSON.parse(profile.activeWorkoutPlan) as {
                     level: string;
                     workoutType: string;
                     subCategory?: string | null;
@@ -262,32 +257,20 @@ export function WorkoutLogDialog({ open, onOpenChange, initialDate }: WorkoutLog
         queryFn: async () => {
             if (!targetUserId || !activePlanConfig) return [];
 
-            let query = supabase
-                .from('workout_plans')
-                .select('*')
-                .eq('user_id', targetUserId)
-                .eq('level', activePlanConfig.level)
-                .eq('workout_type', activePlanConfig.workoutType)
-                .eq('days_per_week', activePlanConfig.daysPerWeek);
+            const result = await fetchWorkoutPlan(targetUserId, {
+                level: activePlanConfig.level,
+                workoutType: activePlanConfig.workoutType,
+                daysPerWeek: activePlanConfig.daysPerWeek,
+                subCategory: activePlanConfig.subCategory || undefined,
+            });
 
-            if (activePlanConfig.subCategory) {
-                query = query.eq('sub_category', activePlanConfig.subCategory);
-            } else {
-                query = query.is('sub_category', null);
-            }
-
-            const { data, error } = await query.order('day_number', { ascending: true });
-            if (error) throw error;
-
-            // Deduplicate by day_number, keeping the most recent entry
-            const seen = new Map<number, any>();
-            for (const row of (data || [])) {
-                const existing = seen.get(row.day_number);
-                if (!existing || row.id > existing.id) {
-                    seen.set(row.day_number, row);
-                }
-            }
-            return Array.from(seen.values()).sort((a, b) => a.day_number - b.day_number);
+            // Map API response to the format the component expects
+            return (result.plans || []).map((p: any) => ({
+                ...p,
+                day_number: p.dayNumber ?? p.day_number,
+                focus: p.focus,
+                exercises: p.exercises,
+            }));
         },
         enabled: !!targetUserId && !!activePlanConfig,
     });
@@ -334,14 +317,7 @@ export function WorkoutLogDialog({ open, onOpenChange, initialDate }: WorkoutLog
 
             try {
                 const formattedDate = format(date, 'yyyy-MM-dd');
-                const { data, error } = await supabase
-                    .from('workout_logs')
-                    .select('*')
-                    .eq('user_id', targetUserId)
-                    .eq('date', formattedDate)
-                    .maybeSingle();
-
-                if (error) throw error;
+                const data = await fetchWorkoutLog(targetUserId!, formattedDate);
 
                 // Phase 3: Don't update stale state
                 if (controller.signal.aborted) return;
@@ -493,28 +469,12 @@ export function WorkoutLogDialog({ open, onOpenChange, initialDate }: WorkoutLog
                 })),
             }));
 
-            const payload = {
-                user_id: targetUserId,
+            await saveWorkoutLog(targetUserId!, {
+                id: existingLogId || undefined,
                 date: format(date, 'yyyy-MM-dd'),
                 title: workoutTitle,
                 content: JSON.stringify(content),
-            };
-
-            let error;
-            if (existingLogId) {
-                const res = await supabase
-                    .from('workout_logs')
-                    .update(payload)
-                    .eq('id', existingLogId);
-                error = res.error;
-            } else {
-                const res = await supabase
-                    .from('workout_logs')
-                    .insert(payload);
-                error = res.error;
-            }
-
-            if (error) throw error;
+            });
         },
         onSuccess: () => {
             clearDraft();

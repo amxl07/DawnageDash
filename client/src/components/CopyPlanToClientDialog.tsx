@@ -10,8 +10,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { fetchMyClients } from "@/lib/api";
 import { Loader2, Copy, Search, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
@@ -47,15 +47,14 @@ export function CopyPlanToClientDialog({
     const { data: clients, isLoading } = useQuery({
         queryKey: ['coachClients', user?.id],
         queryFn: async () => {
-            const { data, error } = await supabase
-                .from('users')
-                .select('id, full_name, email, active_workout_plan, active_meal_plan')
-                .eq('coach_id', user?.id)
-                .eq('role', 'client')
-                .order('full_name', { ascending: true });
-
-            if (error) throw error;
-            return data || [];
+            const data = await fetchMyClients();
+            // Map camelCase API response to snake_case for existing UI code
+            return (data || []).map((c: any) => ({
+                ...c,
+                full_name: c.fullName ?? c.full_name,
+                active_workout_plan: c.activeWorkoutPlan ?? c.active_workout_plan,
+                active_meal_plan: c.activeMealPlan ?? c.active_meal_plan,
+            }));
         },
         enabled: open && !!user?.id,
     });

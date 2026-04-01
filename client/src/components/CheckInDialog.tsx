@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Loader2, CalendarIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/lib/supabase";
+import { fetchCheckIn, saveCheckIn } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -70,29 +70,22 @@ export function CheckInDialog({ open, onOpenChange, selectedDate, onSuccess }: C
             try {
                 const dateStr = format(date, 'yyyy-MM-dd');
 
-                const { data, error } = await supabase
-                    .from("daily_check_ins")
-                    .select("*")
-                    .eq("user_id", user.id)
-                    .eq("date", dateStr)
-                    .maybeSingle();
-
-                if (error) throw error;
+                const data = await fetchCheckIn(user.id, dateStr);
 
                 if (data) {
                     setFormData({
                         id: data.id,
-                        morningWeight: data.morning_weight?.toString() || "",
-                        sleepHours: data.sleep_hours?.toString() || "",
-                        workoutStatus: data.workout_status || "",
-                        workoutPerformance: data.workout_performance?.toString() || "",
-                        nutritionScore: data.nutrition_score?.toString() || "",
-                        calorieIntake: data.calorie_intake?.toString() || "",
-                        waterLiters: data.water_liters?.toString() || "",
-                        dailySteps: data.daily_steps?.toString() || "",
-                        energyLevel: data.energy_level?.toString() || "",
-                        hungerLevel: data.hunger_level?.toString() || "",
-                        stressLevel: data.stress_level?.toString() || "",
+                        morningWeight: data.morningWeight?.toString() || "",
+                        sleepHours: data.sleepHours?.toString() || "",
+                        workoutStatus: data.workoutStatus || "",
+                        workoutPerformance: data.workoutPerformance?.toString() || "",
+                        nutritionScore: data.nutritionScore?.toString() || "",
+                        calorieIntake: data.calorieIntake?.toString() || "",
+                        waterLiters: data.waterLiters?.toString() || "",
+                        dailySteps: data.dailySteps?.toString() || "",
+                        energyLevel: data.energyLevel?.toString() || "",
+                        hungerLevel: data.hungerLevel?.toString() || "",
+                        stressLevel: data.stressLevel?.toString() || "",
                         digestion: data.digestion || "",
                     });
                 } else {
@@ -131,38 +124,22 @@ export function CheckInDialog({ open, onOpenChange, selectedDate, onSuccess }: C
         try {
             const dateStr = format(date, 'yyyy-MM-dd');
 
-            const payload = {
-                user_id: user.id,
+            await saveCheckIn(user.id, {
+                id: formData.id,
                 date: dateStr,
-                morning_weight: formData.morningWeight ? parseFloat(formData.morningWeight) : null,
-                sleep_hours: formData.sleepHours ? parseFloat(formData.sleepHours) : null,
-                workout_status: formData.workoutStatus || null,
-                workout_performance: formData.workoutPerformance ? parseInt(formData.workoutPerformance) : null,
-                nutrition_score: formData.nutritionScore ? parseInt(formData.nutritionScore) : null,
-                calorie_intake: formData.calorieIntake ? parseInt(formData.calorieIntake) : null,
-                water_liters: formData.waterLiters ? parseFloat(formData.waterLiters) : null,
-                daily_steps: formData.dailySteps ? parseInt(formData.dailySteps) : null,
-                energy_level: formData.energyLevel ? parseInt(formData.energyLevel) : null,
-                hunger_level: formData.hungerLevel ? parseInt(formData.hungerLevel) : null,
-                stress_level: formData.stressLevel ? parseInt(formData.stressLevel) : null,
+                morningWeight: formData.morningWeight ? parseFloat(formData.morningWeight) : null,
+                sleepHours: formData.sleepHours ? parseFloat(formData.sleepHours) : null,
+                workoutStatus: formData.workoutStatus || null,
+                workoutPerformance: formData.workoutPerformance ? parseInt(formData.workoutPerformance) : null,
+                nutritionScore: formData.nutritionScore ? parseInt(formData.nutritionScore) : null,
+                calorieIntake: formData.calorieIntake ? parseInt(formData.calorieIntake) : null,
+                waterLiters: formData.waterLiters ? parseFloat(formData.waterLiters) : null,
+                dailySteps: formData.dailySteps ? parseInt(formData.dailySteps) : null,
+                energyLevel: formData.energyLevel ? parseInt(formData.energyLevel) : null,
+                hungerLevel: formData.hungerLevel ? parseInt(formData.hungerLevel) : null,
+                stressLevel: formData.stressLevel ? parseInt(formData.stressLevel) : null,
                 digestion: formData.digestion || null,
-            };
-
-            let error;
-            if (formData.id) {
-                const { error: updateError } = await supabase
-                    .from("daily_check_ins")
-                    .update(payload)
-                    .eq("id", formData.id);
-                error = updateError;
-            } else {
-                const { error: insertError } = await supabase
-                    .from("daily_check_ins")
-                    .insert(payload);
-                error = insertError;
-            }
-
-            if (error) throw error;
+            });
 
             toast({
                 title: "Success",

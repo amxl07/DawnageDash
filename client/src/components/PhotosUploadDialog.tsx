@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2, CalendarIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/lib/supabase";
+import { fetchProgressPhotos, saveProgressPhotos } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -55,22 +55,15 @@ export function PhotosUploadDialog({ open, onOpenChange, selectedDate, onSuccess
             try {
                 const dateStr = format(date, 'yyyy-MM-dd');
 
-                const { data, error } = await supabase
-                    .from("weekly_progress_photos")
-                    .select("*")
-                    .eq("user_id", user.id)
-                    .eq("date", dateStr)
-                    .maybeSingle();
-
-                if (error) throw error;
+                const data = await fetchProgressPhotos(user.id, dateStr);
 
                 if (data) {
                     setFormData({
                         id: data.id,
-                        frontUrl: data.front_url,
-                        backUrl: data.back_url,
-                        sideLeftUrl: data.side_left_url,
-                        sideRightUrl: data.side_right_url,
+                        frontUrl: data.frontUrl,
+                        backUrl: data.backUrl,
+                        sideLeftUrl: data.sideLeftUrl,
+                        sideRightUrl: data.sideRightUrl,
                     });
                 } else {
                     setFormData({
@@ -102,30 +95,14 @@ export function PhotosUploadDialog({ open, onOpenChange, selectedDate, onSuccess
         try {
             const dateStr = format(date, 'yyyy-MM-dd');
 
-            const payload = {
-                user_id: user.id,
+            await saveProgressPhotos(user.id, {
+                id: formData.id,
                 date: dateStr,
-                front_url: formData.frontUrl,
-                back_url: formData.backUrl,
-                side_left_url: formData.sideLeftUrl,
-                side_right_url: formData.sideRightUrl,
-            };
-
-            let error;
-            if (formData.id) {
-                const { error: updateError } = await supabase
-                    .from("weekly_progress_photos")
-                    .update(payload)
-                    .eq("id", formData.id);
-                error = updateError;
-            } else {
-                const { error: insertError } = await supabase
-                    .from("weekly_progress_photos")
-                    .insert(payload);
-                error = insertError;
-            }
-
-            if (error) throw error;
+                frontUrl: formData.frontUrl,
+                backUrl: formData.backUrl,
+                sideLeftUrl: formData.sideLeftUrl,
+                sideRightUrl: formData.sideRightUrl,
+            });
 
             toast({
                 title: "Success",

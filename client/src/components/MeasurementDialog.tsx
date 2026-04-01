@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, CalendarIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/lib/supabase";
+import { fetchMeasurement, saveMeasurement } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -55,15 +55,7 @@ export function MeasurementDialog({ open, onOpenChange, selectedDate, onSuccess 
             setIsFetching(true);
             try {
                 const dateStr = format(date, 'yyyy-MM-dd');
-
-                const { data, error } = await supabase
-                    .from("body_measurements")
-                    .select("*")
-                    .eq("user_id", user.id)
-                    .eq("date", dateStr)
-                    .maybeSingle();
-
-                if (error) throw error;
+                const data = await fetchMeasurement(user.id, dateStr);
 
                 if (data) {
                     setFormData({
@@ -102,31 +94,15 @@ export function MeasurementDialog({ open, onOpenChange, selectedDate, onSuccess 
         try {
             const dateStr = format(date, 'yyyy-MM-dd');
 
-            const payload = {
-                user_id: user.id,
+            await saveMeasurement(user.id, {
+                id: formData.id,
                 date: dateStr,
                 chest: formData.chest ? parseFloat(formData.chest) : null,
                 waist: formData.waist ? parseFloat(formData.waist) : null,
                 hips: formData.hips ? parseFloat(formData.hips) : null,
                 thighs: formData.thighs ? parseFloat(formData.thighs) : null,
                 arms: formData.arms ? parseFloat(formData.arms) : null,
-            };
-
-            let error;
-            if (formData.id) {
-                const { error: updateError } = await supabase
-                    .from("body_measurements")
-                    .update(payload)
-                    .eq("id", formData.id);
-                error = updateError;
-            } else {
-                const { error: insertError } = await supabase
-                    .from("body_measurements")
-                    .insert(payload);
-                error = insertError;
-            }
-
-            if (error) throw error;
+            });
 
             toast({
                 title: "Success",

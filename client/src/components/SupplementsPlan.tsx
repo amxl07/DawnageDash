@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Edit2, Save, X, Plus, Trash2, Loader2, Pill } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase";
+import { fetchSupplements, updateSupplements } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface Supplement {
@@ -41,14 +41,8 @@ export function SupplementsPlan({ userId, isCoach }: SupplementsPlanProps) {
     const { data, isLoading } = useQuery({
         queryKey: ['supplements', userId],
         queryFn: async () => {
-            const { data, error } = await supabase
-                .from('users')
-                .select('supplements_data')
-                .eq('id', userId)
-                .single();
-
-            if (error) throw error;
-            return data?.supplements_data || null;
+            const result = await fetchSupplements(userId);
+            return result?.supplementsData || null;
         },
         enabled: !!userId
     });
@@ -68,12 +62,7 @@ export function SupplementsPlan({ userId, isCoach }: SupplementsPlanProps) {
 
     const saveMutation = useMutation({
         mutationFn: async (supplementsData: Supplement[]) => {
-            const { error } = await supabase
-                .from('users')
-                .update({ supplements_data: JSON.stringify(supplementsData) })
-                .eq('id', userId);
-
-            if (error) throw error;
+            await updateSupplements(userId, JSON.stringify(supplementsData));
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['supplements', userId] });
