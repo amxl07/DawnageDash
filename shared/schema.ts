@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, date, timestamp, uuid, foreignKey } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, date, timestamp, uuid, foreignKey, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -29,6 +29,7 @@ export const users = pgTable("users", {
   trainingNote: text("training_note"), // General training notes
   nutritionNote: text("nutrition_note"), // General nutrition notes
   coachNote: text("coach_note"), // Coach's private notes about this client
+  canEditGlobalTemplates: boolean("can_edit_global_templates").default(false), // Permission to edit global templates
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => {
@@ -155,6 +156,10 @@ export type WorkoutPlan = typeof workoutPlans.$inferSelect;
 export const workoutTemplates = pgTable("workout_templates", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
 
+  // Ownership: NULL = global template, non-NULL = coach-private template
+  coachId: uuid("coach_id").references(() => users.id, { onDelete: "cascade" }),
+  templateName: varchar("template_name", { length: 100 }), // Friendly name for identification
+
   // Hierarchy fields (same as workout_plans but no user_id)
   level: varchar("level", { length: 20 }).notNull().default('Beginner'),
   workoutType: varchar("workout_type", { length: 50 }).notNull(),
@@ -180,6 +185,10 @@ export type WorkoutTemplate = typeof workoutTemplates.$inferSelect;
 // ============================================================================
 export const mealTemplates = pgTable("meal_templates", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+
+  // Ownership: NULL = global template, non-NULL = coach-private template
+  coachId: uuid("coach_id").references(() => users.id, { onDelete: "cascade" }),
+
   name: varchar("name", { length: 100 }).notNull(), // e.g., 'Option 1'
   caloriesTarget: integer("calories_target").notNull(), // e.g., 1200
   dietType: varchar("diet_type", { length: 50 }).notNull(), // 'Vegetarian', 'Eggetarian', 'Non-Vegetarian'

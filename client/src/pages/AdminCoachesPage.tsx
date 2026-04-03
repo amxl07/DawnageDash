@@ -1,4 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 import { useMemo, useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,7 +22,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { UserCheck, Users, AlertTriangle, TrendingUp, Search, ChevronUp, ChevronDown, ShieldCheck, Eye, Dumbbell, Star, CalendarClock } from "lucide-react";
+import { UserCheck, Users, AlertTriangle, TrendingUp, Search, ChevronUp, ChevronDown, ShieldCheck, Eye, Dumbbell, Star, CalendarClock, LayoutTemplate } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   fetchAllCoaches,
@@ -68,10 +70,27 @@ export default function AdminCoachesPage() {
   const { setViewedCoachId } = useAuth();
   const [, setLocation] = useLocation();
 
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
   const handleViewCoach = useCallback((coachId: string) => {
     setViewedCoachId(coachId);
     setLocation("/coach/clients");
   }, [setViewedCoachId, setLocation]);
+
+  const handleToggleTemplatePermission = useCallback(async (coachId: string, currentValue: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ can_edit_global_templates: !currentValue })
+        .eq('id', coachId);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['admin-coaches'] });
+      toast({ title: !currentValue ? "Permission Granted" : "Permission Revoked", description: `Coach can ${!currentValue ? 'now' : 'no longer'} edit global templates.` });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  }, [queryClient, toast]);
 
   const { data: coaches, isLoading: coachesLoading } = useQuery({
     queryKey: ["admin-coaches"],
@@ -828,24 +847,44 @@ export default function AdminCoachesPage() {
                     </span>
                   </TableCell>
 
-                  {/* View Button */}
+                  {/* Actions */}
                   <TableCell>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 rounded-full"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleViewCoach(coach.id);
-                          }}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>View coach's dashboard</TooltipContent>
-                    </Tooltip>
+                    <div className="flex items-center gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn("h-8 w-8 rounded-full", coach.can_edit_global_templates && "text-primary")}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleTemplatePermission(coach.id, !!coach.can_edit_global_templates);
+                            }}
+                          >
+                            <LayoutTemplate className="w-4 h-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {coach.can_edit_global_templates ? 'Can edit global templates (click to revoke)' : 'Cannot edit global templates (click to grant)'}
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-full"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewCoach(coach.id);
+                            }}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>View coach's dashboard</TooltipContent>
+                      </Tooltip>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

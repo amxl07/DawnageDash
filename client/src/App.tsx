@@ -19,6 +19,7 @@ const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
 const AdminCoachesPage = lazy(() => import("@/pages/AdminCoachesPage"));
 const AdminClientsPage = lazy(() => import("@/pages/AdminClientsPage"));
 const AdminBusinessPage = lazy(() => import("@/pages/AdminBusinessPage"));
+const TemplateBuilderPage = lazy(() => import("@/pages/TemplateBuilderPage"));
 const CheckIns = lazy(() => import("@/pages/CheckIns"));
 const Measurements = lazy(() => import("@/pages/Measurements"));
 const Plans = lazy(() => import("@/pages/Plans"));
@@ -79,6 +80,11 @@ function Router() {
             <AdminBusinessPage />
           </ProtectedRoute>
         </Route>
+        <Route path="/admin/templates">
+          <ProtectedRoute>
+            <TemplateBuilderPage />
+          </ProtectedRoute>
+        </Route>
         {/* Coach Routes */}
         <Route path="/coach/clients">
           <ProtectedRoute>
@@ -88,6 +94,11 @@ function Router() {
         <Route path="/coach/claim">
           <ProtectedRoute>
             <CoachClaimPage />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/coach/templates">
+          <ProtectedRoute>
+            <TemplateBuilderPage />
           </ProtectedRoute>
         </Route>
         <Route path="/check-ins">

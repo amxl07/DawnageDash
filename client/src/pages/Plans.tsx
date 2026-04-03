@@ -13,87 +13,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Dumbbell, UtensilsCrossed, CheckCircle2, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { TrainingNote } from "@/components/TrainingNote";
-
-// Types for hierarchical structure
-type Level = 'Beginner' | 'Intermediate' | 'Advanced';
-type WorkoutType = 'GYM_WORKOUT' | 'HOME_WORKOUT' | 'ADVANCE_CALISTHENICS' | 'POWERBUILDING' | 'CALIS_COMPOUND_LIFTS' | 'ASSESSMENT';
-type SubCategory = '0_EXPERIENCE' | '6_MONTH_EXPERIENCE' | 'JUST_BODYWEIGHT' | 'JUST_DBS' | 'JUST_RINGS' | 'DBS_RINGS' | 'PHASE_1' | 'PHASE_2' | '5_DAY_PLAN' | null;
-type DietType = 'Vegetarian' | 'Eggetarian' | 'Non-Vegetarian';
-const CALORIE_OPTIONS = [1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800];
-const DIET_OPTIONS: DietType[] = ['Vegetarian', 'Eggetarian', 'Non-Vegetarian'];
-
-// Hierarchy configuration type
-type WorkoutConfig = { subCategories: SubCategory[] | null; daysOptions: number[] };
-
-// Hierarchy configuration
-const WORKOUT_HIERARCHY: Record<Level, Partial<Record<WorkoutType, WorkoutConfig>>> = {
-  Beginner: {
-    GYM_WORKOUT: {
-      subCategories: ['0_EXPERIENCE', '6_MONTH_EXPERIENCE'],
-      daysOptions: [], // Days depend on sub-category
-    },
-    HOME_WORKOUT: {
-      subCategories: ['JUST_BODYWEIGHT', 'JUST_DBS', 'JUST_RINGS', 'DBS_RINGS'],
-      daysOptions: [3, 4],
-    },
-    ASSESSMENT: {
-      subCategories: ['5_DAY_PLAN'],
-      daysOptions: [5],
-    },
-  },
-  Intermediate: {
-    GYM_WORKOUT: {
-      subCategories: null,
-      daysOptions: [3, 4, 5],
-    },
-    HOME_WORKOUT: {
-      subCategories: ['JUST_BODYWEIGHT', 'JUST_DBS', 'JUST_RINGS', 'DBS_RINGS'],
-      daysOptions: [4, 5],
-    },
-  },
-  Advanced: {
-    ADVANCE_CALISTHENICS: {
-      subCategories: ['JUST_RINGS', 'DBS_RINGS'],
-      daysOptions: [4, 5],
-    },
-    POWERBUILDING: {
-      subCategories: null,
-      daysOptions: [3, 4, 5, 6],
-    },
-    CALIS_COMPOUND_LIFTS: {
-      subCategories: ['PHASE_1', 'PHASE_2'],
-      daysOptions: [5, 6],
-    },
-  },
-};
-
-// Beginner GYM sub-category specific days
-const BEGINNER_GYM_DAYS: Record<string, number[]> = {
-  '0_EXPERIENCE': [3, 4],
-  '6_MONTH_EXPERIENCE': [4, 5],
-};
-
-// Display names for nice UI
-const WORKOUT_TYPE_LABELS: Record<WorkoutType, string> = {
-  GYM_WORKOUT: 'Gym Workout',
-  HOME_WORKOUT: 'Home Workout',
-  ADVANCE_CALISTHENICS: 'Advanced Calisthenics',
-  POWERBUILDING: 'Powerbuilding',
-  CALIS_COMPOUND_LIFTS: 'Calisthenics + Compound Lifts',
-  ASSESSMENT: 'Assessment Plan',
-};
-
-const SUB_CATEGORY_LABELS: Record<string, string> = {
-  '0_EXPERIENCE': '0 Experience',
-  '6_MONTH_EXPERIENCE': '6-Month Experience',
-  'JUST_BODYWEIGHT': 'Just Bodyweight',
-  'JUST_DBS': 'Just Dumbbells',
-  'JUST_RINGS': 'Just Rings',
-  'DBS_RINGS': 'Dumbbells + Rings',
-  'PHASE_1': 'Phase 1',
-  'PHASE_2': 'Phase 2',
-  '5_DAY_PLAN': '5-Day Plan',
-};
+import {
+  type Level, type WorkoutType, type SubCategory, type DietType,
+  CALORIE_OPTIONS, DIET_OPTIONS,
+  WORKOUT_HIERARCHY, BEGINNER_GYM_DAYS,
+  WORKOUT_TYPE_LABELS, SUB_CATEGORY_LABELS,
+} from "@/lib/workout-constants";
 
 
 
@@ -111,9 +36,11 @@ function deduplicateByDayNumber(rows: any[]): any[] {
 }
 
 export default function Plans() {
-  const { user, viewedUserId } = useAuth();
+  const { user, viewedUserId, viewedCoachId } = useAuth();
   const isCoach = user?.user_metadata?.role === 'coach';
+  const isAdmin = user?.user_metadata?.role === 'admin';
   const targetUserId = viewedUserId || user?.id; // Use viewed user or current user
+  const effectiveCoachId = viewedCoachId || (isCoach ? user?.id : null); // Coach ID for template fallback
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -247,7 +174,7 @@ export default function Plans() {
   // Query workout plans based on selections
   // First tries user's custom plans, then falls back to global templates
   const { data: workoutPlans, isLoading: isLoadingWorkouts } = useQuery({
-    queryKey: ['workoutPlans', targetUserId, level, workoutType, subCategory, daysPerWeek],
+    queryKey: ['workoutPlans', targetUserId, effectiveCoachId, level, workoutType, subCategory, daysPerWeek],
     queryFn: async () => {
       // First: Try to get user's custom workout plans
       let userQuery = supabase
@@ -286,10 +213,48 @@ export default function Plans() {
         });
       }
 
-      // Second: Fall back to global templates
+      // Second: Fall back to coach's private templates (if coach is viewing)
+      if (effectiveCoachId) {
+        let coachQuery = supabase
+          .from('workout_templates')
+          .select('*')
+          .eq('coach_id', effectiveCoachId)
+          .eq('level', level)
+          .eq('workout_type', workoutType)
+          .eq('days_per_week', daysPerWeek);
+
+        if (subCategory) {
+          coachQuery = coachQuery.eq('sub_category', subCategory);
+        } else {
+          coachQuery = coachQuery.is('sub_category', null);
+        }
+
+        const { data: coachTemplates } = await coachQuery.order('day_number', { ascending: true });
+
+        if (coachTemplates && coachTemplates.length > 0) {
+          const dedupedCoach = deduplicateByDayNumber(coachTemplates);
+          return dedupedCoach.map(plan => {
+            const exercises = plan.exercises ? JSON.parse(plan.exercises) : [];
+            const exercisesWithIds = exercises.map((ex: any, idx: number) => ({
+              ...ex,
+              id: ex.id || `coach-tpl-ex-${plan.id}-${idx}`
+            }));
+            return {
+              id: plan.id,
+              dayNumber: plan.day_number,
+              focus: plan.focus || '',
+              exercises: exercisesWithIds,
+              isTemplate: true,
+            };
+          });
+        }
+      }
+
+      // Third: Fall back to global templates
       let templateQuery = supabase
         .from('workout_templates')
         .select('*')
+        .is('coach_id', null)
         .eq('level', level)
         .eq('workout_type', workoutType)
         .eq('days_per_week', daysPerWeek);
@@ -341,16 +306,33 @@ export default function Plans() {
         return { source: 'custom', plans: userPlans };
       }
 
-      // 2. Fallback to templates
+      // 2. Fallback to coach's private meal templates
+      if (effectiveCoachId) {
+        const { data: coachTemplate } = await supabase
+          .from('meal_templates')
+          .select('*')
+          .eq('coach_id', effectiveCoachId)
+          .eq('calories_target', caloriesTarget)
+          .eq('diet_type', dietType)
+          .limit(1)
+          .maybeSingle();
+
+        if (coachTemplate) {
+          return { source: 'template', template: coachTemplate };
+        }
+      }
+
+      // 3. Fallback to global templates
       const { data: template, error: templateError } = await supabase
         .from('meal_templates')
         .select('*')
+        .is('coach_id', null)
         .eq('calories_target', caloriesTarget)
         .eq('diet_type', dietType)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
-      // If no template found (e.g. for higher calorie targets not yet added), return empty
-      if (templateError && templateError.code !== 'PGRST116') throw templateError;
+      if (templateError) throw templateError;
 
       return { source: 'template', template };
     },

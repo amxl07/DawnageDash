@@ -1,4 +1,4 @@
-import { Users, UserPlus, LogOut, ArrowLeft, User } from "lucide-react";
+import { Users, UserPlus, LogOut, ArrowLeft, User, LayoutTemplate } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import logoUrl from "@assets/logo.png";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +20,7 @@ import {
 const menuItems = [
   { title: "My Clients", url: "/coach/clients", icon: Users },
   { title: "Claim Clients", url: "/coach/claim", icon: UserPlus },
+  { title: "Templates", url: "/coach/templates", icon: LayoutTemplate },
 ];
 
 export function CoachSidebar() {
