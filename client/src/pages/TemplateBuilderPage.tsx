@@ -322,6 +322,7 @@ export default function TemplateBuilderPage() {
                   scope={scope}
                   coachId={effectiveCoachId}
                   canEditGlobal={permissions.canEditGlobal}
+                  onCloned={(newKey) => { setScope('mine'); setSelectedWorkout(newKey); }}
                 />
               ) : (
                 <Card className="flex items-center justify-center h-[calc(100vh-320px)]">
@@ -412,6 +413,7 @@ export default function TemplateBuilderPage() {
                   coachId={effectiveCoachId}
                   canEditGlobal={permissions.canEditGlobal}
                   onSaved={(updated) => setSelectedMeal(updated)}
+                  onCloned={(newItem) => { setScope('mine'); setSelectedMeal(newItem); }}
                 />
               ) : (
                 <Card className="flex items-center justify-center h-[calc(100vh-320px)]">
@@ -602,12 +604,12 @@ function NewWorkoutTemplateDialog({
             )}
           </div>
 
-          {/* Sub-Category (dynamic, optional) */}
-          {(hasSubCategories || (workoutType && !addingNewType)) && (
+          {/* Sub-Category (dynamic, optional) - only show when type is selected */}
+          {(workoutType && !addingNewType) && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Sub-Category</Label>
-                {!addingNewSub && !hasSubCategories && (
+                <Label>Sub-Category <span className="text-xs text-muted-foreground font-normal">(optional)</span></Label>
+                {!addingNewSub && allSubCategories.length === 0 && (
                   <button className="text-xs text-primary hover:underline" onClick={() => setAddingNewSub(true)}>
                     + Add sub-category
                   </button>
@@ -625,20 +627,17 @@ function NewWorkoutTemplateDialog({
                     Cancel
                   </Button>
                 </div>
-              ) : hasSubCategories ? (
-                <Select value={subCategory || '__none__'} onValueChange={(v) => {
+              ) : allSubCategories.length > 0 ? (
+                <Select value={subCategory || ''} onValueChange={(v) => {
                   if (v === '__add_new__') {
                     setAddingNewSub(true);
-                    setSubCategory('');
-                  } else if (v === '__none__') {
                     setSubCategory('');
                   } else {
                     setSubCategory(v);
                   }
                 }}>
-                  <SelectTrigger><SelectValue placeholder="None (optional)" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select sub-category" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">None</SelectItem>
                     {allSubCategories.map(sc => (
                       <SelectItem key={sc} value={sc}>{SUB_CATEGORY_LABELS[sc] || formatTypeLabel(sc)}</SelectItem>
                     ))}

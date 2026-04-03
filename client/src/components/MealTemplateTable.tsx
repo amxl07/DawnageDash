@@ -7,9 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter,
 } from "@/components/ui/table";
-import { Save, Loader2, Upload, UserPlus } from "lucide-react";
+import { Save, Loader2, Upload, UserPlus, Copy } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { useSaveMealTemplate, usePushMealToGlobal, useAssignMealToClients, type MealTemplateItem } from "@/hooks/useTemplates";
+import { useSaveMealTemplate, usePushMealToGlobal, useAssignMealToClients, useCloneMealToMine, type MealTemplateItem } from "@/hooks/useTemplates";
 import { PushToGlobalDialog } from "@/components/PushToGlobalDialog";
 import { AssignTemplateToClientsDialog } from "@/components/AssignTemplateToClientsDialog";
 
@@ -79,19 +81,23 @@ interface MealTemplateTableProps {
   coachId: string | null;
   canEditGlobal: boolean;
   onSaved?: (updated: MealTemplateItem) => void;
+  onCloned?: (item: MealTemplateItem) => void;
 }
 
-export function MealTemplateTable({ template, canEdit, scope, coachId, canEditGlobal, onSaved }: MealTemplateTableProps) {
+export function MealTemplateTable({ template, canEdit, scope, coachId, canEditGlobal, onSaved, onCloned }: MealTemplateTableProps) {
   const { toast } = useToast();
   const saveMeal = useSaveMealTemplate();
   const pushToGlobal = usePushMealToGlobal();
   const assignToClients = useAssignMealToClients();
+  const cloneToMine = useCloneMealToMine();
 
   const [meals, setMeals] = useState<MealPlanContent>(() => parseMealContent(template.content));
   const [templateName, setTemplateName] = useState(template.name);
   const [hasChanges, setHasChanges] = useState(false);
   const [showPushDialog, setShowPushDialog] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [showCloneDialog, setShowCloneDialog] = useState(false);
+  const [cloneName, setCloneName] = useState('');
 
   // Reset when template changes
   useEffect(() => {
@@ -166,6 +172,23 @@ export function MealTemplateTable({ template, canEdit, scope, coachId, canEditGl
     }
   };
 
+  const handleCloneToMine = async () => {
+    if (!cloneName.trim() || !coachId) return;
+    try {
+      const newItem = await cloneToMine.mutateAsync({
+        sourceId: template.id,
+        newName: cloneName.trim(),
+        targetCoachId: coachId,
+      });
+      toast({ title: "Cloned", description: "Meal template cloned to your personal templates." });
+      setShowCloneDialog(false);
+      setCloneName('');
+      onCloned?.(newItem);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -189,11 +212,17 @@ export function MealTemplateTable({ template, canEdit, scope, coachId, canEditGl
               <p className="text-xs text-muted-foreground mt-1">{templateName}</p>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={() => setShowAssignDialog(true)}>
               <UserPlus className="w-3.5 h-3.5 mr-1.5" />
               Assign
             </Button>
+            {scope === 'global' && coachId && (
+              <Button variant="outline" size="sm" onClick={() => { setCloneName(`${template.name} (Copy)`); setShowCloneDialog(true); }}>
+                <Copy className="w-3.5 h-3.5 mr-1.5" />
+                Clone to My Templates
+              </Button>
+            )}
             {scope === 'mine' && canEditGlobal && (
               <Button variant="outline" size="sm" onClick={() => setShowPushDialog(true)}>
                 <Upload className="w-3.5 h-3.5 mr-1.5" />
@@ -322,6 +351,37 @@ export function MealTemplateTable({ template, canEdit, scope, coachId, canEditGl
         templateType="meal"
         templateLabel={`${template.caloriesTarget} Cal - ${template.dietType}`}
       />
+
+      {/* Clone to My Templates Dialog */}
+      <Dialog open={showCloneDialog} onOpenChange={setShowCloneDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Copy className="w-5 h-5" />
+              Clone to My Templates
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Create a personal copy of this global template that you can customize.
+          </p>
+          <div className="space-y-2 py-2">
+            <Label>Template Name <span className="text-destructive">*</span></Label>
+            <Input
+              placeholder="e.g., My Custom Meal Plan"
+              value={cloneName}
+              onChange={(e) => setCloneName(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCloneDialog(false)}>Cancel</Button>
+            <Button onClick={handleCloneToMine} disabled={!cloneName.trim() || cloneToMine.isPending}>
+              {cloneToMine.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : <Copy className="w-4 h-4 mr-1.5" />}
+              Clone
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

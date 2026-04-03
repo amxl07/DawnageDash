@@ -464,6 +464,112 @@ export function usePushMealToGlobal() {
 }
 
 // ============================================================================
+// Clone Global Template to My Templates
+// ============================================================================
+
+export function useCloneWorkoutToMine() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ sourceKey, newName, targetCoachId }: {
+      sourceKey: WorkoutHierarchyKey;
+      newName: string;
+      targetCoachId: string;
+    }) => {
+      // Fetch the source (global) template rows
+      let query = supabase
+        .from('workout_templates')
+        .select('*')
+        .eq('level', sourceKey.level)
+        .eq('workout_type', sourceKey.workoutType)
+        .eq('days_per_week', sourceKey.daysPerWeek);
+
+      if (sourceKey.subCategory) {
+        query = query.eq('sub_category', sourceKey.subCategory);
+      } else {
+        query = query.is('sub_category', null);
+      }
+
+      if (sourceKey.coachId) {
+        query = query.eq('coach_id', sourceKey.coachId);
+      } else {
+        query = query.is('coach_id', null);
+      }
+
+      query = addTemplateNameFilter(query, sourceKey.templateName);
+
+      const { data, error: fetchError } = await query;
+      if (fetchError) throw fetchError;
+      if (!data || data.length === 0) throw new Error('No template data found to clone');
+
+      // Insert as personal template with new name
+      const clonedRows = data.map(({ id, coach_id, created_at, updated_at, template_name, ...rest }) => ({
+        ...rest,
+        coach_id: targetCoachId,
+        template_name: newName,
+      }));
+
+      const { error: insError } = await supabase.from('workout_templates').insert(clonedRows);
+      if (insError) throw insError;
+
+      return {
+        level: sourceKey.level,
+        workoutType: sourceKey.workoutType,
+        subCategory: sourceKey.subCategory,
+        daysPerWeek: sourceKey.daysPerWeek,
+        coachId: targetCoachId,
+        templateName: newName,
+      } as WorkoutHierarchyKey;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workoutTemplateList'] });
+      queryClient.invalidateQueries({ queryKey: ['workoutTemplateDetail'] });
+    },
+  });
+}
+
+export function useCloneMealToMine() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ sourceId, newName, targetCoachId }: {
+      sourceId: string;
+      newName: string;
+      targetCoachId: string;
+    }) => {
+      const { data, error: fetchError } = await supabase
+        .from('meal_templates')
+        .select('*')
+        .eq('id', sourceId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (!data) throw new Error('Template not found');
+
+      const { id, coach_id, created_at, updated_at, ...rest } = data;
+      const { data: inserted, error: insError } = await supabase
+        .from('meal_templates')
+        .insert({ ...rest, coach_id: targetCoachId, name: newName })
+        .select()
+        .single();
+      if (insError) throw insError;
+
+      return {
+        id: inserted.id,
+        name: inserted.name,
+        caloriesTarget: inserted.calories_target,
+        dietType: inserted.diet_type,
+        coachId: inserted.coach_id,
+        content: inserted.content,
+      } as MealTemplateItem;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mealTemplateList'] });
+    },
+  });
+}
+
+// ============================================================================
 // Distinct Values for Dynamic Dropdowns
 // ============================================================================
 
@@ -534,22 +640,12 @@ export function useAssignWorkoutToClients() {
       clientIds: string[];
     }) => {
       for (const clientId of clientIds) {
-        // Delete existing workout_plans for this config
-        let delQuery = supabase
+        // Delete ALL existing workout_plans for this client (replace entire plan)
+        const { error: delError } = await supabase
           .from('workout_plans')
           .delete()
-          .eq('user_id', clientId)
-          .eq('level', key.level)
-          .eq('workout_type', key.workoutType)
-          .eq('days_per_week', key.daysPerWeek);
-
-        if (key.subCategory) {
-          delQuery = delQuery.eq('sub_category', key.subCategory);
-        } else {
-          delQuery = delQuery.is('sub_category', null);
-        }
-
-        await delQuery;
+          .eq('user_id', clientId);
+        if (delError) throw delError;
 
         // Insert template days as workout_plans
         const rows = days.map(day => ({
@@ -582,6 +678,9 @@ export function useAssignWorkoutToClients() {
       }
     },
     onSuccess: () => {
+      // Invalidate all queries that Plans.tsx and client pages use
+      queryClient.invalidateQueries({ queryKey: ['workoutPlans'] });
+      queryClient.invalidateQueries({ queryKey: ['userProfile'] });
       queryClient.invalidateQueries({ queryKey: ['coachClients'] });
     },
   });
@@ -600,13 +699,12 @@ export function useAssignMealToClients() {
       const mealKeys = ['breakfast', 'mid_morning_snack', 'lunch', 'evening_snack', 'dinner'] as const;
 
       for (const clientId of clientIds) {
-        // Delete existing meal_plans for this config
-        await supabase
+        // Delete ALL existing meal_plans for this client (replace entire meal plan)
+        const { error: delError } = await supabase
           .from('meal_plans')
           .delete()
-          .eq('user_id', clientId)
-          .eq('calories_target', template.caloriesTarget)
-          .eq('diet_type', template.dietType);
+          .eq('user_id', clientId);
+        if (delError) throw delError;
 
         // Insert meal rows from template content
         const rows = mealKeys.map((key, i) => ({
@@ -639,6 +737,9 @@ export function useAssignMealToClients() {
       }
     },
     onSuccess: () => {
+      // Invalidate all queries that Plans.tsx and client pages use
+      queryClient.invalidateQueries({ queryKey: ['mealPlans'] });
+      queryClient.invalidateQueries({ queryKey: ['userProfile'] });
       queryClient.invalidateQueries({ queryKey: ['coachClients'] });
     },
   });

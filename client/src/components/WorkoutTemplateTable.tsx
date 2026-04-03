@@ -8,12 +8,14 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Save, Plus, Trash2, Loader2, GripVertical, Upload, PlusCircle, UserPlus,
+  Save, Plus, Trash2, Loader2, GripVertical, Upload, PlusCircle, UserPlus, Copy,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import {
   useWorkoutTemplateDetail, useSaveWorkoutTemplate, usePushWorkoutToGlobal,
-  useAssignWorkoutToClients,
+  useAssignWorkoutToClients, useCloneWorkoutToMine,
   type WorkoutHierarchyKey, type DayPlan, type Exercise,
 } from "@/hooks/useTemplates";
 import { formatTypeLabel } from "@/lib/workout-constants";
@@ -139,18 +141,21 @@ function SortableExerciseRow({
   );
 }
 
-export function WorkoutTemplateTable({ templateKey, canEdit, scope, coachId, canEditGlobal }: WorkoutTemplateTableProps) {
+export function WorkoutTemplateTable({ templateKey, canEdit, scope, coachId, canEditGlobal, onCloned }: WorkoutTemplateTableProps & { onCloned?: (key: WorkoutHierarchyKey) => void }) {
   const { toast } = useToast();
   const { data: templateData, isLoading } = useWorkoutTemplateDetail(templateKey);
   const saveTemplate = useSaveWorkoutTemplate();
   const pushToGlobal = usePushWorkoutToGlobal();
   const assignToClients = useAssignWorkoutToClients();
+  const cloneToMine = useCloneWorkoutToMine();
 
   const [days, setDays] = useState<DayPlan[]>([]);
   const [activeDay, setActiveDay] = useState(1);
   const [hasChanges, setHasChanges] = useState(false);
   const [showPushDialog, setShowPushDialog] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [showCloneDialog, setShowCloneDialog] = useState(false);
+  const [cloneName, setCloneName] = useState('');
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -285,6 +290,23 @@ export function WorkoutTemplateTable({ templateKey, canEdit, scope, coachId, can
     }
   };
 
+  const handleCloneToMine = async () => {
+    if (!cloneName.trim() || !coachId) return;
+    try {
+      const newKey = await cloneToMine.mutateAsync({
+        sourceKey: templateKey,
+        newName: cloneName.trim(),
+        targetCoachId: coachId,
+      });
+      toast({ title: "Cloned", description: "Template cloned to your personal templates." });
+      setShowCloneDialog(false);
+      setCloneName('');
+      onCloned?.(newKey);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
   if (isLoading) {
     return (
       <Card className="flex items-center justify-center h-[calc(100vh-320px)]">
@@ -311,11 +333,17 @@ export function WorkoutTemplateTable({ templateKey, canEdit, scope, coachId, can
               {scope === 'mine' && <Badge variant="secondary" className="ml-2 text-[10px]">Personal</Badge>}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={() => setShowAssignDialog(true)}>
               <UserPlus className="w-3.5 h-3.5 mr-1.5" />
               Assign
             </Button>
+            {scope === 'global' && coachId && (
+              <Button variant="outline" size="sm" onClick={() => { setCloneName(templateKey.templateName ? `${templateKey.templateName} (Copy)` : ''); setShowCloneDialog(true); }}>
+                <Copy className="w-3.5 h-3.5 mr-1.5" />
+                Clone to My Templates
+              </Button>
+            )}
             {scope === 'mine' && canEditGlobal && (
               <Button variant="outline" size="sm" onClick={() => setShowPushDialog(true)}>
                 <Upload className="w-3.5 h-3.5 mr-1.5" />
@@ -443,6 +471,37 @@ export function WorkoutTemplateTable({ templateKey, canEdit, scope, coachId, can
         templateType="workout"
         templateLabel={`${templateKey.templateName || typeLabel} (${days.length}-day)`}
       />
+
+      {/* Clone to My Templates Dialog */}
+      <Dialog open={showCloneDialog} onOpenChange={setShowCloneDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Copy className="w-5 h-5" />
+              Clone to My Templates
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Create a personal copy of this global template that you can customize.
+          </p>
+          <div className="space-y-2 py-2">
+            <Label>Template Name <span className="text-destructive">*</span></Label>
+            <Input
+              placeholder="e.g., My Custom PPL Split"
+              value={cloneName}
+              onChange={(e) => setCloneName(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCloneDialog(false)}>Cancel</Button>
+            <Button onClick={handleCloneToMine} disabled={!cloneName.trim() || cloneToMine.isPending}>
+              {cloneToMine.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : <Copy className="w-4 h-4 mr-1.5" />}
+              Clone
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
