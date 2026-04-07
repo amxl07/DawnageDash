@@ -37,18 +37,19 @@ import {
   ChevronRight,
   Search,
   Wallet,
+  AlertTriangle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { fetchAllCoaches, fetchAllClients } from "@/lib/admin-utils";
+import { fetchAllCoaches, fetchAllClients, fetchCoachClientHistory } from "@/lib/admin-utils";
 import {
   fetchCoachCommissions,
   fetchClientPayments,
-  fetchPaymentTransactions,
   fetchCoachPayouts,
   upsertCoachPayout,
   calculateMonthlyCoachPayouts,
   calculatePayoutSummary,
 } from "@/lib/admin-business-utils";
+import type { PayoutWarnings } from "@/lib/admin-business-utils";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -71,6 +72,44 @@ function getPayoutStatusBadge(status: string) {
     default:
       return <Badge className="bg-yellow-500/15 text-yellow-600 border-yellow-500/30"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
   }
+}
+
+function WarningsBanner({ warnings }: { warnings: PayoutWarnings }) {
+  const hasWarnings =
+    warnings.clientsWithoutHistory.length > 0 ||
+    warnings.clientsWithoutPackageDuration.length > 0;
+
+  if (!hasWarnings) return null;
+
+  return (
+    <Card className="border-yellow-500/50 bg-yellow-500/5">
+      <CardContent className="py-3 px-4">
+        <div className="flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5 shrink-0" />
+          <div className="space-y-1 text-sm">
+            {warnings.clientsWithoutHistory.length > 0 && (
+              <p>
+                <span className="font-medium text-yellow-700">
+                  {warnings.clientsWithoutHistory.length} client(s) without assignment history
+                </span>
+                <span className="text-muted-foreground"> (using current coach as fallback): </span>
+                <span className="text-muted-foreground">{warnings.clientsWithoutHistory.join(", ")}</span>
+              </p>
+            )}
+            {warnings.clientsWithoutPackageDuration.length > 0 && (
+              <p>
+                <span className="font-medium text-red-600">
+                  {warnings.clientsWithoutPackageDuration.length} client(s) missing package duration
+                </span>
+                <span className="text-muted-foreground"> (skipped from calculation): </span>
+                <span className="text-muted-foreground">{warnings.clientsWithoutPackageDuration.join(", ")}</span>
+              </p>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function AdminPayoutsPage() {
@@ -97,13 +136,15 @@ export default function AdminPayoutsPage() {
   const { data: clients = [] } = useQuery({ queryKey: ["admin-all-clients"], queryFn: fetchAllClients });
   const { data: commissions = [] } = useQuery({ queryKey: ["admin-commissions"], queryFn: fetchCoachCommissions });
   const { data: payments = [] } = useQuery({ queryKey: ["admin-payments"], queryFn: fetchClientPayments });
-  const { data: transactions = [], isLoading } = useQuery({ queryKey: ["admin-transactions"], queryFn: fetchPaymentTransactions });
-  const { data: allPayouts = [] } = useQuery({ queryKey: ["admin-payouts"], queryFn: fetchCoachPayouts });
+  const { data: history = [], isLoading: historyLoading } = useQuery({ queryKey: ["admin-coach-history"], queryFn: fetchCoachClientHistory });
+  const { data: allPayouts = [], isLoading: payoutsLoading } = useQuery({ queryKey: ["admin-payouts"], queryFn: fetchCoachPayouts });
+
+  const isLoading = historyLoading || payoutsLoading;
 
   // ---- Computed data ----
-  const monthlyPayouts = useMemo(
-    () => calculateMonthlyCoachPayouts(coaches, clients, payments, transactions, commissions, selectedMonth, selectedYear),
-    [coaches, clients, payments, transactions, commissions, selectedMonth, selectedYear],
+  const { results: monthlyPayouts, warnings } = useMemo(
+    () => calculateMonthlyCoachPayouts(coaches, clients, payments, commissions, history, selectedMonth, selectedYear),
+    [coaches, clients, payments, commissions, history, selectedMonth, selectedYear],
   );
 
   const payoutsForMonth = useMemo(
@@ -124,7 +165,7 @@ export default function AdminPayoutsPage() {
   // Merge calculated payouts with recorded payout status
   const coachPayoutRows = useMemo(() => {
     return monthlyPayouts
-      .map((cp: any) => {
+      .map((cp) => {
         const record = payoutByCoach.get(cp.coachId);
         return {
           ...cp,
@@ -132,7 +173,7 @@ export default function AdminPayoutsPage() {
           status: record?.status || "pending",
         };
       })
-      .sort((a: any, b: any) => b.commissionEarned - a.commissionEarned);
+      .sort((a, b) => b.commissionEarned - a.commissionEarned);
   }, [monthlyPayouts, payoutByCoach]);
 
   // Filtered history
@@ -217,9 +258,8 @@ export default function AdminPayoutsPage() {
   }
 
   function handleNextMonth() {
-    // Don't allow future months
-    const isCurrentMonth = selectedMonth === now.getMonth() + 1 && selectedYear === now.getFullYear();
-    if (isCurrentMonth) return;
+    const isCurrentMo = selectedMonth === now.getMonth() + 1 && selectedYear === now.getFullYear();
+    if (isCurrentMo) return;
 
     if (selectedMonth === 12) {
       setSelectedMonth(1);
@@ -254,8 +294,14 @@ export default function AdminPayoutsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Coach Payouts</h1>
-        <p className="text-muted-foreground">Calculate and track monthly coach commission payouts</p>
+        <p className="text-muted-foreground">
+          Monthly coach commission payouts — payout for {MONTH_NAMES[selectedMonth - 1]} is due by{" "}
+          {MONTH_NAMES[selectedMonth % 12]} 4th, {selectedMonth === 12 ? selectedYear + 1 : selectedYear}
+        </p>
       </div>
+
+      {/* Warnings Banner */}
+      <WarningsBanner warnings={warnings} />
 
       {/* Month/Year Selector */}
       <div className="flex items-center gap-2">
@@ -301,7 +347,7 @@ export default function AdminPayoutsPage() {
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(summary.totalPayable)}</div>
             <p className="text-xs text-muted-foreground">
-              {coachPayoutRows.filter((r: any) => r.commissionEarned > 0).length} coaches with earnings
+              {coachPayoutRows.filter((r) => r.commissionEarned > 0).length} coaches with earnings
             </p>
           </CardContent>
         </Card>
@@ -355,7 +401,7 @@ export default function AdminPayoutsPage() {
                   <TableRow>
                     <TableHead>Coach</TableHead>
                     <TableHead className="text-right">Commission %</TableHead>
-                    <TableHead className="text-right">Collections</TableHead>
+                    <TableHead className="text-right">Monthly Gross</TableHead>
                     <TableHead className="text-right">Commission Earned</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -369,12 +415,12 @@ export default function AdminPayoutsPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    coachPayoutRows.map((row: any) => (
+                    coachPayoutRows.map((row) => (
                       <TableRow key={row.coachId} className={row.commissionEarned === 0 ? "opacity-50" : ""}>
                         <TableCell>
                           <div>
                             <p className="font-medium">{row.coachName}</p>
-                            <p className="text-xs text-muted-foreground">{row.totalClients} clients</p>
+                            <p className="text-xs text-muted-foreground">{row.totalClients} active clients</p>
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
@@ -384,7 +430,7 @@ export default function AdminPayoutsPage() {
                             <span className="text-red-500 text-xs">Not set</span>
                           )}
                         </TableCell>
-                        <TableCell className="text-right">{formatCurrency(row.monthlyCollected)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(row.monthlyGross)}</TableCell>
                         <TableCell className="text-right font-semibold">{formatCurrency(row.commissionEarned)}</TableCell>
                         <TableCell>{getPayoutStatusBadge(row.status)}</TableCell>
                         <TableCell className="text-right">
@@ -396,7 +442,7 @@ export default function AdminPayoutsPage() {
                           )}
                           {row.status === "paid" && row.payoutRecord && (
                             <span className="text-xs text-muted-foreground">
-                              {row.payoutRecord.payment_method || "—"} &middot;{" "}
+                              {row.payoutRecord.payment_method?.replace("_", " ") || "—"} &middot;{" "}
                               {row.payoutRecord.payment_date || "—"}
                             </span>
                           )}
@@ -443,7 +489,7 @@ export default function AdminPayoutsPage() {
                   <TableRow>
                     <TableHead>Coach</TableHead>
                     <TableHead>Period</TableHead>
-                    <TableHead className="text-right">Collections</TableHead>
+                    <TableHead className="text-right">Monthly Gross</TableHead>
                     <TableHead className="text-right">Commission %</TableHead>
                     <TableHead className="text-right">Amount Paid</TableHead>
                     <TableHead>Method</TableHead>
@@ -497,8 +543,8 @@ export default function AdminPayoutsPage() {
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-muted-foreground">Collections</span>
-                <p className="font-semibold">{formatCurrency(selectedCoachForPayout?.monthlyCollected || 0)}</p>
+                <span className="text-muted-foreground">Monthly Gross (Deal Portion)</span>
+                <p className="font-semibold">{formatCurrency(selectedCoachForPayout?.monthlyGross || 0)}</p>
               </div>
               <div>
                 <span className="text-muted-foreground">Commission Rate</span>
@@ -555,7 +601,7 @@ export default function AdminPayoutsPage() {
                 const amount = parseFloat(payoutAmountOverride) || selectedCoachForPayout.commissionEarned;
                 recordPayoutMutation.mutate({
                   coachId: selectedCoachForPayout.coachId,
-                  grossAmount: selectedCoachForPayout.monthlyCollected,
+                  grossAmount: selectedCoachForPayout.monthlyGross,
                   commissionPercentage: selectedCoachForPayout.commissionPercentage,
                   commissionAmount: Math.round(amount * 100) / 100,
                   method: payoutMethod || undefined,

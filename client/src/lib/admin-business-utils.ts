@@ -268,68 +268,154 @@ export async function upsertCoachPayout(
   }
 }
 
+export interface PayoutWarnings {
+  clientsWithoutHistory: string[];
+  clientsWithoutPackageDuration: string[];
+}
+
+export interface MonthlyCoachPayout {
+  coachId: string;
+  coachName: string;
+  commissionPercentage: number;
+  totalClients: number;
+  monthlyGross: number;
+  commissionEarned: number;
+}
+
 export function calculateMonthlyCoachPayouts(
   coaches: any[],
   clients: any[],
   payments: any[],
-  transactions: any[],
   commissions: any[],
+  history: any[],
   month: number,
   year: number,
-) {
+): { results: MonthlyCoachPayout[]; warnings: PayoutWarnings } {
   const commissionMap = new Map(
     commissions.map((c: any) => [c.coach_id, parseFloat(c.commission_percentage || 0)]),
   );
-
   const paymentByClient = new Map(payments.map((p: any) => [p.client_id, p]));
 
-  const transactionsByPayment = new Map<string, any[]>();
-  for (const t of transactions) {
-    const list = transactionsByPayment.get(t.client_payment_id) || [];
-    list.push(t);
-    transactionsByPayment.set(t.client_payment_id, list);
+  const warnings: PayoutWarnings = {
+    clientsWithoutHistory: [],
+    clientsWithoutPackageDuration: [],
+  };
+
+  // Pre-group history events by client_id for performance
+  const historyByClient = new Map<string, any[]>();
+  for (const h of history) {
+    const list = historyByClient.get(h.client_id) || [];
+    list.push(h);
+    historyByClient.set(h.client_id, list);
   }
 
-  // Half-open interval: [startDate, endDate)
-  const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
-  const endDate =
-    month === 12
-      ? `${year + 1}-01-01`
-      : `${year}-${String(month + 1).padStart(2, "0")}-01`;
+  // Accumulate per-coach: gross (deal portion) and client count
+  const coachGross = new Map<string, number>();
+  const coachClientCount = new Map<string, number>();
+  for (const coach of coaches) {
+    coachGross.set(coach.id, 0);
+    coachClientCount.set(coach.id, 0);
+  }
 
-  return coaches.map((coach: any) => {
-    const coachClients = clients.filter((c: any) => c.coach_id === coach.id);
-    const commPct = commissionMap.get(coach.id) || 0;
+  for (const client of clients) {
+    const payment = paymentByClient.get(client.id);
+    if (!payment) continue; // No deal set
 
-    let monthlyCollected = 0;
+    const dealAmount = parseFloat(payment.total_amount || 0);
+    if (dealAmount <= 0) continue;
 
-    for (const client of coachClients) {
-      const payment = paymentByClient.get(client.id);
-      if (!payment) continue;
+    // Get this client's assignment history
+    const clientEvents = (historyByClient.get(client.id) || [])
+      .sort((a: any, b: any) => (a.created_at || "").localeCompare(b.created_at || ""));
 
-      const txns = transactionsByPayment.get(payment.id) || [];
-      for (const t of txns) {
-        if (t.payment_date >= startDate && t.payment_date < endDate) {
-          monthlyCollected += parseFloat(t.amount || 0);
-        }
-      }
+    // Find the first assignment date — this is when the coaching deal starts
+    const firstAssignment = clientEvents.find((e: any) => e.event_type === "assigned");
+
+    let commissionStartMonth: number;
+    let commissionStartYear: number;
+    let usedFallback = false;
+
+    if (firstAssignment) {
+      const claimDate = new Date(firstAssignment.created_at);
+      commissionStartMonth = claimDate.getMonth() + 1; // 1-12
+      commissionStartYear = claimDate.getFullYear();
+    } else if (client.coach_id) {
+      // Fallback: client has a coach but no history records
+      // Use package_start_date or created_at as approximate claim date
+      const fallbackDate = client.package_start_date || client.created_at;
+      if (!fallbackDate) continue;
+      const d = new Date(fallbackDate);
+      commissionStartMonth = d.getMonth() + 1;
+      commissionStartYear = d.getFullYear();
+      usedFallback = true;
+      warnings.clientsWithoutHistory.push(client.full_name || client.email || client.id);
+    } else {
+      // Client is unclaimed (no coach, no history) — skip silently
+      continue;
     }
 
-    const commissionEarned = (monthlyCollected * commPct) / 100;
+    const packageDuration = client.package_duration;
+    if (!packageDuration) {
+      // Only warn if client is claimed (has a coach or history)
+      if (client.coach_id || firstAssignment) {
+        warnings.clientsWithoutPackageDuration.push(client.full_name || client.email || client.id);
+      }
+      continue;
+    }
+
+    // Check if the target month falls within the commission window
+    // Window: [commissionStart, commissionStart + packageDuration months)
+    const monthsDiff = (year - commissionStartYear) * 12 + (month - commissionStartMonth);
+    if (monthsDiff < 0 || monthsDiff >= packageDuration) continue;
+
+    // Determine which coach is assigned for this target month
+    let assignedCoachId: string | null = null;
+
+    if (clientEvents.length > 0) {
+      const targetYM = `${year}-${String(month).padStart(2, "0")}`;
+      for (const event of clientEvents) {
+        const eventYM = (event.created_at || "").substring(0, 7);
+        if (eventYM > targetYM) break;
+        if (event.event_type === "assigned") {
+          assignedCoachId = event.coach_id;
+        } else if (event.event_type === "unassigned") {
+          assignedCoachId = null;
+        }
+      }
+    } else {
+      // Fallback: use current coach_id
+      assignedCoachId = client.coach_id || null;
+    }
+
+    if (!assignedCoachId) continue;
+
+    // Monthly portion of the deal
+    const monthlyPortion = dealAmount / packageDuration;
+
+    coachGross.set(assignedCoachId, (coachGross.get(assignedCoachId) || 0) + monthlyPortion);
+    coachClientCount.set(assignedCoachId, (coachClientCount.get(assignedCoachId) || 0) + 1);
+  }
+
+  const results = coaches.map((coach: any) => {
+    const gross = coachGross.get(coach.id) || 0;
+    const commPct = commissionMap.get(coach.id) || 0;
+    const commissionEarned = Math.round(((gross * commPct) / 100) * 100) / 100;
 
     return {
       coachId: coach.id,
       coachName: coach.full_name || coach.email,
       commissionPercentage: commPct,
-      totalClients: coachClients.length,
-      monthlyCollected,
+      totalClients: coachClientCount.get(coach.id) || 0,
+      monthlyGross: Math.round(gross * 100) / 100,
       commissionEarned,
     };
   });
+
+  return { results, warnings };
 }
 
 export function calculatePayoutSummary(
-  monthlyPayouts: Array<{ coachId: string; commissionEarned: number }>,
+  monthlyPayouts: MonthlyCoachPayout[],
   existingPayoutRecords: any[],
 ) {
   const totalPayable = monthlyPayouts.reduce((sum, p) => sum + p.commissionEarned, 0);
@@ -341,7 +427,7 @@ export function calculatePayoutSummary(
     }
   }
 
-  const totalPending = totalPayable - totalPaidOut;
+  const totalPending = Math.max(0, totalPayable - totalPaidOut);
 
   return { totalPayable, totalPaidOut, totalPending };
 }
