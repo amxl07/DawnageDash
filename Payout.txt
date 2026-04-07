@@ -1,0 +1,21 @@
+                                                                                                                                                                            
+  1. Client reassignment — If a client gets reassigned to a different coach mid-month, and a payment comes in after reassignment, which coach gets the commission — the       
+  current coach or the coach at the time of the original sale/assignment?                                                                                                     
+  2. Partial month handling — If a coach is assigned a client on the 15th and a transaction is recorded on the 20th, does the coach get full commission on that transaction,  
+  or is it prorated?                                                                                                                                                          
+  3. Payment date vs. collection date — Should commission be calculated based on payment_date in payment_transactions, or created_at? (i.e., do you ever backdate payment     
+  entries?)                                                                                                                                                                   
+  4. Fixed salary component — Do coaches have any base/fixed pay, or is it purely commission-based?                                                                           
+  5. Deductions — Are there any deductions (taxes, platform fees, advances) to subtract from coach payouts?                                                                   
+  6. Payout tracking — Do you want to just calculate the monthly amount, or also record payouts (a new coach_payouts table to mark what was paid and when)?                   
+                                                                                                                                                                              
+  Let me know these details and I'll build the logic.                                                                                                                         
+                                                                                                                                                                              
+✻ Worked for 4m 17s                                                                                                                                                           
+                                                                                                                                                                              
+❯ 1. The current coach gets the commission. \                                                                                                                                 
+2. Coach gets the full commission\                                                                                                                                            
+3. Commissinon should be calcualted based on payement date\                                                                                                                   
+4. No fixed salary purely commission based.\                                                                                                                                  
+5.No deductions\                                                                                                                                                              
+6. Yes add a new coach payouts p

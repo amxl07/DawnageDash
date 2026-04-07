@@ -195,6 +195,158 @@ async function recalculatePaymentStatus(clientPaymentId: string) {
 }
 
 // ============================================================================
+// COACH PAYOUTS
+// ============================================================================
+
+export async function fetchCoachPayouts() {
+  const { data, error } = await supabase
+    .from("coach_payouts")
+    .select("*")
+    .order("payout_year", { ascending: false })
+    .order("payout_month", { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function upsertCoachPayout(
+  coachId: string,
+  payoutMonth: number,
+  payoutYear: number,
+  grossAmount: number,
+  commissionPercentage: number,
+  commissionAmount: number,
+  status: string,
+  paymentMethod?: string,
+  paymentDate?: string,
+  notes?: string,
+) {
+  const { data: existing } = await supabase
+    .from("coach_payouts")
+    .select("id")
+    .eq("coach_id", coachId)
+    .eq("payout_month", payoutMonth)
+    .eq("payout_year", payoutYear)
+    .single();
+
+  if (existing) {
+    const { data, error } = await supabase
+      .from("coach_payouts")
+      .update({
+        gross_amount: grossAmount,
+        commission_percentage: commissionPercentage,
+        commission_amount: commissionAmount,
+        status,
+        payment_method: paymentMethod || null,
+        payment_date: paymentDate || null,
+        notes: notes || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", existing.id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  } else {
+    const { data, error } = await supabase
+      .from("coach_payouts")
+      .insert({
+        coach_id: coachId,
+        payout_month: payoutMonth,
+        payout_year: payoutYear,
+        gross_amount: grossAmount,
+        commission_percentage: commissionPercentage,
+        commission_amount: commissionAmount,
+        status,
+        payment_method: paymentMethod || null,
+        payment_date: paymentDate || null,
+        notes: notes || null,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+}
+
+export function calculateMonthlyCoachPayouts(
+  coaches: any[],
+  clients: any[],
+  payments: any[],
+  transactions: any[],
+  commissions: any[],
+  month: number,
+  year: number,
+) {
+  const commissionMap = new Map(
+    commissions.map((c: any) => [c.coach_id, parseFloat(c.commission_percentage || 0)]),
+  );
+
+  const paymentByClient = new Map(payments.map((p: any) => [p.client_id, p]));
+
+  const transactionsByPayment = new Map<string, any[]>();
+  for (const t of transactions) {
+    const list = transactionsByPayment.get(t.client_payment_id) || [];
+    list.push(t);
+    transactionsByPayment.set(t.client_payment_id, list);
+  }
+
+  // Half-open interval: [startDate, endDate)
+  const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+  const endDate =
+    month === 12
+      ? `${year + 1}-01-01`
+      : `${year}-${String(month + 1).padStart(2, "0")}-01`;
+
+  return coaches.map((coach: any) => {
+    const coachClients = clients.filter((c: any) => c.coach_id === coach.id);
+    const commPct = commissionMap.get(coach.id) || 0;
+
+    let monthlyCollected = 0;
+
+    for (const client of coachClients) {
+      const payment = paymentByClient.get(client.id);
+      if (!payment) continue;
+
+      const txns = transactionsByPayment.get(payment.id) || [];
+      for (const t of txns) {
+        if (t.payment_date >= startDate && t.payment_date < endDate) {
+          monthlyCollected += parseFloat(t.amount || 0);
+        }
+      }
+    }
+
+    const commissionEarned = (monthlyCollected * commPct) / 100;
+
+    return {
+      coachId: coach.id,
+      coachName: coach.full_name || coach.email,
+      commissionPercentage: commPct,
+      totalClients: coachClients.length,
+      monthlyCollected,
+      commissionEarned,
+    };
+  });
+}
+
+export function calculatePayoutSummary(
+  monthlyPayouts: Array<{ coachId: string; commissionEarned: number }>,
+  existingPayoutRecords: any[],
+) {
+  const totalPayable = monthlyPayouts.reduce((sum, p) => sum + p.commissionEarned, 0);
+
+  let totalPaidOut = 0;
+  for (const record of existingPayoutRecords) {
+    if (record.status === "paid") {
+      totalPaidOut += parseFloat(record.commission_amount || 0);
+    }
+  }
+
+  const totalPending = totalPayable - totalPaidOut;
+
+  return { totalPayable, totalPaidOut, totalPending };
+}
+
+// ============================================================================
 // AGGREGATION HELPERS
 // ============================================================================
 

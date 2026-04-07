@@ -81,17 +81,45 @@ export function useTemplatePermissions() {
 }
 
 // ============================================================================
-// Helper: add template_name filter to a query
+// Normalization Helpers
+// ============================================================================
+
+/** Normalize template name: trim whitespace, convert empty string to null */
+function normalizeTemplateName(name: string | null | undefined): string | null {
+  const trimmed = typeof name === 'string' ? name.trim() : null;
+  return trimmed && trimmed.length > 0 ? trimmed : null;
+}
+
+/** Normalize sub-category: trim whitespace, convert empty string to null */
+function normalizeSubCategory(sub: string | null | undefined): string | null {
+  const trimmed = typeof sub === 'string' ? sub.trim() : null;
+  return trimmed && trimmed.length > 0 ? trimmed : null;
+}
+
+// ============================================================================
+// Query Filter Helpers
 // ============================================================================
 
 function addTemplateNameFilter<T extends { eq: (col: string, val: string) => T; is: (col: string, val: null) => T }>(
   query: T,
   templateName: string | null | undefined,
 ): T {
-  if (templateName) {
-    return query.eq('template_name', templateName);
+  const normalized = normalizeTemplateName(templateName);
+  if (normalized !== null) {
+    return query.eq('template_name', normalized);
   }
   return query.is('template_name', null);
+}
+
+function addSubCategoryFilter<T extends { eq: (col: string, val: string) => T; is: (col: string, val: null) => T }>(
+  query: T,
+  subCategory: string | null | undefined,
+): T {
+  const normalized = normalizeSubCategory(subCategory);
+  if (normalized !== null) {
+    return query.eq('sub_category', normalized);
+  }
+  return query.is('sub_category', null);
 }
 
 // ============================================================================
@@ -121,14 +149,16 @@ export function useWorkoutTemplateList(scope: 'global' | 'mine', coachId?: strin
       // Group by unique hierarchy key (including template_name)
       const groups = new Map<string, WorkoutTemplateGroup>();
       for (const row of data || []) {
-        const key = `${row.level}|${row.workout_type}|${row.sub_category || ''}|${row.days_per_week}|${row.coach_id || ''}|${row.template_name || ''}`;
+        const normSub = normalizeSubCategory(row.sub_category);
+        const normName = normalizeTemplateName(row.template_name);
+        const key = `${row.level}|${row.workout_type}|${normSub || ''}|${row.days_per_week}|${row.coach_id || ''}|${normName || ''}`;
         if (!groups.has(key)) {
           groups.set(key, {
             level: row.level,
             workoutType: row.workout_type,
-            subCategory: row.sub_category,
+            subCategory: normSub,
             daysPerWeek: row.days_per_week,
-            templateName: row.template_name || '',
+            templateName: normName || '',
             coachId: row.coach_id,
             dayCount: 0,
           });
@@ -155,11 +185,7 @@ export function useWorkoutTemplateDetail(key: WorkoutHierarchyKey | null) {
         .eq('workout_type', key.workoutType)
         .eq('days_per_week', key.daysPerWeek);
 
-      if (key.subCategory) {
-        query = query.eq('sub_category', key.subCategory);
-      } else {
-        query = query.is('sub_category', null);
-      }
+      query = addSubCategoryFilter(query, key.subCategory);
 
       if (key.coachId) {
         query = query.eq('coach_id', key.coachId);
@@ -213,11 +239,7 @@ export function useSaveWorkoutTemplate() {
         .eq('workout_type', key.workoutType)
         .eq('days_per_week', key.daysPerWeek);
 
-      if (key.subCategory) {
-        deleteQuery = deleteQuery.eq('sub_category', key.subCategory);
-      } else {
-        deleteQuery = deleteQuery.is('sub_category', null);
-      }
+      deleteQuery = addSubCategoryFilter(deleteQuery, key.subCategory);
 
       if (key.coachId) {
         deleteQuery = deleteQuery.eq('coach_id', key.coachId);
@@ -233,10 +255,10 @@ export function useSaveWorkoutTemplate() {
       // Insert new rows
       const rows = days.map(day => ({
         coach_id: key.coachId || null,
-        template_name: key.templateName || null,
+        template_name: normalizeTemplateName(key.templateName),
         level: key.level,
         workout_type: key.workoutType,
-        sub_category: key.subCategory || null,
+        sub_category: normalizeSubCategory(key.subCategory),
         days_per_week: key.daysPerWeek,
         day_number: day.dayNumber,
         focus: day.focus,
@@ -265,11 +287,7 @@ export function useDeleteWorkoutTemplate() {
         .eq('workout_type', key.workoutType)
         .eq('days_per_week', key.daysPerWeek);
 
-      if (key.subCategory) {
-        query = query.eq('sub_category', key.subCategory);
-      } else {
-        query = query.is('sub_category', null);
-      }
+      query = addSubCategoryFilter(query, key.subCategory);
 
       if (key.coachId) {
         query = query.eq('coach_id', key.coachId);
@@ -390,11 +408,7 @@ export function usePushWorkoutToGlobal() {
         .eq('days_per_week', key.daysPerWeek)
         .eq('coach_id', key.coachId);
 
-      if (key.subCategory) {
-        query = query.eq('sub_category', key.subCategory);
-      } else {
-        query = query.is('sub_category', null);
-      }
+      query = addSubCategoryFilter(query, key.subCategory);
 
       query = addTemplateNameFilter(query, key.templateName);
 
@@ -416,11 +430,7 @@ export function usePushWorkoutToGlobal() {
         .eq('days_per_week', key.daysPerWeek)
         .is('coach_id', null);
 
-      if (key.subCategory) {
-        delQuery = delQuery.eq('sub_category', key.subCategory);
-      } else {
-        delQuery = delQuery.is('sub_category', null);
-      }
+      delQuery = addSubCategoryFilter(delQuery, key.subCategory);
 
       delQuery = addTemplateNameFilter(delQuery, key.templateName);
 
@@ -484,11 +494,7 @@ export function useCloneWorkoutToMine() {
         .eq('workout_type', sourceKey.workoutType)
         .eq('days_per_week', sourceKey.daysPerWeek);
 
-      if (sourceKey.subCategory) {
-        query = query.eq('sub_category', sourceKey.subCategory);
-      } else {
-        query = query.is('sub_category', null);
-      }
+      query = addSubCategoryFilter(query, sourceKey.subCategory);
 
       if (sourceKey.coachId) {
         query = query.eq('coach_id', sourceKey.coachId);
@@ -627,6 +633,53 @@ export function useDistinctSubCategories(level: string, workoutType: string, sco
 }
 
 // ============================================================================
+// Meal Content Parser (handles legacy snacks[] format)
+// ============================================================================
+
+interface MealData {
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+}
+
+const emptyMeal: MealData = { name: '', calories: 0, protein: 0, carbs: 0, fats: 0 };
+
+function parseMealContent(content: string): Record<string, MealData> {
+  try {
+    const parsed = JSON.parse(content);
+
+    // Handle the `snacks` array format (legacy)
+    if (parsed.snacks && Array.isArray(parsed.snacks)) {
+      return {
+        breakfast: parsed.breakfast || { ...emptyMeal },
+        mid_morning_snack: parsed.snacks[0] || parsed.mid_morning_snack || { ...emptyMeal },
+        lunch: parsed.lunch || { ...emptyMeal },
+        evening_snack: parsed.snacks[1] || parsed.evening_snack || { ...emptyMeal },
+        dinner: parsed.dinner || { ...emptyMeal },
+      };
+    }
+
+    return {
+      breakfast: parsed.breakfast || { ...emptyMeal },
+      mid_morning_snack: parsed.mid_morning_snack || { ...emptyMeal },
+      lunch: parsed.lunch || { ...emptyMeal },
+      evening_snack: parsed.evening_snack || { ...emptyMeal },
+      dinner: parsed.dinner || { ...emptyMeal },
+    };
+  } catch {
+    return {
+      breakfast: { ...emptyMeal },
+      mid_morning_snack: { ...emptyMeal },
+      lunch: { ...emptyMeal },
+      evening_snack: { ...emptyMeal },
+      dinner: { ...emptyMeal },
+    };
+  }
+}
+
+// ============================================================================
 // Assign Template to Clients
 // ============================================================================
 
@@ -652,7 +705,7 @@ export function useAssignWorkoutToClients() {
           user_id: clientId,
           level: key.level,
           workout_type: key.workoutType,
-          sub_category: key.subCategory || null,
+          sub_category: normalizeSubCategory(key.subCategory),
           days_per_week: key.daysPerWeek,
           day_number: day.dayNumber,
           focus: day.focus,
@@ -694,7 +747,7 @@ export function useAssignMealToClients() {
       template: MealTemplateItem;
       clientIds: string[];
     }) => {
-      const content = JSON.parse(template.content);
+      const content = parseMealContent(template.content);
       const mealTypes = ['Breakfast', 'Mid-Morning Snack', 'Lunch', 'Evening Snack', 'Dinner'] as const;
       const mealKeys = ['breakfast', 'mid_morning_snack', 'lunch', 'evening_snack', 'dinner'] as const;
 

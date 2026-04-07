@@ -19,6 +19,7 @@ const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
 const AdminCoachesPage = lazy(() => import("@/pages/AdminCoachesPage"));
 const AdminClientsPage = lazy(() => import("@/pages/AdminClientsPage"));
 const AdminBusinessPage = lazy(() => import("@/pages/AdminBusinessPage"));
+const AdminPayoutsPage = lazy(() => import("@/pages/AdminPayoutsPage"));
 const TemplateBuilderPage = lazy(() => import("@/pages/TemplateBuilderPage"));
 const CheckIns = lazy(() => import("@/pages/CheckIns"));
 const Measurements = lazy(() => import("@/pages/Measurements"));
@@ -78,6 +79,11 @@ function Router() {
         <Route path="/admin/business">
           <ProtectedRoute>
             <AdminBusinessPage />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/admin/payouts">
+          <ProtectedRoute>
+            <AdminPayoutsPage />
           </ProtectedRoute>
         </Route>
         <Route path="/admin/templates">

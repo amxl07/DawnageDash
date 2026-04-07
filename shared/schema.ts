@@ -414,3 +414,26 @@ export const insertPaymentTransactionSchema = createInsertSchema(paymentTransact
 export type InsertPaymentTransaction = z.infer<typeof insertPaymentTransactionSchema>;
 export type PaymentTransaction = typeof paymentTransactions.$inferSelect;
 
+// ============================================================================
+// COACH PAYOUTS TABLE (Monthly Payout Tracking)
+// ============================================================================
+export const coachPayouts = pgTable("coach_payouts", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  coachId: uuid("coach_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  payoutMonth: integer("payout_month").notNull(),
+  payoutYear: integer("payout_year").notNull(),
+  grossAmount: decimal("gross_amount", { precision: 10, scale: 2 }).notNull(),
+  commissionPercentage: decimal("commission_percentage", { precision: 5, scale: 2 }).notNull(),
+  commissionAmount: decimal("commission_amount", { precision: 10, scale: 2 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("pending"),
+  paymentMethod: varchar("payment_method", { length: 50 }),
+  paymentDate: date("payment_date"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCoachPayoutSchema = createInsertSchema(coachPayouts);
+export type InsertCoachPayout = z.infer<typeof insertCoachPayoutSchema>;
+export type CoachPayout = typeof coachPayouts.$inferSelect;
+

@@ -46,8 +46,8 @@ interface DayWorkout {
   isTemplate?: boolean;
 }
 
-type WorkoutType = 'GYM_WORKOUT' | 'HOME_WORKOUT' | 'ADVANCE_CALISTHENICS' | 'POWERBUILDING' | 'CALIS_COMPOUND_LIFTS' | 'ASSESSMENT';
-type SubCategory = '0_EXPERIENCE' | '6_MONTH_EXPERIENCE' | 'JUST_BODYWEIGHT' | 'JUST_DBS' | 'JUST_RINGS' | 'DBS_RINGS' | 'PHASE_1' | 'PHASE_2' | '5_DAY_PLAN' | null;
+type WorkoutType = string;
+type SubCategory = string | null;
 
 interface EditableWorkoutPlanProps {
   initialPlan: DayWorkout[];
