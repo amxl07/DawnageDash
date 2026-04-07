@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
 import { PackageSelectDialog, PackageType } from "@/components/PackageSelectDialog";
 import { CoachClientTable } from "@/components/CoachClientTable";
@@ -50,6 +50,34 @@ export default function CoachClientsPage() {
   } | null>(null);
   const [isUnassignDialogOpen, setIsUnassignDialogOpen] = useState(false);
   const [isUnassigning, setIsUnassigning] = useState(false);
+
+  // Real-time: subscribe to changes on client-related tables and auto-refresh
+  useEffect(() => {
+    if (!effectiveCoachId) return;
+
+    const channel = supabase
+      .channel('coach-clients-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_check_ins' }, () => {
+        queryClient.invalidateQueries({ queryKey: ["coach-client-checkins"] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
+        queryClient.invalidateQueries({ queryKey: ["coach-clients"] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'weekly_check_ins' }, () => {
+        queryClient.invalidateQueries({ queryKey: ["coach-client-weekly"] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'body_measurements' }, () => {
+        queryClient.invalidateQueries({ queryKey: ["coach-client-measurements"] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'weekly_progress_photos' }, () => {
+        queryClient.invalidateQueries({ queryKey: ["coach-client-photos"] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [effectiveCoachId, queryClient]);
 
   // Fetch assigned clients
   const { data: clients, isLoading: clientsLoading } = useQuery({

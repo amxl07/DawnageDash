@@ -40,6 +40,19 @@ export function ClientDetailsSheet({
     client.package_duration
   );
 
+  // Parse profile_data JSON for goal, injuries, medical conditions
+  const profileData = (() => {
+    if (!client.profile_data) return {};
+    if (typeof client.profile_data === 'string') {
+      try { return JSON.parse(client.profile_data); } catch { return {}; }
+    }
+    return client.profile_data;
+  })();
+  const goal = profileData.goal || null;
+  const injuries = profileData.injuries || null;
+  const medicalCondition = profileData.medicalCondition || null;
+  const allergies = profileData.allergies || null;
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md">
@@ -89,10 +102,10 @@ export function ClientDetailsSheet({
                   <Mail className="w-4 h-4 text-muted-foreground" />
                   <span>{client.email || "No email"}</span>
                 </div>
-                {client.phone && (
+                {(client.phone_number || client.phone) && (
                   <div className="flex items-center gap-2 text-sm">
                     <span className="text-muted-foreground">Phone:</span>
-                    <span>{client.phone}</span>
+                    <span>{client.phone_number || client.phone}</span>
                   </div>
                 )}
                 {client.country && (
@@ -156,40 +169,47 @@ export function ClientDetailsSheet({
                 Goals & Health
               </h4>
               <div className="space-y-2">
-                {client.primary_goal && (
+                {goal && (
                   <div className="flex items-start gap-2 text-sm">
                     <Target className="w-4 h-4 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-xs text-muted-foreground">
                         Primary Goal
                       </p>
-                      <p className="font-medium">{client.primary_goal}</p>
+                      <p className="font-medium">{goal}</p>
                     </div>
                   </div>
                 )}
-                {client.injuries && (
+                {injuries && injuries.toLowerCase() !== 'none' && (
                   <div className="flex items-start gap-2 text-sm">
                     <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5" />
                     <div>
                       <p className="text-xs text-muted-foreground">Injuries</p>
-                      <p>{client.injuries}</p>
+                      <p>{injuries}</p>
                     </div>
                   </div>
                 )}
-                {client.medical_conditions && (
+                {allergies && allergies.toLowerCase() !== 'none' && (
+                  <div className="flex items-start gap-2 text-sm">
+                    <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Allergies</p>
+                      <p>{allergies}</p>
+                    </div>
+                  </div>
+                )}
+                {medicalCondition && (
                   <div className="flex items-start gap-2 text-sm">
                     <AlertCircle className="w-4 h-4 text-red-500 mt-0.5" />
                     <div>
                       <p className="text-xs text-muted-foreground">
                         Medical Conditions
                       </p>
-                      <p>{client.medical_conditions}</p>
+                      <p>{medicalCondition}</p>
                     </div>
                   </div>
                 )}
-                {!client.primary_goal &&
-                  !client.injuries &&
-                  !client.medical_conditions && (
+                {!goal && !injuries && !medicalCondition && (
                     <p className="text-sm text-muted-foreground">
                       No goals or health notes on file.
                     </p>

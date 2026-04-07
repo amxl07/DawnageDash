@@ -129,17 +129,24 @@ export function CheckInForm() {
       if (error) throw error;
 
       // Check if this is the first check-in (or if start date is not set)
-      const { data: userData } = await supabase
+      // Note: A database trigger (trg_auto_set_start_date) also handles this server-side.
+      // This is a fallback in case the trigger isn't deployed yet.
+      const { data: userData, error: userFetchError } = await supabase
         .from('users')
         .select('package_start_date')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (userData && !userData.package_start_date) {
-        await supabase
+      if (userFetchError) {
+        console.warn("Could not check package_start_date:", userFetchError.message);
+      } else if (userData && !userData.package_start_date) {
+        const { error: updateError } = await supabase
           .from('users')
           .update({ package_start_date: today })
           .eq('id', user.id);
+        if (updateError) {
+          console.warn("Could not auto-set package_start_date:", updateError.message);
+        }
       }
 
       toast({
