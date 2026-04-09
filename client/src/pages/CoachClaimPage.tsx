@@ -53,6 +53,12 @@ export default function CoachClaimPage() {
           coach_id: effectiveCoachId,
           package_type: packageType,
           package_duration: duration,
+          active_workout_plan: JSON.stringify({
+            level: "Beginner",
+            workoutType: "ASSESSMENT",
+            subCategory: "5_DAY_PLAN",
+            daysPerWeek: 5,
+          }),
         })
         .eq("id", selectedClientId);
 
