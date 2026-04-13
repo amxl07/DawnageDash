@@ -12,6 +12,8 @@ interface AuthContextType {
   viewedCoachId: string | null;
   setViewedCoachId: (id: string | null) => void;
   isCoachView: boolean;
+  passwordRecoveryPending: boolean;
+  clearPasswordRecovery: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,6 +28,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
   const [viewedCoachId, setViewedCoachIdState] = useState<string | null>(() => {
     return sessionStorage.getItem('dawnage_viewed_coach_id');
+  });
+
+  const [passwordRecoveryPending, setPasswordRecoveryPending] = useState<boolean>(() => {
+    if (window.location.hash.includes('type=recovery')) {
+      sessionStorage.setItem('dawnage_password_recovery', 'true');
+      return true;
+    }
+    return sessionStorage.getItem('dawnage_password_recovery') === 'true';
   });
 
   const setViewedUserId = useCallback((id: string | null) => {
@@ -76,6 +86,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === 'TOKEN_REFRESHED') {
         console.log('Token refreshed successfully');
       }
+      if (event === 'PASSWORD_RECOVERY') {
+        setPasswordRecoveryPending(true);
+        sessionStorage.setItem('dawnage_password_recovery', 'true');
+      }
       if (event === 'SIGNED_OUT') {
         // Ensure corrupt data is cleared on sign out
         clearCorruptAuthData();
@@ -86,6 +100,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  const clearPasswordRecovery = useCallback(() => {
+    setPasswordRecoveryPending(false);
+    sessionStorage.removeItem('dawnage_password_recovery');
   }, []);
 
   const signOut = useCallback(async () => {
@@ -105,8 +124,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isCoachView = !!viewedUserId;
 
   const contextValue = useMemo(() => ({
-    user, session, loading, signOut, viewedUserId, setViewedUserId, viewedCoachId, setViewedCoachId, isCoachView,
-  }), [user, session, loading, signOut, viewedUserId, setViewedUserId, viewedCoachId, setViewedCoachId, isCoachView]);
+    user, session, loading, signOut, viewedUserId, setViewedUserId, viewedCoachId, setViewedCoachId, isCoachView, passwordRecoveryPending, clearPasswordRecovery,
+  }), [user, session, loading, signOut, viewedUserId, setViewedUserId, viewedCoachId, setViewedCoachId, isCoachView, passwordRecoveryPending, clearPasswordRecovery]);
 
   return (
     <AuthContext.Provider value={contextValue}>

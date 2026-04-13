@@ -34,12 +34,14 @@ export default function Login() {
   const [countrySearch, setCountrySearch] = useState("");
 
   const [showVerificationMessage, setShowVerificationMessage] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
 
   // Wizard Step: 1 for Identity, 2 for Security
   const [step, setStep] = useState(1);
 
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, passwordRecoveryPending } = useAuth();
 
   // Memoized filtered countries for performance
   const filteredCountries = useMemo(() => {
@@ -52,15 +54,19 @@ export default function Login() {
   }, [countrySearch]);
 
   useEffect(() => {
-    if (user && !showVerificationMessage) {
+    if (user && passwordRecoveryPending) {
+      setLocation("/reset-password");
+    } else if (user && !showVerificationMessage && !passwordRecoveryPending) {
       setLocation("/");
     }
-  }, [user, setLocation, showVerificationMessage]);
+  }, [user, setLocation, showVerificationMessage, passwordRecoveryPending]);
 
   // Reset step when toggling between Login/Signup
   useEffect(() => {
     setStep(1);
     setShowVerificationMessage(false);
+    setIsForgotPassword(false);
+    setResetEmailSent(false);
   }, [isSignUp]);
 
   const handleNextStep = () => {
@@ -82,6 +88,30 @@ export default function Login() {
 
   const handleBack = () => {
     setStep(1);
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      toast({ title: "Email required", description: "Please enter your email address", variant: "destructive" });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      setResetEmailSent(true);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send reset email",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -177,6 +207,40 @@ export default function Login() {
     );
   }
 
+  if (resetEmailSent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
+        <div className="fixed inset-0 z-0 opacity-10 pointer-events-none pattern-grid-lg" />
+        <div className="fixed top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
+        <div className="fixed bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
+
+        <Card className="w-full max-w-md p-6 sm:p-8 space-y-6 sm:space-y-8 relative z-10 shadow-2xl border-primary/10 rounded-3xl bg-background/80 backdrop-blur-xl overflow-hidden">
+          <div className="text-center space-y-4">
+            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+              <Mail className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight">Check your email</h1>
+            <p className="text-muted-foreground">
+              We've sent a password reset link to <span className="font-semibold text-foreground">{email}</span>. Click the link in the email to set a new password.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <Button
+              onClick={() => { setIsForgotPassword(false); setResetEmailSent(false); }}
+              className="w-full h-12 text-base font-semibold rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all"
+            >
+              Back to Login
+            </Button>
+            <p className="text-xs text-center text-muted-foreground">
+              Didn't receive the email? Check your spam folder or try again.
+            </p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
       <div className="fixed inset-0 z-0 opacity-10 pointer-events-none pattern-grid-lg" />
@@ -188,23 +252,25 @@ export default function Login() {
           <img src={logoUrl} alt="Dawnage AI" className="w-32 mx-auto drop-shadow-md" />
 
           <motion.div
-            key={isSignUp ? "signup-headers" : "login-headers"}
+            key={isForgotPassword ? "forgot-headers" : isSignUp ? "signup-headers" : "login-headers"}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="space-y-1"
           >
             <h1 className="text-3xl font-bold tracking-tight">
-              {isSignUp ? (step === 1 ? "Let's get started" : "Secure your account") : "Welcome back"}
+              {isForgotPassword ? "Reset password" : isSignUp ? (step === 1 ? "Let's get started" : "Secure your account") : "Welcome back"}
             </h1>
             <p className="text-sm text-muted-foreground">
-              {isSignUp
-                ? (step === 1 ? "Tell us a bit about yourself" : "Create your credentials")
-                : "Enter your credentials to access your account"}
+              {isForgotPassword
+                ? "Enter your email and we'll send you a reset link"
+                : isSignUp
+                  ? (step === 1 ? "Tell us a bit about yourself" : "Create your credentials")
+                  : "Enter your credentials to access your account"}
             </p>
           </motion.div>
         </div>
 
-        {isSignUp && (
+        {isSignUp && !isForgotPassword && (
           <Tabs
             defaultValue="client"
             value={isCoachSignup ? "coach" : "client"}
@@ -218,9 +284,59 @@ export default function Login() {
           </Tabs>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={isForgotPassword ? handleForgotPassword : handleSubmit} className="space-y-5">
           <AnimatePresence mode="wait">
-            {isSignUp && step === 1 ? (
+            {isForgotPassword && !isSignUp ? (
+              <motion.div
+                key="forgot"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-4"
+              >
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="name@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10 h-12 rounded-2xl bg-muted/30 border-0 focus-visible:ring-primary/20"
+                      required
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full h-12 text-base font-semibold rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Send Reset Link"
+                  )}
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsForgotPassword(false)}
+                  className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ArrowLeft className="w-3 h-3 inline mr-1" />
+                  Back to Login
+                </button>
+              </motion.div>
+            ) : isSignUp && step === 1 ? (
               <motion.div
                 key="step1"
                 initial={{ opacity: 0, x: -20 }}
@@ -380,7 +496,7 @@ export default function Login() {
                   <div className="flex items-center justify-between">
                     <Label htmlFor="password" className="text-sm font-medium">Password</Label>
                     {!isSignUp && (
-                      <a href="#" className="text-xs text-primary hover:underline font-medium">Forgot?</a>
+                      <button type="button" onClick={() => setIsForgotPassword(true)} className="text-xs text-primary hover:underline font-medium">Forgot?</button>
                     )}
                   </div>
                   <div className="relative">
@@ -480,34 +596,36 @@ export default function Login() {
           </AnimatePresence>
         </form>
 
-        <div className="text-center space-y-4 pt-2">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-border/50" />
+        {!isForgotPassword && (
+          <div className="text-center space-y-4 pt-2">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border/50" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background/80 backdrop-blur-xl px-4 text-muted-foreground font-medium">
+                  Or
+                </span>
+              </div>
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background/80 backdrop-blur-xl px-4 text-muted-foreground font-medium">
-                Or
-              </span>
-            </div>
-          </div>
 
-          <Button
-            variant="ghost"
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="w-full h-12 rounded-2xl hover:bg-muted/50 transition-colors"
-          >
-            {isSignUp ? (
-              <p className="text-sm">
-                Already have an account? <span className="text-primary font-bold ml-1">Sign in</span>
-              </p>
-            ) : (
-              <p className="text-sm">
-                New to Dawnage? <span className="text-primary font-bold ml-1">Create an account</span>
-              </p>
-            )}
-          </Button>
-        </div>
+            <Button
+              variant="ghost"
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="w-full h-12 rounded-2xl hover:bg-muted/50 transition-colors"
+            >
+              {isSignUp ? (
+                <p className="text-sm">
+                  Already have an account? <span className="text-primary font-bold ml-1">Sign in</span>
+                </p>
+              ) : (
+                <p className="text-sm">
+                  New to Dawnage? <span className="text-primary font-bold ml-1">Create an account</span>
+                </p>
+              )}
+            </Button>
+          </div>
+        )}
       </Card>
     </div>
   );

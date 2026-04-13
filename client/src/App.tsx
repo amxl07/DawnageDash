@@ -29,6 +29,7 @@ const Media = lazy(() => import("@/pages/Media"));
 const Profile = lazy(() => import("@/pages/Profile"));
 const WorkoutLogs = lazy(() => import("@/pages/WorkoutLogs"));
 const Login = lazy(() => import("@/pages/Login"));
+const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 function PageLoader() {
@@ -47,6 +48,7 @@ function Router() {
     <Suspense fallback={<PageLoader />}>
       <Switch>
         <Route path="/login" component={Login} />
+        <Route path="/reset-password" component={ResetPassword} />
         <Route path="/">
           <ProtectedRoute>
             {role === 'admin' && !viewedCoachId ? (
@@ -150,7 +152,7 @@ function Router() {
 
 function AppContent() {
   // IMPORTANT: All hooks must be called unconditionally at the top
-  const { user, loading, viewedUserId, viewedCoachId } = useAuth();
+  const { user, loading, viewedUserId, viewedCoachId, passwordRecoveryPending } = useAuth();
 
   // Show full-screen loader while auth is initializing
   if (loading) {
@@ -164,8 +166,8 @@ function AppContent() {
     );
   }
 
-  // Show minimal layout for login page (no sidebar/header) - centered
-  if (!user) {
+  // Show minimal layout for login/reset-password pages (no sidebar/header) - centered
+  if (!user || passwordRecoveryPending) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center">
         <Router />
