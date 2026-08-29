@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { ChevronDown, ChevronRight, Flame, Trophy, Weight, Zap } from 'lucide-react-native';
+import { ChevronDown, Flame, Trophy, Weight, Zap } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { InteractionManager, Pressable, RefreshControl, View } from 'react-native';
 
@@ -10,6 +10,7 @@ import { CheckInHistorySheet } from '@/components/dashboard/CheckInHistorySheet'
 import { ConsistencyGrid } from '@/components/dashboard/ConsistencyGrid';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { StreakHero } from '@/components/dashboard/StreakHero';
+import { TodayActionCard } from '@/components/dashboard/TodayActionCard';
 import { WeekStrip } from '@/components/dashboard/WeekStrip';
 import {
   Card,
@@ -24,7 +25,8 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useWorkoutPlan } from '@/hooks/usePlans';
-import { relativeDays, usePlanProvenance } from '@/hooks/usePlanProvenance';
+import { usePlanProvenance } from '@/hooks/usePlanProvenance';
+import { resolveTodayAction } from '@/lib/today-action';
 import { supabase } from '@/lib/supabase';
 import { buildWeekStrip, calculateStreak } from '@/lib/streak';
 import { localDateString } from '@/lib/dates';
@@ -80,6 +82,17 @@ export default function DashboardScreen() {
   const week = useMemo(() => buildWeekStrip(processed), [processed]);
   const todayStr = localDateString();
   const checkedInToday = processed.some((p) => p.dateString === todayStr && p.status === 'done');
+  const todayAction = resolveTodayAction({
+    checkedInToday,
+    hasWorkoutPlan: Boolean(plan?.days.length),
+    planChanged: provenance.hasChanged,
+  });
+  const fullDate = new Intl.DateTimeFormat(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date());
 
   const dayNumber = processed.length ? processed[0].dayNumber : 0;
   const weekNumber = Math.max(1, Math.ceil(dayNumber / 7));
@@ -138,18 +151,22 @@ export default function DashboardScreen() {
   if (!checkIns?.length) {
     return (
       <Screen archetype="root">
-        <Text variant="h1" style={{ marginBottom: spacing.base }}>
-          {greeting()}, {firstName}
-        </Text>
-        <Card>
-          <EmptyState
-            icon={null}
-            title="Welcome to Dawnage Coaching! 🎉"
-            message="Your first check-in starts everything — the charts, your streak, and the weekly report your coach sees."
-            actionLabel="Do my first check-in"
-            onAction={() => router.push('/(app)/(tabs)/check-in')}
-          />
-        </Card>
+        <View style={{ gap: spacing.lg }}>
+          <View style={{ gap: spacing.xs }}>
+            <Text variant="h1">{greeting()}, {firstName}</Text>
+            <Text variant="bodySm" tone="muted">
+              {fullDate}
+            </Text>
+          </View>
+          <TodayActionCard action={todayAction} onPress={() => router.push(todayAction.route)} />
+          <Card>
+            <EmptyState
+              icon={null}
+              title="Welcome to Dawnage Coaching! 🎉"
+              message="Your first check-in starts everything — the charts, your streak, and the weekly report your coach sees."
+            />
+          </Card>
+        </View>
       </Screen>
     );
   }
@@ -170,12 +187,17 @@ export default function DashboardScreen() {
               {greeting()}, {firstName}
             </Text>
             <Text variant="bodySm" tone="muted">
+              {fullDate}
+            </Text>
+            <Text variant="bodySm" tone="muted">
               {checkedInToday ? "Today's logged." : 'Your check-in is waiting.'}
             </Text>
           </View>
           {/* Quiet brand presence — the mark, tinted back, not a full lockup. */}
           <Logo variant="glyph" size={20} color={colors.mutedForeground} label={false} />
         </View>
+
+        <TodayActionCard action={todayAction} onPress={() => router.push(todayAction.route)} />
 
         <StreakHero
           streak={streak}
@@ -191,33 +213,6 @@ export default function DashboardScreen() {
             router.push({ pathname: '/(app)/(tabs)/check-in', params: { date: d.dateString } })
           }
         />
-
-        {provenance.hasChanged ? (
-          <Pressable
-            onPress={() => router.push('/(app)/(tabs)/plans')}
-            accessibilityRole="button"
-            accessibilityLabel={`Your coach updated your plan ${relativeDays(provenance.updatedAt)}. Open Plans.`}
-            style={({ pressed }) => ({ opacity: pressed ? 0.82 : 1 })}
-          >
-            <Card
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: spacing.md,
-                borderColor: colors.primary,
-                borderWidth: 1,
-              }}
-            >
-              <View style={{ flex: 1, gap: spacing.xs }}>
-                <Text variant="h2">Your coach updated your plan</Text>
-                <Text variant="bodySm" tone="muted">
-                  {relativeDays(provenance.updatedAt)} · tap to see what changed
-                </Text>
-              </View>
-              <ChevronRight size={iconSize.md} color={colors.primary} strokeWidth={2} accessible={false} />
-            </Card>
-          </Pressable>
-        ) : null}
 
         <ConsistencyGrid
           processed={processed}
