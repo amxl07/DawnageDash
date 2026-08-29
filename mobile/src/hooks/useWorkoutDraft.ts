@@ -17,6 +17,25 @@ const DRAFT_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 const key = (userId: string, date: string) => `workout-draft:${userId}:${date}`;
 
+/** Read today's persisted draft without mounting the logger or starting autosave effects. */
+export async function readWorkoutDraft(
+  userId: string,
+  dateKey: string,
+): Promise<DraftData | null> {
+  try {
+    const raw = await AsyncStorage.getItem(key(userId, dateKey));
+    if (!raw) return null;
+    const draft = JSON.parse(raw) as DraftData;
+    if (Date.now() - draft.savedAt > DRAFT_EXPIRY_MS) {
+      await AsyncStorage.removeItem(key(userId, dateKey));
+      return null;
+    }
+    return draft;
+  } catch {
+    return null;
+  }
+}
+
 /** Port of useWorkoutDraft onto AsyncStorage (sessionStorage has no RN analogue). */
 export function useWorkoutDraft(userId: string | undefined, dateKey: string) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -52,18 +71,7 @@ export function useWorkoutDraft(userId: string | undefined, dateKey: string) {
 
   const loadDraft = useCallback(async (): Promise<DraftData | null> => {
     if (!userId) return null;
-    try {
-      const raw = await AsyncStorage.getItem(key(userId, dateKey));
-      if (!raw) return null;
-      const draft: DraftData = JSON.parse(raw);
-      if (Date.now() - draft.savedAt > DRAFT_EXPIRY_MS) {
-        await AsyncStorage.removeItem(key(userId, dateKey));
-        return null;
-      }
-      return draft;
-    } catch {
-      return null;
-    }
+    return readWorkoutDraft(userId, dateKey);
   }, [userId, dateKey]);
 
   const clearDraft = useCallback(async () => {

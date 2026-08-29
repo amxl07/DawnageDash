@@ -1,12 +1,11 @@
-import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
-import { ChevronDown, ClipboardList, Play, Utensils } from 'lucide-react-native';
+import { ClipboardList, Utensils } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
 import { CoachBadge } from '@/components/coach/CoachBadge';
+import { PlanDayCard } from '@/components/plans/PlanDayCard';
 import {
-  Button,
   Card,
   EmptyState,
   ErrorState,
@@ -20,11 +19,11 @@ import {
   useMealPlan,
   useUserProfile,
   useWorkoutPlan,
-  type PlanDay,
 } from '@/hooks/usePlans';
+import { usePlanProgress } from '@/hooks/usePlanProgress';
 import { relativeDays, usePlanProvenance } from '@/hooks/usePlanProvenance';
 import { formatTypeLabel } from '@/lib/workout-constants';
-import { iconSize, spacing, useTheme } from '@/theme';
+import { spacing, useTheme } from '@/theme';
 
 type Top = 'training' | 'nutrition';
 type ActivePlan = {
@@ -50,81 +49,6 @@ function parseActivePlan(value: string | null | undefined): ActivePlan | null {
   }
 }
 
-function DayCard({ day, onLog }: { day: PlanDay; onLog: () => void }) {
-  const { colors } = useTheme();
-  const [open, setOpen] = useState(false);
-
-  return (
-    <Card style={{ gap: spacing.md }}>
-      <Pressable
-        onPress={() => setOpen((v) => !v)}
-        accessibilityRole="button"
-        accessibilityLabel={`Day ${day.day_number}${day.focus ? `, ${day.focus}` : ''}, ${day.exercises.length} exercises`}
-        accessibilityState={{ expanded: open }}
-        style={{ flexDirection: 'row', alignItems: 'center', minHeight: 44 }}
-      >
-        <View style={{ flex: 1 }}>
-          <Text variant="h2">Day {day.day_number}</Text>
-          {day.focus ? (
-            <Text variant="bodySm" tone="muted">
-              {day.focus} · {day.exercises.length} exercises
-            </Text>
-          ) : null}
-        </View>
-        <ChevronDown
-          size={iconSize.md}
-          color={colors.mutedForeground}
-          strokeWidth={2}
-          style={{ transform: [{ rotate: open ? '180deg' : '0deg' }] }}
-          accessible={false}
-        />
-      </Pressable>
-
-      {open ? (
-        <View style={{ gap: spacing.md }}>
-          {day.exercises.map((ex, i) => (
-            <View
-              key={ex.id ?? i}
-              style={{
-                gap: spacing.xs,
-                paddingTop: spacing.md,
-                borderTopWidth: 1,
-                borderTopColor: colors.border,
-              }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <Text style={{ flex: 1 }}>{ex.name}</Text>
-                {ex.videoLink ? (
-                  <Pressable
-                    onPress={() => void WebBrowser.openBrowserAsync(ex.videoLink!)}
-                    hitSlop={10}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Watch demo for ${ex.name}`}
-                    style={{ minWidth: 44, minHeight: 44, alignItems: 'flex-end', justifyContent: 'center' }}
-                  >
-                    <Play size={iconSize.md} color={colors.primary} strokeWidth={2} />
-                  </Pressable>
-                ) : null}
-              </View>
-              <Text variant="bodySm" tone="muted" numeric>
-                {ex.sets} × {ex.reps || '—'}
-              </Text>
-              {ex.notes ? (
-                <Text variant="bodySm" tone="muted">
-                  {ex.notes}
-                </Text>
-              ) : null}
-            </View>
-          ))}
-
-          {/* The plan and the logger are the same task seen twice. */}
-          <Button label={`Log Day ${day.day_number}`} variant="secondary" onPress={onLog} />
-        </View>
-      ) : null}
-    </Card>
-  );
-}
-
 export default function PlansScreen() {
   const { colors } = useTheme();
   const router = useRouter();
@@ -133,16 +57,26 @@ export default function PlansScreen() {
   const { data: profile, isLoading: profileLoading, isError, refetch } = useUserProfile();
   const { data: plan, isLoading: planLoading } = useWorkoutPlan();
   const { data: meal, isLoading: mealLoading } = useMealPlan();
-  const provenance = usePlanProvenance(plan?.days);
+  const { hasChanged, markSeen, updatedAt } = usePlanProvenance(plan?.days);
+  const progress = usePlanProgress(plan?.days ?? []);
+  const pointer = parseActivePlan(profile?.active_workout_plan);
+  const hasRenderedTrainingPlan =
+    top === 'training' &&
+    !profileLoading &&
+    !planLoading &&
+    !progress.isLoading &&
+    !isError &&
+    !progress.isError &&
+    Boolean(pointer && plan?.days.length);
 
-  // Opening Training counts as having seen the plan.
+  // A plan is seen only after its populated Training view has committed.
   useEffect(() => {
-    if (top === 'training' && provenance.updatedAt) provenance.markSeen();
-  }, [top, provenance]);
+    if (hasRenderedTrainingPlan && updatedAt) markSeen();
+  }, [hasRenderedTrainingPlan, markSeen, updatedAt]);
 
   const supplements = parseSupplements(profile?.supplements_data ?? null);
 
-  if (profileLoading || planLoading) {
+  if (profileLoading || planLoading || (top === 'training' && progress.isLoading)) {
     return (
       <Screen archetype="root">
         <SkeletonCard lines={2} />
@@ -152,15 +86,27 @@ export default function PlansScreen() {
     );
   }
 
-  if (isError) {
+  if (isError || (top === 'training' && progress.isError)) {
     return (
       <Screen archetype="root">
-        <ErrorState onRetry={refetch} />
+        <ErrorState
+          onRetry={() => {
+            void refetch();
+            if (progress.isError) void progress.refetch();
+          }}
+        />
       </Screen>
     );
   }
 
-  const pointer = parseActivePlan(profile?.active_workout_plan);
+  const days = plan?.days ?? [];
+  const focusedDay = days.find((day) => {
+    const status = progress.statuses[day.day_number];
+    return status === 'today' || status === 'active';
+  });
+  const orderedDays = focusedDay
+    ? [focusedDay, ...days.filter((day) => day.id !== focusedDay.id)]
+    : days;
 
   return (
     <Screen archetype="root">
@@ -198,13 +144,13 @@ export default function PlansScreen() {
                   {pointer.daysPerWeek}-day
                 </Text>
                 <CoachBadge caption="Assigned by" />
-                {provenance.updatedAt ? (
+                {updatedAt ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                    <Text variant="bodySm" tone={provenance.hasChanged ? 'primary' : 'muted'}>
-                      {provenance.hasChanged ? 'Updated by your coach' : 'Last updated'}{' '}
-                      {relativeDays(provenance.updatedAt)}
+                    <Text variant="bodySm" tone={hasChanged ? 'primary' : 'muted'}>
+                      {hasChanged ? 'Updated by your coach' : 'Last updated'}{' '}
+                      {relativeDays(updatedAt)}
                     </Text>
-                    {provenance.hasChanged ? (
+                    {hasChanged ? (
                       <View
                         style={{
                           width: 8,
@@ -218,12 +164,13 @@ export default function PlansScreen() {
                 ) : null}
               </Card>
 
-              {plan?.days.length ? (
-                plan.days.map((d) => (
-                  <DayCard
+              {orderedDays.length ? (
+                orderedDays.map((d) => (
+                  <PlanDayCard
                     key={d.id}
                     day={d}
-                    onLog={() =>
+                    status={progress.statuses[d.day_number] ?? 'upcoming'}
+                    onStart={() =>
                       router.push({
                         pathname: '/(app)/logger',
                         params: { day: String(d.day_number) },
