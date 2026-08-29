@@ -111,8 +111,8 @@ describe('DashboardScreen', () => {
     const renderer = render(<DashboardScreen />);
 
     const [grid] = renderer.root.findAll(
-      (candidate: { props: { testID?: string; style?: unknown } }) =>
-        candidate.props.testID === 'home-primary-metrics' && candidate.props.style !== undefined,
+      (candidate: { type?: unknown; props: { testID?: string; style?: unknown } }) =>
+        candidate.type === 'View' && candidate.props.testID === 'home-primary-metrics',
     );
     if (!grid) throw new Error('Home primary metrics grid was not rendered');
     expect(StyleSheet.flatten(grid.props.style)).toMatchObject({ flexDirection: 'column' });
