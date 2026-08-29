@@ -1,6 +1,6 @@
 import type { FormState } from '@/components/checkin/CheckInForm';
 
-import { validateCheckInStep } from './checkin-validation';
+import { validateCheckIn, validateCheckInStep } from './checkin-validation';
 
 const EMPTY_FORM: FormState = {
   morningWeight: null,
@@ -55,6 +55,34 @@ describe('validateCheckInStep', () => {
         nutritionScore: 5,
       }),
     ).not.toHaveProperty('workoutPerformance');
+  });
+
+  it('returns the earliest invalid step when a restored finish draft skips prior validation', () => {
+    expect(validateCheckIn(EMPTY_FORM)).toMatchObject({
+      step: 'readiness',
+      errors: {
+        energyLevel: 'Choose your energy level.',
+        stressLevel: 'Choose your stress level.',
+      },
+    });
+  });
+
+  it('rejects persisted enum values outside the supported controls', () => {
+    expect(
+      validateCheckInStep('recovery', {
+        ...EMPTY_FORM,
+        sleepHours: 7,
+        hungerLevel: 5,
+        digestion: 'unknown' as FormState['digestion'],
+      }),
+    ).toHaveProperty('digestion', 'Choose your digestion status.');
+    expect(
+      validateCheckInStep('adherence', {
+        ...EMPTY_FORM,
+        workoutStatus: 'missed' as FormState['workoutStatus'],
+        nutritionScore: 5,
+      }),
+    ).toHaveProperty('workoutStatus', 'Choose today’s training status.');
   });
 
   it('rejects values outside the supported numeric bounds', () => {

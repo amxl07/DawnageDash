@@ -26,6 +26,7 @@ import {
 } from '@/components/ui';
 import type { CheckInPayload } from '@/hooks/useCheckInMutation';
 import { parseLocalDate } from '@/lib/dates';
+import { requiresWorkoutPerformance } from '@/lib/checkin-validation';
 import { num, type DailyCheckIn, type Digestion, type WorkoutStatus } from '@/types/db';
 import { iconSize, spacing, useTheme } from '@/theme';
 
@@ -112,7 +113,9 @@ export function toPayload(form: FormState, date: string): CheckInPayload {
     morning_weight: form.morningWeight,
     sleep_hours: form.sleepHours,
     workout_status: form.workoutStatus,
-    workout_performance: form.workoutPerformance,
+    workout_performance: requiresWorkoutPerformance(form.workoutStatus)
+      ? form.workoutPerformance
+      : null,
     nutrition_score: form.nutritionScore,
     calorie_intake: form.calorieIntake,
     water_liters: form.waterLiters,
@@ -181,7 +184,13 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
     };
   }, [previous]);
 
-  const showPerformance = form.workoutStatus === 'done' || form.workoutStatus === 'cardio_day';
+  const showPerformance = requiresWorkoutPerformance(form.workoutStatus);
+  const setWorkoutStatus = (value: WorkoutStatus) =>
+    setForm((prev) => ({
+      ...prev,
+      workoutStatus: value,
+      workoutPerformance: requiresWorkoutPerformance(value) ? prev.workoutPerformance : null,
+    }));
 
   if (step === 'readiness') {
     return (
@@ -269,15 +278,6 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
         <Text variant="bodySm" tone="muted">
           A quick recovery snapshot helps us spot patterns.
         </Text>
-        <Input
-          label="Recovery notes (optional)"
-          value={form.notes}
-          onChangeText={(t) => set('notes', t)}
-          multiline
-          numberOfLines={3}
-          inputStyle={{ minHeight: 72, textAlignVertical: 'top' }}
-          placeholder="Anything affecting recovery today?"
-        />
       </Card>
     );
   }
@@ -294,7 +294,7 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
             large
             segments={WORKOUT_SEGMENTS}
             value={form.workoutStatus}
-            onChange={(v) => set('workoutStatus', v)}
+            onChange={setWorkoutStatus}
           />
           <FieldError message={errors.workoutStatus} />
         </View>
@@ -415,20 +415,45 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
       <Text variant="label" tone="muted">
         Notes and confirmation
       </Text>
+      <Input
+        label="Notes (optional)"
+        value={form.notes}
+        onChangeText={(t) => set('notes', t)}
+        multiline
+        numberOfLines={3}
+        inputStyle={{ minHeight: 72, textAlignVertical: 'top' }}
+        placeholder="Anything your coach should know?"
+      />
       <View style={{ gap: spacing.sm }}>
         <Text variant="label" tone="muted">
           Ready to save
         </Text>
         {[
-          ['Weight', form.morningWeight === null ? '—' : `${form.morningWeight} kg`],
-          ['Sleep', form.sleepHours === null ? '—' : `${form.sleepHours} h`],
-          ['Energy', form.energyLevel === null ? '—' : `${form.energyLevel}/10`],
-          ['Stress', form.stressLevel === null ? '—' : `${form.stressLevel}/10`],
-          ['Workout', form.workoutStatus ?? '—'],
-          ['Nutrition', form.nutritionScore === null ? '—' : `${form.nutritionScore}/10`],
-          ['Notes', form.notes.trim() || '—'],
+          ['Weight', form.morningWeight === null ? 'Not recorded' : `${form.morningWeight} kg`],
+          ['Energy', form.energyLevel === null ? 'Not recorded' : `${form.energyLevel}/10`],
+          ['Stress', form.stressLevel === null ? 'Not recorded' : `${form.stressLevel}/10`],
+          ['Sleep', form.sleepHours === null ? 'Not recorded' : `${form.sleepHours} h`],
+          ['Hunger', form.hungerLevel === null ? 'Not recorded' : `${form.hungerLevel}/10`],
+          ['Digestion', form.digestion ?? 'Not recorded'],
+          ['Workout', form.workoutStatus ?? 'Not recorded'],
+          ...(showPerformance
+            ? [['Workout performance', form.workoutPerformance === null ? 'Not recorded' : `${form.workoutPerformance}/10`]]
+            : []),
+          ['Nutrition', form.nutritionScore === null ? 'Not recorded' : `${form.nutritionScore}/10`],
+          ['Calories', form.calorieIntake === null ? 'Not recorded' : `${form.calorieIntake} kcal`],
+          ['Water', form.waterLiters === null ? 'Not recorded' : `${form.waterLiters} L`],
+          ['Steps', form.dailySteps === null ? 'Not recorded' : String(form.dailySteps)],
+          ['Protein', form.protein === null ? 'Not recorded' : `${form.protein} g`],
+          ['Carbs', form.carbs === null ? 'Not recorded' : `${form.carbs} g`],
+          ['Fats', form.fats === null ? 'Not recorded' : `${form.fats} g`],
+          ['Notes', form.notes.trim() || 'Not recorded'],
         ].map(([label, value]) => (
-          <View key={label} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+          <View
+            key={label}
+            accessible
+            accessibilityLabel={`${label}: ${value}`}
+            style={{ flexDirection: 'row', justifyContent: 'space-between' }}
+          >
             <Text variant="bodySm" tone="muted">{label}</Text>
             <Text variant="bodySm" numeric>{value}</Text>
           </View>

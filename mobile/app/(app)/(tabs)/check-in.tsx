@@ -30,7 +30,7 @@ import { useCheckInDraft } from '@/hooks/useCheckInDraft';
 import { findPreviousCheckIn, useCheckInMutation } from '@/hooks/useCheckInMutation';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { localDateString, parseLocalDate } from '@/lib/dates';
-import { validateCheckInStep } from '@/lib/checkin-validation';
+import { validateCheckIn, validateCheckInStep } from '@/lib/checkin-validation';
 import { calculateStreak } from '@/lib/streak';
 import { num, normalizeWorkoutStatus } from '@/types/db';
 import { ACTION_BAR_HEIGHT, spacing, useMotion } from '@/theme';
@@ -137,15 +137,41 @@ export default function CheckInScreen() {
     return 'Logged. Your coach sees this.';
   }, [existing, streak, checkIns, form.morningWeight]);
 
-  const submit = async () => {
-    const nextErrors = validateCheckInStep(activeStep.key, form);
-    if (Object.keys(nextErrors).length > 0) {
-      setErrors(nextErrors);
-      AccessibilityInfo.announceForAccessibility('Please complete the highlighted fields.');
-      requestAnimationFrame(() => {
-        const node = findNodeHandle(errorSummaryRef.current);
-        if (node) AccessibilityInfo.setAccessibilityFocus(node);
+  const updateForm = (updater: (previous: FormState) => FormState) => {
+    setForm((previous) => {
+      const next = updater(previous);
+      setErrors((current) => {
+        if (Object.keys(current).length === 0) return current;
+        const nextErrors = validateCheckIn(next).errors;
+        return Object.fromEntries(
+          Object.entries(current).flatMap(([field]) =>
+            nextErrors[field as keyof FormState]
+              ? [[field, nextErrors[field as keyof FormState]]]
+              : [],
+          ),
+        );
       });
+      return next;
+    });
+  };
+
+  const showErrors = (
+    nextErrors: Partial<Record<keyof FormState, string>>,
+    step?: Exclude<CheckInStep, 'finish'> | null,
+  ) => {
+    setErrors(nextErrors);
+    if (step) setStepIndex(CHECK_IN_STEPS.findIndex((candidate) => candidate.key === step));
+    AccessibilityInfo.announceForAccessibility('Please complete the highlighted fields.');
+    requestAnimationFrame(() => {
+      const node = findNodeHandle(errorSummaryRef.current);
+      if (node) AccessibilityInfo.setAccessibilityFocus(node);
+    });
+  };
+
+  const submit = async () => {
+    const validation = validateCheckIn(form);
+    if (validation.step) {
+      showErrors(validation.errors, validation.step);
       return;
     }
     setErrors({});
@@ -203,12 +229,7 @@ export default function CheckInScreen() {
     if (bounded > stepIndex) {
       const nextErrors = validateCheckInStep(activeStep.key, form);
       if (Object.keys(nextErrors).length > 0) {
-        setErrors(nextErrors);
-        AccessibilityInfo.announceForAccessibility('Please complete the highlighted fields.');
-        requestAnimationFrame(() => {
-          const node = findNodeHandle(errorSummaryRef.current);
-          if (node) AccessibilityInfo.setAccessibilityFocus(node);
-        });
+        showErrors(nextErrors);
         return;
       }
     }
@@ -307,7 +328,7 @@ export default function CheckInScreen() {
             {stepIndex === 0 && previous && !existing ? (
               <SameAsYesterdayChip
                 previous={previous}
-                onApply={() => setForm((p) => ({ ...p, ...prefillFrom(previous) }))}
+                onApply={() => updateForm((p) => ({ ...p, ...prefillFrom(previous) }))}
               />
             ) : null}
             {Object.keys(errors).length > 0 ? (
@@ -327,7 +348,7 @@ export default function CheckInScreen() {
 
           <CheckInForm
             form={form}
-            setForm={setForm}
+            setForm={updateForm}
             previous={previous}
             step={activeStep.key}
             errors={errors}
