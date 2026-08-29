@@ -1,0 +1,60 @@
+{
+  "expo": {
+    "name": "Dawnage",
+    "slug": "dawnage",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "dawnage",
+    "userInterfaceStyle": "automatic",
+    "icon": "./assets/images/icon.png",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.dawnage.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Dawnage uses your camera to take weekly progress photos for your coach.",
+        "NSPhotoLibraryUsageDescription": "Dawnage lets you pick progress photos from your library to share with your coach."
+      }
+    },
+    "android": {
+      "package": "com.dawnage.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0B0B0C",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0B0B0C",
+          "dark": {
+            "backgroundColor": "#0B0B0C"
+          },
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 220
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Dawnage lets you pick progress photos from your library to share with your coach.",
+          "cameraPermission": "Dawnage uses your camera to take weekly progress photos for your coach."
+        }
+      ],
+      "@react-native-community/datetimepicker",
+      [
+        "expo-notifications",
+        {
+          "color": "#F04E45"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

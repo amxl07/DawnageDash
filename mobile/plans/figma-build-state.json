@@ -1,0 +1,122 @@
+{
+  "runId": "ds-dawnage-001",
+  "fileKey": "SoV6a8zAkIN0HVgHaM0oSx",
+  "phase": "phase2",
+  "step": "BLOCKED: Figma MCP monthly tool-call quota exhausted (Starter = 20/month)",
+  "planLimits": {
+    "modesPerCollection": 1,
+    "pages": 3
+  },
+  "entities": {
+    "collections": {
+      "Primitives": "VariableCollectionId:4:4",
+      "Color": "VariableCollectionId:4:5",
+      "ColorLight": "VariableCollectionId:4:6",
+      "Dimension": "VariableCollectionId:4:7"
+    },
+    "pages": {
+      "Foundations": "0:1",
+      "Components": "5:5",
+      "Screens": "5:6"
+    },
+    "components": {},
+    "foundationsSections": {
+      "Cover": "6:2",
+      "ColourDark": "6:6",
+      "ColourLight": "6:110",
+      "Typography": "7:4",
+      "SpacingLayout": "7:49"
+    }
+  },
+  "colorDark": {
+    "bg/background": "VariableID:4:37",
+    "bg/card": "VariableID:4:38",
+    "bg/elevated": "VariableID:4:39",
+    "text/foreground": "VariableID:4:40",
+    "text/muted": "VariableID:4:41",
+    "text/on-primary": "VariableID:4:42",
+    "brand/primary": "VariableID:4:43",
+    "brand/primary-fill": "VariableID:4:44",
+    "brand/destructive": "VariableID:4:45",
+    "status/success": "VariableID:4:46",
+    "status/gold": "VariableID:4:47",
+    "status/orange": "VariableID:4:48",
+    "border/default": "VariableID:4:49",
+    "border/strong": "VariableID:4:50",
+    "border/focus": "VariableID:4:51",
+    "chart/1": "VariableID:4:52",
+    "chart/2": "VariableID:4:53",
+    "chart/3": "VariableID:4:54",
+    "chart/4": "VariableID:4:55"
+  },
+  "dimension": {
+    "spacing/xs": "VariableID:4:75",
+    "spacing/sm": "VariableID:4:76",
+    "spacing/md": "VariableID:4:77",
+    "spacing/base": "VariableID:4:78",
+    "spacing/lg": "VariableID:4:79",
+    "spacing/xl": "VariableID:4:80",
+    "spacing/2xl": "VariableID:4:81",
+    "radius/sm": "VariableID:4:82",
+    "radius/md": "VariableID:4:83",
+    "radius/card": "VariableID:4:84",
+    "radius/pill": "VariableID:4:85",
+    "icon/sm": "VariableID:4:86",
+    "icon/md": "VariableID:4:87",
+    "icon/lg": "VariableID:4:88",
+    "icon/xl": "VariableID:4:89",
+    "size/hit-target": "VariableID:4:90"
+  },
+  "completedSteps": [
+    "P0.a",
+    "P0.b",
+    "P0.c",
+    "P0.d",
+    "P0.e",
+    "P0.f",
+    "P1.a",
+    "P1.b",
+    "P1.c",
+    "P1.d",
+    "P1.e",
+    "P1.f",
+    "P1.g",
+    "P1.h",
+    "P2.a",
+    "P2.a",
+    "P2.b"
+  ],
+  "blocker": {
+    "reason": "Figma MCP Starter plan allows 20 tool calls per MONTH; exhausted.",
+    "resets": "monthly",
+    "unblock": "Upgrade to Professional (Full/Dev seat) = 200/day, which also lifts the 3-page and 1-mode caps."
+  },
+  "remaining": [
+    "P2.c screenshot validation of Typography + Spacing sections",
+    "P3 all 12 components",
+    "P4 QA + Code Connect",
+    "Screens page"
+  ],
+  "componentsToBuild": [
+    "Button",
+    "Input",
+    "Card",
+    "Stepper",
+    "RatingRow",
+    "SegmentedControl",
+    "Chip (design-only)",
+    "Badge (design-only)",
+    "ProgressBar",
+    "OptionRow",
+    "EmptyState",
+    "Sheet"
+  ],
+  "specDocument": "mobile/plans/05-figma-component-specs.md",
+  "resumeInstructions": "Load figma-generate-library + figma-use. Read plans/05-figma-component-specs.md for exact per-component specs (already extracted from source \u2014 no rediscovery needed). Resume at P2.c: screenshot-validate the Typography (7:4) and Spacing & Layout (7:49) sections, then build components in the documented dependency order on page Components (5:5).",
+  "callBudget": {
+    "phase3_writes": 12,
+    "phase3_validation": 6,
+    "total_estimate": 18,
+    "note": "Exceeds a Starter month (20/mo total). Professional = 200/day."
+  }
+}

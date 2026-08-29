@@ -1,0 +1,51 @@
+# Phase 5 — Plans (read) + Workout Logging (the big one)
+
+Web sources: `pages/Plans.tsx` (client-visible parts only), `components/EditableWorkoutPlan.tsx` (read-only rendering), `components/EditableMealPlan.tsx`, `components/SupplementsPlan.tsx`, `components/TrainingNote.tsx`, `pages/WorkoutLogs.tsx`, `components/WorkoutLogDialog.tsx`, `components/workout-mobile/*` (the UX blueprint — follow it closely), `hooks/useWorkoutDraft.ts`, `hooks/usePreviousWorkoutData.ts`.
+
+## 5a. Plans tab (read-only)
+Top-level segmented: **Training | Nutrition**.
+- Training → sub-tabs Workout | Notes.
+  - Workout: resolve per contract §"Client-side plan resolution". Show plan header (formatted labels via `workout-constants.ts` `formatTypeLabel`: e.g. "Intermediate · Gym Workout · 4-day"). Day cards (Day n — focus), expandable: exercise rows with name, `sets × reps` target, video button (`videoLink` → open in browser/WebView), notes collapsible. Expansion animates height 200ms and rotates the chevron; instant under reduced motion. Each day card header carries `accessibilityState={{ expanded }}`. Empty state: "No workout plan has been assigned yet. Please contact your coach."
+  - **"Log this day" button on each day card** — the plan and the logger are the same task seen twice; making the user read a day here, then re-find it in the Logs tab, is a needless hop. It deep-links into the logger pre-seeded with that day.
+  - Notes: read-only `users.training_note` (empty state if null).
+- Nutrition → sub-tabs Meal Plan | Supplements | Notes.
+  - Meal Plan: only when `active_meal_plan` set. Header: "{calories} kcal · {dietType}". Five meal cards (Breakfast, Mid Morning Snack, Lunch, Evening Snack, Dinner): description + kcal + P/C/F chips; totals row.
+  - Supplements: read-only list from `users.supplements_data` JSON (name, serving, timing).
+  - Notes: `users.nutrition_note`.
+- Also surface `cardio_note` / `steps_note` (small cards on the Training tab) if non-null.
+- No selectors, no confirm/copy/edit anywhere.
+
+## 5b. Workout Logs tab — history
+Port WorkoutLogs.tsx: metric cards (Total, This Week, Avg/Week, Total Exercises), weeks accordion (Mon-start, current week badge & expanded by default), log cards (date block, title, exercise count, Edit) expanding to per-exercise set tables. **`FlatList` (or `SectionList` by week) with memoized rows and stable `keyExtractor`** — a client with a year of logs must not build every row (§03.D). Set tables use tabular figures and fixed column widths so numbers align (§02.5). The renderer must handle all three content formats (new array, legacy object, plain string — see web `renderExerciseContent`). "Log Workout" button → logger.
+
+## 5c. The logger — full-screen flow (not a modal)
+State machine = port the web reducer verbatim (FormState/FormAction in WorkoutLogDialog.tsx). On open for a date (default today): saved draft → RESTORE_DRAFT (toast "Draft restored") → else existing log → LOAD_EXISTING_LOG → else first plan day → LOAD_DEFAULT_PLAN → else empty.
+- **Route config: `gestureEnabled: false`.** The horizontally-swipeable exercise carousel directly conflicts with the iOS interactive back-swipe — swiping between exercises would keep popping the screen. Disable the stack gesture on this route and provide an explicit **X / Close** in the header (§03.B.3). This is not optional; it is the single most likely "feels broken" bug in the whole app.
+- Header: Close (X), title, date badge, Unsaved badge; day-selector pills (Day n — focus) from resolved plan days, horizontally scrollable, `accessibilityRole="tab"`; progress bar "{done} of {n} exercises" with the text visible, not just the fill.
+- One exercise per horizontally-swipeable slide (port MobileWorkoutCarousel/ExerciseSlide UX): big name, video play button (plan metadata), collapsible notes, **"Last: 60kg × 8, 60 × 8, 55 × 10" banner** from previous-session data (port usePreviousWorkoutData: last 10 logs before this date, first occurrence per exercise name) — and make each of those previous values **tappable to copy into the matching set row**. Beating last week is the whole point of the banner; one tap to match it, then adjust, is dramatically faster than typing.
+- Set rows = green check **circle with a check glyph** when weight+reps filled (never color alone — §03.A.6), KG and REPS as **steppers with ≥44pt tap targets** (long-press to type; weight ±2.5, reps ±1) plus a smaller RPE field, target reps hint under each row. Direct entry uses `decimal-pad` (weight) / `number-pad` (reps, RPE) with a Done accessory; the stepper path never opens a keyboard at all. `impactAsync(Light)` on each stepper hit and when a row completes.
+- Accessibility: each set row is one group labelled `"Set 2, 60 kilograms, 8 reps, complete"`; steppers are `accessibilityRole="adjustable"` with increment/decrement actions. Add/remove set buttons (web parity: sets come from plan target but the array is editable via UPDATE_SET — add ADD_SET/REMOVE_SET actions, keeping the saved shape identical). Allow adding a custom exercise by name (blank-session support: title input + add exercises manually). Dot pager (green **with a check glyph** = complete) + rest timer + Save bar pinned at bottom inside the safe area, with matching scroll inset. **Visible prev/next arrows flank the exercise name** — swipe is never the only way to move between exercises (§03.B.2), and the arrows also give the carousel a keyboard/screen-reader path.
+- Rest timer: presets 1:00/1:30/2:00/3:00, circular countdown, pause/reset/skip, haptic + in-app alert at zero, running across slides. Auto-suggest starting it when a set row completes.
+  - **Drive it from a stored `endsAt` timestamp, not a decrementing interval.** RN timers are throttled or suspended when the app backgrounds — an interval-based countdown drifts badly or freezes the moment the user checks a message mid-set, which is exactly when a rest timer is being used. Persist `endsAt` and derive remaining time from `Date.now()` on every tick and on every foreground.
+  - Also schedule a one-shot local notification at `endsAt` (expo-notifications is installed in Phase 7 — if this phase runs first, keep the hook and wire it in Phase 7) so the timer is useful with the screen off. The ring is the only permitted infinite animation in the app, and only while running.
+  - Timer state announces at zero via `announceForAccessibility`; the remaining time is exposed as text, not only as an arc.
+- Drafts: port useWorkoutDraft onto AsyncStorage — key `workout-draft:{userId}:{yyyy-MM-dd}`, debounced 500ms, 24h expiry, cleared on save/discard; discard-confirmation when closing dirty.
+- Save: content = `[{ exercise, sets: [{ setNumber, reps, weight, rpe }] }]` (strings), title required, update-by-id if editing else insert; invalidate workoutLogs.
+- **Offline resilience**: wrap the save in a tiny outbox — on network failure, persist the payload to AsyncStorage (`workout-outbox`), show "Saved locally — will sync", and flush the outbox (update/insert per payload) on app foreground / NetInfo reconnect (`npx expo install @react-native-community/netinfo`). Drafts already survive process death; the outbox covers submit-time failures. Keep it to workout logs only — do not generalize.
+  - **The pending state must be visible and honest**: a persistent "1 workout waiting to sync" chip on the Logs tab, the affected log card badged `Pending`, and a success toast when it flushes. A silent outbox is worse than no outbox — the user has no way to know whether their session is safe.
+  - **Consider (do not build without asking): extending the same outbox to daily check-ins.** The check-in is the streak-critical daily action and a gym basement is exactly where connectivity dies. The `UNIQUE(user_id, date)` constraint makes the flush logic slightly different (upsert-by-date, not insert). This is a scope question for the user, not a decision to make mid-phase — raise it in the phase summary.
+- **Post-workout summary screen** after successful save: duration (track from logger open), total volume (Σ weight×reps over numeric sets), sets completed, and **PRs**: for each exercise, if today's max weight > historical max from previous data → a `Trophy` badge + "New PR" with a distinct celebration (`impactAsync(Heavy)` ×2 at 90ms + animation). Numbers count up with tabular figures; the whole summary collapses to a static card under reduced motion, haptics still firing. `announceForAccessibility` the headline ("Workout saved. 4,200 kg total volume. New personal record on Bench Press.").
+- Straight sets only — supersets/circuits are not in the schema; note the limitation in the summary.
+
+## Acceptance criteria
+- Plans: a real client account shows exactly what the web shows (cross-check workout days, meals, supplements, notes; and the fallback-to-global-template path with an account that has active_workout_plan but no user rows).
+- Logger: prefill from plan, previous-session banners correct, draft survives force-quit, discard confirm works, edit of an old log round-trips, saved JSON matches the contract byte-shape (verify a row), airplane-mode save syncs on reconnect, PR detection fires correctly, summary math right.
+- History renders legacy-format rows without crashing (test with the oldest rows in the DB).
+- **Gesture check (do this explicitly)**: on a physical iOS device, swiping between exercises never pops the screen; the header X is the only way back; Android hardware back on a dirty logger prompts to discard rather than silently exiting.
+- **Rest timer survives backgrounding**: start a 2:00 timer, background the app for 60s, return — remaining time is correct (~1:00), not frozen at 2:00.
+- Steppers never open the keyboard; long-press does, with the right keypad; tapping a previous-session value copies it into the row.
+- Outbox pending state is visible on the Logs tab and clears with a toast on reconnect.
+- History list stays smooth with a year of logs (FlatList, memoized rows) — check frame rate on the oldest test account.
+- §03 quick check passes; the logger traversed with a screen reader (set rows, steppers, pager). Both themes; `tsc` clean. Budget note: this is the largest phase — split the work logger-first if needed, but the phase gate stays a single stop.
+
+**STOP. Post summary. Wait for "continue".**
