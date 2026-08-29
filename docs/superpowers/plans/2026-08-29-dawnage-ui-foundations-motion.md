@@ -25,31 +25,33 @@
 
 ---
 
-### Task 1: Add a deterministic mobile test harness
+### Task 1: Deterministic mobile test harness (satisfied by Release Hardening Task 1)
 
 **Files:**
 - Modify: `mobile/package.json`
 - Modify: `mobile/package-lock.json`
 - Create: `mobile/jest.config.js`
 - Create: `mobile/src/test/setup.ts`
-- Create: `mobile/src/test/smoke.test.ts`
+- Create: `mobile/src/lib/dates.test.ts`
 
 **Interfaces:**
 - Consumes: Expo SDK 54 and the existing `@/*` TypeScript alias.
 - Produces: `npm test`, `npm run test:watch`, and `npm run typecheck` commands used by every later task.
 
-- [ ] **Step 1: Install Expo-compatible test dependencies**
+- [x] **Step 1: Install Expo-compatible test dependencies**
+
+This task is satisfied by Release Hardening Task 1 so lint, Jest, and aggregate verification land atomically. Do not repeat the installation in a later foundations task.
 
 Run from `mobile/`:
 
 ```bash
 npx expo install jest-expo -- --save-dev
-npm install --save-dev @testing-library/react-native @types/jest
+npm install --save-dev jest@^29.7.0 @testing-library/react-native @types/jest
 ```
 
 Expected: `package.json` and `package-lock.json` change; `npx expo install --check` reports no invalid Expo package versions.
 
-- [ ] **Step 2: Add scripts and Jest configuration**
+- [x] **Step 2: Add scripts and Jest configuration**
 
 Add these scripts to `mobile/package.json`:
 
@@ -72,7 +74,7 @@ module.exports = {
 };
 ```
 
-- [ ] **Step 3: Configure stable native mocks**
+- [x] **Step 3: Configure stable native mocks**
 
 Create `mobile/src/test/setup.ts`:
 
@@ -90,14 +92,23 @@ jest.mock('expo-haptics', () => ({
 }));
 ```
 
-- [ ] **Step 4: Add and run a smoke test**
 
-Create `mobile/src/test/smoke.test.ts`:
+Do not create the no-op `src/test/smoke.test.ts`; the release-hardening task creates a real `src/lib/dates.test.ts` contract test instead.
+
+- [x] **Step 4: Add and run a real date-helper test**
+
+Create `mobile/src/lib/dates.test.ts`:
 
 ```ts
-describe('mobile test harness', () => {
-  it('runs TypeScript tests', () => {
-    expect(true).toBe(true);
+import { localDateString, parseLocalDate } from './dates';
+
+describe('local date helpers', () => {
+  it('formats a local date without UTC rollover', () => {
+    expect(localDateString(new Date(2026, 7, 29, 0, 30))).toBe('2026-08-29');
+  });
+
+  it('parses a date-only string at local midnight', () => {
+    expect(parseLocalDate('2026-08-29')).toEqual(new Date(2026, 7, 29));
   });
 });
 ```
@@ -105,17 +116,17 @@ describe('mobile test harness', () => {
 Run:
 
 ```bash
-npm test -- src/test/smoke.test.ts
+npm test -- src/lib/dates.test.ts
 npm run typecheck
 npx expo install --check
 ```
 
 Expected: all three commands exit 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit through Release Hardening Task 1**
 
 ```bash
-git add mobile/package.json mobile/package-lock.json mobile/jest.config.js mobile/src/test/setup.ts mobile/src/test/smoke.test.ts
+git add mobile/package.json mobile/package-lock.json mobile/jest.config.js mobile/src/test/setup.ts mobile/src/lib/dates.test.ts
 git diff --cached --check
 git commit -m "test(mobile): add Expo-compatible test harness"
 ```

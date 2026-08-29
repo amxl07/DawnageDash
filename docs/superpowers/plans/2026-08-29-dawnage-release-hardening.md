@@ -35,6 +35,9 @@
 - Modify: `mobile/package.json`
 - Modify: `mobile/package-lock.json`
 - Create: `mobile/eslint.config.js`
+- Create: `mobile/jest.config.js`
+- Create: `mobile/src/test/setup.ts`
+- Create: `mobile/src/lib/dates.test.ts`
 - Verify: `mobile/tsconfig.json`
 
 - [ ] **Step 1: Record the current failing lint behavior**
@@ -59,6 +62,16 @@ npm install --save-dev @types/node
 ```
 
 Expected: `package.json` and `package-lock.json` change; no Expo or React Native runtime dependency changes.
+
+Also install the deterministic test harness dependencies:
+
+```bash
+cd mobile
+npx expo install jest-expo -- --save-dev
+npm install --save-dev jest@^29.7.0 @testing-library/react-native @types/jest
+```
+
+Expected: all four packages are direct `devDependencies`; no runtime dependency changes.
 
 - [ ] **Step 3: Add the checked-in flat configuration**
 
@@ -94,6 +107,19 @@ Ensure `mobile/package.json` contains these entries:
 
 Do not remove the existing `start`, `android`, `ios`, `web`, or `reset-project` scripts. `verify:ui` is added in Task 4; the aggregate command is expected to fail with “Missing script: verify:ui” until that task lands.
 
+Create `mobile/jest.config.js`:
+
+```js
+module.exports = {
+  preset: 'jest-expo',
+  setupFilesAfterEnv: ['<rootDir>/src/test/setup.ts'],
+  moduleNameMapper: { '^@/(.*)$': '<rootDir>/src/$1' },
+  testPathIgnorePatterns: ['/node_modules/', '/.maestro/'],
+};
+```
+
+Create `mobile/src/test/setup.ts` with Reanimated's `setUpTests()` and stable mocks for Expo Haptics. Create `mobile/src/lib/dates.test.ts` to test real `localDateString` and `parseLocalDate` behavior, including `new Date(2026, 7, 29, 0, 30)` formatting as `2026-08-29`. Do not add a no-op smoke test.
+
 - [ ] **Step 5: Run lint and type checking, fixing only diagnosed issues**
 
 Run:
@@ -102,14 +128,16 @@ Run:
 cd mobile
 npm run lint
 npm run typecheck
+npm test -- src/lib/dates.test.ts
+npm test
 ```
 
-Expected: both exit 0. If a lint finding is unrelated to the UI uplift, correct the smallest local issue and keep behavior unchanged; do not weaken or disable a rule globally to hide it.
+Expected: all four commands exit 0. If a lint finding is unrelated to the UI uplift, correct the smallest local issue and keep behavior unchanged; do not weaken or disable a rule globally to hide it.
 
 - [ ] **Step 6: Commit the deterministic toolchain**
 
 ```bash
-git add mobile/package.json mobile/package-lock.json mobile/eslint.config.js
+git add mobile/package.json mobile/package-lock.json mobile/eslint.config.js mobile/jest.config.js mobile/src/test/setup.ts mobile/src/lib/dates.test.ts
 git commit -m "chore(mobile): make UI verification deterministic"
 ```
 
