@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -6,7 +7,7 @@ import { Button } from './Button';
 import { Text } from './Text';
 
 type Props = {
-  status?: string;
+  status?: ReactNode;
   primaryLabel: string;
   onPrimary: () => void;
   primaryLoading?: boolean;
@@ -44,11 +45,13 @@ export function StickyActionBar({
         borderTopColor: colors.border,
       }}
     >
-      {status ? (
+      {typeof status === 'string' ? (
         <Text variant="bodySm" tone="muted" accessibilityLiveRegion="polite">
           {status}
         </Text>
-      ) : null}
+      ) : (
+        status
+      )}
       <View style={{ flexDirection: 'row', gap: spacing.sm }}>
         {secondaryLabel && onSecondary ? (
           <Button

@@ -22,6 +22,7 @@ import {
   ProgressBar,
   Screen,
   SkeletonCard,
+  StatusPill,
   StickyActionBar,
   Text,
 } from '@/components/ui';
@@ -90,7 +91,7 @@ export default function CheckInScreen() {
   const [celebrating, setCelebrating] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
-  const { saveDraft, loadDraft, clearDraft } = useCheckInDraft(user?.id, targetDate);
+  const { saveDraft, loadDraft, clearDraft, draftStatus } = useCheckInDraft(user?.id, targetDate);
 
   // Existing data wins. New check-ins restore a recent local draft, but never
   // silently copy yesterday's subjective answers.
@@ -355,15 +356,42 @@ export default function CheckInScreen() {
           />
 
           {saveError ? (
-            <Text variant="bodySm" tone="primary" accessibilityLiveRegion="polite">
-              {saveError}
-            </Text>
+            <View style={{ alignItems: 'flex-start', gap: spacing.sm }}>
+              <Text
+                variant="bodySm"
+                tone="primary"
+                accessibilityRole="alert"
+                accessibilityLiveRegion="polite"
+              >
+                {saveError}
+              </Text>
+              <Button
+                label="Retry"
+                variant="secondary"
+                onPress={() => void submit()}
+                disabled={mutation.isPending}
+              />
+            </View>
           ) : null}
         </View>
       </Screen>
 
       <StickyActionBar
-        status={`Step ${stepIndex + 1} of ${CHECK_IN_STEPS.length}${existing ? '' : ' · Draft saves on this device'}`}
+        status={
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              gap: spacing.sm,
+            }}
+          >
+            <Text variant="bodySm" tone="muted">
+              Step {stepIndex + 1} of {CHECK_IN_STEPS.length}
+            </Text>
+            {!existing && draftStatus ? <StatusPill status={draftStatus} /> : null}
+          </View>
+        }
         secondaryLabel={stepIndex > 0 ? 'Back' : existing ? 'Cancel' : undefined}
         onSecondary={
           stepIndex > 0

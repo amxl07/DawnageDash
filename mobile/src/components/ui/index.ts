@@ -18,6 +18,7 @@ export { Stepper } from './Stepper';
 export { AnimatedNumber } from './AnimatedNumber';
 export { Stagger } from './Stagger';
 export { StickyActionBar } from './StickyActionBar';
+export { StatusPill } from './StatusPill';
 export { PageHeader } from './PageHeader';
 export { ListRow } from './ListRow';
 export { AnimatedFlatList, useListMotion } from './AnimatedList';
