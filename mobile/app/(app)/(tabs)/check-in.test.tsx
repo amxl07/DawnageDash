@@ -1,22 +1,40 @@
-import { Pressable, Text as NativeText, View } from 'react-native';
+/* eslint-disable @typescript-eslint/no-require-imports */
+import { AccessibilityInfo, findNodeHandle } from 'react-native';
 // @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
-import CheckInScreen from './check-in';
-
-const mockAnnounce = jest.fn();
-const mockFocus = jest.fn();
 const mockFrames: FrameRequestCallback[] = [];
+const mockFindNodeHandle = jest.mocked(findNodeHandle);
+const mockAccessibilityInfo = jest.mocked(AccessibilityInfo);
+const mockEmptyDraftForm = {
+  morningWeight: null, sleepHours: null, workoutStatus: null, workoutPerformance: null,
+  nutritionScore: null, calorieIntake: null, waterLiters: null, dailySteps: null,
+  protein: null, carbs: null, fats: null, energyLevel: null, hungerLevel: null,
+  stressLevel: null, digestion: null, notes: '',
+};
+const mockLoadDraft = jest.fn(async () => ({ form: mockEmptyDraftForm, step: 3 }));
+const mockSaveDraft = jest.fn();
+const mockClearDraft = jest.fn();
 
 jest.mock('react-native', () => {
-  const actual = jest.requireActual('react-native');
+  const React = require('react');
+  const MockView = 'View';
+  const MockScrollView = React.forwardRef(
+    ({ children }: { children: React.ReactNode }, _ref: unknown) =>
+      React.createElement(MockView, null, children),
+  );
+  MockScrollView.displayName = 'MockScrollView';
   return {
-    ...actual,
-    findNodeHandle: jest.fn(() => 44),
+    View: MockView,
+    Text: 'Text',
+    Pressable: 'Pressable',
+    KeyboardAvoidingView: MockView,
+    Platform: { OS: 'ios' },
+    ScrollView: MockScrollView,
+    findNodeHandle: jest.fn((node) => (node ? 44 : null)),
     AccessibilityInfo: {
-      ...actual.AccessibilityInfo,
-      announceForAccessibility: mockAnnounce,
-      setAccessibilityFocus: mockFocus,
+      announceForAccessibility: jest.fn(),
+      setAccessibilityFocus: jest.fn(),
     },
   };
 });
@@ -27,19 +45,7 @@ jest.mock('@/hooks/useDashboardData', () => ({
   useDashboardData: () => ({ checkIns: [], processed: [], isLoading: false, isError: false, refetch: jest.fn() }),
 }));
 jest.mock('@/hooks/useCheckInDraft', () => ({
-  useCheckInDraft: () => ({
-    saveDraft: jest.fn(),
-    clearDraft: jest.fn(),
-    loadDraft: async () => ({
-      form: {
-        morningWeight: null, sleepHours: null, workoutStatus: null, workoutPerformance: null,
-        nutritionScore: null, calorieIntake: null, waterLiters: null, dailySteps: null,
-        protein: null, carbs: null, fats: null, energyLevel: null, hungerLevel: null,
-        stressLevel: null, digestion: null, notes: '',
-      },
-      step: 3,
-    }),
-  }),
+  useCheckInDraft: () => ({ saveDraft: mockSaveDraft, clearDraft: mockClearDraft, loadDraft: mockLoadDraft }),
 }));
 jest.mock('@/hooks/useCheckInMutation', () => ({
   findPreviousCheckIn: () => null,
@@ -89,10 +95,15 @@ jest.mock('@/components/ui', () => {
   };
 });
 
+// Load after the targeted React Native surface is registered.
+const CheckInScreen = require('./check-in').default;
+
 describe('CheckInScreen restored Finish validation', () => {
   beforeEach(() => {
-    mockAnnounce.mockClear();
-    mockFocus.mockClear();
+    mockAccessibilityInfo.announceForAccessibility.mockClear();
+    mockAccessibilityInfo.setAccessibilityFocus.mockClear();
+    mockFindNodeHandle.mockClear();
+    mockLoadDraft.mockClear();
     mockFrames.length = 0;
     global.requestAnimationFrame = ((callback: FrameRequestCallback) => {
       mockFrames.push(callback);
@@ -103,20 +114,25 @@ describe('CheckInScreen restored Finish validation', () => {
   it('returns a restored finish draft to its earliest invalid step, preserves unrelated errors, and focuses after layout', async () => {
     let renderer!: ReturnType<typeof create>;
     await act(async () => {
-      renderer = create(<CheckInScreen />);
+      renderer = create(<CheckInScreen />, { createNodeMock: () => ({ mounted: true }) });
       await Promise.resolve();
     });
     expect(renderer.root.findByProps({ testID: 'active-step' }).props.children).toBe('finish');
 
-    act(() => renderer.root.findByProps({ testID: 'submit' }).props.onPress());
+    await act(async () => {
+      await renderer.root.findByProps({ testID: 'submit' }).props.onPress();
+    });
 
     expect(renderer.root.findByProps({ testID: 'active-step' }).props.children).toBe('readiness');
     expect(renderer.root.findByProps({ testID: 'error-energy' }).props.children).toBe('Choose your energy level.');
-    expect(mockAnnounce).toHaveBeenCalledWith('Please complete the highlighted fields.');
-    expect(mockFocus).not.toHaveBeenCalled();
+    expect(mockAccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith('Please complete the highlighted fields.');
+    expect(mockAccessibilityInfo.setAccessibilityFocus).not.toHaveBeenCalled();
 
     act(() => mockFrames.splice(0).forEach((frame) => frame(0)));
-    expect(mockFocus).toHaveBeenCalledWith(44);
+    expect(mockFindNodeHandle).toHaveBeenCalledTimes(1);
+    const [errorSummaryNode] = mockFindNodeHandle.mock.calls[0];
+    expect(errorSummaryNode).not.toBeNull();
+    expect(mockAccessibilityInfo.setAccessibilityFocus).toHaveBeenCalledWith(44);
 
     act(() => renderer.root.findByProps({ testID: 'fix-energy' }).props.onPress());
     expect(renderer.root.findByProps({ testID: 'error-energy' }).props.children).toBe('');
