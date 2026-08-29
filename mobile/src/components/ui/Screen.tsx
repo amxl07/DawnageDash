@@ -1,5 +1,6 @@
 import { ScrollView, StyleSheet, View, type RefreshControlProps, type ViewStyle } from 'react-native';
-import { forwardRef } from 'react';
+import { forwardRef, useImperativeHandle, useRef } from 'react';
+import { useScrollToTop } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
@@ -42,6 +43,12 @@ export const Screen = forwardRef<ScrollView, Props>(function Screen(
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { horizontal, maxContentWidth } = useResponsiveLayout();
+  const scrollRef = useRef<ScrollView>(null);
+
+  // Register the actual ScrollView so an active-tab reselect uses React
+  // Navigation's platform-standard return-to-top behavior.
+  useScrollToTop(scrollRef);
+  useImperativeHandle(ref, () => scrollRef.current as ScrollView, []);
 
   const archetypePadding = screenContentPadding(archetype, insets);
 
@@ -73,7 +80,7 @@ export const Screen = forwardRef<ScrollView, Props>(function Screen(
 
   return (
     <ScrollView
-      ref={ref}
+      ref={scrollRef}
       style={[container, style]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}

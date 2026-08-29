@@ -8,7 +8,8 @@ import {
 } from '@gorhom/bottom-sheet';
 import { X } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Pressable, View } from 'react-native';
+import { AccessibilityInfo, findNodeHandle, Pressable, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HIT_SLOP_MIN, iconSize, radius, spacing, useTheme } from '@/theme';
 import { Text } from './Text';
@@ -40,13 +41,25 @@ type Props = {
  */
 export function Sheet({ visible, onClose, title, children, heightRatio = 0.85 }: Props) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const ref = useRef<BottomSheetModal>(null);
+  const titleRef = useRef<View>(null);
 
   const snapPoints = useMemo(() => [`${Math.round(heightRatio * 100)}%`], [heightRatio]);
 
   useEffect(() => {
-    if (visible) ref.current?.present();
-    else ref.current?.dismiss();
+    if (!visible) {
+      ref.current?.dismiss();
+      return;
+    }
+
+    ref.current?.present();
+    const frame = requestAnimationFrame(() => {
+      const titleHandle = findNodeHandle(titleRef.current);
+      if (titleHandle != null) AccessibilityInfo.setAccessibilityFocus(titleHandle);
+    });
+
+    return () => cancelAnimationFrame(frame);
   }, [visible]);
 
   const renderBackdrop = useCallback(
@@ -90,14 +103,16 @@ export function Sheet({ visible, onClose, title, children, heightRatio = 0.85 }:
           borderBottomColor: colors.border,
         }}
       >
-        <Text variant="h2">{title}</Text>
+        <View ref={titleRef} accessibilityRole="header">
+          <Text variant="h2">{title}</Text>
+        </View>
         {/* A visible close button is mandatory — dismissal is never
             gesture-only, even though pan-down now works (§03.B.6). */}
         <Pressable
           onPress={onClose}
           hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel="Close"
+          accessibilityLabel={`Close ${title}`}
           style={{
             minWidth: HIT_SLOP_MIN,
             minHeight: HIT_SLOP_MIN,
@@ -109,7 +124,7 @@ export function Sheet({ visible, onClose, title, children, heightRatio = 0.85 }:
         </Pressable>
       </BottomSheetView>
 
-      <View style={{ flex: 1 }}>{children}</View>
+      <View testID="sheet-content" style={{ flex: 1, paddingBottom: insets.bottom }}>{children}</View>
     </BottomSheetModal>
   );
 }

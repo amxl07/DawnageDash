@@ -1,4 +1,5 @@
 import { StyleSheet, Text } from 'react-native';
+import { useScrollToTop } from '@react-navigation/native';
 
 // @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
@@ -14,6 +15,10 @@ jest.mock('@/hooks/useResponsiveLayout', () => ({
   useResponsiveLayout: jest.fn(),
 }));
 
+jest.mock('@react-navigation/native', () => ({
+  useScrollToTop: jest.fn(),
+}));
+
 jest.mock('@/theme', () => ({
   horizontalInset: (width: number) => (width >= 768 ? 24 : 16),
   screenContentPadding: (archetype: string, insets: { top: number; bottom: number }) => ({
@@ -25,6 +30,7 @@ jest.mock('@/theme', () => ({
 }));
 
 const mockedUseResponsiveLayout = jest.mocked(useResponsiveLayout);
+const mockUseScrollToTop = jest.mocked(useScrollToTop);
 
 function render(ui: React.ReactElement) {
   let renderer: ReturnType<typeof create>;
@@ -50,6 +56,7 @@ function expectToHaveStyle(node: { props: { style: unknown } }, style: object) {
 
 describe('Screen', () => {
   beforeEach(() => {
+    jest.clearAllMocks();
     mockedUseResponsiveLayout.mockReturnValue({
       width: 320,
       height: 640,
@@ -70,6 +77,13 @@ describe('Screen', () => {
     );
 
     expectToHaveStyle(getByTestId('screen-content'), { paddingTop: 63 });
+  });
+
+  it('registers a root scroll view for active-tab reselect', () => {
+    render(<Screen archetype="root"><Text>Home</Text></Screen>);
+
+    expect(mockUseScrollToTop).toHaveBeenCalledTimes(1);
+    expect(mockUseScrollToTop.mock.calls[0][0].current).toBeTruthy();
   });
 
   it('does not add a top safe-area inset inside sheets', () => {

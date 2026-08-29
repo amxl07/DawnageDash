@@ -3,7 +3,8 @@ import NetInfo from '@react-native-community/netinfo';
 import { format, startOfWeek } from 'date-fns';
 import { useRouter } from 'expo-router';
 import { CalendarDays, ChevronDown, CloudOff, Dumbbell, Plus } from 'lucide-react-native';
-import { memo, useEffect, useMemo, useState } from 'react';
+import { useScrollToTop } from '@react-navigation/native';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, FlatList, Pressable, View } from 'react-native';
 import Animated, { FadeInDown, FadeOutUp, LinearTransition } from 'react-native-reanimated';
 
@@ -124,10 +125,13 @@ const LogCard = memo(function LogCard({ log, onEdit }: { log: LogRow; onEdit: ()
 export default function LogsScreen() {
   const { colors } = useTheme();
   const listMotion = useListMotion();
+  const listRef = useRef<FlatList<LogRow>>(null);
   const router = useRouter();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [pending, setPending] = useState(0);
+
+  useScrollToTop(listRef);
 
   const { data: logs, isLoading, isError, refetch } = useQuery({
     queryKey: ['workoutLogs', user?.id],
@@ -233,6 +237,7 @@ export default function LogsScreen() {
   return (
     <Screen archetype="root" scroll={false}>
       <AnimatedFlatList
+        ref={listRef}
         data={logs ?? []}
         keyExtractor={(l) => l.id}
         ListHeaderComponent={header}
