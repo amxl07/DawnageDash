@@ -1,15 +1,9 @@
-import {
-  useWindowDimensions,
-  ScrollView,
-  StyleSheet,
-  View,
-  type RefreshControlProps,
-  type ViewStyle,
-} from 'react-native';
+import { ScrollView, StyleSheet, View, type RefreshControlProps, type ViewStyle } from 'react-native';
 import { forwardRef } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { horizontalInset, screenContentPadding, spacing, useTheme, type ScreenArchetype } from '@/theme';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+import { screenContentPadding, spacing, useTheme, type ScreenArchetype } from '@/theme';
 
 type Props = {
   children: React.ReactNode;
@@ -21,21 +15,34 @@ type Props = {
    * sticky action bar, 'child' is a pushed screen, 'sheet' sits in a sheet.
    */
   archetype?: ScreenArchetype;
+  /** Whether this screen owns the top safe-area clearance. */
+  includeTopSafeArea?: boolean;
   /** Extra bottom padding on top of the archetype's, for unusual cases. */
   bottomInset?: number;
   refreshControl?: React.ReactElement<RefreshControlProps>;
   style?: ViewStyle;
+  contentStyle?: ViewStyle;
+  testID?: string;
 };
 
 export const Screen = forwardRef<ScrollView, Props>(function Screen(
-  { children, scroll = true, archetype = 'child', bottomInset = 0, refreshControl, style },
+  {
+    children,
+    scroll = true,
+    archetype = 'child',
+    includeTopSafeArea = true,
+    bottomInset = 0,
+    refreshControl,
+    style,
+    contentStyle,
+    testID,
+  },
   ref,
 ) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { horizontal, maxContentWidth } = useResponsiveLayout();
 
-  const horizontal = horizontalInset(width);
   const archetypePadding = screenContentPadding(archetype, insets);
 
   const container: ViewStyle = {
@@ -45,25 +52,34 @@ export const Screen = forwardRef<ScrollView, Props>(function Screen(
     paddingRight: insets.right + horizontal,
   };
 
-  const contentPadding = {
-    paddingTop: archetypePadding.paddingTop,
+  const content = {
+    width: '100%' as const,
+    maxWidth: maxContentWidth,
+    alignSelf: 'center' as const,
+    flexGrow: scroll ? undefined : 1,
+    paddingTop: includeTopSafeArea ? archetypePadding.paddingTop : spacing.base,
     paddingBottom: archetypePadding.paddingBottom + bottomInset,
   };
 
+  const body = (
+    <View testID={testID} style={[content, contentStyle]}>
+      {children}
+    </View>
+  );
+
   if (!scroll) {
-    return <View style={[container, contentPadding, style]}>{children}</View>;
+    return <View style={[container, style]}>{body}</View>;
   }
 
   return (
     <ScrollView
       ref={ref}
-      style={container}
-      contentContainerStyle={[contentPadding, style]}
+      style={[container, style]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
       refreshControl={refreshControl}
     >
-      {children}
+      {body}
     </ScrollView>
   );
 });

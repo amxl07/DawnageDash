@@ -17,8 +17,9 @@ import { QuestionField } from './QuestionField';
 import { QuestionnaireSummary } from './QuestionnaireSummary';
 
 type Answers = Record<string, string | number>;
+type QuestionnaireWizardProps = { screenHeader?: React.ReactNode };
 
-export function QuestionnaireWizard() {
+export function QuestionnaireWizard({ screenHeader }: QuestionnaireWizardProps) {
   const { user } = useAuth();
   const scrollRef = useRef<ScrollView>(null);
 
@@ -146,6 +147,7 @@ export function QuestionnaireWizard() {
   if (loading) {
     return (
       <Screen>
+        {screenHeader}
         <View style={{ gap: spacing.base }}>
           <SkeletonCard lines={2} />
           <SkeletonCard lines={4} />
@@ -157,6 +159,7 @@ export function QuestionnaireWizard() {
   if (loadError) {
     return (
       <Screen>
+        {screenHeader}
         <ErrorState
           title="Couldn't load your assessment"
           message="Check your connection and try again."
@@ -170,6 +173,7 @@ export function QuestionnaireWizard() {
     return (
       <QuestionnaireSummary
         answers={answers}
+        screenHeader={screenHeader}
         onEdit={() => {
           setShowSummary(false);
           setIndex(0);
@@ -181,6 +185,7 @@ export function QuestionnaireWizard() {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <Screen ref={scrollRef}>
+        {screenHeader}
         <View style={{ gap: spacing.sm }}>
           <Text variant="label" tone="muted">
             Section {index + 1} of {total}

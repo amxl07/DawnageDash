@@ -5,7 +5,6 @@ import { useRouter } from 'expo-router';
 import { ChevronDown, Clock } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { AccessibilityInfo, Alert, KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CountryPicker, type Country } from '@/components/auth/CountryPicker';
 import { TimezonePicker } from '@/components/onboarding/TimezonePicker';
@@ -36,7 +35,6 @@ export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
   const { data: profile, isLoading } = useUserProfile();
-  const insets = useSafeAreaInsets();
 
   const [tab, setTab] = useState<Tab>('basic');
   const [dirty, setDirty] = useState(false);
@@ -198,18 +196,8 @@ export default function ProfileScreen() {
     </View>
   );
 
-  // The wizard owns its own Screen/ScrollView, so it must not be nested inside one.
   if (tab === 'assessment') {
-    return (
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <View style={{ paddingTop: insets.top + spacing.base, paddingHorizontal: spacing.base }}>
-          {headerBar}
-        </View>
-        <View style={{ flex: 1 }}>
-          <QuestionnaireWizard />
-        </View>
-      </View>
-    );
+    return <QuestionnaireWizard screenHeader={headerBar} />;
   }
 
   return (

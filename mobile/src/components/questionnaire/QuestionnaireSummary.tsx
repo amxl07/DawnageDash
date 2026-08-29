@@ -8,14 +8,16 @@ import { iconSize, spacing, useTheme } from '@/theme';
 type Props = {
   answers: Record<string, string | number>;
   onEdit: () => void;
+  screenHeader?: React.ReactNode;
 };
 
 /** Read-back view once all 10 sections are complete. */
-export function QuestionnaireSummary({ answers, onEdit }: Props) {
+export function QuestionnaireSummary({ answers, onEdit, screenHeader }: Props) {
   const { colors } = useTheme();
 
   return (
     <Screen>
+      {screenHeader}
       <View style={{ alignItems: 'center', gap: spacing.sm, paddingTop: spacing.base }}>
         <CheckCircle2 size={iconSize.xl} color={colors.success} strokeWidth={2} accessible={false} />
         <Text variant="h1">Assessment complete</Text>
