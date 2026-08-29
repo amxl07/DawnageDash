@@ -9,6 +9,7 @@ export function Card({ style, padded = true, elevated = false, ...rest }: Props)
   const base: ViewStyle = {
     backgroundColor: elevated ? colors.elevated : colors.card,
     borderRadius: radius.card,
+    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: colors.border,
     padding: padded ? spacing.base : 0,

@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
 import { View, type TextStyle } from 'react-native';
 import Animated, {
+  Easing,
   FadeIn,
   FadeOut,
   LinearTransition,
   useAnimatedStyle,
-  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 
 import { tabularNums, type as typeScale, useMotion, useTheme } from '@/theme';
@@ -62,7 +63,10 @@ function AnimatedDigit({
     transform: [
       {
         translateY: motion.enabled
-          ? withSpring(-height * digit, { duration: 1000, dampingRatio: 0.9 })
+          ? withTiming(-height * digit, {
+              duration: motion.duration.value,
+              easing: Easing.bezier(...motion.easing.standard),
+            })
           : -height * digit,
       },
     ],
@@ -70,9 +74,9 @@ function AnimatedDigit({
 
   return (
     <Animated.View
-      layout={motion.enabled ? LinearTransition.duration(400) : undefined}
-      entering={motion.enabled ? FadeIn.duration(200) : undefined}
-      exiting={motion.enabled ? FadeOut.duration(150) : undefined}
+      layout={motion.enabled ? LinearTransition.duration(motion.duration.enter) : undefined}
+      entering={motion.enabled ? FadeIn.duration(motion.duration.enter) : undefined}
+      exiting={motion.enabled ? FadeOut.duration(motion.duration.exit) : undefined}
       style={{ width, height, overflow: 'hidden' }}
     >
       <Animated.View style={[{ flexDirection: 'column' }, animated]}>
@@ -146,7 +150,7 @@ export function AnimatedNumber({
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center' }} {...a11y}>
       <Animated.View
-        layout={LinearTransition.duration(400)}
+        layout={LinearTransition.duration(motion.duration.enter)}
         style={{ flexDirection: 'row', alignItems: 'center' }}
       >
         {chars.map((char, i) => {
