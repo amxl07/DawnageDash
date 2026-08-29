@@ -32,7 +32,7 @@ import { useDashboardData } from '@/hooks/useDashboardData';
 import { localDateString, parseLocalDate } from '@/lib/dates';
 import { calculateStreak } from '@/lib/streak';
 import { num, normalizeWorkoutStatus } from '@/types/db';
-import { spacing } from '@/theme';
+import { ACTION_BAR_HEIGHT, spacing } from '@/theme';
 
 const CHECK_IN_STEPS: { key: CheckInStep; title: string; description: string }[] = [
   {
@@ -150,7 +150,7 @@ export default function CheckInScreen() {
 
   if (isLoading) {
     return (
-      <Screen>
+      <Screen archetype="root">
         <View style={{ gap: spacing.base }}>
           <SkeletonCard lines={2} />
           <SkeletonCard lines={3} />
@@ -161,7 +161,7 @@ export default function CheckInScreen() {
 
   if (isError) {
     return (
-      <Screen>
+      <Screen archetype="root">
         <ErrorState onRetry={refetch} />
       </Screen>
     );
@@ -169,7 +169,7 @@ export default function CheckInScreen() {
 
   if (celebrating) {
     return (
-      <Screen>
+      <Screen archetype="root">
         <Celebration payoff={celebrating} />
       </Screen>
     );
@@ -204,7 +204,7 @@ export default function CheckInScreen() {
     ];
 
     return (
-      <Screen>
+      <Screen archetype="root">
         <View style={{ gap: spacing.lg }}>
           <View style={{ gap: spacing.xs }}>
             <Text variant="h1">{dateLabel} is done</Text>
@@ -252,7 +252,7 @@ export default function CheckInScreen() {
   // ── the fast flow ────────────────────────────────────────────────────────
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Screen bottomInset={126}>
+      <Screen archetype="root" bottomInset={ACTION_BAR_HEIGHT}>
         <View style={{ gap: spacing.lg }}>
           <View style={{ gap: spacing.sm }}>
             <Text variant="h1">{isToday ? 'How was today?' : dateLabel}</Text>

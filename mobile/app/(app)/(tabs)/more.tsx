@@ -40,7 +40,7 @@ export default function MoreScreen() {
   };
 
   return (
-    <Screen>
+    <Screen archetype="root">
       <Text variant="h1" style={{ marginBottom: spacing.base }}>
         More
       </Text>

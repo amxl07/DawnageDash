@@ -149,17 +149,72 @@ with the timer, next exercise, and last set's numbers.
 
 ## 6. Sequencing
 
-**Wave 1 — foundations (no screen redesign):** items 1–4.
-Odometer, sliding thumb, `screenContentPadding`, list layout animations.
-Everything downstream inherits these.
+**Wave 1 — foundations ✅ DONE.** Items 1–4 shipped:
+- `AnimatedNumber` rebuilt as a true odometer (UI-thread, no per-frame JS).
+- `SegmentedControl` given a thumb that travels in 2D (x, y, width, height).
+- `src/theme/layout.ts` — `screenContentPadding(archetype, insets)` +
+  `statusBarHeight` (Dynamic Island correction) + `horizontalInset`; wired into
+  `Screen` via an `archetype` prop and applied across the tab roots, logger and
+  check-in. Removed the hand-rolled `bottomInset={80}` / `{126}` magic numbers.
+- `useListMotion()` + `AnimatedFlatList`, applied to measurements, logs and media.
 
-**Wave 2 — the two signature moments:** items 5–7.
-Heatmap on Dashboard; circular timer + Rest screen in the logger.
+Open item for device verification: `DIGIT_WIDTH_RATIO = 0.62` in
+`AnimatedNumber.tsx` is the one eyeball value — tabular figures are monospaced
+so a single ratio holds per family, but it should be confirmed on a real screen.
 
-**Wave 3 — polish:** items 8–13.
+**Wave 2 — signature moments ✅ DONE.** Items 5–7 shipped:
+- `ConsistencyGrid` — diagonal-wave heatmap on the Dashboard, below the week
+  strip. Levels encode workout STATUS (done / cardio / rest / logged-no-training
+  / missed), not GitHub's intensity, and reuse WeekStrip's colours.
+- `CircularTimer` — SVG ring with the three-stage completion chained via
+  `withTiming` callbacks. **The wavy ring was deliberately dropped**: it would
+  mean regenerating a ~120-point SVG path in a worklet every frame.
+- `useRestTimer` — timer state extracted so the compact card and the
+  full-screen view share one timer. Keeps our `endsAt` timestamp model.
+- Full-screen rest is **opt-in** (a Focus button), not automatic: PerfectGymCoach
+  takes the screen over because their flow is guided one-exercise-at-a-time;
+  ours is a free-form swipeable logger where a takeover would block the next set.
 
-**Wave 4 — structural:** items 14–17. Bottom-sheet and FlashList swaps touch
-many files; do them last, behind a working app.
+**Wave 3 — polish ✅ DONE (items 8–12; 13 deliberately dropped).**
+- **8** `SwipeableSlide` — pan between logger exercises, card follows the finger,
+  edge resistance at the ends. `activeOffsetX`/`failOffsetY` so it never steals
+  vertical scroll. Prev/next buttons and dot pager remain — swipe is an
+  accelerator, never the mechanism.
+- **9** Set-complete tick now enters on a spring `LinearTransition` instead of
+  snapping (from `demos/checkbox-interactions`).
+- **10** Blurred tab bar via `expo-blur` — **iOS only**. Android's blur is weaker
+  and far more expensive to composite, so it keeps the solid surface.
+- **11** Outbox pending pill enters/exits with `FadeInDown`/`FadeOutUp`.
+- **12** Dashboard metric grid staggers on first load.
+
+**13 (calendar picker) dropped, not deferred.** The heatmap now exposes ~21
+weeks of tappable days and the week strip covers this week — a calendar would be
+a third route to the same action. Rejected on redundancy, not effort.
+
+**Wave 4 — structural ✅ DONE (14 + 17 shipped; 15 and 16 rejected on evidence).**
+
+- **14 + 17** `Sheet` rebuilt on `@gorhom/bottom-sheet`. Gains drag-to-dismiss,
+  a backdrop that fades with the drag, snap points, and — the reason it was
+  worth doing — real keyboard handling for the form sheets. Pure JS over
+  Reanimated + Gesture Handler, so Expo Go still works.
+  All five consumers migrated to `SheetFlatList` / `SheetScrollView`; a plain
+  RN scrollable inside a sheet fights the sheet's own pan gesture. Removed the
+  now-harmful `KeyboardAvoidingView` from `MeasurementSheet` — it double-shifts
+  against gorhom's `keyboardBehavior="interactive"`.
+
+- **15 FlashList — REJECTED on measured data.** The live account has 21 workout
+  logs, 9 measurements, 2 photo sets. FlashList exists to recycle hundreds of
+  rows; on 9–21 it is pure churn, and FlashList v2 would also cost us the
+  `itemLayoutAnimation` added in Wave 1. The only long lists are the country
+  (177) and timezone (~600) pickers, which already have `getItemLayout` +
+  tuned `windowSize` and are opened rarely.
+
+- **16 Shared-element photo transition — BLOCKED, not deferred.**
+  `sharedTransitionTag` was **removed in Reanimated 4** — verified absent from
+  the entire installed package (4.1.7), not just the typings. Reproducing it
+  means hand-rolling: measure the thumbnail rect, animate a full-screen overlay
+  from it. That is ~100 lines of gesture and measurement code for a screen used
+  weekly at most, so it is a deliberate open decision rather than silent work.
 
 ### Gates that apply to every item
 - Pure Reanimated. No Skia.

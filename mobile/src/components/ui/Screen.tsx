@@ -9,28 +9,34 @@ import {
 import { forwardRef } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { spacing, useTheme } from '@/theme';
+import { horizontalInset, screenContentPadding, spacing, useTheme, type ScreenArchetype } from '@/theme';
 
 type Props = {
   children: React.ReactNode;
   /** Wrap in a ScrollView. Set false for screens owning their own FlatList. */
   scroll?: boolean;
-  /** Extra bottom padding so content clears a sticky action bar. */
+  /**
+   * What kind of screen this is. Drives top/bottom insets so no screen has to
+   * do the arithmetic itself: 'root' clears the tab bar, 'editor' clears a
+   * sticky action bar, 'child' is a pushed screen, 'sheet' sits in a sheet.
+   */
+  archetype?: ScreenArchetype;
+  /** Extra bottom padding on top of the archetype's, for unusual cases. */
   bottomInset?: number;
   refreshControl?: React.ReactElement<RefreshControlProps>;
   style?: ViewStyle;
 };
 
 export const Screen = forwardRef<ScrollView, Props>(function Screen(
-  { children, scroll = true, bottomInset = 0, refreshControl, style },
+  { children, scroll = true, archetype = 'child', bottomInset = 0, refreshControl, style },
   ref,
 ) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
-  // Wider gutters on tablets / large phones so text keeps a readable measure.
-  const horizontal = width >= 768 ? spacing.lg : spacing.base;
+  const horizontal = horizontalInset(width);
+  const archetypePadding = screenContentPadding(archetype, insets);
 
   const container: ViewStyle = {
     flex: 1,
@@ -40,8 +46,8 @@ export const Screen = forwardRef<ScrollView, Props>(function Screen(
   };
 
   const contentPadding = {
-    paddingTop: spacing.base,
-    paddingBottom: insets.bottom + spacing.xl + bottomInset,
+    paddingTop: archetypePadding.paddingTop,
+    paddingBottom: archetypePadding.paddingBottom + bottomInset,
   };
 
   if (!scroll) {

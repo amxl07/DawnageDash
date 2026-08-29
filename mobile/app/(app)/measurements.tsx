@@ -7,7 +7,10 @@ import { FlatList, Pressable, View } from 'react-native';
 import { LineChart } from '@/components/charts';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { MeasurementSheet } from '@/components/measurements/MeasurementSheet';
-import { Button, Card, EmptyState, ErrorState, PageHeader, Screen, SkeletonCard, Text } from '@/components/ui';
+import { Button, Card, EmptyState, ErrorState, PageHeader, Screen, SkeletonCard, Text ,
+  AnimatedFlatList,
+  useListMotion,
+} from '@/components/ui';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useMeasurements } from '@/hooks/useMeasurements';
 import { calculateWeeklyAverages } from '@/lib/checkin-utils';
@@ -71,6 +74,7 @@ const HistoryRow = memo(function HistoryRow({
 
 export default function MeasurementsScreen() {
   const { colors } = useTheme();
+  const listMotion = useListMotion();
   const router = useRouter();
   const { data: rows, isLoading, isError, refetch } = useMeasurements();
   const { checkIns } = useDashboardData();
@@ -260,7 +264,7 @@ export default function MeasurementsScreen() {
   return (
     <>
       <Screen scroll={false}>
-        <FlatList
+        <AnimatedFlatList
           data={rows ?? []}
           keyExtractor={(r) => r.id}
           ListHeaderComponent={header}
@@ -289,6 +293,7 @@ export default function MeasurementsScreen() {
           showsVerticalScrollIndicator={false}
           initialNumToRender={8}
           windowSize={7}
+          itemLayoutAnimation={listMotion.itemLayoutAnimation}
         />
       </Screen>
 

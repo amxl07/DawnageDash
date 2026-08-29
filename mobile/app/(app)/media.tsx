@@ -7,7 +7,10 @@ import { FlatList, Pressable, View } from 'react-native';
 
 import { PhotoCaptureSheet } from '@/components/media/PhotoCaptureSheet';
 import { PhotoViewer, type ViewerPhoto } from '@/components/media/PhotoViewer';
-import { Badge, Button, Card, EmptyState, ErrorState, PageHeader, Screen, SkeletonCard, Text } from '@/components/ui';
+import { Badge, Button, Card, EmptyState, ErrorState, PageHeader, Screen, SkeletonCard, Text ,
+  AnimatedFlatList,
+  useListMotion,
+} from '@/components/ui';
 import { useProgressPhotos, type PhotoRow } from '@/hooks/useProgressPhotos';
 import { ANGLES } from '@/lib/photos';
 import { localDateString, parseLocalDate } from '@/lib/dates';
@@ -136,6 +139,7 @@ const WeekCard = memo(function WeekCard({
 
 export default function MediaScreen() {
   const { colors } = useTheme();
+  const listMotion = useListMotion();
   const router = useRouter();
   const { data: rows, isLoading, isError, refetch } = useProgressPhotos();
 
@@ -214,7 +218,7 @@ export default function MediaScreen() {
   return (
     <>
       <Screen scroll={false}>
-        <FlatList
+        <AnimatedFlatList
           data={rows ?? []}
           keyExtractor={(r) => r.id}
           ListHeaderComponent={header}
@@ -249,6 +253,7 @@ export default function MediaScreen() {
           showsVerticalScrollIndicator={false}
           initialNumToRender={4}
           windowSize={5}
+          itemLayoutAnimation={listMotion.itemLayoutAnimation}
         />
       </Screen>
 

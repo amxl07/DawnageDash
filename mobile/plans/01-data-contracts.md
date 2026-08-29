@@ -57,7 +57,10 @@ overall_feeling, weekly_wins, nutrition_adherence ('Yes'|'No'|'Mostly'), digesti
 All set values are strings. Older rows may contain a legacy object format (`Exercise/Sets/Reps/Weight/Duration/Rest/VideoLink` keys) or plain strings — the history renderer must tolerate all three (see WorkoutLogs.tsx `renderExerciseContent`).
 
 ### workout_plans (user-assigned copies; client READ-ONLY)
-`id, user_id, level, workout_type, sub_category (nullable), days_per_week, day_number, focus, exercises (TEXT JSON), notes`.
+`id, user_id, level, workout_type, sub_category (nullable), days_per_week, day_number, focus, exercises (TEXT JSON), notes, created_at, updated_at`.
+**`created_at` / `updated_at` verified present 2026-08-29** (they were missing from
+this list). `meal_plans` has them too. They are what makes plan provenance
+possible — "your coach updated this 3 days ago".
 `exercises` JSON: `[{ id?, name (or legacy "exercise"/"Exercise"), sets: number, reps: string, videoLink?, notes? }]` — note `sets` here is a TARGET COUNT (number), unlike logs. Legacy key casing varies; normalize with `ex.Exercise || ex.exercise || ex.name`.
 
 ### workout_templates (global when coach_id IS NULL; client fallback read)

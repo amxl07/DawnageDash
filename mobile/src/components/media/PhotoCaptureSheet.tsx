@@ -4,9 +4,9 @@ import * as ImagePicker from 'expo-image-picker';
 import { format } from 'date-fns';
 import { Camera, ImageIcon, RotateCcw, Trash2 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, View } from 'react-native';
 
-import { Button, Card, Sheet, Text } from '@/components/ui';
+import { Button, Card, Sheet, SheetScrollView, Text } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePhotoMutation, type PhotoRow } from '@/hooks/useProgressPhotos';
 import { ANGLES, MAX_SOURCE_BYTES, uploadPhoto, type AngleKey } from '@/lib/photos';
@@ -194,7 +194,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
       onClose={requestClose}
       title={`Photos · ${format(parseLocalDate(date), 'd MMM yyyy')}`}
     >
-      <ScrollView contentContainerStyle={{ padding: spacing.base, gap: spacing.base }}>
+      <SheetScrollView contentContainerStyle={{ padding: spacing.base, gap: spacing.base }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
           <Text variant="bodySm" tone="muted" style={{ flex: 1 }}>
             {ghost
@@ -332,7 +332,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
             {saveError}
           </Text>
         ) : null}
-      </ScrollView>
+      </SheetScrollView>
 
       <View style={{ padding: spacing.base }}>
         <Button

@@ -26,6 +26,8 @@ export type PlanDay = {
   focus: string | null;
   exercises: PlanExercise[];
   notes: string | null;
+  /** Verified present on workout_plans — see 01-data-contracts.md. */
+  updated_at: string | null;
 };
 
 export type UserProfile = {
@@ -136,6 +138,7 @@ export function useWorkoutPlan(opts: { userRowsOnly?: boolean } = {}) {
             focus: (r.focus as string) ?? null,
             exercises: normalizeExercises((r.exercises as string) ?? null),
             notes: (r.notes as string) ?? null,
+            updated_at: (r.updated_at as string) ?? (r.created_at as string) ?? null,
           }));
       };
 

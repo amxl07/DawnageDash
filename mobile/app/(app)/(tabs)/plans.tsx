@@ -1,9 +1,10 @@
 import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
 import { ChevronDown, ClipboardList, Play, Utensils } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
+import { CoachBadge } from '@/components/coach/CoachBadge';
 import {
   Button,
   Card,
@@ -21,6 +22,7 @@ import {
   useWorkoutPlan,
   type PlanDay,
 } from '@/hooks/usePlans';
+import { relativeDays, usePlanProvenance } from '@/hooks/usePlanProvenance';
 import { formatTypeLabel } from '@/lib/workout-constants';
 import { iconSize, spacing, useTheme } from '@/theme';
 
@@ -131,12 +133,18 @@ export default function PlansScreen() {
   const { data: profile, isLoading: profileLoading, isError, refetch } = useUserProfile();
   const { data: plan, isLoading: planLoading } = useWorkoutPlan();
   const { data: meal, isLoading: mealLoading } = useMealPlan();
+  const provenance = usePlanProvenance(plan?.days);
+
+  // Opening Training counts as having seen the plan.
+  useEffect(() => {
+    if (top === 'training' && provenance.updatedAt) provenance.markSeen();
+  }, [top, provenance]);
 
   const supplements = parseSupplements(profile?.supplements_data ?? null);
 
   if (profileLoading || planLoading) {
     return (
-      <Screen>
+      <Screen archetype="root">
         <SkeletonCard lines={2} />
         <View style={{ height: spacing.base }} />
         <SkeletonCard lines={4} />
@@ -146,7 +154,7 @@ export default function PlansScreen() {
 
   if (isError) {
     return (
-      <Screen>
+      <Screen archetype="root">
         <ErrorState onRetry={refetch} />
       </Screen>
     );
@@ -155,7 +163,7 @@ export default function PlansScreen() {
   const pointer = parseActivePlan(profile?.active_workout_plan);
 
   return (
-    <Screen>
+    <Screen archetype="root">
       <View style={{ gap: spacing.lg }}>
         <Text variant="h1">Your plan</Text>
 
@@ -189,6 +197,25 @@ export default function PlansScreen() {
                   {pointer.subCategory ? ` · ${formatTypeLabel(pointer.subCategory)}` : ''} ·{' '}
                   {pointer.daysPerWeek}-day
                 </Text>
+                <CoachBadge caption="Assigned by" />
+                {provenance.updatedAt ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                    <Text variant="bodySm" tone={provenance.hasChanged ? 'primary' : 'muted'}>
+                      {provenance.hasChanged ? 'Updated by your coach' : 'Last updated'}{' '}
+                      {relativeDays(provenance.updatedAt)}
+                    </Text>
+                    {provenance.hasChanged ? (
+                      <View
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: 4,
+                          backgroundColor: colors.primary,
+                        }}
+                      />
+                    ) : null}
+                  </View>
+                ) : null}
               </Card>
 
               {plan?.days.length ? (

@@ -1,8 +1,16 @@
+import {
+  BottomSheetBackdrop,
+  BottomSheetFlatList,
+  BottomSheetModal,
+  BottomSheetScrollView,
+  BottomSheetView,
+  type BottomSheetBackdropProps,
+} from '@gorhom/bottom-sheet';
 import { X } from 'lucide-react-native';
-import { Modal, Pressable, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { Pressable, View } from 'react-native';
 
-import { iconSize, radius, spacing, useMotion, useTheme } from '@/theme';
+import { HIT_SLOP_MIN, iconSize, radius, spacing, useTheme } from '@/theme';
 import { Text } from './Text';
 
 type Props = {
@@ -15,61 +23,98 @@ type Props = {
 };
 
 /**
- * Bottom sheet. Always has a visible close button — dismissal is never
- * gesture-only (§03.B.6).
+ * Bottom sheet, built on @gorhom/bottom-sheet.
+ *
+ * Replaces a plain `Modal` with `animationType="slide"`. What that bought:
+ * drag-to-dismiss, a real backdrop that fades with the drag, snap points, and —
+ * the reason it was worth changing — keyboard handling. The measurement and
+ * questionnaire sheets are forms, and a Modal has no notion of a keyboard
+ * pushing its content.
+ *
+ * Pure JS on top of Reanimated + Gesture Handler, so it still runs in Expo Go;
+ * nothing here forfeits the SDK 54 decision.
+ *
+ * Scrollable children MUST use the exports below (`SheetScrollView`,
+ * `SheetFlatList`) rather than plain RN ones, or the inner scroll fights the
+ * sheet's own pan gesture.
  */
 export function Sheet({ visible, onClose, title, children, heightRatio = 0.85 }: Props) {
-  const { colors, shadow } = useTheme();
-  const motion = useMotion();
-  const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const ref = useRef<BottomSheetModal>(null);
+
+  const snapPoints = useMemo(() => [`${Math.round(heightRatio * 100)}%`], [heightRatio]);
+
+  useEffect(() => {
+    if (visible) ref.current?.present();
+    else ref.current?.dismiss();
+  }, [visible]);
+
+  const renderBackdrop = useCallback(
+    (props: BottomSheetBackdropProps) => (
+      <BottomSheetBackdrop
+        {...props}
+        appearsOnIndex={0}
+        disappearsOnIndex={-1}
+        opacity={0.6}
+        pressBehavior="close"
+      />
+    ),
+    [],
+  );
 
   return (
-    <Modal
-      visible={visible}
-      animationType={motion.reduced ? 'none' : 'slide'}
-      transparent
-      onRequestClose={onClose}
+    <BottomSheetModal
+      ref={ref}
+      snapPoints={snapPoints}
+      onDismiss={onClose}
+      backdropComponent={renderBackdrop}
+      enablePanDownToClose
+      backgroundStyle={{
+        backgroundColor: colors.card,
+        borderTopLeftRadius: radius.card,
+        borderTopRightRadius: radius.card,
+      }}
+      handleIndicatorStyle={{ backgroundColor: colors.borderStrong }}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
     >
-      <Pressable
-        style={{ flex: 1, backgroundColor: colors.scrim }}
-        accessibilityRole="button"
-        accessibilityLabel="Close"
-        onPress={onClose}
-      />
-      <View
-        style={[
-          {
-            height: `${heightRatio * 100}%`,
-            backgroundColor: colors.card,
-            borderTopLeftRadius: radius.card,
-            borderTopRightRadius: radius.card,
-            paddingBottom: insets.bottom,
-          },
-          shadow.sheet,
-        ]}
+      <BottomSheetView
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: spacing.base,
+          paddingBottom: spacing.md,
+          borderBottomWidth: 1,
+          borderBottomColor: colors.border,
+        }}
       >
-        <View
+        <Text variant="h2">{title}</Text>
+        {/* A visible close button is mandatory — dismissal is never
+            gesture-only, even though pan-down now works (§03.B.6). */}
+        <Pressable
+          onPress={onClose}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
           style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: spacing.base,
-            borderBottomWidth: 1,
-            borderBottomColor: colors.border,
+            minWidth: HIT_SLOP_MIN,
+            minHeight: HIT_SLOP_MIN,
+            alignItems: 'flex-end',
+            justifyContent: 'center',
           }}
         >
-          <Text variant="h2">{title}</Text>
-          <Pressable
-            onPress={onClose}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Close"
-          >
-            <X size={iconSize.lg} color={colors.mutedForeground} strokeWidth={2} />
-          </Pressable>
-        </View>
-        <View style={{ flex: 1 }}>{children}</View>
-      </View>
-    </Modal>
+          <X size={iconSize.lg} color={colors.mutedForeground} strokeWidth={2} />
+        </Pressable>
+      </BottomSheetView>
+
+      <View style={{ flex: 1 }}>{children}</View>
+    </BottomSheetModal>
   );
 }
+
+/** Use inside a Sheet instead of RN's ScrollView. */
+export const SheetScrollView = BottomSheetScrollView;
+/** Use inside a Sheet instead of RN's FlatList. */
+export const SheetFlatList = BottomSheetFlatList;

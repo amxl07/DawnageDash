@@ -2,10 +2,11 @@ import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import { Check, Minus, Plus, Play, Trash2 } from 'lucide-react-native';
 import { Pressable, TextInput, View } from 'react-native';
+import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 
 import { Card, Text } from '@/components/ui';
 import type { DraftExercise } from '@/hooks/useWorkoutDraft';
-import { HIT_SLOP_MIN, iconSize, radius, spacing, tabularNums, type, useTheme } from '@/theme';
+import { HIT_SLOP_MIN, iconSize, radius, spacing, tabularNums, type, useMotion, useTheme } from '@/theme';
 
 type Props = {
   exercise: DraftExercise;
@@ -96,6 +97,9 @@ function SetStepper({
   );
 }
 
+/** Spring layout so a completed row settles rather than snapping. */
+const SetLayout = LinearTransition.springify().mass(1).damping(30).stiffness(250);
+
 export function ExerciseSlide({
   exercise,
   targetReps,
@@ -107,6 +111,7 @@ export function ExerciseSlide({
   onRemoveSet,
 }: Props) {
   const { colors } = useTheme();
+  const listMotion = useMotion();
 
   const previousSummary = previous?.length
     ? previous
@@ -192,7 +197,8 @@ export function ExerciseSlide({
         return (
           <View key={i} style={{ gap: spacing.xs }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <View
+              <Animated.View
+                layout={listMotion.enabled ? SetLayout : undefined}
                 style={{
                   width: 28,
                   height: 28,
@@ -205,13 +211,18 @@ export function ExerciseSlide({
                 }}
               >
                 {complete ? (
-                  <Check size={16} color={colors.background} strokeWidth={3} accessible={false} />
+                  <Animated.View
+                    entering={listMotion.enabled ? FadeIn.duration(160) : undefined}
+                    exiting={listMotion.enabled ? FadeOut.duration(120) : undefined}
+                  >
+                    <Check size={16} color={colors.background} strokeWidth={3} accessible={false} />
+                  </Animated.View>
                 ) : (
                   <Text variant="bodySm" tone="muted" numeric>
                     {i + 1}
                   </Text>
                 )}
-              </View>
+              </Animated.View>
 
               <SetStepper
                 label={`Set ${i + 1} weight in kilograms`}

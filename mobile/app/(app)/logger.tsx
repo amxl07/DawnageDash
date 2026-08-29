@@ -17,6 +17,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ExerciseSlide } from '@/components/logger/ExerciseSlide';
+import { SwipeableSlide } from '@/components/logger/SwipeableSlide';
 import { RestTimer } from '@/components/logger/RestTimer';
 import { Button, Card, Input, Screen, Text } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
@@ -489,7 +490,7 @@ export default function LoggerScreen() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Screen bottomInset={80}>
+      <Screen archetype="editor">
         <View style={{ gap: spacing.base }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
             {/* Explicit close: the stack's back-swipe is disabled on this route. */}
@@ -612,6 +613,12 @@ export default function LoggerScreen() {
               </View>
 
               {currentExercise ? (
+                <SwipeableSlide
+                  canPrev={index > 0}
+                  canNext={index < state.exercises.length - 1}
+                  onPrev={() => setIndex((i) => Math.max(0, i - 1))}
+                  onNext={() => setIndex((i) => Math.min(state.exercises.length - 1, i + 1))}
+                >
                 <ExerciseSlide
                   exercise={currentExercise}
                   targetReps={planMeta?.reps}
@@ -626,9 +633,10 @@ export default function LoggerScreen() {
                     dispatch({ type: 'REMOVE_SET', payload: { ex: index, set: setIdx } })
                   }
                 />
+                </SwipeableSlide>
               ) : null}
 
-              <RestTimer />
+              <RestTimer contextLabel={currentExercise?.name} />
             </>
           ) : (
             <Card style={{ gap: spacing.sm }}>

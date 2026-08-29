@@ -1,9 +1,9 @@
 import * as Haptics from 'expo-haptics';
 import { format } from 'date-fns';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, KeyboardAvoidingView, Platform, ScrollView, TextInput, View } from 'react-native';
+import { AccessibilityInfo, TextInput, View } from 'react-native';
 
-import { Button, Input, Sheet, Text } from '@/components/ui';
+import { Button, Input, Sheet, SheetScrollView, Text } from '@/components/ui';
 import { useMeasurementMutation } from '@/hooks/useMeasurements';
 import { localDateString, parseLocalDate } from '@/lib/dates';
 import { num, type BodyMeasurement } from '@/types/db';
@@ -120,11 +120,8 @@ export function MeasurementSheet({ visible, onClose, editing, previous, onSaved 
       onClose={onClose}
       title={editing ? `Edit ${format(parseLocalDate(date), 'd MMM yyyy')}` : 'Add measurements'}
     >
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
+      <View style={{ flex: 1 }}>
+        <SheetScrollView
           contentContainerStyle={{ padding: spacing.base, gap: spacing.base }}
           keyboardShouldPersistTaps="handled"
         >
@@ -165,12 +162,12 @@ export function MeasurementSheet({ visible, onClose, editing, previous, onSaved 
               {saveError}
             </Text>
           ) : null}
-        </ScrollView>
+        </SheetScrollView>
 
         <View style={{ padding: spacing.base }}>
           <Button label="Save" onPress={save} loading={mutation.isPending} />
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Sheet>
   );
 }

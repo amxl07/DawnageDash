@@ -9,6 +9,7 @@ import {
   Poppins_600SemiBold,
   Poppins_700Bold,
 } from '@expo-google-fonts/poppins';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -74,7 +75,9 @@ export default function RootLayout() {
         <ThemeProvider>
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
-              <RootNavigator />
+              <BottomSheetModalProvider>
+                <RootNavigator />
+              </BottomSheetModalProvider>
             </AuthProvider>
           </QueryClientProvider>
         </ThemeProvider>

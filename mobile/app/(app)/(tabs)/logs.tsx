@@ -5,9 +5,13 @@ import { useRouter } from 'expo-router';
 import { CalendarDays, ChevronDown, CloudOff, Dumbbell, Plus } from 'lucide-react-native';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { AppState, FlatList, Pressable, View } from 'react-native';
+import Animated, { FadeInDown, FadeOutUp, LinearTransition } from 'react-native-reanimated';
 
 import { MetricCard } from '@/components/dashboard/MetricCard';
-import { Button, Card, EmptyState, ErrorState, Screen, SkeletonCard, Text } from '@/components/ui';
+import { Button, Card, EmptyState, ErrorState, Screen, SkeletonCard, Text ,
+  AnimatedFlatList,
+  useListMotion,
+} from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { localDateString, parseLocalDate } from '@/lib/dates';
 import { flushOutbox, readOutbox } from '@/lib/outbox';
@@ -119,6 +123,7 @@ const LogCard = memo(function LogCard({ log, onEdit }: { log: LogRow; onEdit: ()
 
 export default function LogsScreen() {
   const { colors } = useTheme();
+  const listMotion = useListMotion();
   const router = useRouter();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -177,7 +182,7 @@ export default function LogsScreen() {
 
   if (isLoading) {
     return (
-      <Screen>
+      <Screen archetype="root">
         <SkeletonCard lines={2} />
         <View style={{ height: spacing.base }} />
         <SkeletonCard lines={3} />
@@ -187,7 +192,7 @@ export default function LogsScreen() {
 
   if (isError) {
     return (
-      <Screen>
+      <Screen archetype="root">
         <ErrorState onRetry={refetch} />
       </Screen>
     );
@@ -198,12 +203,18 @@ export default function LogsScreen() {
       <Text variant="h1">Workout logs</Text>
 
       {pending > 0 ? (
+        <Animated.View
+          entering={listMotion.enabled ? FadeInDown.duration(240) : undefined}
+          exiting={listMotion.enabled ? FadeOutUp.duration(200) : undefined}
+          layout={listMotion.enabled ? LinearTransition.duration(240) : undefined}
+        >
         <Card style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderColor: colors.gold, borderWidth: 1 }}>
           <CloudOff size={iconSize.md} color={colors.gold} strokeWidth={2} accessible={false} />
           <Text variant="bodySm" tone="gold" style={{ flex: 1 }} accessibilityLiveRegion="polite">
             {pending} workout{pending > 1 ? 's' : ''} saved on this device, waiting to sync.
           </Text>
         </Card>
+        </Animated.View>
       ) : null}
 
       <View style={{ flexDirection: 'row', gap: spacing.md }}>
@@ -220,8 +231,8 @@ export default function LogsScreen() {
   );
 
   return (
-    <Screen scroll={false}>
-      <FlatList
+    <Screen archetype="root" scroll={false}>
+      <AnimatedFlatList
         data={logs ?? []}
         keyExtractor={(l) => l.id}
         ListHeaderComponent={header}
@@ -245,6 +256,7 @@ export default function LogsScreen() {
         showsVerticalScrollIndicator={false}
         initialNumToRender={8}
         windowSize={7}
+        itemLayoutAnimation={listMotion.itemLayoutAnimation}
       />
     </Screen>
   );

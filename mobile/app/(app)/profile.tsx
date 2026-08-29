@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CountryPicker, type Country } from '@/components/auth/CountryPicker';
 import { TimezonePicker } from '@/components/onboarding/TimezonePicker';
+import { CoachBadge } from '@/components/coach/CoachBadge';
 import { QuestionnaireWizard } from '@/components/questionnaire';
 import {
   Button,
@@ -286,6 +287,8 @@ export default function ProfileScreen() {
                   </Pressable>
                 </View>
               </Card>
+
+              <CoachBadge variant="card" />
 
               <Card style={{ gap: spacing.base }}>
                 <Text variant="h2">About you</Text>

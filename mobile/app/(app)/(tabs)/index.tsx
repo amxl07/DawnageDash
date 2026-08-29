@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { ChevronDown, Flame, Trophy, Weight, Zap } from 'lucide-react-native';
+import { ChevronDown, ChevronRight, Flame, Trophy, Weight, Zap } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Pressable, RefreshControl, View } from 'react-native';
 
 import { DawnGlow, Logo } from '@/components/brand';
 import { BarChart, DonutChart, LineChart } from '@/components/charts';
+import { ConsistencyGrid } from '@/components/dashboard/ConsistencyGrid';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { StreakHero } from '@/components/dashboard/StreakHero';
 import { WeekStrip } from '@/components/dashboard/WeekStrip';
@@ -16,10 +17,13 @@ import {
   ProgressBar,
   Screen,
   SkeletonCard,
+  Stagger,
   Text,
 } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDashboardData } from '@/hooks/useDashboardData';
+import { useWorkoutPlan } from '@/hooks/usePlans';
+import { relativeDays, usePlanProvenance } from '@/hooks/usePlanProvenance';
 import { supabase } from '@/lib/supabase';
 import { buildWeekStrip, calculateStreak } from '@/lib/streak';
 import { localDateString } from '@/lib/dates';
@@ -37,6 +41,8 @@ export default function DashboardScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const { user } = useAuth();
+  const { data: plan } = useWorkoutPlan();
+  const provenance = usePlanProvenance(plan?.days);
   const [showInsights, setShowInsights] = useState(false);
   const {
     checkIns,
@@ -89,7 +95,7 @@ export default function DashboardScreen() {
 
   if (isLoading) {
     return (
-      <Screen>
+      <Screen archetype="root">
         <View style={{ gap: spacing.base }}>
           <SkeletonCard lines={1} />
           <View style={{ flexDirection: 'row', gap: spacing.md }}>
@@ -104,7 +110,7 @@ export default function DashboardScreen() {
 
   if (isError) {
     return (
-      <Screen>
+      <Screen archetype="root">
         <ErrorState
           title="Couldn't load your dashboard"
           message="Check your connection and try again."
@@ -116,7 +122,7 @@ export default function DashboardScreen() {
 
   if (!checkIns?.length) {
     return (
-      <Screen>
+      <Screen archetype="root">
         <Text variant="h1" style={{ marginBottom: spacing.base }}>
           {greeting()}, {firstName}
         </Text>
@@ -137,6 +143,7 @@ export default function DashboardScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
     <DawnGlow height={220} intensity={0.7} />
     <Screen
+      archetype="root"
       refreshControl={
         <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
       }
@@ -170,6 +177,41 @@ export default function DashboardScreen() {
           }
         />
 
+        {provenance.hasChanged ? (
+          <Pressable
+            onPress={() => router.push('/(app)/(tabs)/plans')}
+            accessibilityRole="button"
+            accessibilityLabel={`Your coach updated your plan ${relativeDays(provenance.updatedAt)}. Open Plans.`}
+            style={({ pressed }) => ({ opacity: pressed ? 0.82 : 1 })}
+          >
+            <Card
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: spacing.md,
+                borderColor: colors.primary,
+                borderWidth: 1,
+              }}
+            >
+              <View style={{ flex: 1, gap: spacing.xs }}>
+                <Text variant="h2">Your coach updated your plan</Text>
+                <Text variant="bodySm" tone="muted">
+                  {relativeDays(provenance.updatedAt)} · tap to see what changed
+                </Text>
+              </View>
+              <ChevronRight size={iconSize.md} color={colors.primary} strokeWidth={2} accessible={false} />
+            </Card>
+          </Pressable>
+        ) : null}
+
+        <ConsistencyGrid
+          processed={processed}
+          onSelectDay={(dateString) =>
+            router.push({ pathname: '/(app)/(tabs)/check-in', params: { date: dateString } })
+          }
+        />
+
+        <Stagger index={0}>
         <View style={{ flexDirection: 'row', gap: spacing.md }}>
           <MetricCard
             icon={Weight}
@@ -185,6 +227,7 @@ export default function DashboardScreen() {
             trend={{ value: 0, goodDirection: 'up', caption: 'Total tracked' }}
           />
         </View>
+        </Stagger>
 
         <Pressable
           onPress={() => setShowInsights((shown) => !shown)}

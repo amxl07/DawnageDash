@@ -7,6 +7,7 @@ import { Camera, CheckCircle2, Ruler } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 
+import { CoachBadge } from '@/components/coach/CoachBadge';
 import {
   Button,
   Card,
@@ -130,6 +131,7 @@ export default function WeeklyFeedbackScreen() {
           <CheckCircle2 size={iconSize.xl} color={colors.success} strokeWidth={2} accessible={false} />
           <Text variant="h1">Thanks, {firstName}!</Text>
           <Card style={{ gap: spacing.md }}>
+            <CoachBadge caption="Sent to" />
             <Text variant="bodySm" tone="muted">
               Also upload your weigh-ins, measurements and progress pictures so your coach has the
               full picture. You&apos;ll get detailed feedback within 48 hours.

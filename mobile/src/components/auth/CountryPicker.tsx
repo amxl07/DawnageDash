@@ -1,8 +1,8 @@
 import { Search } from 'lucide-react-native';
 import { memo, useMemo, useState } from 'react';
-import { FlatList, Pressable, TextInput, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
 
-import { Sheet, Text } from '@/components/ui';
+import { Sheet, SheetFlatList, Text } from '@/components/ui';
 import { allCountryCodes } from '@/lib/countryCodes';
 import { HIT_SLOP_MIN, iconSize, radius, spacing, type, useTheme } from '@/theme';
 
@@ -90,7 +90,7 @@ export function CountryPicker({
         />
       </View>
 
-      <FlatList
+      <SheetFlatList
         data={data}
         keyExtractor={(item, i) => `${item.country}-${item.code}-${i}`}
         renderItem={({ item }) => (

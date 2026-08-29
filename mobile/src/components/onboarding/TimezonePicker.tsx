@@ -1,8 +1,8 @@
 import { Search } from 'lucide-react-native';
 import { memo, useMemo, useState } from 'react';
-import { FlatList, Pressable, TextInput, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
 
-import { Sheet, Text } from '@/components/ui';
+import { Sheet, SheetFlatList, Text } from '@/components/ui';
 import { listTimezones } from '@/lib/timezones';
 import { HIT_SLOP_MIN, iconSize, radius, spacing, type, useTheme } from '@/theme';
 
@@ -83,7 +83,7 @@ export function TimezonePicker({
           style={[type.body, { flex: 1, color: colors.foreground, paddingVertical: spacing.md }]}
         />
       </View>
-      <FlatList
+      <SheetFlatList
         data={data}
         keyExtractor={(z) => z}
         renderItem={({ item }) => (

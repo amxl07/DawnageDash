@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { CheckCircle2, ClipboardList, Dumbbell, LayoutDashboard, Menu } from 'lucide-react-native';
-import { View } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useDashboardData } from '@/hooks/useDashboardData';
@@ -19,7 +20,7 @@ function TabIcon({
   focused: boolean;
   dot?: boolean;
 }) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   return (
     <View
       style={{
@@ -52,7 +53,7 @@ function TabIcon({
 }
 
 export default function TabsLayout() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   // The one piece of ambient state worth surfacing globally.
   const { processed } = useDashboardData();
@@ -65,8 +66,19 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedForeground,
+        tabBarBackground:
+          Platform.OS === 'ios'
+            ? () => (
+                <BlurView
+                  tint={isDark ? 'dark' : 'light'}
+                  intensity={24}
+                  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+                />
+              )
+            : undefined,
         tabBarStyle: {
-          backgroundColor: colors.card,
+          backgroundColor: Platform.OS === 'ios' ? 'transparent' : colors.card,
+          position: Platform.OS === 'ios' ? 'absolute' : 'relative',
           borderTopColor: colors.border,
           // Clear the home indicator / Android gesture bar.
           height: 56 + insets.bottom,
