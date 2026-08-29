@@ -242,7 +242,7 @@ export default function DashboardScreen() {
         />
 
         <Stagger index={0}>
-        <AdaptiveGrid>
+        <AdaptiveGrid testID="home-primary-metrics">
           <MetricCard
             icon={Weight}
             label="Weight"
