@@ -148,11 +148,20 @@ type Props = {
   setForm: (updater: (prev: FormState) => FormState) => void;
   previous: DailyCheckIn | null;
   step: CheckInStep;
+  errors: Partial<Record<keyof FormState, string>>;
 };
 
-export type CheckInStep = 'recovery' | 'training' | 'nutrition' | 'finish';
+export type CheckInStep = 'readiness' | 'recovery' | 'adherence' | 'finish';
 
-export function CheckInForm({ form, setForm, previous, step }: Props) {
+function FieldError({ message }: { message?: string }) {
+  return message ? (
+    <Text variant="bodySm" tone="primary" accessibilityLiveRegion="polite">
+      {message}
+    </Text>
+  ) : null;
+}
+
+export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
   const { colors } = useTheme();
   const [showMore, setShowMore] = useState(false);
 
@@ -174,11 +183,11 @@ export function CheckInForm({ form, setForm, previous, step }: Props) {
 
   const showPerformance = form.workoutStatus === 'done' || form.workoutStatus === 'cardio_day';
 
-  if (step === 'recovery') {
+  if (step === 'readiness') {
     return (
       <Card style={{ gap: spacing.base }}>
         <Text variant="label" tone="muted">
-          Recovery
+          Readiness and energy
         </Text>
         <Stepper
           label="Morning weight"
@@ -190,17 +199,7 @@ export function CheckInForm({ form, setForm, previous, step }: Props) {
           max={400}
           suffix="kg"
           hint={prevHint.weight}
-        />
-        <Stepper
-          label="Sleep"
-          value={form.sleepHours}
-          onChange={(v) => set('sleepHours', v)}
-          step={0.5}
-          precision={1}
-          min={0}
-          max={24}
-          suffix="h"
-          hint={prevHint.sleep}
+          error={errors.morningWeight}
         />
         {(
           [
@@ -219,25 +218,86 @@ export function CheckInForm({ form, setForm, previous, step }: Props) {
               value={form[key]}
               onChange={(v) => set(key, v)}
             />
+            <FieldError message={errors[key]} />
           </View>
         ))}
       </Card>
     );
   }
 
-  if (step === 'training') {
+  if (step === 'recovery') {
     return (
       <Card style={{ gap: spacing.base }}>
         <Text variant="label" tone="muted">
-          Training
+          Sleep and recovery
         </Text>
-        <SegmentedControl
-          label="Workout"
-          large
-          segments={WORKOUT_SEGMENTS}
-          value={form.workoutStatus}
-          onChange={(v) => set('workoutStatus', v)}
+        <Stepper
+          label="Sleep"
+          value={form.sleepHours}
+          onChange={(v) => set('sleepHours', v)}
+          step={0.5}
+          precision={1}
+          min={0}
+          max={24}
+          suffix="h"
+          hint={prevHint.sleep}
+          error={errors.sleepHours}
         />
+        <View style={{ gap: spacing.sm }}>
+          <Text variant="label" tone="muted">
+            Hunger
+          </Text>
+          <RatingRow
+            label="Hunger out of 10"
+            min={1}
+            max={10}
+            value={form.hungerLevel}
+            onChange={(v) => set('hungerLevel', v)}
+          />
+          <FieldError message={errors.hungerLevel} />
+        </View>
+        <View style={{ gap: spacing.sm }}>
+          <SegmentedControl
+            label="Digestion"
+            large
+            segments={DIGESTION_SEGMENTS}
+            value={form.digestion}
+            onChange={(v) => set('digestion', v)}
+          />
+          <FieldError message={errors.digestion} />
+        </View>
+        <Text variant="bodySm" tone="muted">
+          A quick recovery snapshot helps us spot patterns.
+        </Text>
+        <Input
+          label="Recovery notes (optional)"
+          value={form.notes}
+          onChangeText={(t) => set('notes', t)}
+          multiline
+          numberOfLines={3}
+          inputStyle={{ minHeight: 72, textAlignVertical: 'top' }}
+          placeholder="Anything affecting recovery today?"
+        />
+      </Card>
+    );
+  }
+
+  if (step === 'adherence') {
+    return (
+      <Card style={{ gap: spacing.base }}>
+        <Text variant="label" tone="muted">
+          Nutrition and adherence
+        </Text>
+        <View style={{ gap: spacing.sm }}>
+          <SegmentedControl
+            label="Workout"
+            large
+            segments={WORKOUT_SEGMENTS}
+            value={form.workoutStatus}
+            onChange={(v) => set('workoutStatus', v)}
+          />
+          <FieldError message={errors.workoutStatus} />
+        </View>
         {showPerformance ? (
           <View style={{ gap: spacing.sm }}>
             <Text variant="label" tone="muted">
@@ -250,28 +310,9 @@ export function CheckInForm({ form, setForm, previous, step }: Props) {
               value={form.workoutPerformance}
               onChange={(v) => set('workoutPerformance', v)}
             />
+            <FieldError message={errors.workoutPerformance} />
           </View>
         ) : null}
-        <Stepper
-          label="Steps"
-          value={form.dailySteps}
-          onChange={(v) => set('dailySteps', v === null ? null : Math.round(v))}
-          step={500}
-          precision={0}
-          min={0}
-          max={200000}
-          hint={prevHint.steps}
-        />
-      </Card>
-    );
-  }
-
-  if (step === 'nutrition') {
-    return (
-      <Card style={{ gap: spacing.base }}>
-        <Text variant="label" tone="muted">
-          Nutrition
-        </Text>
         <View style={{ gap: spacing.sm }}>
           <Text variant="label" tone="muted">
             Nutrition score
@@ -283,6 +324,7 @@ export function CheckInForm({ form, setForm, previous, step }: Props) {
             value={form.nutritionScore}
             onChange={(v) => set('nutritionScore', v)}
           />
+          <FieldError message={errors.nutritionScore} />
         </View>
         <Stepper
           label="Calories"
@@ -294,6 +336,7 @@ export function CheckInForm({ form, setForm, previous, step }: Props) {
           max={20000}
           suffix="kcal"
           hint={prevHint.calories}
+          error={errors.calorieIntake}
         />
         <Stepper
           label="Water"
@@ -305,6 +348,18 @@ export function CheckInForm({ form, setForm, previous, step }: Props) {
           max={20}
           suffix="L"
           hint={prevHint.water}
+          error={errors.waterLiters}
+        />
+        <Stepper
+          label="Steps"
+          value={form.dailySteps}
+          onChange={(v) => set('dailySteps', v === null ? null : Math.round(v))}
+          step={500}
+          precision={0}
+          min={0}
+          max={200000}
+          hint={prevHint.steps}
+          error={errors.dailySteps}
         />
         <Pressable
           onPress={() => {
@@ -327,31 +382,28 @@ export function CheckInForm({ form, setForm, previous, step }: Props) {
             accessible={false}
           />
         </Pressable>
-
         {showMore ? (
-          <View style={{ gap: spacing.base }}>
-            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-              {(
-                [
-                  ['Protein', 'protein'],
-                  ['Carbs', 'carbs'],
-                  ['Fats', 'fats'],
-                ] as const
-              ).map(([label, key]) => (
-                <Input
-                  key={key}
-                  containerStyle={{ flex: 1 }}
-                  label={label}
-                  value={form[key] === null ? '' : String(form[key])}
-                  onChangeText={(t) => {
-                    const n = parseFloat(t);
-                    set(key, t.trim() === '' || !Number.isFinite(n) ? null : n);
-                  }}
-                  keyboardType="number-pad"
-                  placeholder="g"
-                />
-              ))}
-            </View>
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            {(
+              [
+                ['Protein', 'protein'],
+                ['Carbs', 'carbs'],
+                ['Fats', 'fats'],
+              ] as const
+            ).map(([label, key]) => (
+              <Input
+                key={key}
+                containerStyle={{ flex: 1 }}
+                label={label}
+                value={form[key] === null ? '' : String(form[key])}
+                onChangeText={(t) => {
+                  const n = parseFloat(t);
+                  set(key, t.trim() === '' || !Number.isFinite(n) ? null : n);
+                }}
+                keyboardType="number-pad"
+                placeholder="g"
+              />
+            ))}
           </View>
         ) : null}
       </Card>
@@ -361,36 +413,28 @@ export function CheckInForm({ form, setForm, previous, step }: Props) {
   return (
     <Card style={{ gap: spacing.base }}>
       <Text variant="label" tone="muted">
-        How you feel
+        Notes and confirmation
       </Text>
       <View style={{ gap: spacing.sm }}>
         <Text variant="label" tone="muted">
-          Hunger
+          Ready to save
         </Text>
-        <RatingRow
-          label="Hunger out of 10"
-          min={1}
-          max={10}
-          value={form.hungerLevel}
-          onChange={(v) => set('hungerLevel', v)}
-        />
+        {[
+          ['Weight', form.morningWeight === null ? '—' : `${form.morningWeight} kg`],
+          ['Sleep', form.sleepHours === null ? '—' : `${form.sleepHours} h`],
+          ['Energy', form.energyLevel === null ? '—' : `${form.energyLevel}/10`],
+          ['Stress', form.stressLevel === null ? '—' : `${form.stressLevel}/10`],
+          ['Workout', form.workoutStatus ?? '—'],
+          ['Nutrition', form.nutritionScore === null ? '—' : `${form.nutritionScore}/10`],
+          ['Notes', form.notes.trim() || '—'],
+        ].map(([label, value]) => (
+          <View key={label} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Text variant="bodySm" tone="muted">{label}</Text>
+            <Text variant="bodySm" numeric>{value}</Text>
+          </View>
+        ))}
       </View>
-      <SegmentedControl
-        label="Digestion"
-        large
-        segments={DIGESTION_SEGMENTS}
-        value={form.digestion}
-        onChange={(v) => set('digestion', v)}
-      />
-      <Input
-        label="Notes (optional)"
-        value={form.notes}
-        onChangeText={(t) => set('notes', t)}
-        multiline
-        numberOfLines={4}
-        inputStyle={{ minHeight: 88, textAlignVertical: 'top' }}
-        placeholder="Anything your coach should know?"
-      />
+
     </Card>
   );
 }

@@ -18,6 +18,8 @@ type Props = {
   suffix?: string;
   /** Shown under the field, e.g. "last: 82.4 kg". */
   hint?: string;
+  /** Validation feedback replaces the hint so it sits next to the control. */
+  error?: string;
 };
 
 /**
@@ -34,6 +36,7 @@ export function Stepper({
   precision = 1,
   suffix,
   hint,
+  error,
 }: Props) {
   const { colors } = useTheme();
   const [typing, setTyping] = useState(false);
@@ -144,7 +147,11 @@ export function Stepper({
         </Pressable>
       </View>
 
-      {hint ? (
+      {error ? (
+        <Text variant="bodySm" tone="primary" accessibilityLiveRegion="polite">
+          {error}
+        </Text>
+      ) : hint ? (
         <Text variant="bodySm" tone="muted">
           {hint} · tap the number to type
         </Text>

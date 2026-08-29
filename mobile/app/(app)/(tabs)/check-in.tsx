@@ -1,8 +1,8 @@
 import * as Haptics from 'expo-haptics';
 import { format } from 'date-fns';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { AccessibilityInfo, KeyboardAvoidingView, Platform, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AccessibilityInfo, findNodeHandle, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 
 import { Celebration } from '@/components/checkin/Celebration';
 import {
@@ -30,36 +30,40 @@ import { useCheckInDraft } from '@/hooks/useCheckInDraft';
 import { findPreviousCheckIn, useCheckInMutation } from '@/hooks/useCheckInMutation';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { localDateString, parseLocalDate } from '@/lib/dates';
+import { validateCheckInStep } from '@/lib/checkin-validation';
 import { calculateStreak } from '@/lib/streak';
 import { num, normalizeWorkoutStatus } from '@/types/db';
-import { ACTION_BAR_HEIGHT, spacing } from '@/theme';
+import { ACTION_BAR_HEIGHT, spacing, useMotion } from '@/theme';
 
 const CHECK_IN_STEPS: { key: CheckInStep; title: string; description: string }[] = [
   {
+    key: 'readiness',
+    title: 'Readiness and energy',
+    description: 'A quick picture of how you are starting today.',
+  },
+  {
     key: 'recovery',
-    title: 'Recovery',
-    description: 'Your sleep, weight, and how recovered you feel.',
+    title: 'Sleep and recovery',
+    description: 'Capture sleep and the context that affects recovery.',
   },
   {
-    key: 'training',
-    title: 'Training',
-    description: 'Record today’s movement and workout quality.',
-  },
-  {
-    key: 'nutrition',
-    title: 'Nutrition',
-    description: 'Capture the useful numbers without overthinking them.',
+    key: 'adherence',
+    title: 'Nutrition and adherence',
+    description: 'Record training and the useful nutrition numbers.',
   },
   {
     key: 'finish',
-    title: 'Final details',
-    description: 'Add context that will help your coach understand the day.',
+    title: 'Notes and confirmation',
+    description: 'Review your check-in before saving it.',
   },
 ];
 
 export default function CheckInScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const motion = useMotion();
+  const scrollRef = useRef<ScrollView>(null);
+  const errorSummaryRef = useRef<View>(null);
   const params = useLocalSearchParams<{ date?: string }>();
 
   const { checkIns, processed, isLoading, isError, refetch } = useDashboardData();
@@ -85,6 +89,7 @@ export default function CheckInScreen() {
   const [draftReady, setDraftReady] = useState(false);
   const [celebrating, setCelebrating] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const { saveDraft, loadDraft, clearDraft } = useCheckInDraft(user?.id, targetDate);
 
   // Existing data wins. New check-ins restore a recent local draft, but never
@@ -104,6 +109,7 @@ export default function CheckInScreen() {
         setStepIndex(Math.min(CHECK_IN_STEPS.length - 1, Math.max(0, draft?.step ?? 0)));
       }
       setEditing(false);
+      setErrors({});
       setDraftReady(true);
     })();
     return () => {
@@ -132,6 +138,17 @@ export default function CheckInScreen() {
   }, [existing, streak, checkIns, form.morningWeight]);
 
   const submit = async () => {
+    const nextErrors = validateCheckInStep(activeStep.key, form);
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      AccessibilityInfo.announceForAccessibility('Please complete the highlighted fields.');
+      requestAnimationFrame(() => {
+        const node = findNodeHandle(errorSummaryRef.current);
+        if (node) AccessibilityInfo.setAccessibilityFocus(node);
+      });
+      return;
+    }
+    setErrors({});
     setSaveError(null);
     try {
       await mutation.mutateAsync(toPayload(form, targetDate));
@@ -183,8 +200,22 @@ export default function CheckInScreen() {
 
   const moveToStep = (next: number) => {
     const bounded = Math.min(CHECK_IN_STEPS.length - 1, Math.max(0, next));
+    if (bounded > stepIndex) {
+      const nextErrors = validateCheckInStep(activeStep.key, form);
+      if (Object.keys(nextErrors).length > 0) {
+        setErrors(nextErrors);
+        AccessibilityInfo.announceForAccessibility('Please complete the highlighted fields.');
+        requestAnimationFrame(() => {
+          const node = findNodeHandle(errorSummaryRef.current);
+          if (node) AccessibilityInfo.setAccessibilityFocus(node);
+        });
+        return;
+      }
+    }
     setStepIndex(bounded);
+    setErrors({});
     setSaveError(null);
+    scrollRef.current?.scrollTo({ y: 0, animated: motion.enabled });
     AccessibilityInfo.announceForAccessibility(
       `Step ${bounded + 1} of ${CHECK_IN_STEPS.length}: ${CHECK_IN_STEPS[bounded].title}`,
     );
@@ -234,6 +265,7 @@ export default function CheckInScreen() {
             variant="secondary"
             onPress={() => {
               setStepIndex(0);
+              setErrors({});
               setEditing(true);
             }}
           />
@@ -252,7 +284,7 @@ export default function CheckInScreen() {
   // ── the fast flow ────────────────────────────────────────────────────────
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Screen archetype="root" bottomInset={ACTION_BAR_HEIGHT}>
+      <Screen ref={scrollRef} archetype="root" bottomInset={ACTION_BAR_HEIGHT}>
         <View style={{ gap: spacing.lg }}>
           <View style={{ gap: spacing.sm }}>
             <Text variant="h1">{isToday ? 'How was today?' : dateLabel}</Text>
@@ -278,6 +310,19 @@ export default function CheckInScreen() {
                 onApply={() => setForm((p) => ({ ...p, ...prefillFrom(previous) }))}
               />
             ) : null}
+            {Object.keys(errors).length > 0 ? (
+              <View
+                ref={errorSummaryRef}
+                accessible
+                accessibilityRole="alert"
+                accessibilityLiveRegion="polite"
+                style={{ gap: spacing.xs }}
+              >
+                <Text variant="bodySm" tone="primary">
+                  Please complete the highlighted fields.
+                </Text>
+              </View>
+            ) : null}
           </View>
 
           <CheckInForm
@@ -285,6 +330,7 @@ export default function CheckInScreen() {
             setForm={setForm}
             previous={previous}
             step={activeStep.key}
+            errors={errors}
           />
 
           {saveError ? (
