@@ -22,18 +22,30 @@ export type ScreenArchetype =
   /** Content inside a bottom sheet. */
   | 'sheet';
 
+export type ResponsiveMode = 'compact' | 'regular' | 'wide';
+
 /** Height of the tab bar body, excluding the bottom safe area. */
 export const TAB_BAR_HEIGHT = 56;
 /** Height of a sticky action bar body, excluding the bottom safe area. */
 export const ACTION_BAR_HEIGHT = 64;
 
-/**
- * The Dynamic Island reports a taller top inset than the notch, which leaves
- * headers looking bottom-heavy. skulpt corrects by 6pt; same here.
- */
-export function statusBarHeight(insets: EdgeInsets): number {
-  const hasDynamicIsland = Platform.OS === 'ios' && insets.top > 50;
-  return hasDynamicIsland ? insets.top - 6 : insets.top;
+export function getResponsiveMode(width: number, fontScale: number): ResponsiveMode {
+  if (width >= 768) return 'wide';
+  if (width < 360 || fontScale >= 1.3) return 'compact';
+  return 'regular';
+}
+
+export function contentMaxWidth(mode: ResponsiveMode): number | undefined {
+  return mode === 'wide' ? 720 : undefined;
+}
+
+/** The full OS-reported safe area, including Dynamic Island clearance. */
+export function statusBarHeight(
+  insets: EdgeInsets,
+  platform: typeof Platform.OS = Platform.OS,
+): number {
+  void platform;
+  return insets.top;
 }
 
 /** Horizontal gutter — wider on tablets so text keeps a readable measure. */
@@ -44,17 +56,18 @@ export function horizontalInset(width: number): number {
 export function screenContentPadding(
   archetype: ScreenArchetype,
   insets: EdgeInsets,
+  platform: typeof Platform.OS = Platform.OS,
 ): { paddingTop: number; paddingBottom: number } {
   switch (archetype) {
     case 'root':
       return {
-        paddingTop: spacing.base,
+        paddingTop: statusBarHeight(insets, platform) + spacing.base,
         // Clear the tab bar plus a comfortable scroll tail.
         paddingBottom: insets.bottom + TAB_BAR_HEIGHT + spacing.lg,
       };
     case 'editor':
       return {
-        paddingTop: spacing.base,
+        paddingTop: statusBarHeight(insets, platform) + spacing.base,
         // Clear the sticky action bar, which sits inside the safe area itself.
         paddingBottom: insets.bottom + ACTION_BAR_HEIGHT + spacing.lg,
       };
@@ -66,7 +79,7 @@ export function screenContentPadding(
     case 'child':
     default:
       return {
-        paddingTop: spacing.base,
+        paddingTop: statusBarHeight(insets, platform) + spacing.base,
         paddingBottom: insets.bottom + spacing.xl,
       };
   }
