@@ -5,6 +5,7 @@ import { Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useDashboardData } from '@/hooks/useDashboardData';
+import { useReducedTransparency } from '@/hooks/useReducedTransparency';
 import { localDateString } from '@/lib/dates';
 import { fonts, iconSize, radius, useTheme } from '@/theme';
 
@@ -20,7 +21,7 @@ function TabIcon({
   focused: boolean;
   dot?: boolean;
 }) {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   return (
     <View
       style={{
@@ -55,6 +56,7 @@ function TabIcon({
 export default function TabsLayout() {
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
+  const reducedTransparency = useReducedTransparency();
   // The one piece of ambient state worth surfacing globally.
   const { processed } = useDashboardData();
   const today = localDateString();
@@ -67,17 +69,18 @@ export default function TabsLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedForeground,
         tabBarBackground:
-          Platform.OS === 'ios'
+          Platform.OS === 'ios' && !reducedTransparency
             ? () => (
                 <BlurView
                   tint={isDark ? 'dark' : 'light'}
-                  intensity={24}
+                  intensity={20}
                   style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
                 />
               )
             : undefined,
         tabBarStyle: {
-          backgroundColor: Platform.OS === 'ios' ? 'transparent' : colors.card,
+          backgroundColor:
+            Platform.OS === 'ios' && !reducedTransparency ? 'transparent' : colors.card,
           position: Platform.OS === 'ios' ? 'absolute' : 'relative',
           borderTopColor: colors.border,
           // Clear the home indicator / Android gesture bar.
