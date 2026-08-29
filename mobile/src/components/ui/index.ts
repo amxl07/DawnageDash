@@ -21,3 +21,4 @@ export { StickyActionBar } from './StickyActionBar';
 export { PageHeader } from './PageHeader';
 export { ListRow } from './ListRow';
 export { AnimatedFlatList, useListMotion } from './AnimatedList';
+export { AdaptiveGrid } from './AdaptiveGrid';
