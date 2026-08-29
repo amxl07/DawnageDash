@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { ChevronDown, ChevronRight, Flame, Trophy, Weight, Zap } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
-import { Pressable, RefreshControl, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { InteractionManager, Pressable, RefreshControl, View } from 'react-native';
 
 import { DawnGlow, Logo } from '@/components/brand';
 import { BarChart, DonutChart, LineChart } from '@/components/charts';
+import { CheckInHistorySheet } from '@/components/dashboard/CheckInHistorySheet';
 import { ConsistencyGrid } from '@/components/dashboard/ConsistencyGrid';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { StreakHero } from '@/components/dashboard/StreakHero';
@@ -44,6 +45,8 @@ export default function DashboardScreen() {
   const { data: plan } = useWorkoutPlan();
   const provenance = usePlanProvenance(plan?.days);
   const [showInsights, setShowInsights] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const selectedHistoryDate = useRef<string | null>(null);
   const {
     checkIns,
     metrics,
@@ -92,6 +95,18 @@ export default function DashboardScreen() {
 
   const macroTotal =
     nutritionBreakdown.protein + nutritionBreakdown.carbs + nutritionBreakdown.fats;
+
+  useEffect(() => {
+    if (historyOpen || !selectedHistoryDate.current) return;
+
+    const dateString = selectedHistoryDate.current;
+    selectedHistoryDate.current = null;
+    const interaction = InteractionManager.runAfterInteractions(() => {
+      router.push({ pathname: '/(app)/(tabs)/check-in', params: { date: dateString } });
+    });
+
+    return () => interaction.cancel();
+  }, [historyOpen, router]);
 
   if (isLoading) {
     return (
@@ -206,9 +221,10 @@ export default function DashboardScreen() {
 
         <ConsistencyGrid
           processed={processed}
-          onSelectDay={(dateString) =>
-            router.push({ pathname: '/(app)/(tabs)/check-in', params: { date: dateString } })
-          }
+          onOpenHistory={() => {
+            selectedHistoryDate.current = null;
+            setHistoryOpen(true);
+          }}
         />
 
         <Stagger index={0}>
@@ -356,6 +372,14 @@ export default function DashboardScreen() {
         ) : null}
       </View>
     </Screen>
+    <CheckInHistorySheet
+      visible={historyOpen}
+      processed={processed}
+      onSelectDay={(dateString) => {
+        selectedHistoryDate.current = dateString;
+      }}
+      onClose={() => setHistoryOpen(false)}
+    />
     </View>
   );
 }
