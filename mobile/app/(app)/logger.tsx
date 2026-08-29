@@ -31,7 +31,13 @@ import { useWorkoutDraft } from '@/hooks/useWorkoutDraft';
 import { localDateString, parseLocalDate } from '@/lib/dates';
 import { enqueue, flushOutbox } from '@/lib/outbox';
 import { supabase } from '@/lib/supabase';
-import { maxWeightFor, parseWorkoutContent, totalVolume } from '@/lib/workout-content';
+import {
+  countSets,
+  maxWeightFor,
+  parseWorkoutContent,
+  serializeWorkoutContent,
+  totalVolume,
+} from '@/lib/workout-content';
 import { HIT_SLOP_MIN, iconSize, spacing, useTheme } from '@/theme';
 
 export default function LoggerScreen() {
@@ -232,7 +238,7 @@ export default function LoggerScreen() {
   );
 
   const completedCount = state.exercises.filter((ex) =>
-    ex.sets.some((s) => s.weight.trim() && s.reps.trim()),
+    ex.sets.some((s) => s.completed),
   ).length;
 
   const close = () => {
@@ -273,17 +279,21 @@ export default function LoggerScreen() {
     setSaving(true);
     setSaveError(null);
 
-    const content = JSON.stringify(
-      state.exercises.map((ex) => ({
-        exercise: ex.name,
+    const content = serializeWorkoutContent({
+      planDayNumber: state.selectedDay,
+      exercises: state.exercises.map((ex) => ({
+        name: ex.name,
         sets: ex.sets.map((s, i) => ({
           setNumber: i + 1,
           reps: s.reps,
           weight: s.weight,
           rpe: s.rpe,
+          completed: s.completed,
+          duration: s.duration,
+          kind: s.kind,
         })),
       })),
-    );
+    });
     const payload = { user_id: user.id, date, title: state.title.trim(), content };
 
     // PR detection against the previous-session data.
@@ -300,10 +310,7 @@ export default function LoggerScreen() {
     const exercisesNow = parsedNow.kind === 'exercises' ? parsedNow.exercises : [];
     const result = {
       volume: totalVolume(exercisesNow),
-      sets: exercisesNow.reduce(
-        (n, e) => n + e.sets.filter((s) => s.weight.trim() && s.reps.trim()).length,
-        0,
-      ),
+      sets: countSets(exercisesNow),
       minutes: Math.max(1, Math.round((Date.now() - openedAt.current) / 60000)),
       prs,
     };
@@ -508,7 +515,7 @@ export default function LoggerScreen() {
 
                 <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'center', gap: spacing.xs }}>
                   {state.exercises.map((ex, i) => {
-                    const done = ex.sets.some((s) => s.weight.trim() && s.reps.trim());
+                    const done = ex.sets.some((s) => s.completed);
                     return (
                       <View
                         key={ex.id}
@@ -556,6 +563,12 @@ export default function LoggerScreen() {
                     dispatch({
                       type: 'UPDATE_SET',
                       payload: { exerciseIndex: index, setIndex: setIdx, field, value },
+                    })
+                  }
+                  onToggleSet={(setIdx) =>
+                    dispatch({
+                      type: 'TOGGLE_SET',
+                      payload: { exerciseIndex: index, setIndex: setIdx },
                     })
                   }
                   onAddSet={() =>
