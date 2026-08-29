@@ -7,13 +7,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Sheet } from './Sheet';
 
+let mockModalOnChange: ((index: number) => void) | undefined;
+
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = jest.requireActual('react');
   const { View: NativeView } = jest.requireActual('react-native');
 
   const Modal = React.forwardRef(
-    ({ children }: { children: React.ReactNode }, ref: React.ForwardedRef<{ present: () => void; dismiss: () => void }>) => {
+    (
+      { children, onChange }: { children: React.ReactNode; onChange?: (index: number) => void },
+      ref: React.ForwardedRef<{ present: () => void; dismiss: () => void }>,
+    ) => {
+      mockModalOnChange = onChange;
       React.useImperativeHandle(ref, () => ({ present: jest.fn(), dismiss: jest.fn() }));
+      // Rendering children must not synthesize a presentation state change.
       return React.createElement(NativeView, null, children);
     },
   );
@@ -75,11 +82,7 @@ const mockFindNodeHandle = jest.mocked(findNodeHandle);
 describe('Sheet', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    global.requestAnimationFrame = ((callback: FrameRequestCallback) => {
-      callback(0);
-      return 1;
-    }) as typeof requestAnimationFrame;
-    global.cancelAnimationFrame = jest.fn();
+    mockModalOnChange = undefined;
   });
 
   it('provides a named 44pt close action and bottom safe-area clearance', () => {
@@ -112,14 +115,26 @@ describe('Sheet', () => {
     expect(StyleSheet.flatten(getByTestId('sheet-content').props.style)).toMatchObject({ paddingBottom: 34 });
   });
 
-  it('moves accessibility focus to its title after presentation', () => {
+  it('waits for presentation before moving accessibility focus to its title once', () => {
     mockSafeAreaInsets.mockReturnValue({ top: 47, right: 0, bottom: 34, left: 0 });
 
     act(() => {
       create(<Sheet visible title="Exercise details" onClose={jest.fn()}><Text>Prescription</Text></Sheet>);
     });
 
-    expect(mockFindNodeHandle).toHaveBeenCalled();
+    expect(mockFindNodeHandle).not.toHaveBeenCalled();
+    expect(mockAccessibilityInfo.setAccessibilityFocus).not.toHaveBeenCalled();
+
+    act(() => mockModalOnChange?.(0));
+
+    expect(mockFindNodeHandle).toHaveBeenCalledTimes(1);
     expect(mockAccessibilityInfo.setAccessibilityFocus).toHaveBeenCalledWith(42);
+
+    act(() => {
+      mockModalOnChange?.(1);
+      mockModalOnChange?.(0);
+    });
+
+    expect(mockAccessibilityInfo.setAccessibilityFocus).toHaveBeenCalledTimes(1);
   });
 });

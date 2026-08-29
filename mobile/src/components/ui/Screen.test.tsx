@@ -86,6 +86,13 @@ describe('Screen', () => {
     expect(mockUseScrollToTop.mock.calls[0][0].current).toBeTruthy();
   });
 
+  it('keeps scroll-to-top registration unconditional for non-scrolling screens', () => {
+    render(<Screen scroll={false}><Text>Static content</Text></Screen>);
+
+    expect(mockUseScrollToTop).toHaveBeenCalledTimes(1);
+    expect(mockUseScrollToTop.mock.calls[0][0].current).toBeNull();
+  });
+
   it('does not add a top safe-area inset inside sheets', () => {
     const { getByTestId } = render(
       <Screen archetype="sheet" testID="screen-content">

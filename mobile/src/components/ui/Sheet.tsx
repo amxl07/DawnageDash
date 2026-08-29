@@ -44,23 +44,31 @@ export function Sheet({ visible, onClose, title, children, heightRatio = 0.85 }:
   const insets = useSafeAreaInsets();
   const ref = useRef<BottomSheetModal>(null);
   const titleRef = useRef<View>(null);
+  const hasFocusedTitle = useRef(false);
 
   const snapPoints = useMemo(() => [`${Math.round(heightRatio * 100)}%`], [heightRatio]);
 
   useEffect(() => {
     if (!visible) {
+      hasFocusedTitle.current = false;
       ref.current?.dismiss();
       return;
     }
 
+    hasFocusedTitle.current = false;
     ref.current?.present();
-    const frame = requestAnimationFrame(() => {
+  }, [visible]);
+
+  const handleSheetChange = useCallback(
+    (index: number) => {
+      if (!visible || index !== 0 || hasFocusedTitle.current) return;
+
+      hasFocusedTitle.current = true;
       const titleHandle = findNodeHandle(titleRef.current);
       if (titleHandle != null) AccessibilityInfo.setAccessibilityFocus(titleHandle);
-    });
-
-    return () => cancelAnimationFrame(frame);
-  }, [visible]);
+    },
+    [visible],
+  );
 
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
@@ -79,6 +87,7 @@ export function Sheet({ visible, onClose, title, children, heightRatio = 0.85 }:
     <BottomSheetModal
       ref={ref}
       snapPoints={snapPoints}
+      onChange={handleSheetChange}
       onDismiss={onClose}
       backdropComponent={renderBackdrop}
       enablePanDownToClose
