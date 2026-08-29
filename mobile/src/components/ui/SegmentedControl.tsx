@@ -2,11 +2,7 @@ import * as Haptics from 'expo-haptics';
 import type { LucideIcon } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import { Pressable, View, type LayoutChangeEvent } from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 
 import { HIT_SLOP_MIN, iconSize, radius, spacing, useMotion, useTheme } from '@/theme';
 import { Text } from './Text';
@@ -22,15 +18,9 @@ type Props<T extends string> = {
   large?: boolean;
 };
 
-type Rect = { x: number; y: number; width: number; height: number };
-
 /**
- * One-of-many selection with a thumb that travels to the active segment.
- *
- * The thumb animates x, y, width AND height — width because labels differ in
- * length, and y/height because `large` wraps into a grid where the selection
- * can move between rows. Measuring per segment with onLayout is what makes
- * unequal labels work; a fixed-fraction thumb would drift.
+ * One-of-many selection. Compact rows use a transform-only thumb; wrapping
+ * controls use direct selected surfaces so selection remains unambiguous.
  *
  * Uses lucide glyphs + a text label — never emoji, which are font-dependent
  * and unthemeable (§02.8).
@@ -44,33 +34,25 @@ export function SegmentedControl<T extends string>({
 }: Props<T>) {
   const { colors } = useTheme();
   const motion = useMotion();
-  const [rects, setRects] = useState<Record<number, Rect>>({});
+  const [containerWidth, setContainerWidth] = useState(0);
 
-  const activeIndex = segments.findIndex((s) => s.value === value);
-  const activeRect = activeIndex >= 0 ? rects[activeIndex] : undefined;
-
-  const onSegmentLayout = useCallback((index: number, e: LayoutChangeEvent) => {
-    const { x, y, width, height } = e.nativeEvent.layout;
-    setRects((prev) => {
-      const p = prev[index];
-      if (p && p.x === x && p.y === y && p.width === width && p.height === height) return prev;
-      return { ...prev, [index]: { x, y, width, height } };
-    });
+  const activeIndex = segments.findIndex((segment) => segment.value === value);
+  const segmentWidth = segments.length > 0 ? (containerWidth - spacing.sm * (segments.length - 1)) / segments.length : 0;
+  const onContainerLayout = useCallback((event: LayoutChangeEvent) => {
+    const { width } = event.nativeEvent.layout;
+    setContainerWidth((current) => (current === width ? current : width));
   }, []);
 
   const thumbStyle = useAnimatedStyle(() => {
-    if (!activeRect) return { opacity: 0 };
-    const cfg = { duration: motion.duration.enter, easing: Easing.bezier(...motion.easing.standard) };
-    return {
-      opacity: 1,
-      transform: [
-        { translateX: withTiming(activeRect.x, cfg) },
-        { translateY: withTiming(activeRect.y, cfg) },
-      ],
-      width: withTiming(activeRect.width, cfg),
-      height: withTiming(activeRect.height, cfg),
+    const config = {
+      duration: motion.duration.feedback,
+      easing: Easing.bezier(...motion.easing.standard),
     };
-  }, [activeRect, motion]);
+    return {
+      opacity: containerWidth > 0 && activeIndex >= 0 ? 1 : 0,
+      transform: [{ translateX: withTiming(activeIndex * (segmentWidth + spacing.sm), config) }],
+    };
+  }, [activeIndex, containerWidth, motion, segmentWidth]);
 
   return (
     <View style={{ gap: spacing.xs }}>
@@ -80,6 +62,7 @@ export function SegmentedControl<T extends string>({
 
       <View
         accessibilityRole="radiogroup"
+        onLayout={large ? undefined : onContainerLayout}
         style={{
           position: 'relative',
           flexDirection: 'row',
@@ -87,42 +70,45 @@ export function SegmentedControl<T extends string>({
           gap: spacing.sm,
         }}
       >
-        {/* Travels to the active segment. Hidden until the first measurement
-            lands, so it never flashes at 0×0 in the corner. */}
-        <Animated.View
-          pointerEvents="none"
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-          style={[
-            {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              borderRadius: radius.md,
-              backgroundColor: colors.primaryFill,
-              borderWidth: 2,
-              borderColor: colors.primary,
-            },
-            thumbStyle,
-          ]}
-        />
+        {!large ? (
+          <Animated.View
+            pointerEvents="none"
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={[
+              {
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: segmentWidth,
+                bottom: 0,
+                borderRadius: radius.md,
+                backgroundColor: colors.primaryFill,
+                borderWidth: 2,
+                borderColor: colors.primary,
+              },
+              thumbStyle,
+            ]}
+          />
+        ) : null}
 
-        {segments.map((seg, index) => {
-          const active = value === seg.value;
-          const Icon = seg.icon;
+        {segments.map((segment) => {
+          const active = value === segment.value;
+          const Icon = segment.icon;
           return (
             <Pressable
-              key={seg.value}
-              onLayout={(e) => onSegmentLayout(index, e)}
+              key={segment.value}
               onPress={() => {
-                onChange(seg.value);
+                if (active) return;
+                onChange(segment.value);
                 void Haptics.selectionAsync();
               }}
               accessibilityRole="radio"
-              accessibilityLabel={seg.label}
+              accessibilityLabel={segment.label}
               accessibilityState={{ selected: active, checked: active }}
               style={({ pressed }) => ({
-                flexGrow: 1,
+                flex: large ? undefined : 1,
+                flexGrow: large ? 1 : undefined,
                 flexBasis: large ? '46%' : 0,
                 minHeight: large ? 64 : HIT_SLOP_MIN,
                 alignItems: 'center',
@@ -131,11 +117,9 @@ export function SegmentedControl<T extends string>({
                 paddingVertical: spacing.sm,
                 paddingHorizontal: spacing.sm,
                 borderRadius: radius.md,
-                // The thumb supplies the active outline; an inactive segment
-                // keeps its own so the control still reads as a set of choices.
-                borderWidth: active ? 0 : 1,
-                borderColor: colors.borderStrong,
-                backgroundColor: !active && pressed ? colors.elevated : 'transparent',
+                borderWidth: large && active ? 2 : active ? 0 : 1,
+                borderColor: large && active ? colors.primary : colors.borderStrong,
+                backgroundColor: large && active ? colors.primaryFill : !active && pressed ? colors.elevated : 'transparent',
               })}
             >
               {Icon ? (
@@ -147,7 +131,7 @@ export function SegmentedControl<T extends string>({
                 />
               ) : null}
               <Text variant="bodySm" tone={active ? 'onPrimary' : 'default'}>
-                {seg.label}
+                {segment.label}
               </Text>
             </Pressable>
           );
