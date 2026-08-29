@@ -21,117 +21,18 @@ import { SwipeableSlide } from '@/components/logger/SwipeableSlide';
 import { RestTimer } from '@/components/logger/RestTimer';
 import { Button, Card, Input, Screen, Text } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
+import {
+  initialWorkoutState,
+  workoutReducer,
+  type WorkoutExercise,
+} from '@/features/workout/workoutReducer';
 import { useWorkoutPlan } from '@/hooks/usePlans';
-import { useWorkoutDraft, type DraftExercise } from '@/hooks/useWorkoutDraft';
+import { useWorkoutDraft } from '@/hooks/useWorkoutDraft';
 import { localDateString, parseLocalDate } from '@/lib/dates';
 import { enqueue, flushOutbox } from '@/lib/outbox';
 import { supabase } from '@/lib/supabase';
 import { maxWeightFor, parseWorkoutContent, totalVolume } from '@/lib/workout-content';
 import { HIT_SLOP_MIN, iconSize, spacing, useTheme } from '@/theme';
-
-// ── reducer (ported from WorkoutLogDialog's FormState/FormAction) ──────────
-type State = {
-  title: string;
-  exercises: DraftExercise[];
-  existingLogId: string | null;
-  selectedDay: number | null;
-  isDirty: boolean;
-};
-
-type Action =
-  | { type: 'LOAD_EXISTING_LOG'; payload: { logId: string; title: string; exercises: DraftExercise[] } }
-  | { type: 'LOAD_DEFAULT_PLAN'; payload: { day: number; title: string; exercises: DraftExercise[] } }
-  | { type: 'RESTORE_DRAFT'; payload: { title: string; exercises: DraftExercise[]; existingLogId: string | null } }
-  | { type: 'SET_TITLE'; payload: string }
-  | { type: 'UPDATE_SET'; payload: { ex: number; set: number; field: 'reps' | 'weight' | 'rpe'; value: string } }
-  | { type: 'ADD_SET'; payload: { ex: number } }
-  | { type: 'REMOVE_SET'; payload: { ex: number; set: number } }
-  | { type: 'ADD_EXERCISE'; payload: { name: string } }
-  | { type: 'MARK_CLEAN' };
-
-const initialState: State = {
-  title: '',
-  exercises: [],
-  existingLogId: null,
-  selectedDay: null,
-  isDirty: false,
-};
-
-function reducer(state: State, action: Action): State {
-  switch (action.type) {
-    case 'LOAD_EXISTING_LOG':
-      return {
-        ...state,
-        title: action.payload.title,
-        exercises: action.payload.exercises,
-        existingLogId: action.payload.logId,
-        isDirty: false,
-      };
-    case 'LOAD_DEFAULT_PLAN':
-      return {
-        ...state,
-        title: action.payload.title,
-        exercises: action.payload.exercises,
-        selectedDay: action.payload.day,
-        existingLogId: null,
-        isDirty: false,
-      };
-    case 'RESTORE_DRAFT':
-      return {
-        ...state,
-        title: action.payload.title,
-        exercises: action.payload.exercises,
-        existingLogId: action.payload.existingLogId,
-        isDirty: true,
-      };
-    case 'SET_TITLE':
-      return { ...state, title: action.payload, isDirty: true };
-    case 'UPDATE_SET': {
-      const exercises = state.exercises.map((ex, i) =>
-        i !== action.payload.ex
-          ? ex
-          : {
-              ...ex,
-              sets: ex.sets.map((s, j) =>
-                j !== action.payload.set ? s : { ...s, [action.payload.field]: action.payload.value },
-              ),
-            },
-      );
-      return { ...state, exercises, isDirty: true };
-    }
-    case 'ADD_SET': {
-      const exercises = state.exercises.map((ex, i) =>
-        i !== action.payload.ex ? ex : { ...ex, sets: [...ex.sets, { reps: '', weight: '', rpe: '' }] },
-      );
-      return { ...state, exercises, isDirty: true };
-    }
-    case 'REMOVE_SET': {
-      const exercises = state.exercises.map((ex, i) =>
-        i !== action.payload.ex
-          ? ex
-          : { ...ex, sets: ex.sets.filter((_, j) => j !== action.payload.set) },
-      );
-      return { ...state, exercises, isDirty: true };
-    }
-    case 'ADD_EXERCISE':
-      return {
-        ...state,
-        exercises: [
-          ...state.exercises,
-          {
-            id: `custom-${Date.now()}`,
-            name: action.payload.name,
-            sets: [{ reps: '', weight: '', rpe: '' }],
-          },
-        ],
-        isDirty: true,
-      };
-    case 'MARK_CLEAN':
-      return { ...state, isDirty: false };
-    default:
-      return state;
-  }
-}
 
 export default function LoggerScreen() {
   const { colors } = useTheme();
@@ -142,7 +43,7 @@ export default function LoggerScreen() {
   const params = useLocalSearchParams<{ date?: string; day?: string; logId?: string }>();
 
   const date = params.date && params.date <= localDateString() ? params.date : localDateString();
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const [state, dispatch] = useReducer(workoutReducer, initialWorkoutState);
   const [index, setIndex] = useState(0);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -214,12 +115,14 @@ export default function LoggerScreen() {
     void (async () => {
       const draft = await loadDraft();
       if (draft) {
+        const selectedDay = Number(draft.selectedPlanId);
         dispatch({
           type: 'RESTORE_DRAFT',
           payload: {
             title: draft.workoutTitle,
             exercises: draft.exercises,
             existingLogId: draft.existingLogId,
+            selectedDay: Number.isInteger(selectedDay) ? selectedDay : null,
           },
         });
         AccessibilityInfo.announceForAccessibility('Draft restored.');
@@ -227,19 +130,43 @@ export default function LoggerScreen() {
       }
       if (existingLog) {
         const parsed = parseWorkoutContent(existingLog.content);
-        const exercises: DraftExercise[] =
+        const exercises: WorkoutExercise[] =
           parsed.kind === 'exercises'
             ? parsed.exercises.map((e, i) => ({
                 id: String(i),
                 name: e.name,
+                tracking: 'weight-reps',
                 sets: e.sets.length
-                  ? e.sets.map((s) => ({ reps: s.reps, weight: s.weight, rpe: s.rpe }))
-                  : [{ reps: '', weight: '', rpe: '' }],
+                  ? e.sets.map((s, setIndex) => ({
+                      id: `${i}-set-${setIndex + 1}`,
+                      reps: s.reps,
+                      weight: s.weight,
+                      rpe: s.rpe,
+                      duration: s.duration ?? '',
+                      kind: s.kind ?? 'work',
+                      completed: s.completed,
+                    }))
+                  : [
+                      {
+                        id: `${i}-set-1`,
+                        reps: '',
+                        weight: '',
+                        rpe: '',
+                        duration: '',
+                        kind: 'work',
+                        completed: false,
+                      },
+                    ],
               }))
             : [];
         dispatch({
           type: 'LOAD_EXISTING_LOG',
-          payload: { logId: existingLog.id, title: existingLog.title ?? '', exercises },
+          payload: {
+            logId: existingLog.id,
+            title: existingLog.title ?? '',
+            exercises,
+            selectedDay: parsed.kind === 'exercises' ? parsed.planDayNumber ?? null : null,
+          },
         });
         return;
       }
@@ -626,11 +553,19 @@ export default function LoggerScreen() {
                   notes={planMeta?.notes}
                   previous={previousData?.[currentExercise.name.toLowerCase().trim()]}
                   onUpdateSet={(setIdx, field, value) =>
-                    dispatch({ type: 'UPDATE_SET', payload: { ex: index, set: setIdx, field, value } })
+                    dispatch({
+                      type: 'UPDATE_SET',
+                      payload: { exerciseIndex: index, setIndex: setIdx, field, value },
+                    })
                   }
-                  onAddSet={() => dispatch({ type: 'ADD_SET', payload: { ex: index } })}
+                  onAddSet={() =>
+                    dispatch({ type: 'ADD_SET', payload: { exerciseIndex: index } })
+                  }
                   onRemoveSet={(setIdx) =>
-                    dispatch({ type: 'REMOVE_SET', payload: { ex: index, set: setIdx } })
+                    dispatch({
+                      type: 'REMOVE_SET',
+                      payload: { exerciseIndex: index, setIndex: setIdx },
+                    })
                   }
                 />
                 </SwipeableSlide>

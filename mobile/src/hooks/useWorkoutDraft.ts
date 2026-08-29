@@ -1,7 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-export type DraftExercise = { id: string; name: string; sets: { reps: string; weight: string; rpe: string }[] };
+import type { WorkoutExercise } from '@/features/workout/workoutReducer';
+
+export type DraftExercise = WorkoutExercise;
 
 export type DraftData = {
   workoutTitle: string;
