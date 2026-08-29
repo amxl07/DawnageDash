@@ -32,10 +32,10 @@ export function MetricCard({ icon: Icon, label, value, unit, trend }: Props) {
     .join('. ');
 
   return (
-    <Card style={{ flex: 1, gap: spacing.sm, minWidth: 0 }} accessible accessibilityLabel={a11y}>
+    <Card style={{ flex: 1, alignSelf: 'stretch', gap: spacing.sm, minWidth: 0 }} accessible accessibilityLabel={a11y}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
         <Icon size={iconSize.sm} color={colors.mutedForeground} strokeWidth={2} accessible={false} />
-        <Text variant="label" tone="muted" numberOfLines={1} style={{ flex: 1 }}>
+        <Text variant="label" tone="muted" style={{ flex: 1 }}>
           {label}
         </Text>
       </View>
@@ -73,12 +73,12 @@ export function MetricCard({ icon: Icon, label, value, unit, trend }: Props) {
             {trend.value > 0 ? '+' : ''}
             {trend.value.toFixed(1)}
           </Text>
-          <Text variant="bodySm" tone="muted" numberOfLines={1} style={{ flex: 1 }}>
+          <Text variant="bodySm" tone="muted" style={{ flex: 1 }}>
             {trend.caption}
           </Text>
         </View>
       ) : (
-        <Text variant="bodySm" tone="muted" numberOfLines={1}>
+        <Text variant="bodySm" tone="muted">
           {trend?.caption ?? ' '}
         </Text>
       )}

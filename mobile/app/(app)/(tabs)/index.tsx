@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { ChevronDown, Flame, Trophy, Weight, Zap } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { InteractionManager, Pressable, RefreshControl, View } from 'react-native';
+import Animated, { Easing, FadeIn, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { DawnGlow, Logo } from '@/components/brand';
 import { BarChart, DonutChart, LineChart } from '@/components/charts';
@@ -14,6 +15,7 @@ import { TodayActionCard } from '@/components/dashboard/TodayActionCard';
 import { WeekStrip } from '@/components/dashboard/WeekStrip';
 import {
   Card,
+  AdaptiveGrid,
   EmptyState,
   ErrorState,
   ProgressBar,
@@ -31,7 +33,7 @@ import { supabase } from '@/lib/supabase';
 import { buildWeekStrip, calculateStreak } from '@/lib/streak';
 import { localDateString } from '@/lib/dates';
 import { num } from '@/types/db';
-import { iconSize, spacing, useTheme } from '@/theme';
+import { iconSize, spacing, useMotion, useTheme } from '@/theme';
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -42,11 +44,13 @@ function greeting(): string {
 
 export default function DashboardScreen() {
   const { colors } = useTheme();
+  const motion = useMotion();
   const router = useRouter();
   const { user } = useAuth();
   const { data: plan } = useWorkoutPlan();
   const provenance = usePlanProvenance(plan?.days);
   const [showInsights, setShowInsights] = useState(false);
+  const insightChevron = useSharedValue(0);
   const [historyOpen, setHistoryOpen] = useState(false);
   const selectedHistoryDate = useRef<string | null>(null);
   const {
@@ -120,6 +124,22 @@ export default function DashboardScreen() {
 
     return () => interaction.cancel();
   }, [historyOpen, router]);
+
+  useEffect(() => {
+    const next = showInsights ? 1 : 0;
+    if (!motion.enabled) {
+      insightChevron.value = next;
+      return;
+    }
+    insightChevron.value = withTiming(next, {
+      duration: motion.duration.feedback,
+      easing: Easing.bezier(...motion.easing.standard),
+    });
+  }, [insightChevron, motion.duration.feedback, motion.easing.standard, motion.enabled, showInsights]);
+
+  const insightChevronStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${insightChevron.value * 180}deg` }],
+  }));
 
   if (isLoading) {
     return (
@@ -222,7 +242,7 @@ export default function DashboardScreen() {
         />
 
         <Stagger index={0}>
-        <View style={{ flexDirection: 'row', gap: spacing.md }}>
+        <AdaptiveGrid>
           <MetricCard
             icon={Weight}
             label="Weight"
@@ -236,7 +256,7 @@ export default function DashboardScreen() {
             value={String(metrics.totalWorkouts)}
             trend={{ value: 0, goodDirection: 'up', caption: 'Total tracked' }}
           />
-        </View>
+        </AdaptiveGrid>
         </Stagger>
 
         <Pressable
@@ -253,19 +273,21 @@ export default function DashboardScreen() {
                 Energy, nutrition, charts, and weekly targets
               </Text>
             </View>
-            <ChevronDown
-              size={iconSize.md}
-              color={colors.mutedForeground}
-              strokeWidth={2}
-              style={{ transform: [{ rotate: showInsights ? '180deg' : '0deg' }] }}
-              accessible={false}
-            />
+            <Animated.View style={insightChevronStyle} accessible={false}>
+              <ChevronDown
+                size={iconSize.md}
+                color={colors.mutedForeground}
+                strokeWidth={2}
+                accessible={false}
+              />
+            </Animated.View>
           </Card>
         </Pressable>
 
         {showInsights ? (
+          <Animated.View entering={motion.enabled ? FadeIn.duration(motion.duration.enter) : undefined}>
           <View style={{ gap: spacing.lg }}>
-            <View style={{ flexDirection: 'row', gap: spacing.md }}>
+            <AdaptiveGrid>
               <MetricCard
                 icon={Flame}
                 label="Nutrition"
@@ -280,7 +302,7 @@ export default function DashboardScreen() {
                 unit="/10"
                 trend={{ value: 0, goodDirection: 'up', caption: 'All-time average' }}
               />
-            </View>
+            </AdaptiveGrid>
 
             {weightChartData.length >= 2 ? (
               <Card style={{ gap: spacing.md }}>
@@ -363,6 +385,7 @@ export default function DashboardScreen() {
               ))}
             </Card>
           </View>
+          </Animated.View>
         ) : null}
       </View>
     </Screen>

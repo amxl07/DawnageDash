@@ -9,7 +9,7 @@ import { AppState, FlatList, Pressable, View } from 'react-native';
 import Animated, { FadeInDown, FadeOutUp, LinearTransition } from 'react-native-reanimated';
 
 import { MetricCard } from '@/components/dashboard/MetricCard';
-import { Button, Card, EmptyState, ErrorState, Screen, SkeletonCard, Text ,
+import { AdaptiveGrid, Button, Card, EmptyState, ErrorState, Screen, SkeletonCard, Text ,
   AnimatedFlatList,
   useListMotion,
 } from '@/components/ui';
@@ -221,10 +221,10 @@ export default function LogsScreen() {
         </Animated.View>
       ) : null}
 
-      <View style={{ flexDirection: 'row', gap: spacing.md }}>
+      <AdaptiveGrid>
         <MetricCard icon={Dumbbell} label="All workouts" value={String(metrics.total)} trend={{ value: 0, goodDirection: 'up', caption: 'logged' }} />
         <MetricCard icon={CalendarDays} label="This week" value={String(metrics.thisWeek)} trend={{ value: 0, goodDirection: 'up', caption: 'workouts' }} />
-      </View>
+      </AdaptiveGrid>
 
       <Button
         label="Log a workout"
