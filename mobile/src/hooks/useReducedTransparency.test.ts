@@ -1,7 +1,16 @@
-import { createElement, type ReactElement } from 'react';
+import * as React from 'react';
 import { AccessibilityInfo } from 'react-native';
 
 import { useReducedTransparency } from './useReducedTransparency';
+
+jest.mock('react', () => {
+  const actual = jest.requireActual('react');
+
+  return {
+    ...actual,
+    useState: jest.fn(actual.useState),
+  };
+});
 
 jest.mock('react-native', () => {
   return {
@@ -19,8 +28,17 @@ let reduceTransparencyListener: ((enabled: boolean) => void) | undefined;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const TestRenderer = require('react-test-renderer') as {
   act: (callback: () => void | Promise<void>) => void | Promise<void>;
-  create: (element: ReactElement) => { unmount: () => void };
+  create: (element: React.ReactElement) => { unmount: () => void };
 };
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+
+  return { promise, resolve };
+}
 
 function renderHook<T>(hook: () => T) {
   let current: T | undefined;
@@ -32,7 +50,7 @@ function renderHook<T>(hook: () => T) {
   }
 
   TestRenderer.act(() => {
-    renderer = TestRenderer.create(createElement(HookProbe));
+    renderer = TestRenderer.create(React.createElement(HookProbe));
   });
 
   return {
@@ -80,5 +98,35 @@ describe('useReducedTransparency', () => {
     unmount();
 
     expect(mockRemove).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves an event received before the initial preference resolves', async () => {
+    const initialPreference = createDeferred<boolean>();
+    (mockAccessibilityInfo.isReduceTransparencyEnabled as jest.Mock).mockReturnValue(
+      initialPreference.promise,
+    );
+    const { result } = renderHook(() => useReducedTransparency());
+
+    TestRenderer.act(() => reduceTransparencyListener?.(true));
+    expect(result.current).toBe(true);
+
+    await TestRenderer.act(async () => initialPreference.resolve(false));
+
+    expect(result.current).toBe(true);
+  });
+
+  it('does not update state when unmounted before the initial preference resolves', async () => {
+    const initialPreference = createDeferred<boolean>();
+    const setReduced = jest.fn();
+    (mockAccessibilityInfo.isReduceTransparencyEnabled as jest.Mock).mockReturnValue(
+      initialPreference.promise,
+    );
+    (React.useState as jest.Mock).mockImplementationOnce(() => [false, setReduced]);
+    const { unmount } = renderHook(() => useReducedTransparency());
+
+    unmount();
+    await TestRenderer.act(async () => initialPreference.resolve(true));
+
+    expect(setReduced).not.toHaveBeenCalled();
   });
 });

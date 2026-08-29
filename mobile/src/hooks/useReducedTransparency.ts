@@ -5,10 +5,25 @@ export function useReducedTransparency(): boolean {
   const [reduced, setReduced] = useState(false);
 
   useEffect(() => {
-    void AccessibilityInfo.isReduceTransparencyEnabled().then(setReduced);
-    const subscription = AccessibilityInfo.addEventListener('reduceTransparencyChanged', setReduced);
+    let active = true;
+    let receivedEvent = false;
 
-    return () => subscription.remove();
+    void AccessibilityInfo.isReduceTransparencyEnabled().then((initialPreference) => {
+      if (active && !receivedEvent) {
+        setReduced(initialPreference);
+      }
+    });
+    const subscription = AccessibilityInfo.addEventListener('reduceTransparencyChanged', (value) => {
+      receivedEvent = true;
+      if (active) {
+        setReduced(value);
+      }
+    });
+
+    return () => {
+      active = false;
+      subscription.remove();
+    };
   }, []);
 
   return reduced;
