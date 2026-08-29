@@ -75,7 +75,6 @@ export function CheckInHistorySheet({
         data={history}
         keyExtractor={(item) => item.dateString}
         renderItem={({ item }) => <HistoryRow day={item} onSelectDay={select} />}
-        getItemLayout={(_, index) => ({ length: HIT_SLOP_MIN + 28, offset: (HIT_SLOP_MIN + 28) * index, index })}
         initialNumToRender={14}
         windowSize={7}
       />

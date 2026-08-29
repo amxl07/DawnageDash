@@ -6,6 +6,8 @@ import { act, create } from 'react-test-renderer';
 import { CheckInHistorySheet } from './CheckInHistorySheet';
 import { ConsistencyGrid } from './ConsistencyGrid';
 
+let mockSheetFlatListProps: Record<string, unknown> | undefined;
+
 jest.mock('lucide-react-native', () => ({
   AlertCircle: 'AlertCircle',
   ChevronRight: 'ChevronRight',
@@ -25,9 +27,10 @@ jest.mock('@gorhom/bottom-sheet', () => {
 
   return {
     BottomSheetBackdrop: View,
-    BottomSheetFlatList: ({ data, renderItem }: { data: unknown[]; renderItem: (info: { item: unknown; index: number }) => React.ReactNode }) => (
-      <View>{data.map((item, index) => <React.Fragment key={index}>{renderItem({ item, index })}</React.Fragment>)}</View>
-    ),
+    BottomSheetFlatList: ({ data, renderItem, ...props }: { data: unknown[]; renderItem: (info: { item: unknown; index: number }) => React.ReactNode }) => {
+      mockSheetFlatListProps = props;
+      return <View>{data.map((item, index) => <React.Fragment key={index}>{renderItem({ item, index })}</React.Fragment>)}</View>;
+    },
     BottomSheetModal,
     BottomSheetScrollView: View,
     BottomSheetView: View,
@@ -132,5 +135,23 @@ describe('ConsistencyGrid', () => {
 
     expect(row.props.style({ pressed: false })).toMatchObject({ minHeight: 44 });
     expect(events).toEqual([`select:${dateString}`, 'close']);
+  });
+
+  it('does not promise a fixed history-row height to the virtualized sheet', () => {
+    mockSheetFlatListProps = undefined;
+
+    act(() => {
+      create(
+        <CheckInHistorySheet
+          visible
+          processed={[checkIn('2026-08-29')]}
+          onSelectDay={jest.fn()}
+          onClose={jest.fn()}
+        />,
+      );
+    });
+
+    expect(mockSheetFlatListProps).toBeDefined();
+    expect(mockSheetFlatListProps).not.toHaveProperty('getItemLayout');
   });
 });
