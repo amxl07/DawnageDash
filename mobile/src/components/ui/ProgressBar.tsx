@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming, Easing } from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { radius, useMotion, useTheme } from '@/theme';
 
@@ -19,16 +19,24 @@ export function ProgressBar({ value, height = 8, color, glow = true, accessibili
   const motion = useMotion();
   const fill = color ?? colors.primary;
   const clamped = Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
-  const width = useSharedValue(0);
+  const progress = useSharedValue(motion.reduced ? clamped : 0);
 
   useEffect(() => {
-    width.value = withTiming(clamped, {
-      duration: motion.duration.enter,
-      easing: Easing.bezier(...motion.easing.standard),
-    });
-  }, [clamped, motion, width]);
+    if (motion.reduced) {
+      progress.set(clamped);
+      return;
+    }
 
-  const animated = useAnimatedStyle(() => ({ width: `${width.value * 100}%` }));
+    progress.set(withTiming(clamped, {
+      duration: motion.duration.enter,
+      easing: Easing.linear,
+    }));
+  }, [clamped, motion.duration.enter, motion.reduced, progress]);
+
+  const animated = useAnimatedStyle(() => ({
+    transformOrigin: 'left center',
+    transform: [{ scaleX: progress.get() }],
+  }));
 
   return (
     <View
@@ -48,6 +56,7 @@ export function ProgressBar({ value, height = 8, color, glow = true, accessibili
         style={[
           {
             height: '100%',
+            width: '100%',
             borderRadius: radius.pill,
             backgroundColor: fill,
             ...(glow

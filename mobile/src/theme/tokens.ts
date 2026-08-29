@@ -54,7 +54,7 @@ export const type = {
  * "Reduce Motion" setting is on, so screens never repeat the check.
  */
 export const motion = {
-  duration: { micro: 120, enter: 250, exit: 180, celebration: 1400 },
+  duration: { micro: 120, feedback: 160, enter: 200, exit: 160, value: 260, celebration: 500 },
   /** Cubic-bezier control points; feed to Easing.bezier(...). */
   easing: {
     standard: [0.16, 1, 0.3, 1] as const,

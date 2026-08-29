@@ -81,7 +81,7 @@ export function useMotion() {
     if (!reduced) return { ...motion, enabled: true, reduced: false };
     return {
       ...motion,
-      duration: { micro: 0, enter: 0, exit: 0, celebration: 0 },
+      duration: { micro: 0, feedback: 0, enter: 0, exit: 0, value: 0, celebration: 0 },
       pressScale: 1,
       enabled: false,
       reduced: true,
