@@ -1,6 +1,7 @@
 import { format } from 'date-fns';
 import { Check } from 'lucide-react-native';
-import { Pressable, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import { Card, Text } from '@/components/ui';
 import type { WeekDay } from '@/lib/streak';
@@ -18,6 +19,17 @@ type Props = { days: WeekDay[]; onSelectDay: (d: WeekDay) => void };
  */
 export function WeekStrip({ days, onSelectDay }: Props) {
   const { colors } = useTheme();
+  const scrollRef = useRef<ScrollView>(null);
+  const hasScrolledToToday = useRef(false);
+
+  useEffect(() => {
+    if (hasScrolledToToday.current) return;
+    const todayIndex = days.findIndex((day) => day.isToday);
+    if (todayIndex >= 0) {
+      scrollRef.current?.scrollTo({ x: Math.max(0, todayIndex * 52 - 104), animated: false });
+      hasScrolledToToday.current = true;
+    }
+  }, [days]);
 
   const fillFor = (d: WeekDay) => {
     if (d.state !== 'done') return 'transparent';
@@ -50,9 +62,16 @@ export function WeekStrip({ days, onSelectDay }: Props) {
       <Text variant="label" tone="muted">
         This week
       </Text>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: spacing.sm }}
+        accessibilityRole="adjustable"
+        accessibilityLabel="This week"
+      >
         {days.map((d) => {
-          const isToday = d.state === 'today-pending';
+          const isToday = d.isToday;
           const done = d.state === 'done';
           const future = d.state === 'future';
           return (
@@ -94,7 +113,7 @@ export function WeekStrip({ days, onSelectDay }: Props) {
             </Pressable>
           );
         })}
-      </View>
+      </ScrollView>
     </Card>
   );
 }

@@ -36,13 +36,13 @@ export type WeekDay = {
   dateString: string;
   /** Short label, e.g. "M". */
   initial: string;
+  isToday: boolean;
   state: 'done' | 'missed' | 'today-pending' | 'future';
   workoutStatus: string | null;
 };
 
 /** Mon→Sun strip for the current week. Powers the dashboard week strip. */
-export function buildWeekStrip(processed: ProcessedCheckIn[]): WeekDay[] {
-  const today = new Date();
+export function buildWeekStrip(processed: ProcessedCheckIn[], today = new Date()): WeekDay[] {
   const todayStr = localDateString(today);
   const weekStart = startOfWeek(today, { weekStartsOn: 1 });
   const byDate = new Map(processed.map((p) => [p.dateString, p]));
@@ -52,6 +52,7 @@ export function buildWeekStrip(processed: ProcessedCheckIn[]): WeekDay[] {
     const date = addDays(weekStart, i);
     const dateString = localDateString(date);
     const entry = byDate.get(dateString);
+    const isToday = dateString === todayStr;
     const isFuture = differenceInCalendarDays(date, today) > 0;
 
     let state: WeekDay['state'];
@@ -64,6 +65,7 @@ export function buildWeekStrip(processed: ProcessedCheckIn[]): WeekDay[] {
       date,
       dateString,
       initial: initials[i],
+      isToday,
       state,
       workoutStatus: entry?.originalCheckIn?.workout_status ?? null,
     };
