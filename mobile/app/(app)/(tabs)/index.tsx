@@ -204,7 +204,6 @@ export default function DashboardScreen() {
           dayNumber={dayNumber}
           weekNumber={weekNumber}
           checkedInToday={checkedInToday}
-          onCheckIn={() => router.push('/(app)/(tabs)/check-in')}
         />
 
         <WeekStrip

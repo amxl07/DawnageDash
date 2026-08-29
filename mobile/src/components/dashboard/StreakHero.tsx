@@ -1,7 +1,7 @@
 import { Flame } from 'lucide-react-native';
 import { View } from 'react-native';
 
-import { AnimatedNumber, Button, Card, Text } from '@/components/ui';
+import { AnimatedNumber, Card, Text } from '@/components/ui';
 import { iconSize, spacing, useTheme } from '@/theme';
 
 type Props = {
@@ -9,7 +9,6 @@ type Props = {
   dayNumber: number;
   weekNumber: number;
   checkedInToday: boolean;
-  onCheckIn: () => void;
 };
 
 /**
@@ -19,7 +18,7 @@ type Props = {
  * At zero there is no number to celebrate — showing "0 day streak" is a
  * scoreboard of failure. The block becomes a forward-looking prompt instead.
  */
-export function StreakHero({ streak, dayNumber, weekNumber, checkedInToday, onCheckIn }: Props) {
+export function StreakHero({ streak, dayNumber, weekNumber, checkedInToday }: Props) {
   const { colors } = useTheme();
 
   const meta = `Day ${dayNumber} · Week ${weekNumber}`;
@@ -34,12 +33,9 @@ export function StreakHero({ streak, dayNumber, weekNumber, checkedInToday, onCh
           {checkedInToday ? "Today's logged — that's the streak started." : "Today's a fresh start"}
         </Text>
         {!checkedInToday ? (
-          <>
-            <Text variant="bodySm" tone="muted">
-              One check-in begins it. Most of it is already filled in for you.
-            </Text>
-            <Button label="Check in" onPress={onCheckIn} />
-          </>
+          <Text variant="bodySm" tone="muted">
+            One check-in begins it. Most of it is already filled in for you.
+          </Text>
         ) : null}
       </Card>
     );
@@ -78,10 +74,6 @@ export function StreakHero({ streak, dayNumber, weekNumber, checkedInToday, onCh
         accessibilityLabel={`${streak} day streak. ${meta}.${checkedInToday ? ' Checked in today.' : ' Not checked in today.'}`}
         style={{ height: 0 }}
       />
-
-      {!checkedInToday ? (
-        <Button label="Keep it going — check in" onPress={onCheckIn} />
-      ) : null}
     </Card>
   );
 }
