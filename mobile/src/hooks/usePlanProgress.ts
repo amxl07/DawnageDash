@@ -1,4 +1,6 @@
 import { endOfWeek, startOfWeek } from 'date-fns';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -70,12 +72,14 @@ export function derivePlanDayStatuses(
 
 export function usePlanProgress(days: readonly PlanDay[]) {
   const { user } = useAuth();
-  const today = localDateString();
+  const [today, setToday] = useState(() => localDateString());
+  const todayRef = useRef(today);
+  const hasFocused = useRef(false);
   const weekStart = localDateString(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const weekEnd = localDateString(endOfWeek(new Date(), { weekStartsOn: 1 }));
 
   const query = useQuery({
-    queryKey: ['workoutLogs', user?.id, 'plan-progress', weekStart],
+    queryKey: ['workoutLogs', user?.id, 'plan-progress', weekStart, today],
     queryFn: async (): Promise<PlanProgress> => {
       if (!user?.id) return { activeDay: null, completedDays: [] };
 
@@ -97,6 +101,23 @@ export function usePlanProgress(days: readonly PlanDay[]) {
     },
     enabled: Boolean(user?.id),
   });
+  const refetchRef = useRef(query.refetch);
+  refetchRef.current = query.refetch;
+
+  useFocusEffect(
+    useCallback(() => {
+      const focusedDate = localDateString();
+      const firstFocus = !hasFocused.current;
+      hasFocused.current = true;
+
+      if (focusedDate !== todayRef.current) {
+        todayRef.current = focusedDate;
+        setToday(focusedDate);
+        return;
+      }
+      if (!firstFocus) void refetchRef.current();
+    }, []),
+  );
 
   const dayNumbers = days.map((day) => day.day_number);
   const progress = query.data ?? { activeDay: null, completedDays: [] };

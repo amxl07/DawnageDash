@@ -57,7 +57,7 @@ export default function PlansScreen() {
   const { data: profile, isLoading: profileLoading, isError, refetch } = useUserProfile();
   const { data: plan, isLoading: planLoading } = useWorkoutPlan();
   const { data: meal, isLoading: mealLoading } = useMealPlan();
-  const { hasChanged, markSeen, updatedAt } = usePlanProvenance(plan?.days);
+  const { hasChanged, markSeen, ready: provenanceReady, updatedAt } = usePlanProvenance(plan?.days);
   const progress = usePlanProgress(plan?.days ?? []);
   const pointer = parseActivePlan(profile?.active_workout_plan);
   const hasRenderedTrainingPlan =
@@ -67,6 +67,7 @@ export default function PlansScreen() {
     !progress.isLoading &&
     !isError &&
     !progress.isError &&
+    provenanceReady &&
     Boolean(pointer && plan?.days.length);
 
   // A plan is seen only after its populated Training view has committed.
