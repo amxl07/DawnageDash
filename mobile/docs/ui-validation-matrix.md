@@ -16,7 +16,7 @@ The baseline commit identifies the approved pre-implementation source. It does n
 
 | Field | Recorded value |
 | --- | --- |
-| Git commit | bbbc6e285c59787289f911c55c7fc039cf459a50 — source revision reviewed for the privacy audit; no app binary |
+| Git commit | 9ef1bd8a6dc59e53ac3db174802d48eaaf31cf83 — source revision reviewed by the automated/source gate; no app binary |
 | Expo build | Not available — no immutable development or preview build was produced for this matrix |
 | Supabase environment | Not recorded — no runtime validation session was conducted |
 | Reviewer/date | Not assigned / 2026-08-30 — runtime review pending |
@@ -99,4 +99,15 @@ Capture the implemented routes at matched data state and dimensions for compact/
 
 ## Release sign-off
 
+Verdict: BLOCKED — 9ef1bd8a6dc59e53ac3db174802d48eaaf31cf83 — Codex automated/source gate — 2026-08-30 — PRIV-PHOTO-BUCKET-PUBLIC, PRIV-PHOTO-PUBLIC-URL, EVIDENCE-IMMUTABLE-BUILD-UNAVAILABLE, E2E-IOS-MAESTRO-UNAVAILABLE, E2E-ANDROID-MAESTRO-UNAVAILABLE, PRIV-CROSS-ACCOUNT-UNVERIFIED
+
 Release is blocked while any required row is `Not run`, `Blocked`, or `Fail`, or while an unresolved P0/P1 defect exists. Source-only checks never satisfy physical-device, accessibility-service, or runtime-performance rows.
+
+### Open release blockers
+
+- `PRIV-PHOTO-BUCKET-PUBLIC`: checked-in provisioning declares the progress-photo bucket public with bucket-wide read access.
+- `PRIV-PHOTO-PUBLIC-URL`: the client obtains and persists permanent public object URLs.
+- `EVIDENCE-IMMUTABLE-BUILD-UNAVAILABLE`: no immutable Expo build or matching physical-device evidence exists for the device, state, accessibility, motion, or performance rows.
+- `E2E-IOS-MAESTRO-UNAVAILABLE`: Maestro, E2E credentials, and an approved installed iOS build/device were unavailable, so the iOS flows were not run.
+- `E2E-ANDROID-MAESTRO-UNAVAILABLE`: Maestro, E2E credentials, ADB, and an approved installed Android build/device were unavailable, so the Android flows were not run.
+- `PRIV-CROSS-ACCOUNT-UNVERIFIED`: no authorized linked-environment session or dedicated non-production accounts were available for the required cross-account denial test.
