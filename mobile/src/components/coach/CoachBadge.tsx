@@ -37,15 +37,13 @@ export function CoachBadge({
 
   if (!lookup) return null;
 
-  if (lookup.kind !== 'assigned' || !lookup.coach.full_name) {
+  if (lookup.kind !== 'assigned') {
     if (fallback === 'hide') return null;
 
     const message =
       lookup.kind === 'unassigned'
         ? 'No coach assigned yet.'
-        : lookup.kind === 'assigned'
-          ? 'Coach assigned.'
-          : 'Coach details are temporarily unavailable.';
+        : 'Coach details are temporarily unavailable.';
     return (
       <Text variant="bodySm" tone="muted" style={{ flexShrink: 1, minWidth: 0 }}>
         {message}
@@ -54,6 +52,17 @@ export function CoachBadge({
   }
 
   const { coach } = lookup;
+  const coachName = coach.full_name?.trim();
+
+  if (!coachName) {
+    if (fallback === 'hide') return null;
+
+    return (
+      <Text variant="bodySm" tone="muted" style={{ flexShrink: 1, minWidth: 0 }}>
+        Coach assigned.
+      </Text>
+    );
+  }
 
   const label = caption ?? 'Your coach';
 
@@ -83,7 +92,7 @@ export function CoachBadge({
         // avatar_url is null for coaches today, so initials are the norm,
         // not the exception.
         <Text variant="bodySm" tone="muted">
-          {coachInitials(coach.full_name)}
+          {coachInitials(coachName)}
         </Text>
       )}
     </View>
@@ -97,7 +106,7 @@ export function CoachBadge({
           {label}
         </Text>
         <Text variant={variant === 'card' ? 'h2' : 'body'} style={{ flexShrink: 1 }}>
-          {coach.full_name}
+          {coachName}
         </Text>
       </View>
     </View>
@@ -106,7 +115,7 @@ export function CoachBadge({
   return (
     <View
       accessible
-      accessibilityLabel={`${label}: ${coach.full_name}`}
+      accessibilityLabel={`${label}: ${coachName}`}
       style={
         variant === 'card'
           ? {

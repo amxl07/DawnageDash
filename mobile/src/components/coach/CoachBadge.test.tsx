@@ -85,6 +85,41 @@ describe('CoachBadge', () => {
     expect(renderer.root.findByType(MockNativeText).props.children).toBe('Coach assigned.');
   });
 
+  it('treats a whitespace-only assigned name as missing in status and hidden placements', () => {
+    mockUseCoach.mockReturnValue({
+      data: {
+        kind: 'assigned',
+        coach: { id: 'c1', full_name: '   ', avatar_url: null },
+      },
+    });
+
+    const status = renderBadge({ fallback: 'status' });
+    const hidden = renderBadge({ fallback: 'hide' });
+
+    expect(status.root.findByType(MockNativeText).props.children).toBe('Coach assigned.');
+    expect(hidden.toJSON()).toBeNull();
+  });
+
+  it('trims a valid assigned name before rendering and labeling it', () => {
+    mockUseCoach.mockReturnValue({
+      data: {
+        kind: 'assigned',
+        coach: { id: 'c1', full_name: '  Amal Manoj  ', avatar_url: null },
+      },
+    });
+
+    const renderer = renderBadge();
+    const text = renderer.root
+      .findAllByType(MockNativeText)
+      .map((node: { props: { children?: React.ReactNode } }) => node.props.children);
+
+    expect(text).toEqual(expect.arrayContaining(['AM', 'Your coach', 'Amal Manoj']));
+    expect(text).not.toContain('  Amal Manoj  ');
+    expect(renderer.root.findByProps({ accessible: true }).props.accessibilityLabel).toBe(
+      'Your coach: Amal Manoj',
+    );
+  });
+
   it('renders assigned coach initials, name, caption, and one combined accessibility label', () => {
     mockUseCoach.mockReturnValue({
       data: {

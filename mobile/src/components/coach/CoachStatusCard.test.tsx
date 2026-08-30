@@ -70,7 +70,7 @@ describe('CoachStatusCard', () => {
   it('renders the assigned coach identity with the relationship label', () => {
     const renderer = renderCard({
       kind: 'assigned',
-      coach: { id: 'c1', full_name: 'Amal Manoj', avatar_url: null },
+      coach: { id: 'c1', full_name: '  Amal Manoj  ', avatar_url: null },
     });
 
     expect(textContent(renderer)).toEqual(expect.arrayContaining(['AM', 'Your coach', 'Amal Manoj']));

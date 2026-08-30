@@ -1,4 +1,4 @@
-import { Text as NativeText, View } from 'react-native';
+import { Pressable, Text as NativeText, View } from 'react-native';
 
 // @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
@@ -6,9 +6,11 @@ import { act, create } from 'react-test-renderer';
 import MoreScreen from './more';
 
 const MockNativeText = NativeText;
+const MockPressable = Pressable;
 const MockView = View;
+const mockPush = jest.fn();
 
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
 jest.mock('expo-image', () => ({ Image: 'ExpoImage' }));
 jest.mock('lucide-react-native', () => ({
   Camera: () => null,
@@ -23,10 +25,15 @@ jest.mock('@/components/ui', () => ({
   Card: ({ children, ...props }: React.ComponentProps<typeof MockView>) => (
     <MockView {...props}>{children}</MockView>
   ),
-  ListRow: ({ title }: { title: string }) => (
-    <MockView testID={`row-${title}`}>
+  ListRow: ({ title, onPress }: { title: string; onPress: () => void }) => (
+    <MockPressable
+      testID={`row-${title}`}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      onPress={onPress}
+    >
       <MockNativeText>{title}</MockNativeText>
-    </MockView>
+    </MockPressable>
   ),
   Screen: ({ children, ...props }: React.ComponentProps<typeof MockView>) => (
     <MockView {...props}>{children}</MockView>
@@ -66,6 +73,10 @@ function renderScreen() {
 }
 
 describe('MoreScreen', () => {
+  beforeEach(() => {
+    mockPush.mockClear();
+  });
+
   it('orders coaching, progress, and account around user goals', () => {
     const renderer = renderScreen();
     const visibleOrder = renderer.root
@@ -101,5 +112,22 @@ describe('MoreScreen', () => {
     );
 
     expect(screen.props.includeTopSafeArea).not.toBe(false);
+  });
+
+  it('routes every goal row to its supported destination', () => {
+    const renderer = renderScreen();
+    const routes = [
+      ['Weekly feedback', '/(app)/weekly-feedback'],
+      ['Measurements', '/(app)/measurements'],
+      ['Progress photos', '/(app)/media'],
+      ['Profile', '/(app)/profile'],
+      ['Settings', '/(app)/settings'],
+    ] as const;
+
+    routes.forEach(([label]) => {
+      act(() => renderer.root.findByProps({ testID: `row-${label}` }).props.onPress());
+    });
+
+    expect(mockPush.mock.calls).toEqual(routes.map(([, destination]) => [destination]));
   });
 });
