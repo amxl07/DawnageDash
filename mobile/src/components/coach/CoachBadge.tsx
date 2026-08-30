@@ -11,6 +11,8 @@ type Props = {
   /** Overrides the default line, e.g. "will read this". */
   caption?: string;
   size?: number;
+  /** Hide absent data in compact placements or explain its current state. */
+  fallback?: 'hide' | 'status';
 };
 
 /**
@@ -21,14 +23,35 @@ type Props = {
  * only as a text placeholder. A name and a face turn a tracker into a
  * relationship.
  *
- * Renders nothing when there is no coach, or before the RPC is deployed. Every
- * placement must therefore tolerate its absence.
+ * Compact placements hide absent data by default. Larger surfaces can request
+ * a truthful status without conflating no assignment with an unavailable RPC.
  */
-export function CoachBadge({ variant = 'inline', caption, size = 36 }: Props) {
+export function CoachBadge({
+  variant = 'inline',
+  caption,
+  size = 36,
+  fallback = 'hide',
+}: Props) {
   const { colors } = useTheme();
-  const { data: coach } = useCoach();
+  const { data: lookup } = useCoach();
 
-  if (!coach?.full_name) return null;
+  if (!lookup) return null;
+
+  if (lookup.kind !== 'assigned' || !lookup.coach.full_name) {
+    if (fallback === 'hide') return null;
+
+    const message =
+      lookup.kind === 'unassigned'
+        ? 'No coach assigned yet.'
+        : 'Coach details are temporarily unavailable.';
+    return (
+      <Text variant="bodySm" tone="muted">
+        {message}
+      </Text>
+    );
+  }
+
+  const { coach } = lookup;
 
   const label = caption ?? 'Your coach';
 
