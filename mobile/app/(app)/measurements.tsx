@@ -1,18 +1,36 @@
 import { format } from 'date-fns';
 import { useRouter } from 'expo-router';
 import { Plus, Ruler, Scale, TrendingDown } from 'lucide-react-native';
-import { memo, useMemo, useState } from 'react';
-import { FlatList, Pressable, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  InteractionManager,
+  Pressable,
+  View,
+  type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 
 import { LineChart } from '@/components/charts';
 import { MetricCard } from '@/components/dashboard/MetricCard';
+import { MeasurementHistoryRow } from '@/components/measurements/MeasurementHistoryRow';
 import { MeasurementSheet } from '@/components/measurements/MeasurementSheet';
-import { Button, Card, EmptyState, ErrorState, PageHeader, Screen, SkeletonCard, Text ,
+import {
+  AdaptiveGrid,
   AnimatedFlatList,
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  Screen,
+  SkeletonCard,
+  Text,
   useListMotion,
 } from '@/components/ui';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useMeasurements } from '@/hooks/useMeasurements';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { calculateWeeklyAverages } from '@/lib/checkin-utils';
 import { parseLocalDate } from '@/lib/dates';
 import { num, type BodyMeasurement } from '@/types/db';
@@ -28,52 +46,9 @@ const SERIES = [
 
 type SeriesKey = (typeof SERIES)[number]['key'];
 
-const HistoryRow = memo(function HistoryRow({
-  row,
-  weekNumber,
-  onEdit,
-}: {
-  row: BodyMeasurement;
-  weekNumber: number;
-  onEdit: () => void;
-}) {
-  const values = SERIES.map((s) => `${s.name} ${num(row[s.key]) || '—'}`).join(', ');
-  return (
-    <Pressable
-      onPress={onEdit}
-      accessibilityRole="button"
-      accessibilityLabel={`Week ${weekNumber}, ${format(parseLocalDate(row.date), 'd MMMM yyyy')}. ${values}. Tap to edit.`}
-      style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1, marginBottom: spacing.md })}
-    >
-      <Card style={{ gap: spacing.sm }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Text variant="h2">
-            Week {weekNumber}
-            {weekNumber === 0 ? ' · Baseline' : ''}
-          </Text>
-          <Text variant="bodySm" tone="muted">
-            {format(parseLocalDate(row.date), 'd MMM yyyy')}
-          </Text>
-        </View>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
-          {SERIES.map((s) => (
-            <View key={s.key} style={{ minWidth: 64 }}>
-              <Text variant="label" tone="muted">
-                {s.name}
-              </Text>
-              <Text variant="bodySm" numeric>
-                {num(row[s.key]) ? `${num(row[s.key])} cm` : '—'}
-              </Text>
-            </View>
-          ))}
-        </View>
-      </Card>
-    </Pressable>
-  );
-});
-
 export default function MeasurementsScreen() {
   const { colors } = useTheme();
+  const { isCompact } = useResponsiveLayout();
   const listMotion = useListMotion();
   const router = useRouter();
   const { data: rows, isLoading, isError, refetch } = useMeasurements();
@@ -83,6 +58,66 @@ export default function MeasurementsScreen() {
   const [editing, setEditing] = useState<BodyMeasurement | null>(null);
   const [payoff, setPayoff] = useState<string | null>(null);
   const [visible, setVisible] = useState<SeriesKey[]>(['chest', 'waist', 'hips']);
+  const [chartReady, setChartReady] = useState(false);
+  const chartRequested = useRef(false);
+  const chartLayout = useRef<{ y: number; height: number } | null>(null);
+  const viewportHeight = useRef(0);
+  const scrollOffset = useRef(0);
+  const pendingChartMount = useRef<
+    ReturnType<typeof InteractionManager.runAfterInteractions> | null
+  >(null);
+
+  const mountChartWhenVisible = useCallback(() => {
+    if (chartRequested.current) return;
+    const section = chartLayout.current;
+    if (!section || viewportHeight.current <= 0) return;
+
+    const viewportTop = scrollOffset.current;
+    const viewportBottom = viewportTop + viewportHeight.current;
+    const sectionBottom = section.y + section.height;
+    if (section.y >= viewportBottom || sectionBottom <= viewportTop) return;
+
+    chartRequested.current = true;
+    pendingChartMount.current = InteractionManager.runAfterInteractions(() => {
+      setChartReady(true);
+      pendingChartMount.current = null;
+    });
+  }, []);
+
+  useEffect(
+    () => () => {
+      pendingChartMount.current?.cancel();
+    },
+    [],
+  );
+
+  const handleListLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      viewportHeight.current = event.nativeEvent.layout.height;
+      mountChartWhenVisible();
+    },
+    [mountChartWhenVisible],
+  );
+
+  const handleProgressLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      chartLayout.current = {
+        y: event.nativeEvent.layout.y,
+        height: event.nativeEvent.layout.height,
+      };
+      mountChartWhenVisible();
+    },
+    [mountChartWhenVisible],
+  );
+
+  const handleScrollSettled = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      scrollOffset.current = event.nativeEvent.contentOffset.y;
+      viewportHeight.current = event.nativeEvent.layoutMeasurement.height;
+      mountChartWhenVisible();
+    },
+    [mountChartWhenVisible],
+  );
 
   // rows are newest-first: [0] = current, [last] = baseline (Week 0).
   const current = rows?.[0] ?? null;
@@ -120,6 +155,27 @@ export default function MeasurementsScreen() {
     }));
   }, [rows, visible, colors]);
 
+  const latestSummaries = useMemo(() => {
+    if (!current || !baseline) return [];
+    return SERIES.filter((series) => visible.includes(series.key)).map((series) => {
+      const latest = num(current[series.key]);
+      if (!latest) return `${series.name}: no latest value`;
+
+      const start = num(baseline[series.key]);
+      if (!start) return `${series.name}: ${latest} cm · no baseline value`;
+
+      const delta = latest - start;
+      const change =
+        delta === 0
+          ? 'no change from baseline'
+          : `${delta < 0 ? 'down' : 'up'} ${Math.abs(delta).toFixed(1)} cm from baseline`;
+      return `${series.name}: ${latest} cm · ${change}`;
+    });
+  }, [baseline, current, visible]);
+  const latestDateSummary = current
+    ? `Latest entry · recorded ${format(parseLocalDate(current.date), 'd MMM yyyy')}`
+    : '';
+
   if (isLoading) {
     return (
       <Screen>
@@ -150,7 +206,7 @@ export default function MeasurementsScreen() {
         </Card>
       ) : null}
 
-      <View style={{ flexDirection: 'row', gap: spacing.md }}>
+      <AdaptiveGrid testID="measurement-primary-metrics">
         <MetricCard
           icon={Scale}
           label="Weight lost"
@@ -165,7 +221,7 @@ export default function MeasurementsScreen() {
           unit="cm"
           trend={{ value: 0, goodDirection: 'up', caption: 'Reduction' }}
         />
-      </View>
+      </AdaptiveGrid>
       <MetricCard
         icon={Ruler}
         label="Avg weekly loss"
@@ -175,8 +231,22 @@ export default function MeasurementsScreen() {
       />
 
       {rows && rows.length >= 2 ? (
-        <Card style={{ gap: spacing.md }}>
+        <Card
+          testID="measurement-progress-section"
+          onLayout={handleProgressLayout}
+          style={{ gap: spacing.md }}
+        >
           <Text variant="h2">Progress</Text>
+          <View style={{ gap: spacing.xs }}>
+            <Text variant="label" tone="muted">
+              {latestDateSummary}
+            </Text>
+            {latestSummaries.map((summary) => (
+              <Text key={summary} variant="bodySm" numeric>
+                {summary}
+              </Text>
+            ))}
+          </View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
             {SERIES.map((s) => {
               const on = visible.includes(s.key);
@@ -190,7 +260,7 @@ export default function MeasurementsScreen() {
                   accessibilityLabel={`${s.name} series`}
                   accessibilityState={{ checked: on }}
                   style={{
-                    minHeight: 36,
+                    minHeight: 44,
                     justifyContent: 'center',
                     paddingHorizontal: spacing.md,
                     borderRadius: 999,
@@ -205,12 +275,20 @@ export default function MeasurementsScreen() {
               );
             })}
           </View>
-          <LineChart
-            height={200}
-            series={chartSeries}
-            yAxisSuffix=""
-            summary={`Body measurements by week, week zero is your baseline. Showing ${chartSeries.map((s) => s.name).join(', ')}.`}
-          />
+          <View style={{ minHeight: 200, justifyContent: 'center' }}>
+            {chartReady ? (
+              <LineChart
+                height={200}
+                series={chartSeries}
+                yAxisSuffix=""
+                summary={`Body measurements by week, week zero is your baseline. Showing ${chartSeries.map((s) => s.name).join(', ')}.`}
+              />
+            ) : (
+              <Text variant="bodySm" tone="muted">
+                Chart loads when it comes into view.
+              </Text>
+            )}
+          </View>
         </Card>
       ) : null}
 
@@ -226,7 +304,13 @@ export default function MeasurementsScreen() {
             return (
               <View
                 key={s.key}
-                style={{ flexDirection: 'row', justifyContent: 'space-between' }}
+                testID={`measurement-comparison-${s.key}`}
+                style={{
+                  flexDirection: isCompact ? 'column' : 'row',
+                  justifyContent: 'space-between',
+                  alignItems: isCompact ? 'flex-start' : 'baseline',
+                  gap: isCompact ? spacing.xs : spacing.md,
+                }}
               >
                 <Text variant="bodySm" tone="muted">
                   {s.name}
@@ -269,7 +353,7 @@ export default function MeasurementsScreen() {
           keyExtractor={(r) => r.id}
           ListHeaderComponent={header}
           renderItem={({ item, index }) => (
-            <HistoryRow
+            <MeasurementHistoryRow
               row={item}
               weekNumber={(rows?.length ?? 1) - 1 - index}
               onEdit={() => {
@@ -294,6 +378,9 @@ export default function MeasurementsScreen() {
           initialNumToRender={8}
           windowSize={7}
           itemLayoutAnimation={listMotion.itemLayoutAnimation}
+          onLayout={handleListLayout}
+          onScrollEndDrag={handleScrollSettled}
+          onMomentumScrollEnd={handleScrollSettled}
         />
       </Screen>
 

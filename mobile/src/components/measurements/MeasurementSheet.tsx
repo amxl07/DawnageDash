@@ -6,21 +6,17 @@ import { AccessibilityInfo, TextInput, View } from 'react-native';
 import { Button, Input, Sheet, SheetScrollView, Text } from '@/components/ui';
 import { useMeasurementMutation } from '@/hooks/useMeasurements';
 import { localDateString, parseLocalDate } from '@/lib/dates';
+import {
+  EMPTY_MEASUREMENT_DRAFT,
+  MEASUREMENT_FIELDS,
+  validateMeasurementDraft,
+  validateMeasurementValue,
+  type MeasurementDraft,
+  type MeasurementErrors,
+  type MeasurementField,
+} from '@/lib/measurement-validation';
 import { num, type BodyMeasurement } from '@/types/db';
 import { spacing } from '@/theme';
-
-const FIELDS = [
-  { key: 'chest', label: 'Chest' },
-  { key: 'waist', label: 'Waist' },
-  { key: 'hips', label: 'Hips' },
-  { key: 'thighs', label: 'Thighs' },
-  { key: 'arms', label: 'Arms' },
-] as const;
-
-type FieldKey = (typeof FIELDS)[number]['key'];
-type Draft = Record<FieldKey, string>;
-
-const EMPTY: Draft = { chest: '', waist: '', hips: '', thighs: '', arms: '' };
 
 type Props = {
   visible: boolean;
@@ -34,8 +30,8 @@ type Props = {
 
 export function MeasurementSheet({ visible, onClose, editing, previous, onSaved }: Props) {
   const mutation = useMeasurementMutation();
-  const [draft, setDraft] = useState<Draft>(EMPTY);
-  const [errors, setErrors] = useState<Partial<Record<FieldKey, string>>>({});
+  const [draft, setDraft] = useState<MeasurementDraft>(EMPTY_MEASUREMENT_DRAFT);
+  const [errors, setErrors] = useState<MeasurementErrors>({});
   const [saveError, setSaveError] = useState<string | null>(null);
   const refs = useRef<Record<string, TextInput | null>>({});
 
@@ -45,7 +41,7 @@ export function MeasurementSheet({ visible, onClose, editing, previous, onSaved 
     if (!visible) return;
     const source = editing ?? previous;
     if (!source) {
-      setDraft(EMPTY);
+      setDraft(EMPTY_MEASUREMENT_DRAFT);
     } else {
       setDraft({
         chest: source.chest ? String(num(source.chest)) : '',
@@ -59,20 +55,8 @@ export function MeasurementSheet({ visible, onClose, editing, previous, onSaved 
     setSaveError(null);
   }, [visible, editing, previous]);
 
-  const validate = (value: string): string | undefined => {
-    if (!value.trim()) return undefined;
-    const n = parseFloat(value);
-    if (!Number.isFinite(n)) return 'Enter a number in centimetres.';
-    if (n < 20 || n > 250) return 'That looks off — expected 20–250 cm.';
-    return undefined;
-  };
-
   const save = async () => {
-    const next: Partial<Record<FieldKey, string>> = {};
-    for (const f of FIELDS) {
-      const e = validate(draft[f.key]);
-      if (e) next[f.key] = e;
-    }
+    const next = validateMeasurementDraft(draft);
     setErrors(next);
     if (Object.keys(next).length) return;
 
@@ -106,7 +90,7 @@ export function MeasurementSheet({ visible, onClose, editing, previous, onSaved 
   };
 
   const hintFor = useMemo(
-    () => (key: FieldKey) => {
+    () => (key: MeasurementField) => {
       if (!previous || editing) return undefined;
       const v = num(previous[key]);
       return v > 0 ? `last: ${v} cm` : undefined;
@@ -131,7 +115,7 @@ export function MeasurementSheet({ visible, onClose, editing, previous, onSaved 
               : `Recording for ${format(parseLocalDate(date), 'EEEE d MMMM')}. Values are prefilled from your last entry, so you only change what moved.`}
           </Text>
 
-          {FIELDS.map((f, i) => (
+          {MEASUREMENT_FIELDS.map((f, i) => (
             <Input
               key={f.key}
               ref={(r) => {
@@ -145,11 +129,16 @@ export function MeasurementSheet({ visible, onClose, editing, previous, onSaved 
                 setDraft((p) => ({ ...p, [f.key]: t }));
                 setErrors((p) => ({ ...p, [f.key]: undefined }));
               }}
-              onBlur={() => setErrors((p) => ({ ...p, [f.key]: validate(draft[f.key]) }))}
+              onBlur={() =>
+                setErrors((p) => ({
+                  ...p,
+                  [f.key]: validateMeasurementValue(draft[f.key]),
+                }))
+              }
               keyboardType="decimal-pad"
-              returnKeyType={i === FIELDS.length - 1 ? 'done' : 'next'}
+              returnKeyType={i === MEASUREMENT_FIELDS.length - 1 ? 'done' : 'next'}
               onSubmitEditing={() => {
-                const nextField = FIELDS[i + 1];
+                const nextField = MEASUREMENT_FIELDS[i + 1];
                 if (nextField) refs.current[nextField.key]?.focus();
                 else void save();
               }}
