@@ -1,0 +1,25 @@
+appId: com.dawnage.app
+name: Onboarding completes with a goal and timezone
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Welcome back"
+- tapOn:
+    id: "login-email"
+- inputText: ${DAWNAGE_E2E_ONBOARD_EMAIL}
+- tapOn:
+    id: "login-password"
+- inputText: ${DAWNAGE_E2E_ONBOARD_PASSWORD}
+- tapOn: "Sign in"
+- extendedWaitUntil:
+    visible: "What are you working toward?"
+    timeout: 20000
+- tapOn: "Build muscle"
+- tapOn: "Continue"
+- assertVisible: "Your weekly rhythm"
+- tapOn: "Continue"
+- assertVisible: "Your timezone"
+- tapOn: "Finish setup"
+- extendedWaitUntil:
+    visible: "Home"
+    timeout: 20000

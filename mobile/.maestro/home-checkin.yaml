@@ -1,0 +1,34 @@
+appId: com.dawnage.app
+name: Home and check-in preserve progress
+---
+- runFlow: helpers/sign-in.yaml
+- assertVisible: "Home"
+- tapOn:
+    id: "home-today-action"
+- assertVisible: "Readiness and energy"
+# The final UI exposes two visible 1–10 rows. Their first and second "5"
+# targets select Energy and Stress without adding test-only field hooks.
+- tapOn:
+    text: "5"
+    index: 0
+- tapOn:
+    text: "5"
+    index: 1
+- tapOn:
+    id: "checkin-next"
+- assertVisible: "Sleep and recovery"
+- extendedWaitUntil:
+    visible: "Saved on this device"
+    timeout: 5000
+- stopApp
+- launchApp
+- runFlow:
+    when:
+      visible: "Home"
+    commands:
+      - tapOn: "Check In"
+- extendedWaitUntil:
+    visible: "Sleep and recovery"
+    timeout: 10000
+- tapOn: "Home"
+- assertVisible: "Home"

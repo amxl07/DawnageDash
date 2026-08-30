@@ -508,6 +508,7 @@ export default function LoggerScreen() {
               ) : null}
             </View>
             <Pressable
+              testID="logger-finish"
               onPress={() => void save()}
               disabled={saving}
               accessibilityRole="button"

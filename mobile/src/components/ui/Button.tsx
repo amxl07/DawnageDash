@@ -15,6 +15,7 @@ type Props = {
   icon?: React.ReactNode;
   style?: ViewStyle;
   accessibilityHint?: string;
+  testID?: string;
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -28,6 +29,7 @@ export function Button({
   icon,
   style,
   accessibilityHint,
+  testID,
 }: Props) {
   const { colors } = useTheme();
   const motion = useMotion();
@@ -47,6 +49,7 @@ export function Button({
 
   return (
     <AnimatedPressable
+      testID={testID}
       onPress={inactive ? undefined : onPress}
       pressRetentionOffset={16}
       onPressIn={() => {

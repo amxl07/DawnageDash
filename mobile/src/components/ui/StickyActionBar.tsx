@@ -12,6 +12,7 @@ type Props = {
   onPrimary: () => void;
   primaryLoading?: boolean;
   primaryDisabled?: boolean;
+  primaryTestID?: string;
   secondaryLabel?: string;
   onSecondary?: () => void;
 };
@@ -23,6 +24,7 @@ export function StickyActionBar({
   onPrimary,
   primaryLoading,
   primaryDisabled,
+  primaryTestID,
   secondaryLabel,
   onSecondary,
 }: Props) {
@@ -62,6 +64,7 @@ export function StickyActionBar({
           />
         ) : null}
         <Button
+          testID={primaryTestID}
           label={primaryLabel}
           onPress={onPrimary}
           loading={primaryLoading}

@@ -377,6 +377,7 @@ export default function CheckInScreen() {
       </Screen>
 
       <StickyActionBar
+        primaryTestID={isLastStep ? 'checkin-save' : 'checkin-next'}
         status={
           <View
             style={{

@@ -321,6 +321,7 @@ export default function LoginScreen() {
           ) : (
             <>
               <Input
+                testID="login-email"
                 label="Email"
                 icon={Mail}
                 value={email}
@@ -335,6 +336,7 @@ export default function LoginScreen() {
               />
               <Input
                 ref={passwordRef}
+                testID="login-password"
                 label="Password"
                 icon={Lock}
                 password

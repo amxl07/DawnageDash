@@ -181,6 +181,12 @@ export default function PlansScreen() {
                 orderedDays.map((d) => (
                   <View key={d.id} style={{ gap: spacing.sm }}>
                     <PlanDayCard
+                      testID={
+                        progress.statuses[d.day_number] === 'today' ||
+                        progress.statuses[d.day_number] === 'active'
+                          ? 'plan-current-day'
+                          : undefined
+                      }
                       day={d}
                       status={progress.statuses[d.day_number] ?? 'upcoming'}
                       onStart={() =>

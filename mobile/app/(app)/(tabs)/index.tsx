@@ -212,7 +212,11 @@ export default function DashboardScreen() {
       <Screen archetype="root">
         <View style={{ gap: spacing.lg }}>
           <DashboardGreeting firstName={firstName} fullDate={fullDate} />
-          <TodayActionCard action={todayAction} onPress={() => router.push(todayAction.route)} />
+          <TodayActionCard
+            testID="home-today-action"
+            action={todayAction}
+            onPress={() => router.push(todayAction.route)}
+          />
           <Card>
             <EmptyState
               icon={null}
@@ -242,7 +246,11 @@ export default function DashboardScreen() {
           showLogo
         />
 
-        <TodayActionCard action={todayAction} onPress={() => router.push(todayAction.route)} />
+        <TodayActionCard
+          testID="home-today-action"
+          action={todayAction}
+          onPress={() => router.push(todayAction.route)}
+        />
 
         <StreakHero
           streak={streak}

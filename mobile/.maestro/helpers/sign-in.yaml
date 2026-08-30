@@ -1,0 +1,15 @@
+appId: com.dawnage.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Welcome back"
+- tapOn:
+    id: "login-email"
+- inputText: ${DAWNAGE_E2E_EMAIL}
+- tapOn:
+    id: "login-password"
+- inputText: ${DAWNAGE_E2E_PASSWORD}
+- tapOn: "Sign in"
+- extendedWaitUntil:
+    visible: "Home"
+    timeout: 20000

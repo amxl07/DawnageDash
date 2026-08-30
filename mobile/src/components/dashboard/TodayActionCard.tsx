@@ -4,7 +4,15 @@ import { Button, Card, Text } from '@/components/ui';
 import type { TodayAction } from '@/lib/today-action';
 import { spacing } from '@/theme';
 
-export function TodayActionCard({ action, onPress }: { action: TodayAction; onPress: () => void }) {
+export function TodayActionCard({
+  action,
+  onPress,
+  testID,
+}: {
+  action: TodayAction;
+  onPress: () => void;
+  testID?: string;
+}) {
   return (
     <Card style={{ gap: spacing.md }}>
       <View
@@ -17,7 +25,12 @@ export function TodayActionCard({ action, onPress }: { action: TodayAction; onPr
           {action.detail}
         </Text>
       </View>
-      <Button label={action.title} onPress={onPress} accessibilityHint={action.detail} />
+      <Button
+        testID={testID}
+        label={action.title}
+        onPress={onPress}
+        accessibilityHint={action.detail}
+      />
     </Card>
   );
 }

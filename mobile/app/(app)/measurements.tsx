@@ -375,6 +375,7 @@ export default function MeasurementsScreen() {
       ) : null}
 
       <Button
+        testID="measurement-add"
         label="Add measurements"
         icon={<Plus size={iconSize.md} color={colors.onPrimary} strokeWidth={2.5} />}
         onPress={() => {

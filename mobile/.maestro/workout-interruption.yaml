@@ -1,0 +1,46 @@
+appId: com.dawnage.app
+name: Workout draft and timer survive interruption
+---
+- runFlow: helpers/sign-in.yaml
+- tapOn: "Plans"
+- tapOn:
+    id: "plan-current-day"
+- tapOn:
+    text: "Start Day .*"
+- extendedWaitUntil:
+    visible: "Workout title"
+    timeout: 10000
+- tapOn:
+    text: "Mark (warm-up|set) 1 complete"
+- extendedWaitUntil:
+    visible: "Saved on this device"
+    timeout: 5000
+- tapOn: "Start rest timer"
+- assertVisible: "Pause rest timer"
+# Background and resume without terminating so the absolute-deadline timer can recover.
+- pressKey: Home
+- launchApp:
+    stopApp: false
+- assertVisible: "Pause rest timer"
+# Termination separately verifies the workout draft persisted to AsyncStorage.
+- stopApp
+- launchApp
+- runFlow:
+    when:
+      visible: "Home"
+    commands:
+      - tapOn: "Plans"
+- runFlow:
+    when:
+      visible:
+        id: "plan-current-day"
+    commands:
+      - tapOn:
+          id: "plan-current-day"
+      - tapOn:
+          text: "Continue Day .*"
+- extendedWaitUntil:
+    visible: "Workout title"
+    timeout: 10000
+- assertVisible:
+    text: "Mark (warm-up|set) 1 incomplete"

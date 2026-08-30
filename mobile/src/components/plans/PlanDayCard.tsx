@@ -21,6 +21,7 @@ type Props = {
   day: PlanDay;
   status: PlanDayStatus;
   onStart: () => void;
+  testID?: string;
 };
 
 const STATUS_LABEL: Record<PlanDayStatus, string> = {
@@ -36,7 +37,7 @@ const actionLabel = (status: PlanDayStatus, dayNumber: number): string => {
   return `Start Day ${dayNumber}`;
 };
 
-export function PlanDayCard({ day, status, onStart }: Props) {
+export function PlanDayCard({ day, status, onStart, testID }: Props) {
   const { colors } = useTheme();
   const motion = useMotion();
   const [open, setOpen] = useState(false);
@@ -69,6 +70,7 @@ export function PlanDayCard({ day, status, onStart }: Props) {
   return (
     <Card style={{ gap: spacing.md }}>
       <Pressable
+        testID={testID}
         onPress={toggleExpanded}
         accessibilityRole="button"
         accessibilityLabel={disclosureLabel}

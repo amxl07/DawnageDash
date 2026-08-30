@@ -277,6 +277,7 @@ export default function MediaScreen() {
         />
       ) : null}
       <Button
+        testID="photo-add-current-week"
         label="Add this week's photos"
         icon={<Plus size={iconSize.md} color={colors.onPrimary} strokeWidth={2.5} />}
         onPress={() => {
