@@ -16,7 +16,7 @@ The baseline commit identifies the approved pre-implementation source. It does n
 
 | Field | Recorded value |
 | --- | --- |
-| Git commit | d85af5887450760d62133b41fdb75587a008fc08 — source revision only |
+| Git commit | bbbc6e285c59787289f911c55c7fc039cf459a50 — source revision reviewed for the privacy audit; no app binary |
 | Expo build | Not available — no immutable development or preview build was produced for this matrix |
 | Supabase environment | Not recorded — no runtime validation session was conducted |
 | Reviewer/date | Not assigned / 2026-08-30 — runtime review pending |
@@ -77,10 +77,19 @@ No WCAG or complete screen-reader compliance claim may be made from source revie
 
 | Check | Pass condition | Result | Evidence note |
 | --- | --- | --- | --- |
-| `progress_photos` bucket | Supabase storage bucket reports `public = false` | Not run | Requires a separately authorized storage-policy review; never record a key or photo URL |
-| Read authorization | User A cannot read User B's photo object or metadata | Not run | Requires sanitized test accounts and an authorized cross-account check |
-| UI disclosure | Before first capture, copy states who can access the photo and when upload occurs | Not run | Final runtime copy has not been reviewed on an immutable build |
-| URL lifetime | The app does not persist or display a permanently public object URL | Not run | Client and storage URL behavior has not yet been audited |
+| `progress_photos` bucket | Supabase storage bucket reports `public = false` | Fail | Source audit: checked-in bucket provisioning declares `public = true` and bucket-wide read access. No live environment query was performed |
+| Read authorization | User A cannot read User B's photo object or metadata | Blocked | No authorized linked-environment SQL session or two non-production accounts were available; cross-account denial was not run |
+| UI disclosure | Before first capture, copy states who can access the photo and when upload occurs | Blocked | Source copy names the coaching-team audience and says upload occurs after Save photos, but no immutable-build runtime review was performed |
+| URL lifetime | The app does not persist or display a permanently public object URL | Fail | Source audit: the client calls `getPublicUrl` after upload and persists the returned `publicUrl`; no live object or URL was accessed |
+
+### Privacy audit boundary and release decision
+
+This was a source-only audit on 2026-08-30. No live Supabase query or cross-account runtime check was performed. No immutable Expo build, authorized linked-environment SQL session, or two dedicated non-production accounts were available. The audit did not access or record credentials, project identifiers, object paths, photo URLs, or user data.
+
+- Progress-photo feature decision: **Blocked**. The checked-in storage setup declares a public bucket and bucket-wide read access, while the client persists permanent public URLs.
+- Mobile release decision: **Blocked**. No existing deployment feature-control mechanism was found, so this UI hardening plan cannot safely disable the progress-photo production entry point. The entire mobile release remains blocked pending a separate approved security remediation covering private storage, owner and authorized-coach access policies, signed URLs, data migration and backfill, cache invalidation, and staged rollout validation.
+
+This audit does not authorize or implement storage, policy, schema, URL-model, data-migration, or product-code changes.
 
 ## Evidence procedure
 

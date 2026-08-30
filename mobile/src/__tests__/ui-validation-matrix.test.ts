@@ -49,6 +49,13 @@ const readBuildField = (matrix: string, field: string) => {
   return matrix.match(new RegExp(`^\\| ${escapedField} \\| ([^|]+) \\|$`, 'm'))?.[1].trim();
 };
 
+const readPrivacyResult = (matrix: string, check: string) => {
+  const escapedCheck = check.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return matrix.match(
+    new RegExp(`^\\| ${escapedCheck} \\| [^|]+ \\| (Pass|Fail|Blocked|Not run) \\|`, 'm'),
+  )?.[1];
+};
+
 const validateObservedResultMetadata = (matrix: string) => {
   const errors: string[] = [];
   const passRows = matrix
@@ -152,5 +159,27 @@ describe('UI release evidence contract', () => {
     }
     expect(placeholder.status).toBe(1);
     expect(trackedPlaceholder.status).toBe(0);
+  });
+
+  it('records the source-proven photo privacy failures without inventing runtime evidence', () => {
+    const matrix = readMatrix();
+
+    expect(readPrivacyResult(matrix, '`progress_photos` bucket')).toBe('Fail');
+    expect(readPrivacyResult(matrix, 'Read authorization')).toBe('Blocked');
+    expect(readPrivacyResult(matrix, 'UI disclosure')).toBe('Blocked');
+    expect(readPrivacyResult(matrix, 'URL lifetime')).toBe('Fail');
+    expect(matrix).toContain('Progress-photo feature decision: **Blocked**');
+    expect(matrix).toContain('Mobile release decision: **Blocked**');
+    expect(matrix).toContain('separate approved security remediation');
+    expect(matrix).toContain('No live Supabase query or cross-account runtime check was performed');
+  });
+
+  it('keeps privacy evidence sanitized', () => {
+    const matrix = readMatrix();
+
+    expect(matrix).not.toMatch(/https?:\/\//i);
+    expect(matrix).not.toMatch(/supabase\.co/i);
+    expect(matrix).not.toMatch(/\/storage\/v1\/object\//i);
+    expect(matrix).not.toMatch(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/);
   });
 });
