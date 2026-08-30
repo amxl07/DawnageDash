@@ -289,14 +289,14 @@ export default function LoggerScreen() {
   // Flush the outbox when connectivity returns.
   useEffect(() => {
     const unsub = NetInfo.addEventListener((s) => {
-      if (s.isConnected) {
-        void flushOutbox().then((n) => {
+      if (s.isConnected && user?.id) {
+        void flushOutbox(user.id).then((n) => {
           if (n > 0) void queryClient.invalidateQueries({ queryKey: ['workoutLogs'] });
         }).catch(() => {});
       }
     });
     return unsub;
-  }, [queryClient]);
+  }, [queryClient, user?.id]);
 
   const currentPlanDay = plan?.days.find((d) => d.day_number === state.selectedDay);
   const currentExercise = state.exercises[index];

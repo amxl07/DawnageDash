@@ -44,9 +44,10 @@ function serializeMutation<T>(operation: () => Promise<T>): Promise<T> {
   return result;
 }
 
-export async function readOutbox(): Promise<OutboxItem[]> {
+export async function readOutbox(userId: string): Promise<OutboxItem[]> {
   try {
-    return await readOutboxStrict();
+    const items = await readOutboxStrict();
+    return items.filter((item) => item.user_id === userId);
   } catch {
     return [];
   }
@@ -91,15 +92,19 @@ export function saveWorkoutLog(item: WorkoutSaveInput): Promise<WorkoutSaveResul
 }
 
 /** Returns how many items synced. Safe to call repeatedly. */
-export function flushOutbox(): Promise<number> {
+export function flushOutbox(userId: string): Promise<number> {
   return serializeMutation(async () => {
     const items = await readOutboxStrict();
-    if (!items.length) return 0;
+    if (!items.some((item) => item.user_id === userId)) return 0;
 
     const remaining: OutboxItem[] = [];
     let synced = 0;
 
     for (const item of items) {
+      if (item.user_id !== userId) {
+        remaining.push(item);
+        continue;
+      }
       try {
         const payload = {
           user_id: item.user_id,

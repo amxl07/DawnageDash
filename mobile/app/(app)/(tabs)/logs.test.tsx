@@ -1,9 +1,15 @@
-import { Text as NativeText } from 'react-native';
+import NetInfo from '@react-native-community/netinfo';
+import { useFocusEffect } from '@react-navigation/native';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
+import { AppState, Text as NativeText } from 'react-native';
 
 // @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
-import { LogCard } from './logs';
+import { useAuth } from '@/contexts/AuthContext';
+import { flushOutbox, readOutbox } from '@/lib/outbox';
+import LogsScreen, { LogCard } from './logs';
 
 jest.mock('@react-native-community/netinfo', () => ({ addEventListener: jest.fn(() => jest.fn()) }));
 jest.mock('@react-navigation/native', () => ({
@@ -179,5 +185,54 @@ describe('LogCard set history', () => {
 
     expect(lines).toContainEqual(expect.objectContaining({ children: 'Set 2: — kg × —' }));
     expect(lines.map((line) => String(line.children)).join(' ')).not.toContain('— sec');
+  });
+});
+
+describe('LogsScreen outbox ownership', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.mocked(useAuth).mockReturnValue({ user: { id: 'user-1' } } as never);
+    jest.mocked(useRouter).mockReturnValue({ push: jest.fn() } as never);
+    jest.mocked(useQueryClient).mockReturnValue({ invalidateQueries: jest.fn() } as never);
+    jest.mocked(useQuery).mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+    } as never);
+    jest.mocked(readOutbox).mockResolvedValue([]);
+    jest.mocked(flushOutbox).mockResolvedValue(0);
+    jest.mocked(useFocusEffect).mockImplementation((callback) => {
+      callback();
+    });
+    jest.spyOn(AppState, 'addEventListener').mockReturnValue({ remove: jest.fn() });
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it('reads and flushes pending workouts for only the authenticated user', async () => {
+    let connectivityListener: ((state: { isConnected: boolean }) => void) | undefined;
+    jest.mocked(NetInfo.addEventListener).mockImplementation((listener) => {
+      connectivityListener = listener as (state: { isConnected: boolean }) => void;
+      return jest.fn();
+    });
+
+    let renderer!: ReturnType<typeof create>;
+    await act(async () => {
+      renderer = create(<LogsScreen />);
+      await Promise.resolve();
+    });
+
+    expect(readOutbox).toHaveBeenCalledWith('user-1');
+
+    await act(async () => {
+      connectivityListener?.({ isConnected: true });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(flushOutbox).toHaveBeenCalledWith('user-1');
+    expect(readOutbox).not.toHaveBeenCalledWith('user-2');
+    act(() => renderer.unmount());
   });
 });

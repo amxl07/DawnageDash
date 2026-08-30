@@ -54,7 +54,7 @@ describe('workout outbox durability', () => {
       return 'log-1';
     });
 
-    const flushing = flushOutbox();
+    const flushing = flushOutbox('user-1');
     await serverStarted.promise;
     const enqueueing = enqueue(payload('Newest'));
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -62,7 +62,7 @@ describe('workout outbox durability', () => {
 
     await expect(flushing).resolves.toBe(1);
     await enqueueing;
-    await expect(readOutbox()).resolves.toEqual([
+    await expect(readOutbox('user-1')).resolves.toEqual([
       expect.objectContaining({ title: 'Newest', content: '{"version":2,"title":"Newest"}' }),
     ]);
   });
@@ -78,7 +78,7 @@ describe('workout outbox durability', () => {
       status: 'synced',
       logId: 'log-1',
     });
-    await expect(readOutbox()).resolves.toEqual([]);
+    await expect(readOutbox('user-1')).resolves.toEqual([]);
   });
 
   it('lets the newest direct save win when a flush starts first', async () => {
@@ -98,7 +98,7 @@ describe('workout outbox durability', () => {
         return 'log-1';
       });
 
-    const flushing = flushOutbox();
+    const flushing = flushOutbox('user-1');
     await flushStarted.promise;
     const saving = saveWorkoutLog(payload('Newest direct'));
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -111,7 +111,7 @@ describe('workout outbox durability', () => {
     expect(titleBeforeFlushFinished).toBe('');
     expect(callsBeforeFlushFinished).toBe(1);
     expect(serverTitle).toBe('Newest direct');
-    await expect(readOutbox()).resolves.toEqual([]);
+    await expect(readOutbox('user-1')).resolves.toEqual([]);
   });
 
   it('removes stale queued work before a direct-first save allows a flush to run', async () => {
@@ -128,7 +128,7 @@ describe('workout outbox durability', () => {
 
     const saving = saveWorkoutLog(payload('Newest direct'));
     await directStarted.promise;
-    const flushing = flushOutbox();
+    const flushing = flushOutbox('user-1');
     let flushSettled = false;
     void flushing.then(() => {
       flushSettled = true;
@@ -144,7 +144,7 @@ describe('workout outbox durability', () => {
     expect(callsBeforeDirectFinished).toBe(1);
     expect(serverTitle).toBe('Newest direct');
     expect(mockPersistWorkoutLog).toHaveBeenCalledTimes(1);
-    await expect(readOutbox()).resolves.toEqual([]);
+    await expect(readOutbox('user-1')).resolves.toEqual([]);
   });
 
   it('durably replaces an older queue item with the newest payload when direct sync fails', async () => {
@@ -155,7 +155,7 @@ describe('workout outbox durability', () => {
       status: 'offline',
       logId: null,
     });
-    await expect(readOutbox()).resolves.toEqual([
+    await expect(readOutbox('user-1')).resolves.toEqual([
       expect.objectContaining({
         title: 'Newest offline',
         content: '{"version":2,"title":"Newest offline"}',
@@ -169,7 +169,7 @@ describe('workout outbox durability', () => {
 
     await expect(saveWorkoutLog(payload('Newest direct'))).rejects.toThrow('cleanup failed');
     expect(mockPersistWorkoutLog).not.toHaveBeenCalled();
-    await expect(readOutbox()).resolves.toEqual([
+    await expect(readOutbox('user-1')).resolves.toEqual([
       expect.objectContaining({ title: 'Older queued' }),
     ]);
   });
@@ -191,7 +191,7 @@ describe('workout outbox durability', () => {
       .mockRejectedValueOnce(new Error('disk full'));
 
     await expect(saveWorkoutLog(payload('Not durable'))).rejects.toThrow('disk full');
-    await expect(readOutbox()).resolves.toEqual([]);
+    await expect(readOutbox('user-1')).resolves.toEqual([]);
     await expect(saveWorkoutLog(payload('Retry'))).resolves.toEqual({
       status: 'synced',
       logId: 'log-1',
@@ -217,19 +217,19 @@ describe('workout outbox durability', () => {
 
   it('rejects a flush read failure while the public status read stays tolerant', async () => {
     mockStorage.getItem.mockRejectedValueOnce(new Error('read failed'));
-    await expect(flushOutbox()).rejects.toThrow('read failed');
+    await expect(flushOutbox('user-1')).rejects.toThrow('read failed');
     expect(mockStorage.setItem).not.toHaveBeenCalled();
 
     mockStorage.getItem.mockRejectedValueOnce(new Error('status read failed'));
-    await expect(readOutbox()).resolves.toEqual([]);
+    await expect(readOutbox('user-1')).resolves.toEqual([]);
   });
 
   it('retains an existing-log item when an error-free update affects no row', async () => {
     await enqueue(payload('Existing', 'log-missing'));
     mockPersistWorkoutLog.mockRejectedValueOnce(new Error('Workout update affected no row'));
 
-    await expect(flushOutbox()).resolves.toBe(0);
-    await expect(readOutbox()).resolves.toEqual([
+    await expect(flushOutbox('user-1')).resolves.toBe(0);
+    await expect(readOutbox('user-1')).resolves.toEqual([
       expect.objectContaining({ title: 'Existing', existingLogId: 'log-missing' }),
     ]);
   });
@@ -238,11 +238,34 @@ describe('workout outbox durability', () => {
     await enqueue(payload('Replay safe'));
     mockStorage.setItem.mockRejectedValueOnce(new Error('cleanup failed'));
 
-    await expect(flushOutbox()).rejects.toThrow('cleanup failed');
-    await expect(readOutbox()).resolves.toHaveLength(1);
-    await expect(flushOutbox()).resolves.toBe(1);
+    await expect(flushOutbox('user-1')).rejects.toThrow('cleanup failed');
+    await expect(readOutbox('user-1')).resolves.toHaveLength(1);
+    await expect(flushOutbox('user-1')).resolves.toBe(1);
 
     expect(mockPersistWorkoutLog).toHaveBeenCalledTimes(2);
     expect(mockStorage.setItem).toHaveBeenLastCalledWith('workout-outbox', '[]');
+  });
+
+  it('reads and flushes only the requested account while retaining another account queue', async () => {
+    await enqueue(payload('Current account'));
+    await enqueue({ ...payload('Other account'), user_id: 'user-2' });
+
+    await expect(readOutbox('user-1')).resolves.toEqual([
+      expect.objectContaining({ user_id: 'user-1', title: 'Current account' }),
+    ]);
+    await expect(readOutbox('user-2')).resolves.toEqual([
+      expect.objectContaining({ user_id: 'user-2', title: 'Other account' }),
+    ]);
+
+    await expect(flushOutbox('user-1')).resolves.toBe(1);
+    expect(mockPersistWorkoutLog).toHaveBeenCalledTimes(1);
+    expect(mockPersistWorkoutLog).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: 'user-1', title: 'Current account' }),
+      null,
+    );
+    await expect(readOutbox('user-1')).resolves.toEqual([]);
+    await expect(readOutbox('user-2')).resolves.toEqual([
+      expect.objectContaining({ user_id: 'user-2', title: 'Other account' }),
+    ]);
   });
 });

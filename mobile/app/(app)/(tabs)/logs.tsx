@@ -180,6 +180,8 @@ export default function LogsScreen() {
   const listRef = useRef<FlatList<LogRow>>(null);
   const router = useRouter();
   const { user } = useAuth();
+  const activeUserIdRef = useRef(user?.id);
+  activeUserIdRef.current = user?.id;
   const queryClient = useQueryClient();
   const [pending, setPending] = useState(0);
 
@@ -202,23 +204,32 @@ export default function LogsScreen() {
 
   // Pending outbox state must be VISIBLE — a silent queue is worse than none.
   const refreshPending = useCallback(
-    () => void readOutbox().then((items) => setPending(items.length)),
-    [],
+    () => {
+      const userId = user?.id;
+      if (!userId) {
+        setPending(0);
+        return;
+      }
+      void readOutbox(userId).then((items) => {
+        if (activeUserIdRef.current === userId) setPending(items.length);
+      });
+    },
+    [user?.id],
   );
   useFocusEffect(refreshPending);
   useEffect(() => {
     refreshPending();
     const appSub = AppState.addEventListener('change', (s) => {
-      if (s === 'active') {
-        void flushOutbox().then((n) => {
+      if (s === 'active' && user?.id) {
+        void flushOutbox(user.id).then((n) => {
           refreshPending();
           if (n > 0) void queryClient.invalidateQueries({ queryKey: ['workoutLogs'] });
         }).catch(refreshPending);
       }
     });
     const netSub = NetInfo.addEventListener((s) => {
-      if (s.isConnected) {
-        void flushOutbox().then((n) => {
+      if (s.isConnected && user?.id) {
+        void flushOutbox(user.id).then((n) => {
           refreshPending();
           if (n > 0) void queryClient.invalidateQueries({ queryKey: ['workoutLogs'] });
         }).catch(refreshPending);
@@ -228,7 +239,7 @@ export default function LogsScreen() {
       appSub.remove();
       netSub();
     };
-  }, [queryClient, refreshPending]);
+  }, [queryClient, refreshPending, user?.id]);
 
   const metrics = useMemo(() => {
     const all = logs ?? [];
