@@ -63,6 +63,7 @@ export type WorkoutAction =
       type: 'REPLACE_EXERCISE';
       payload: { exerciseIndex: number; exercise: DraftExerciseInput };
     }
+  | { type: 'ATTACH_PERSISTED_LOG_ID'; payload: string }
   | { type: 'MARK_CLEAN' };
 
 export const initialWorkoutState: WorkoutState = {
@@ -273,6 +274,8 @@ export function workoutReducer(state: WorkoutState, action: WorkoutAction): Work
         }),
         isDirty: true,
       };
+    case 'ATTACH_PERSISTED_LOG_ID':
+      return { ...state, existingLogId: action.payload };
     case 'MARK_CLEAN':
       return { ...state, isDirty: false };
     default:

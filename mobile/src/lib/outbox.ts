@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { supabase } from './supabase';
+import { persistWorkoutLog } from './workoutPersistence';
 
 const KEY = 'workout-outbox';
 let mutationQueue: Promise<void> = Promise.resolve();
@@ -20,13 +20,9 @@ export type OutboxItem = {
  * generalised). Drafts already survive process death; this covers the case
  * where the user hits Save with no connection.
  */
-async function readOutboxStorage(): Promise<OutboxItem[]> {
-  try {
-    const raw = await AsyncStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as OutboxItem[]) : [];
-  } catch {
-    return [];
-  }
+async function readOutboxStrict(): Promise<OutboxItem[]> {
+  const raw = await AsyncStorage.getItem(KEY);
+  return raw ? (JSON.parse(raw) as OutboxItem[]) : [];
 }
 
 async function writeOutbox(items: OutboxItem[]): Promise<void> {
@@ -43,12 +39,16 @@ function serializeMutation<T>(operation: () => Promise<T>): Promise<T> {
 }
 
 export async function readOutbox(): Promise<OutboxItem[]> {
-  return readOutboxStorage();
+  try {
+    return await readOutboxStrict();
+  } catch {
+    return [];
+  }
 }
 
 export function enqueue(item: Omit<OutboxItem, 'id' | 'queuedAt'>): Promise<void> {
   return serializeMutation(async () => {
-    const items = await readOutboxStorage();
+    const items = await readOutboxStrict();
     // One queued entry per (user, date) — a later save supersedes an earlier one.
     const filtered = items.filter((i) => !(i.user_id === item.user_id && i.date === item.date));
     filtered.push({ ...item, id: `${item.user_id}:${item.date}`, queuedAt: Date.now() });
@@ -59,7 +59,7 @@ export function enqueue(item: Omit<OutboxItem, 'id' | 'queuedAt'>): Promise<void
 /** Returns how many items synced. Safe to call repeatedly. */
 export function flushOutbox(): Promise<number> {
   return serializeMutation(async () => {
-    const items = await readOutboxStorage();
+    const items = await readOutboxStrict();
     if (!items.length) return 0;
 
     const remaining: OutboxItem[] = [];
@@ -73,20 +73,7 @@ export function flushOutbox(): Promise<number> {
           title: item.title,
           content: item.content,
         };
-        if (item.existingLogId) {
-          const { data, error } = await supabase
-            .from('workout_logs')
-            .update(payload)
-            .eq('id', item.existingLogId)
-            .select('id')
-            .maybeSingle();
-          if (error || data?.id !== item.existingLogId) {
-            throw error ?? new Error('Workout update affected no row');
-          }
-        } else {
-          const { error } = await supabase.from('workout_logs').insert(payload);
-          if (error) throw error;
-        }
+        await persistWorkoutLog(payload, item.existingLogId);
         synced += 1;
       } catch {
         remaining.push(item);

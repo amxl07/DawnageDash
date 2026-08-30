@@ -1,11 +1,18 @@
 import { initialWorkoutState } from './workoutReducer';
 import {
+  persistWorkoutLog,
+  type WorkoutLogPersistence,
+  type WorkoutLogPayload,
+} from '@/lib/workoutPersistence';
+import {
   acquireWorkoutSave,
   applyWorkoutEdit,
-  assertExistingWorkoutUpdated,
+  attachPersistedWorkoutId,
   finalizeWorkoutSave,
   releaseWorkoutSave,
 } from './workoutSave';
+
+jest.mock('@/lib/supabase', () => ({ supabase: {} }));
 
 function deferred() {
   let resolve!: () => void;
@@ -52,6 +59,52 @@ describe('workout save integrity', () => {
     expect(next.generation).toBe(2);
     expect(next.state.selectedDay).toBe(2);
     expect(next.state.isDirty).toBe(true);
+  });
+
+  it('flows a fresh insert id into the edited draft without advancing its generation', async () => {
+    let storedId: string | null = null;
+    const persistence: WorkoutLogPersistence = {
+      findByDate: jest.fn(async () => ({ data: storedId ? { id: storedId } : null, error: null })),
+      updateById: jest.fn(async (id) => ({ data: { id }, error: null })),
+      insert: jest.fn(async () => {
+        storedId = 'inserted-1';
+        return { data: { id: storedId }, error: null };
+      }),
+    };
+    const payload: WorkoutLogPayload = {
+      user_id: 'user-1',
+      date: '2026-08-30',
+      title: 'Submitted',
+      content: '{"version":2,"exercises":[]}',
+    };
+    let snapshot = applyWorkoutEdit(
+      { generation: 0, state: initialWorkoutState },
+      { type: 'SET_TITLE', payload: 'Submitted' },
+    );
+    const submittedGeneration = snapshot.generation;
+    snapshot = applyWorkoutEdit(snapshot, { type: 'SET_TITLE', payload: 'Edited again' });
+    const firstId = await persistWorkoutLog(payload, null, persistence);
+    snapshot = attachPersistedWorkoutId(snapshot, firstId);
+    let persistedId: string | null = null;
+
+    await expect(
+      finalizeWorkoutSave({
+        savedGeneration: submittedGeneration,
+        getCurrentGeneration: () => snapshot.generation,
+        clearDraft: jest.fn(async () => undefined),
+        repersistLatestDraft: async () => {
+          persistedId = snapshot.state.existingLogId;
+        },
+      }),
+    ).resolves.toBe('edited');
+
+    expect(snapshot.generation).toBe(2);
+    expect(persistedId).toBe('inserted-1');
+    await expect(
+      persistWorkoutLog({ ...payload, title: 'Edited again' }, persistedId, persistence),
+    ).resolves.toBe('inserted-1');
+    expect(persistence.insert).toHaveBeenCalledTimes(1);
+    expect(persistence.updateById).toHaveBeenCalledTimes(1);
   });
 
   it('keeps and repersists an edit that arrives while draft clearing is pending', async () => {
@@ -104,18 +157,4 @@ describe('workout save integrity', () => {
     expect(repersistLatestDraft).not.toHaveBeenCalled();
   });
 
-  it('rejects an error-free existing-log update that affected no row', () => {
-    expect(() =>
-      assertExistingWorkoutUpdated({ data: null, error: null }, 'log-7'),
-    ).toThrow('Workout update affected no row');
-  });
-
-  it('accepts only the requested existing-log id', () => {
-    expect(() =>
-      assertExistingWorkoutUpdated({ data: { id: 'log-7' }, error: null }, 'log-7'),
-    ).not.toThrow();
-    expect(() =>
-      assertExistingWorkoutUpdated({ data: { id: 'log-other' }, error: null }, 'log-7'),
-    ).toThrow('Workout update affected no row');
-  });
 });

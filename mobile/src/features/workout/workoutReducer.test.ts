@@ -304,4 +304,16 @@ describe('workoutReducer', () => {
 
     expect(next.isDirty).toBe(false);
   });
+
+  it('attaches a persisted row id without changing dirty state', () => {
+    const dirty = { ...stateWithTwoSets, existingLogId: null, isDirty: true };
+    const next = workoutReducer(dirty, {
+      type: 'ATTACH_PERSISTED_LOG_ID',
+      payload: 'log-created',
+    });
+
+    expect(next.existingLogId).toBe('log-created');
+    expect(next.isDirty).toBe(true);
+    expect(next.exercises).toBe(dirty.exercises);
+  });
 });

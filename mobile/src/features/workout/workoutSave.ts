@@ -48,6 +48,20 @@ export function applyWorkoutEdit(
   };
 }
 
+/** Adopts a confirmed row identity without disguising it as a user edit. */
+export function attachPersistedWorkoutId(
+  current: WorkoutEditSnapshot,
+  logId: string,
+): WorkoutEditSnapshot {
+  return {
+    generation: current.generation,
+    state: workoutReducer(current.state, {
+      type: 'ATTACH_PERSISTED_LOG_ID',
+      payload: logId,
+    }),
+  };
+}
+
 type FinalizeOptions = {
   savedGeneration: number;
   getCurrentGeneration: () => number;
@@ -86,17 +100,4 @@ export async function finalizeWorkoutSave({
   }
 
   return 'finalized';
-}
-
-type ExistingUpdateResult = {
-  data: { id: string } | null;
-  error: unknown;
-};
-
-export function assertExistingWorkoutUpdated(
-  result: ExistingUpdateResult,
-  expectedId: string,
-): void {
-  if (result.error) throw result.error;
-  if (result.data?.id !== expectedId) throw new Error('Workout update affected no row');
 }

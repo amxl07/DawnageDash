@@ -33,7 +33,7 @@ import {
 import {
   acquireWorkoutSave,
   applyWorkoutEdit,
-  assertExistingWorkoutUpdated,
+  attachPersistedWorkoutId,
   finalizeWorkoutSave,
   releaseWorkoutSave,
   type WorkoutEditAction,
@@ -50,6 +50,7 @@ import {
   serializeWorkoutContent,
   totalVolume,
 } from '@/lib/workout-content';
+import { persistWorkoutLog } from '@/lib/workoutPersistence';
 import { HIT_SLOP_MIN, iconSize, spacing, useTheme } from '@/theme';
 
 function elapsedLabel(totalSeconds: number): string {
@@ -99,6 +100,11 @@ export default function LoggerScreen() {
       ...editSnapshotRef.current,
       generation: editSnapshotRef.current.generation + 1,
     };
+  }, []);
+
+  const attachPersistedId = useCallback((logId: string) => {
+    editSnapshotRef.current = attachPersistedWorkoutId(editSnapshotRef.current, logId);
+    reducerDispatch({ type: 'ATTACH_PERSISTED_LOG_ID', payload: logId });
   }, []);
 
   const { saveDraft, saveDraftNow, loadDraft, clearDraft, draftStatus } = useWorkoutDraft(
@@ -274,7 +280,7 @@ export default function LoggerScreen() {
       if (s.isConnected) {
         void flushOutbox().then((n) => {
           if (n > 0) void queryClient.invalidateQueries({ queryKey: ['workoutLogs'] });
-        });
+        }).catch(() => {});
       }
     });
     return unsub;
@@ -380,18 +386,8 @@ export default function LoggerScreen() {
     let syncStatus: 'saved' | 'offline' = 'saved';
     try {
       try {
-        if (submittedState.existingLogId) {
-          const updateResult = await supabase
-            .from('workout_logs')
-            .update(payload)
-            .eq('id', submittedState.existingLogId)
-            .select('id')
-            .maybeSingle();
-          assertExistingWorkoutUpdated(updateResult, submittedState.existingLogId);
-        } else {
-          const { error } = await supabase.from('workout_logs').insert(payload);
-          if (error) throw error;
-        }
+        const persistedId = await persistWorkoutLog(payload, submittedState.existingLogId);
+        attachPersistedId(persistedId);
         void queryClient.invalidateQueries({ queryKey: ['workoutLogs'] });
       } catch {
         try {

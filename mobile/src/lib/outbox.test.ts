@@ -1,24 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { enqueue, flushOutbox, readOutbox } from './outbox';
-
-const mockInsert = jest.fn();
-const mockMaybeSingle = jest.fn();
-const mockSelect = jest.fn(() => ({ maybeSingle: mockMaybeSingle }));
-const mockEq = jest.fn(() => ({ data: null, error: null, select: mockSelect }));
-const mockUpdate = jest.fn(() => ({ eq: mockEq }));
-const mockFrom = jest.fn((_table: string) => ({ insert: mockInsert, update: mockUpdate }));
+import { persistWorkoutLog } from './workoutPersistence';
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn(),
   setItem: jest.fn(),
 }));
 
-jest.mock('./supabase', () => ({
-  supabase: { from: (table: string) => mockFrom(table) },
-}));
+jest.mock('./workoutPersistence', () => ({ persistWorkoutLog: jest.fn() }));
 
 const mockStorage = jest.mocked(AsyncStorage);
+const mockPersistWorkoutLog = jest.mocked(persistWorkoutLog);
 
 const payload = (title: string, existingLogId: string | null = null) => ({
   user_id: 'user-1',
@@ -48,17 +41,17 @@ describe('workout outbox durability', () => {
     mockStorage.setItem.mockImplementation(async (_key, value) => {
       stored = value;
     });
-    mockInsert.mockResolvedValue({ data: null, error: null });
-    mockMaybeSingle.mockResolvedValue({ data: { id: 'log-1' }, error: null });
+    mockPersistWorkoutLog.mockResolvedValue('log-1');
   });
 
   it('does not let an in-flight flush overwrite a newer enqueue', async () => {
     await enqueue(payload('Original'));
     const serverResponse = deferred<{ data: null; error: null }>();
     const serverStarted = deferred<void>();
-    mockInsert.mockImplementationOnce(() => {
+    mockPersistWorkoutLog.mockImplementationOnce(async () => {
       serverStarted.resolve();
-      return serverResponse.promise;
+      await serverResponse.promise;
+      return 'log-1';
     });
 
     const flushing = flushOutbox();
@@ -80,13 +73,45 @@ describe('workout outbox durability', () => {
     await expect(enqueue(payload('Keep me'))).rejects.toThrow('disk full');
   });
 
+  it.each([
+    ['storage read', new Error('read failed')],
+    ['malformed JSON', null],
+  ])('does not overwrite the queue after a %s failure', async (_label, readError) => {
+    if (readError) mockStorage.getItem.mockRejectedValueOnce(readError);
+    else mockStorage.getItem.mockResolvedValueOnce('{not-json');
+
+    await expect(enqueue(payload('Must not overwrite'))).rejects.toBeTruthy();
+    expect(mockStorage.setItem).not.toHaveBeenCalled();
+  });
+
+  it('rejects a flush read failure while the public status read stays tolerant', async () => {
+    mockStorage.getItem.mockRejectedValueOnce(new Error('read failed'));
+    await expect(flushOutbox()).rejects.toThrow('read failed');
+    expect(mockStorage.setItem).not.toHaveBeenCalled();
+
+    mockStorage.getItem.mockRejectedValueOnce(new Error('status read failed'));
+    await expect(readOutbox()).resolves.toEqual([]);
+  });
+
   it('retains an existing-log item when an error-free update affects no row', async () => {
     await enqueue(payload('Existing', 'log-missing'));
-    mockMaybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    mockPersistWorkoutLog.mockRejectedValueOnce(new Error('Workout update affected no row'));
 
     await expect(flushOutbox()).resolves.toBe(0);
     await expect(readOutbox()).resolves.toEqual([
       expect.objectContaining({ title: 'Existing', existingLogId: 'log-missing' }),
     ]);
+  });
+
+  it('retries safely when queue cleanup fails after remote persistence', async () => {
+    await enqueue(payload('Replay safe'));
+    mockStorage.setItem.mockRejectedValueOnce(new Error('cleanup failed'));
+
+    await expect(flushOutbox()).rejects.toThrow('cleanup failed');
+    await expect(readOutbox()).resolves.toHaveLength(1);
+    await expect(flushOutbox()).resolves.toBe(1);
+
+    expect(mockPersistWorkoutLog).toHaveBeenCalledTimes(2);
+    expect(mockStorage.setItem).toHaveBeenLastCalledWith('workout-outbox', '[]');
   });
 });

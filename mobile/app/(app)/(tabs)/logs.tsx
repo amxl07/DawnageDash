@@ -170,7 +170,7 @@ export default function LogsScreen() {
         void flushOutbox().then((n) => {
           refreshPending();
           if (n > 0) void queryClient.invalidateQueries({ queryKey: ['workoutLogs'] });
-        });
+        }).catch(refreshPending);
       }
     });
     const netSub = NetInfo.addEventListener((s) => {
@@ -178,7 +178,7 @@ export default function LogsScreen() {
         void flushOutbox().then((n) => {
           refreshPending();
           if (n > 0) void queryClient.invalidateQueries({ queryKey: ['workoutLogs'] });
-        });
+        }).catch(refreshPending);
       }
     });
     return () => {
