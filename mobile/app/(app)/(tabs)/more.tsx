@@ -10,16 +10,36 @@ import {
 } from 'lucide-react-native';
 import { Alert, Pressable, View } from 'react-native';
 
-import { Card, ListRow, Screen, Text } from '@/components/ui';
+import { CoachStatusCard } from '@/components/coach/CoachStatusCard';
+import { Card, ListRow, Screen, SkeletonCard, Text } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCoach } from '@/hooks/useCoach';
 import { HIT_SLOP_MIN, iconSize, spacing, useTheme } from '@/theme';
 
 type Row = { icon: LucideIcon; label: string; href: string; hint: string };
 
+const COACHING_ROWS: Row[] = [
+  {
+    icon: MessageSquareText,
+    label: 'Weekly feedback',
+    href: '/(app)/weekly-feedback',
+    hint: 'Your weekly check-in',
+  },
+];
+
 const PROGRESS_ROWS: Row[] = [
-  { icon: Ruler, label: 'Measurements', href: '/(app)/measurements', hint: 'Track body measurements' },
-  { icon: Camera, label: 'Progress photos', href: '/(app)/media', hint: 'Compare your weekly photos' },
-  { icon: MessageSquareText, label: 'Weekly Feedback', href: '/(app)/weekly-feedback', hint: 'Your weekly check-in' },
+  {
+    icon: Ruler,
+    label: 'Measurements',
+    href: '/(app)/measurements',
+    hint: 'Track body measurements',
+  },
+  {
+    icon: Camera,
+    label: 'Progress photos',
+    href: '/(app)/media',
+    hint: 'Compare your weekly photos',
+  },
 ];
 
 const ACCOUNT_ROWS: Row[] = [
@@ -31,6 +51,7 @@ export default function MoreScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const { signOut } = useAuth();
+  const { data: coachLookup } = useCoach();
 
   const confirmSignOut = () => {
     Alert.alert('Sign out?', "You'll need to sign in again.", [
@@ -45,7 +66,24 @@ export default function MoreScreen() {
         More
       </Text>
 
-      <View style={{ gap: spacing.sm }}>
+      {coachLookup ? <CoachStatusCard lookup={coachLookup} /> : <SkeletonCard lines={2} />}
+
+      <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
+        <Text variant="label" tone="muted">Coaching</Text>
+        <Card padded={false}>
+          {COACHING_ROWS.map((row) => (
+            <ListRow
+              key={row.href}
+              icon={row.icon}
+              title={row.label}
+              subtitle={row.hint}
+              onPress={() => router.push(row.href as never)}
+            />
+          ))}
+        </Card>
+      </View>
+
+      <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
         <Text variant="label" tone="muted">Progress</Text>
         <Card padded={false}>
           {PROGRESS_ROWS.map((row, index) => (

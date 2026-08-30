@@ -1,4 +1,4 @@
-import { Text as NativeText, View } from 'react-native';
+import { StyleSheet, Text as NativeText, View } from 'react-native';
 
 // @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
@@ -72,6 +72,19 @@ describe('CoachBadge', () => {
     expect(renderer.root.findByType(MockNativeText).props.children).toBe(expected);
   });
 
+  it('describes an assigned coach with no published name without reporting an outage', () => {
+    mockUseCoach.mockReturnValue({
+      data: {
+        kind: 'assigned',
+        coach: { id: 'c1', full_name: null, avatar_url: null },
+      },
+    });
+
+    const renderer = renderBadge({ fallback: 'status' });
+
+    expect(renderer.root.findByType(MockNativeText).props.children).toBe('Coach assigned.');
+  });
+
   it('renders assigned coach initials, name, caption, and one combined accessibility label', () => {
     mockUseCoach.mockReturnValue({
       data: {
@@ -117,5 +130,36 @@ describe('CoachBadge', () => {
       cachePolicy: 'memory-disk',
       accessible: false,
     });
+  });
+
+  it('lets long assigned and fallback text wrap in a 320dp large-text placement', () => {
+    mockUseCoach.mockReturnValue({
+      data: {
+        kind: 'assigned',
+        coach: {
+          id: 'c1',
+          full_name: 'Alexandria Catherine Montgomery-Wellington',
+          avatar_url: null,
+        },
+      },
+    });
+    const assigned = renderBadge({ size: 28, fallback: 'status' });
+    const assignedName = assigned.root
+      .findAllByType(MockNativeText)
+      .find((node: { props: { children?: React.ReactNode } }) =>
+        String(node.props.children).startsWith('Alexandria'),
+      );
+
+    mockUseCoach.mockReturnValue({ data: { kind: 'unavailable' } });
+    let fallback!: ReturnType<typeof create>;
+    act(() => {
+      fallback = create(<CoachBadge size={28} fallback="status" />);
+    });
+    const fallbackText = fallback.root.findByType(MockNativeText);
+
+    expect(StyleSheet.flatten(assignedName?.props.style)).toMatchObject({ flexShrink: 1 });
+    expect(StyleSheet.flatten(fallbackText.props.style)).toMatchObject({ flexShrink: 1 });
+    expect(assignedName?.props.numberOfLines).not.toBe(1);
+    expect(fallbackText.props.numberOfLines).not.toBe(1);
   });
 });

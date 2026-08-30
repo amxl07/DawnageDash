@@ -43,9 +43,11 @@ export function CoachBadge({
     const message =
       lookup.kind === 'unassigned'
         ? 'No coach assigned yet.'
-        : 'Coach details are temporarily unavailable.';
+        : lookup.kind === 'assigned'
+          ? 'Coach assigned.'
+          : 'Coach details are temporarily unavailable.';
     return (
-      <Text variant="bodySm" tone="muted">
+      <Text variant="bodySm" tone="muted" style={{ flexShrink: 1, minWidth: 0 }}>
         {message}
       </Text>
     );
@@ -90,11 +92,13 @@ export function CoachBadge({
   const body = (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
       {avatar}
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, minWidth: 0 }}>
         <Text variant="label" tone="muted">
           {label}
         </Text>
-        <Text variant={variant === 'card' ? 'h2' : 'body'}>{coach.full_name}</Text>
+        <Text variant={variant === 'card' ? 'h2' : 'body'} style={{ flexShrink: 1 }}>
+          {coach.full_name}
+        </Text>
       </View>
     </View>
   );

@@ -22,6 +22,7 @@ import {
 } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/usePlans';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { parseLocalDate } from '@/lib/dates';
 import { supabase } from '@/lib/supabase';
 import { detectTimezone } from '@/lib/timezones';
@@ -35,6 +36,7 @@ export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
   const { data: profile, isLoading } = useUserProfile();
+  const { isCompact } = useResponsiveLayout();
 
   const [tab, setTab] = useState<Tab>('basic');
   const [dirty, setDirty] = useState(false);
@@ -276,7 +278,7 @@ export default function ProfileScreen() {
                 </View>
               </Card>
 
-              <CoachBadge variant="card" />
+              <CoachBadge variant="card" fallback="status" />
 
               <Card style={{ gap: spacing.base }}>
                 <Text variant="h2">About you</Text>
@@ -290,7 +292,15 @@ export default function ProfileScreen() {
               {startDate ? (
                 <Card style={{ gap: spacing.sm }}>
                   <Text variant="h2">Program</Text>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <View
+                    testID="program-start-row"
+                    style={{
+                      flexDirection: isCompact ? 'column' : 'row',
+                      alignItems: isCompact ? 'flex-start' : 'center',
+                      justifyContent: isCompact ? undefined : 'space-between',
+                      gap: isCompact ? spacing.xs : spacing.md,
+                    }}
+                  >
                     <Text variant="bodySm" tone="muted">
                       Start
                     </Text>
@@ -299,7 +309,15 @@ export default function ProfileScreen() {
                     </Text>
                   </View>
                   {endDate ? (
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <View
+                      testID="program-end-row"
+                      style={{
+                        flexDirection: isCompact ? 'column' : 'row',
+                        alignItems: isCompact ? 'flex-start' : 'center',
+                        justifyContent: isCompact ? undefined : 'space-between',
+                        gap: isCompact ? spacing.xs : spacing.md,
+                      }}
+                    >
                       <Text variant="bodySm" tone="muted">
                         End
                       </Text>

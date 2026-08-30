@@ -7,6 +7,7 @@ import Animated, { Easing, FadeIn, useAnimatedStyle, useSharedValue, withTiming 
 
 import { DawnGlow, Logo } from '@/components/brand';
 import { BarChart, DonutChart, LineChart } from '@/components/charts';
+import { CoachBadge } from '@/components/coach/CoachBadge';
 import { CheckInHistorySheet } from '@/components/dashboard/CheckInHistorySheet';
 import { ConsistencyGrid } from '@/components/dashboard/ConsistencyGrid';
 import { MetricCard } from '@/components/dashboard/MetricCard';
@@ -40,6 +41,44 @@ function greeting(): string {
   if (h < 12) return 'Good morning';
   if (h < 18) return 'Good afternoon';
   return 'Good evening';
+}
+
+function DashboardGreeting({
+  firstName,
+  fullDate,
+  status,
+  showLogo = false,
+}: {
+  firstName: string;
+  fullDate: string;
+  status?: string;
+  showLogo?: boolean;
+}) {
+  const { colors } = useTheme();
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
+      <View style={{ flex: 1, minWidth: 0, gap: spacing.xs }}>
+        <Text variant="h1" style={{ flexShrink: 1 }}>
+          {greeting()}, {firstName}
+        </Text>
+        <Text variant="bodySm" tone="muted">
+          {fullDate}
+        </Text>
+        {status ? (
+          <Text variant="bodySm" tone="muted">
+            {status}
+          </Text>
+        ) : null}
+        <View style={{ alignSelf: 'stretch', paddingTop: spacing.xs }}>
+          <CoachBadge size={28} fallback="status" />
+        </View>
+      </View>
+      {showLogo ? (
+        <Logo variant="glyph" size={20} color={colors.mutedForeground} label={false} />
+      ) : null}
+    </View>
+  );
 }
 
 export default function DashboardScreen() {
@@ -172,12 +211,7 @@ export default function DashboardScreen() {
     return (
       <Screen archetype="root">
         <View style={{ gap: spacing.lg }}>
-          <View style={{ gap: spacing.xs }}>
-            <Text variant="h1">{greeting()}, {firstName}</Text>
-            <Text variant="bodySm" tone="muted">
-              {fullDate}
-            </Text>
-          </View>
+          <DashboardGreeting firstName={firstName} fullDate={fullDate} />
           <TodayActionCard action={todayAction} onPress={() => router.push(todayAction.route)} />
           <Card>
             <EmptyState
@@ -201,21 +235,12 @@ export default function DashboardScreen() {
       }
     >
       <View style={{ gap: spacing.lg }}>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
-          <View style={{ flex: 1, gap: spacing.xs }}>
-            <Text variant="h1">
-              {greeting()}, {firstName}
-            </Text>
-            <Text variant="bodySm" tone="muted">
-              {fullDate}
-            </Text>
-            <Text variant="bodySm" tone="muted">
-              {checkedInToday ? "Today's logged." : 'Your check-in is waiting.'}
-            </Text>
-          </View>
-          {/* Quiet brand presence — the mark, tinted back, not a full lockup. */}
-          <Logo variant="glyph" size={20} color={colors.mutedForeground} label={false} />
-        </View>
+        <DashboardGreeting
+          firstName={firstName}
+          fullDate={fullDate}
+          status={checkedInToday ? "Today's logged." : 'Your check-in is waiting.'}
+          showLogo
+        />
 
         <TodayActionCard action={todayAction} onPress={() => router.push(todayAction.route)} />
 
