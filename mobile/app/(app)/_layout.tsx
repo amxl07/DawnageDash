@@ -49,7 +49,7 @@ export default function AppLayout() {
   if (step >= 3 && onOnboarding) return <Redirect href="/(app)/(tabs)" />;
 
   return (
-    <RestTimerProvider>
+    <RestTimerProvider key={session.user.id} userId={session.user.id}>
       <Stack
         screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
       >

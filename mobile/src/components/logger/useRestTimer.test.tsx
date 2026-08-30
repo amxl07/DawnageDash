@@ -1,4 +1,5 @@
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { PropsWithChildren } from 'react';
 import { AppState } from 'react-native';
 
@@ -12,10 +13,18 @@ import {
   type RestTimerState,
 } from './useRestTimer';
 
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn(),
+  setItem: jest.fn(),
+  removeItem: jest.fn(),
+}));
+
 const mockNotificationAsync = jest.mocked(Haptics.notificationAsync);
+const mockStorage = jest.mocked(AsyncStorage);
+let persisted = new Map<string, string>();
 
 function Provider({ children }: PropsWithChildren) {
-  return <RestTimerProvider>{children}</RestTimerProvider>;
+  return <RestTimerProvider userId="user-1">{children}</RestTimerProvider>;
 }
 
 function renderTimer() {
@@ -50,6 +59,14 @@ describe('rest timer absolute-time lifecycle', () => {
     jest.useFakeTimers();
     jest.setSystemTime(0);
     jest.clearAllMocks();
+    persisted = new Map();
+    mockStorage.getItem.mockImplementation(async (key) => persisted.get(key) ?? null);
+    mockStorage.setItem.mockImplementation(async (key, value) => {
+      persisted.set(key, value);
+    });
+    mockStorage.removeItem.mockImplementation(async (key) => {
+      persisted.delete(key);
+    });
   });
 
   afterEach(() => {
@@ -83,7 +100,7 @@ describe('rest timer absolute-time lifecycle', () => {
     }
 
     function Shell({ show }: { show: boolean }) {
-      return <RestTimerProvider>{show ? <Probe /> : null}</RestTimerProvider>;
+      return <RestTimerProvider userId="user-1">{show ? <Probe /> : null}</RestTimerProvider>;
     }
 
     let renderer!: ReturnType<typeof create>;
@@ -99,6 +116,25 @@ describe('rest timer absolute-time lifecycle', () => {
     expect(current?.running).toBe(true);
     expect(current?.remaining).toBe(90);
     act(() => renderer.unmount());
+  });
+
+  it('restores a running timer from its absolute timestamp after a provider remount', async () => {
+    const first = renderTimer();
+    act(() => first.result.current.start(90));
+    await act(async () => Promise.resolve());
+    first.unmount();
+
+    jest.setSystemTime(30_400);
+    const restored = renderTimer();
+    await act(async () => Promise.resolve());
+
+    expect(restored.result.current).toMatchObject({
+      duration: 90,
+      remaining: 60,
+      running: true,
+      complete: false,
+    });
+    restored.unmount();
   });
 
   it('recomputes on foreground and fires completion feedback once per run', () => {

@@ -7,6 +7,12 @@ import { CircularTimer } from './CircularTimer';
 import { RestTimer } from './RestTimer';
 import { RestTimerProvider } from './useRestTimer';
 
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn(async () => null),
+  setItem: jest.fn(async () => undefined),
+  removeItem: jest.fn(async () => undefined),
+}));
+
 const mockMotion = { enabled: true };
 const mockSharedValues: {
   initial: number;
@@ -208,7 +214,7 @@ describe('CircularTimer completion choreography', () => {
     let renderer!: ReturnType<typeof create>;
     act(() => {
       renderer = create(
-        <RestTimerProvider>
+        <RestTimerProvider userId="timer-test-user">
           <RestTimer />
         </RestTimerProvider>,
       );
