@@ -1,4 +1,5 @@
 import * as Haptics from 'expo-haptics';
+import { StyleSheet } from 'react-native';
 
 // @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
@@ -278,9 +279,83 @@ describe('SetEditor', () => {
     expect(remove.props.onPress).toBeUndefined();
     expect(onRemove).not.toHaveBeenCalled();
   });
+
+  it('renders one labeled duration input instead of weight and repetition inputs', () => {
+    const onUpdate = jest.fn();
+    const { getByLabelText, queryByText } = renderSetEditor({
+      tracking: 'duration',
+      targetDuration: '45 sec',
+      onUpdate,
+    });
+
+    expect(queryByText('Weight (kg)')).toBeNull();
+    expect(queryByText('Repetitions')).toBeNull();
+    const duration = getByLabelText('Set 1 duration in seconds');
+    expect(StyleSheet.flatten(duration.props.style).minHeight).toBeGreaterThanOrEqual(44);
+    act(() => duration.props.onChangeText('42'));
+    expect(onUpdate).toHaveBeenCalledWith('duration', '42');
+    expect(queryByText('Target: 45 sec')).toBeTruthy();
+  });
+
+  it('labels warm-up sets distinctly from work sets', () => {
+    const { getByRole, getByText } = renderSetEditor({
+      set: { ...incompleteSet, kind: 'warmup' },
+    });
+
+    expect(getByText('Warm-up 1')).toBeTruthy();
+    expect(getByRole('checkbox', 'Mark warm-up 1 complete')).toBeTruthy();
+  });
+
+  it('offers a 44 point plate-calculator action only for weight-repetition sets', () => {
+    const onOpenPlateCalculator = jest.fn();
+    const weightEditor = renderSetEditor({ onOpenPlateCalculator });
+    const action = weightEditor.getByRole('button', 'Calculate plates for set 1');
+
+    expect(StyleSheet.flatten(action.props.style).minHeight).toBeGreaterThanOrEqual(44);
+    act(() => action.props.onPress());
+    expect(onOpenPlateCalculator).toHaveBeenCalledTimes(1);
+
+    const durationEditor = renderSetEditor({ tracking: 'duration', onOpenPlateCalculator });
+    expect(durationEditor.queryByText('Plates')).toBeNull();
+  });
 });
 
 describe('ExerciseSlide set completion', () => {
+  it('exposes a visible 44 point Details action for a plan prescription', () => {
+    mockResponsiveLayout({ isCompact: true });
+    let renderer!: ReturnType<typeof create>;
+    act(() => {
+      renderer = create(
+        <ExerciseSlide
+          exercise={{
+            id: 'squat',
+            name: 'Squat',
+            tracking: 'weight-reps',
+            sets: [incompleteSet],
+          }}
+          prescription={{
+            id: 'squat',
+            name: 'Squat',
+            sets: 1,
+            reps: '8',
+            warmupSets: 0,
+            substitutions: [],
+          }}
+          onUpdateSet={jest.fn()}
+          onToggleSet={jest.fn()}
+          onAddSet={jest.fn()}
+          onRemoveSet={jest.fn()}
+        />,
+      );
+    });
+
+    const details = renderer.root.findByProps({
+      accessibilityRole: 'button',
+      accessibilityLabel: 'Show details for Squat',
+    });
+    expect(StyleSheet.flatten(details.props.style)).toMatchObject({ minHeight: 44 });
+  });
+
   it('marks the first incomplete stable set current and forwards its toggle', () => {
     mockResponsiveLayout({ isCompact: true });
     const onToggleSet = jest.fn();

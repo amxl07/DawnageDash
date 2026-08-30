@@ -78,6 +78,8 @@ const day: PlanDay = {
       name: 'Shoulder press',
       sets: 3,
       reps: '8–10',
+      warmupSets: 0,
+      substitutions: [],
       notes: 'Keep ribs down',
       videoLink: 'https://example.com/press',
     },

@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
 import { ClipboardList, Utensils } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { CoachBadge } from '@/components/coach/CoachBadge';
+import { ExercisePrescriptionSheet } from '@/components/plans/ExercisePrescriptionSheet';
 import { PlanDayCard } from '@/components/plans/PlanDayCard';
 import {
   Card,
@@ -19,11 +20,12 @@ import {
   useMealPlan,
   useUserProfile,
   useWorkoutPlan,
+  type PlanExercise,
 } from '@/hooks/usePlans';
 import { usePlanProgress } from '@/hooks/usePlanProgress';
 import { relativeDays, usePlanProvenance } from '@/hooks/usePlanProvenance';
 import { formatTypeLabel } from '@/lib/workout-constants';
-import { spacing, useTheme } from '@/theme';
+import { HIT_SLOP_MIN, spacing, useTheme } from '@/theme';
 
 type Top = 'training' | 'nutrition';
 type ActivePlan = {
@@ -53,6 +55,7 @@ export default function PlansScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const [top, setTop] = useState<Top>('training');
+  const [selectedExercise, setSelectedExercise] = useState<PlanExercise | null>(null);
 
   const { data: profile, isLoading: profileLoading, isError, refetch } = useUserProfile();
   const { data: plan, isLoading: planLoading } = useWorkoutPlan();
@@ -167,17 +170,45 @@ export default function PlansScreen() {
 
               {orderedDays.length ? (
                 orderedDays.map((d) => (
-                  <PlanDayCard
-                    key={d.id}
-                    day={d}
-                    status={progress.statuses[d.day_number] ?? 'upcoming'}
-                    onStart={() =>
-                      router.push({
-                        pathname: '/(app)/logger',
-                        params: { day: String(d.day_number) },
-                      })
-                    }
-                  />
+                  <View key={d.id} style={{ gap: spacing.sm }}>
+                    <PlanDayCard
+                      day={d}
+                      status={progress.statuses[d.day_number] ?? 'upcoming'}
+                      onStart={() =>
+                        router.push({
+                          pathname: '/(app)/logger',
+                          params: { day: String(d.day_number) },
+                        })
+                      }
+                    />
+                    {d.exercises.length ? (
+                      <Card style={{ gap: spacing.xs }}>
+                        <Text variant="label" tone="muted">
+                          Exercise details
+                        </Text>
+                        {d.exercises.map((exercise, exerciseIndex) => (
+                          <View
+                            key={exercise.id ?? exerciseIndex}
+                            style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
+                          >
+                            <Text variant="bodySm" style={{ flex: 1 }}>
+                              {exercise.name}
+                            </Text>
+                            <Pressable
+                              onPress={() => setSelectedExercise(exercise)}
+                              accessibilityRole="button"
+                              accessibilityLabel={`Show details for ${exercise.name}`}
+                              style={{ minHeight: HIT_SLOP_MIN, justifyContent: 'center' }}
+                            >
+                              <Text variant="bodySm" tone="primary">
+                                Details
+                              </Text>
+                            </Pressable>
+                          </View>
+                        ))}
+                      </Card>
+                    ) : null}
+                  </View>
                 ))
               ) : (
                 <Card>
@@ -231,14 +262,21 @@ export default function PlansScreen() {
                 </Card>
                 {meal.meals.map((m) => (
                   <Card key={m.meal_type} style={{ gap: spacing.sm }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        flexWrap: 'wrap',
+                        justifyContent: 'space-between',
+                        gap: spacing.sm,
+                      }}
+                    >
                       <Text variant="h2">{m.meal_type}</Text>
                       {m.calories ? (
                         <Text variant="bodySm" tone="muted" numeric>{m.calories} kcal</Text>
                       ) : null}
                     </View>
                     {m.description ? <Text variant="bodySm">{m.description}</Text> : null}
-                    <View style={{ flexDirection: 'row', gap: spacing.md }}>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
                       {([['P', m.protein], ['C', m.carbs], ['F', m.fats]] as const).map(
                         ([key, value]) => value !== null ? (
                           <Text key={key} variant="bodySm" tone="muted" numeric>
@@ -284,15 +322,33 @@ export default function PlansScreen() {
               )}
             </Card>
 
-            {profile?.nutrition_note ? (
-              <Card style={{ gap: spacing.xs }}>
+            {profile?.nutrition_note || profile?.cardio_note || profile?.steps_note ? (
+              <Card style={{ gap: spacing.md }}>
                 <Text variant="h2">Coach notes</Text>
-                <Text variant="bodySm">{profile.nutrition_note}</Text>
+                {profile.nutrition_note ? <Text variant="bodySm">{profile.nutrition_note}</Text> : null}
+                {profile.cardio_note ? (
+                  <View style={{ gap: spacing.xs }}>
+                    <Text variant="label" tone="muted">Cardio</Text>
+                    <Text variant="bodySm">{profile.cardio_note}</Text>
+                  </View>
+                ) : null}
+                {profile.steps_note ? (
+                  <View style={{ gap: spacing.xs }}>
+                    <Text variant="label" tone="muted">Steps</Text>
+                    <Text variant="bodySm">{profile.steps_note}</Text>
+                  </View>
+                ) : null}
               </Card>
             ) : null}
           </View>
         )}
       </View>
+
+      <ExercisePrescriptionSheet
+        visible={selectedExercise !== null}
+        exercise={selectedExercise}
+        onClose={() => setSelectedExercise(null)}
+      />
     </Screen>
   );
 }

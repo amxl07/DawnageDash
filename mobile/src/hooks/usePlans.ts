@@ -16,6 +16,10 @@ export type PlanExercise = {
   name: string;
   sets: number; // TARGET count here — unlike logs, where sets is an array
   reps: string;
+  duration?: string;
+  restSeconds?: number;
+  warmupSets: number;
+  substitutions: PlanExercise[];
   videoLink?: string;
   notes?: string;
 };
@@ -57,19 +61,70 @@ const parseJson = <T,>(raw: string | null): T | null => {
   }
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const optionalString = (value: unknown): string | undefined => {
+  if (value === null || value === undefined) return undefined;
+  const normalized = String(value).trim();
+  return normalized || undefined;
+};
+
+const optionalFiniteNumber = (value: unknown): number | undefined => {
+  if (value === null || value === undefined || value === '') return undefined;
+  const normalized = Number(value);
+  return Number.isFinite(normalized) ? normalized : undefined;
+};
+
+const suppliedExerciseName = (exercise: Record<string, unknown>): string | undefined => {
+  const value = exercise.name ?? exercise.Exercise ?? exercise.exercise;
+  return typeof value === 'string' ? optionalString(value) : undefined;
+};
+
+function normalizeExercise(ex: Record<string, unknown>, index: number): PlanExercise {
+  const setsValue = Number(ex.sets ?? ex.Sets ?? 3);
+  const sets = Number.isFinite(setsValue) && setsValue > 0 ? Math.floor(setsValue) : 3;
+  const warmupValue = Number(ex.warmupSets ?? ex.warmup_sets ?? ex.WarmupSets ?? 0);
+  const warmupSets = Number.isFinite(warmupValue)
+    ? Math.min(sets, Math.max(0, Math.floor(warmupValue)))
+    : 0;
+  const substitutionsValue = ex.substitutions ?? ex.Substitutions;
+  const substitutions = Array.isArray(substitutionsValue)
+    ? substitutionsValue
+        .filter(isRecord)
+        .filter((substitution) => Boolean(suppliedExerciseName(substitution)))
+        .map((substitution, substitutionIndex) =>
+          normalizeExercise(substitution, substitutionIndex),
+        )
+    : [];
+
+  const duration = optionalString(ex.duration ?? ex.Duration);
+  const restSeconds = optionalFiniteNumber(
+    ex.restSeconds ?? ex.rest_seconds ?? ex.rest ?? ex.Rest,
+  );
+
+  return {
+    id: typeof ex.id === 'string' ? ex.id : String(index),
+    name: optionalString(ex.Exercise ?? ex.exercise ?? ex.name) ?? `Exercise ${index + 1}`,
+    sets,
+    reps: String(ex.reps ?? ex.Reps ?? ''),
+    ...(duration ? { duration } : {}),
+    ...(restSeconds === undefined ? {} : { restSeconds }),
+    warmupSets,
+    substitutions,
+    videoLink: optionalString(ex.videoLink ?? ex.VideoLink),
+    notes: optionalString(ex.notes ?? ex.Notes),
+  };
+}
+
 /** Legacy key casing varies across rows. */
 function normalizeExercises(raw: string | null): PlanExercise[] {
   const parsed = parseJson<Record<string, unknown>[]>(raw);
   if (!Array.isArray(parsed)) return [];
-  return parsed.map((ex, i) => ({
-    id: typeof ex.id === 'string' ? ex.id : String(i),
-    name: String(ex.Exercise ?? ex.exercise ?? ex.name ?? `Exercise ${i + 1}`),
-    sets: Number(ex.sets ?? ex.Sets ?? 3) || 3,
-    reps: String(ex.reps ?? ex.Reps ?? ''),
-    videoLink: (ex.videoLink ?? ex.VideoLink) ? String(ex.videoLink ?? ex.VideoLink) : undefined,
-    notes: ex.notes ? String(ex.notes) : undefined,
-  }));
+  return parsed.filter(isRecord).map(normalizeExercise);
 }
+
+export const normalizeExercisesForTest = normalizeExercises;
 
 export function useUserProfile() {
   const { user } = useAuth();

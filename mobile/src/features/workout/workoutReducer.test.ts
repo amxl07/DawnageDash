@@ -1,6 +1,8 @@
 import {
+  createDraftExerciseFromPlan,
   initialWorkoutState,
   normalizeDraftExercise,
+  personalRecordSets,
   workoutReducer,
   type WorkoutExercise,
   type WorkoutState,
@@ -39,6 +41,77 @@ const stateWithTwoSets: WorkoutState = {
 };
 
 describe('workoutReducer', () => {
+  it('builds stable warm-up sets and duration tracking from a duration-only prescription', () => {
+    expect(
+      createDraftExerciseFromPlan({
+        id: 'carry',
+        name: 'Farmer carry',
+        sets: 3,
+        reps: '',
+        duration: '45 sec',
+        warmupSets: 2,
+      }),
+    ).toEqual({
+      id: 'carry',
+      name: 'Farmer carry',
+      tracking: 'duration',
+      sets: [
+        {
+          id: 'carry-set-1',
+          reps: '',
+          weight: '',
+          rpe: '',
+          duration: '',
+          kind: 'warmup',
+          completed: false,
+        },
+        {
+          id: 'carry-set-2',
+          reps: '',
+          weight: '',
+          rpe: '',
+          duration: '',
+          kind: 'warmup',
+          completed: false,
+        },
+        {
+          id: 'carry-set-3',
+          reps: '',
+          weight: '',
+          rpe: '',
+          duration: '',
+          kind: 'work',
+          completed: false,
+        },
+      ],
+    });
+  });
+
+  it('keeps repetition tracking when both repetition and duration metadata exist', () => {
+    expect(
+      createDraftExerciseFromPlan({
+        name: 'Tempo squat',
+        sets: 1,
+        reps: '5',
+        duration: '30 sec',
+        warmupSets: 0,
+      }).tracking,
+    ).toBe('weight-reps');
+  });
+
+  it('excludes warm-ups from personal-record candidates without excluding historical work sets', () => {
+    expect(
+      personalRecordSets([
+        { reps: '1', weight: '120', kind: 'warmup' },
+        { reps: '5', weight: '100', kind: 'work' },
+        { reps: '5', weight: '95' },
+      ]),
+    ).toEqual([
+      { reps: '5', weight: '100', kind: 'work' },
+      { reps: '5', weight: '95' },
+    ]);
+  });
+
   it('updates only the addressed set without mutating the prior state', () => {
     const next = workoutReducer(stateWithTwoSets, {
       type: 'UPDATE_SET',

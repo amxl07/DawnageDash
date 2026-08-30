@@ -30,6 +30,43 @@ export type DraftExerciseInput = Pick<WorkoutExercise, 'name'> &
     sets: DraftSetInput[];
   };
 
+export type PlanExerciseInput = {
+  id?: string;
+  name: string;
+  sets: number;
+  reps: string;
+  duration?: string;
+  warmupSets: number;
+};
+
+export function createDraftExerciseFromPlan(
+  exercise: PlanExerciseInput,
+  exerciseIndex = 0,
+): WorkoutExercise {
+  const id = exercise.id?.trim() || `exercise-${exerciseIndex + 1}`;
+  const tracking: WorkoutExercise['tracking'] =
+    exercise.duration && !exercise.reps.trim() ? 'duration' : 'weight-reps';
+
+  return {
+    id,
+    name: exercise.name,
+    tracking,
+    sets: Array.from({ length: Math.max(1, exercise.sets) }, (_, setIndex) => ({
+      id: `${id}-set-${setIndex + 1}`,
+      reps: '',
+      weight: '',
+      rpe: '',
+      duration: '',
+      kind: setIndex < exercise.warmupSets ? 'warmup' : 'work',
+      completed: false,
+    })),
+  };
+}
+
+export function personalRecordSets<T extends { kind?: WorkoutSet['kind'] }>(sets: T[]): T[] {
+  return sets.filter((set) => set.kind !== 'warmup');
+}
+
 type LoadPayload = {
   title: string;
   exercises: DraftExerciseInput[];

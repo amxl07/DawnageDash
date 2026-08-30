@@ -24,7 +24,7 @@ import {
   useTheme,
 } from '@/theme';
 
-type EditableSetField = 'weight' | 'reps' | 'rpe';
+type EditableSetField = 'weight' | 'reps' | 'rpe' | 'duration';
 
 const INLINE_FIELD_MIN_WIDTH = 76;
 const INLINE_COMPLETION_MIN_WIDTH = 104;
@@ -47,12 +47,15 @@ type Props = {
   index: number;
   set: WorkoutSet;
   previous?: Pick<WorkoutSet, 'weight' | 'reps' | 'rpe'>;
+  tracking?: 'weight-reps' | 'duration';
   targetReps?: string;
+  targetDuration?: string;
   isCurrent: boolean;
   canRemove: boolean;
   onUpdate: (field: EditableSetField, value: string) => void;
   onToggle: () => void;
   onRemove: () => void;
+  onOpenPlateCalculator?: () => void;
 };
 
 type FieldProps = {
@@ -119,12 +122,15 @@ export function SetEditor({
   index,
   set,
   previous,
+  tracking = 'weight-reps',
   targetReps,
+  targetDuration,
   isCurrent,
   canRemove,
   onUpdate,
   onToggle,
   onRemove,
+  onOpenPlateCalculator,
 }: Props) {
   const { fontScale, isCompact } = useResponsiveLayout();
   const { colors } = useTheme();
@@ -135,6 +141,8 @@ export function SetEditor({
     availableWidth === null ||
     availableWidth < INLINE_MIN_AVAILABLE_WIDTH * Math.max(1, fontScale);
   const setNumber = index + 1;
+  const setLabel = set.kind === 'warmup' ? `Warm-up ${setNumber}` : `Set ${setNumber}`;
+  const spokenSetLabel = set.kind === 'warmup' ? `warm-up ${setNumber}` : `set ${setNumber}`;
   const mounted = useRef(false);
   const completionScale = useSharedValue(1);
   const completionOpacity = useSharedValue(1);
@@ -177,7 +185,7 @@ export function SetEditor({
       <Pressable
         onPress={toggle}
         accessibilityRole="checkbox"
-        accessibilityLabel={`Mark set ${setNumber} ${set.completed ? 'incomplete' : 'complete'}`}
+        accessibilityLabel={`Mark ${spokenSetLabel} ${set.completed ? 'incomplete' : 'complete'}`}
         accessibilityState={{ checked: set.completed }}
         style={{
           minWidth: stacked ? HIT_SLOP_MIN : INLINE_COMPLETION_MIN_WIDTH,
@@ -197,21 +205,35 @@ export function SetEditor({
           <Check size={iconSize.sm} color={colors.success} strokeWidth={3} accessible={false} />
         ) : null}
         <Text variant="bodySm" tone={set.completed ? 'success' : 'muted'}>
-          {set.completed ? 'Completed' : `Set ${setNumber}`}
+          {set.completed ? 'Completed' : setLabel}
         </Text>
       </Pressable>
     </Animated.View>
   );
 
   const weight = (
-    <SetField
-      compact={stacked}
-      label={`Set ${setNumber} weight in kilograms`}
-      shortLabel="Weight (kg)"
-      value={set.weight}
-      keyboardType="decimal-pad"
-      onChangeText={(value) => onUpdate('weight', value)}
-    />
+    <View style={{ flex: 1, gap: spacing.xs }}>
+      <SetField
+        compact={stacked}
+        label={`Set ${setNumber} weight in kilograms`}
+        shortLabel="Weight (kg)"
+        value={set.weight}
+        keyboardType="decimal-pad"
+        onChangeText={(value) => onUpdate('weight', value)}
+      />
+      {onOpenPlateCalculator ? (
+        <Pressable
+          onPress={onOpenPlateCalculator}
+          accessibilityRole="button"
+          accessibilityLabel={`Calculate plates for set ${setNumber}`}
+          style={{ minHeight: HIT_SLOP_MIN, alignSelf: 'flex-start', justifyContent: 'center' }}
+        >
+          <Text variant="bodySm" tone="primary">
+            Plates
+          </Text>
+        </Pressable>
+      ) : null}
+    </View>
   );
   const repetitions = (
     <SetField
@@ -221,6 +243,16 @@ export function SetEditor({
       value={set.reps}
       keyboardType="number-pad"
       onChangeText={(value) => onUpdate('reps', value)}
+    />
+  );
+  const duration = (
+    <SetField
+      compact={stacked}
+      label={`Set ${setNumber} duration in seconds`}
+      shortLabel="Duration (seconds)"
+      value={set.duration}
+      keyboardType="number-pad"
+      onChangeText={(value) => onUpdate('duration', value)}
     />
   );
   const rpe = (
@@ -289,8 +321,14 @@ export function SetEditor({
         <>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>{completion}</View>
           <View testID="set-editor-fields" style={[{ flexDirection: 'column', gap: spacing.sm }]}>
-            {weight}
-            {repetitions}
+            {tracking === 'duration' ? (
+              duration
+            ) : (
+              <>
+                {weight}
+                {repetitions}
+              </>
+            )}
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm }}>
             {rpe}
@@ -307,8 +345,14 @@ export function SetEditor({
             testID="set-editor-fields"
             style={[{ flex: 1, flexDirection: 'row', gap: spacing.sm }]}
           >
-            {weight}
-            {repetitions}
+            {tracking === 'duration' ? (
+              duration
+            ) : (
+              <>
+                {weight}
+                {repetitions}
+              </>
+            )}
             {rpe}
           </View>
           {remove}
@@ -318,6 +362,11 @@ export function SetEditor({
       {targetReps ? (
         <Text variant="bodySm" tone="muted">
           Target: {targetReps} reps
+        </Text>
+      ) : null}
+      {tracking === 'duration' && targetDuration ? (
+        <Text variant="bodySm" tone="muted">
+          Target: {targetDuration}
         </Text>
       ) : null}
       {previous ? (

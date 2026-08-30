@@ -25,7 +25,9 @@ import {
 import { Button, Card, Input, Screen, StatusPill, StickyActionBar, Text } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import {
+  createDraftExerciseFromPlan,
   initialWorkoutState,
+  personalRecordSets,
   workoutReducer,
   type WorkoutAction,
   type WorkoutExercise,
@@ -38,7 +40,7 @@ import {
   releaseWorkoutSave,
   type WorkoutEditAction,
 } from '@/features/workout/workoutSave';
-import { useWorkoutPlan } from '@/hooks/usePlans';
+import { useWorkoutPlan, type PlanExercise } from '@/hooks/usePlans';
 import { useWorkoutDraft } from '@/hooks/useWorkoutDraft';
 import { localDateString, parseLocalDate } from '@/lib/dates';
 import { flushOutbox, saveWorkoutLog } from '@/lib/outbox';
@@ -56,6 +58,16 @@ function elapsedLabel(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function findPrescription(exercises: PlanExercise[], name: string): PlanExercise | undefined {
+  const normalizedName = name.toLowerCase().trim();
+  for (const exercise of exercises) {
+    if (exercise.name.toLowerCase().trim() === normalizedName) return exercise;
+    const substitution = findPrescription(exercise.substitutions, name);
+    if (substitution) return substitution;
+  }
+  return undefined;
 }
 
 export default function LoggerScreen() {
@@ -139,7 +151,10 @@ export default function LoggerScreen() {
         .lt('date', date)
         .order('date', { ascending: false })
         .limit(10);
-      const result: Record<string, { weight: string; reps: string; rpe: string }[]> = {};
+      const result: Record<
+        string,
+        { weight: string; reps: string; rpe: string; kind?: 'warmup' | 'work' }[]
+      > = {};
       for (const log of data ?? []) {
         const parsed = parseWorkoutContent(log.content);
         if (parsed.kind !== 'exercises') continue;
@@ -147,7 +162,12 @@ export default function LoggerScreen() {
           const key = ex.name.toLowerCase().trim();
           // First occurrence wins — logs are newest-first.
           if (!key || result[key]) continue;
-          result[key] = ex.sets.map((s) => ({ weight: s.weight, reps: s.reps, rpe: s.rpe }));
+          result[key] = ex.sets.map((s) => ({
+            weight: s.weight,
+            reps: s.reps,
+            rpe: s.rpe,
+            kind: s.kind,
+          }));
         }
       }
       return result;
@@ -193,7 +213,11 @@ export default function LoggerScreen() {
             ? parsed.exercises.map((e, i) => ({
                 id: String(i),
                 name: e.name,
-                tracking: 'weight-reps',
+                tracking:
+                  e.sets.some((set) => set.duration !== undefined) &&
+                  e.sets.every((set) => !set.reps.trim())
+                    ? 'duration'
+                    : 'weight-reps',
                 sets: e.sets.length
                   ? e.sets.map((s, setIndex) => ({
                       id: `${i}-set-${setIndex + 1}`,
@@ -244,15 +268,7 @@ export default function LoggerScreen() {
         payload: {
           day: dayNumber,
           title: day.focus ? `Day ${dayNumber} — ${day.focus}` : `Day ${dayNumber}`,
-          exercises: day.exercises.map((ex, i) => ({
-            id: ex.id ?? String(i),
-            name: ex.name,
-            sets: Array.from({ length: Math.max(1, ex.sets) }, () => ({
-              reps: '',
-              weight: '',
-              rpe: '',
-            })),
-          })),
+          exercises: day.exercises.map(createDraftExerciseFromPlan),
         },
       };
       if (userInitiated) dispatchEdit(action);
@@ -288,9 +304,9 @@ export default function LoggerScreen() {
   const currentPlanDay = plan?.days.find((d) => d.day_number === state.selectedDay);
   const currentExercise = state.exercises[index];
   const currentExerciseName = currentExercise?.name;
-  const planMeta = currentPlanDay?.exercises.find(
-    (e) => e.name.toLowerCase() === currentExercise?.name.toLowerCase(),
-  );
+  const planMeta = currentExercise
+    ? findPrescription(currentPlanDay?.exercises ?? [], currentExercise.name)
+    : undefined;
 
   const completedCount = state.exercises.filter((ex) =>
     ex.sets.some((s) => s.completed),
@@ -368,8 +384,12 @@ export default function LoggerScreen() {
     for (const ex of submittedState.exercises) {
       const prev = previousData?.[ex.name.toLowerCase().trim()];
       if (!prev?.length) continue;
-      const todayMax = maxWeightFor(ex.sets.map((s, i) => ({ setNumber: i + 1, ...s })));
-      const prevMax = maxWeightFor(prev.map((s, i) => ({ setNumber: i + 1, ...s })));
+      const todayMax = maxWeightFor(
+        personalRecordSets(ex.sets).map((s, i) => ({ setNumber: i + 1, ...s })),
+      );
+      const prevMax = maxWeightFor(
+        personalRecordSets(prev).map((s, i) => ({ setNumber: i + 1, ...s })),
+      );
       if (todayMax > 0 && todayMax > prevMax) prs.push(ex.name);
     }
 
@@ -602,9 +622,9 @@ export default function LoggerScreen() {
                 >
                 <ExerciseSlide
                   exercise={currentExercise}
+                  prescription={planMeta}
                   targetReps={planMeta?.reps}
-                  videoLink={planMeta?.videoLink}
-                  notes={planMeta?.notes}
+                  targetDuration={planMeta?.duration}
                   previous={previousData?.[currentExercise.name.toLowerCase().trim()]}
                   onUpdateSet={(setIdx, field, value) =>
                     dispatchEdit({
@@ -627,6 +647,27 @@ export default function LoggerScreen() {
                       payload: { exerciseIndex: index, setIndex: setIdx },
                     })
                   }
+                  onSubstitute={(substitution) => {
+                    Alert.alert(
+                      `Use ${substitution.name}?`,
+                      `Entered sets for ${currentExercise.name} will be replaced. Your coach’s plan will not change.`,
+                      [
+                        { text: 'Keep current exercise', style: 'cancel' },
+                        {
+                          text: `Use ${substitution.name}`,
+                          style: 'destructive',
+                          onPress: () =>
+                            dispatchEdit({
+                              type: 'REPLACE_EXERCISE',
+                              payload: {
+                                exerciseIndex: index,
+                                exercise: createDraftExerciseFromPlan(substitution, index),
+                              },
+                            }),
+                        },
+                      ],
+                    );
+                  }}
                 />
                 </SwipeableSlide>
               ) : null}
