@@ -174,6 +174,36 @@ describe('CircularTimer completion choreography', () => {
     act(() => renderer.unmount());
   });
 
+  it('switches to a static tick tree on a running-to-complete Reduced Motion transition', () => {
+    let renderer!: ReturnType<typeof create>;
+    act(() => {
+      renderer = create(
+        <CircularTimer progress={0.5} remainingSeconds={30} complete={false} />,
+      );
+    });
+    expect(renderer.root.findAllByType('Svg')).toHaveLength(1);
+    expect(renderer.root.findAllByProps({ children: '0:30' })).toHaveLength(1);
+
+    mockMotion.enabled = false;
+    act(() => {
+      renderer.update(<CircularTimer progress={1} remainingSeconds={0} complete />);
+    });
+
+    expect(renderer.root.findAllByType('Svg')).toHaveLength(0);
+    expect(renderer.root.findAllByProps({ children: '0:00' })).toHaveLength(0);
+    expect(renderer.root.findAllByType('Check')).toHaveLength(1);
+
+    act(() => {
+      renderer.update(
+        <CircularTimer progress={0} remainingSeconds={90} complete={false} />,
+      );
+    });
+    expect(renderer.root.findAllByType('Svg')).toHaveLength(1);
+    expect(renderer.root.findAllByProps({ children: '1:30' })).toHaveLength(1);
+    expect(renderer.root.findAllByType('Check')).toHaveLength(0);
+    act(() => renderer.unmount());
+  });
+
   it('keeps every rest preset at least 44pt tall', () => {
     let renderer!: ReturnType<typeof create>;
     act(() => {

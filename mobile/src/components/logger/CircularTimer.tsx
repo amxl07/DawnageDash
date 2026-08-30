@@ -112,6 +112,62 @@ export function CircularTimer({
     transform: [{ scale: tickScale.get() }],
   }));
 
+  if (!motion.enabled) {
+    return (
+      <View
+        style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}
+        accessible
+        accessibilityRole="timer"
+        accessibilityLabel={
+          complete ? 'Rest complete' : `${mmss(remainingSeconds)} of rest remaining`
+        }
+      >
+        {complete ? (
+          <View accessibilityElementsHidden importantForAccessibility="no">
+            <Check size={size * 0.4} color={colors.success} strokeWidth={3} />
+          </View>
+        ) : (
+          <>
+            <View style={{ position: 'absolute' }}>
+              <Svg width={size} height={size}>
+                <Circle
+                  cx={size / 2}
+                  cy={size / 2}
+                  r={radius}
+                  stroke={colors.elevated}
+                  strokeWidth={strokeWidth}
+                  fill="none"
+                />
+                <Circle
+                  cx={size / 2}
+                  cy={size / 2}
+                  r={radius}
+                  stroke={colors.primary}
+                  strokeWidth={strokeWidth}
+                  strokeLinecap="round"
+                  fill="none"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={circumference * (1 - progress)}
+                  transform={`rotate(-90 ${size / 2} ${size / 2})`}
+                />
+              </Svg>
+            </View>
+            <View>
+              <Text
+                variant="display"
+                numeric
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+              >
+                {mmss(remainingSeconds)}
+              </Text>
+            </View>
+          </>
+        )}
+      </View>
+    );
+  }
+
   return (
     <View
       style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}
