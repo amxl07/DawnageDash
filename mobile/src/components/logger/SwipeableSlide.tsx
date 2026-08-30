@@ -13,9 +13,12 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { useMotion } from '@/theme';
-import { decideSwipe, type SwipeDirection } from './swipeDecision';
+import {
+  applySwipeResistance,
+  decideSwipe,
+  type SwipeDirection,
+} from './swipeDecision';
 
-const EDGE_RESISTANCE = 0.25;
 const COMMIT_DISTANCE_RATIO = 0.25;
 const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
 
@@ -75,13 +78,14 @@ export function SwipeableSlide({
             return;
           }
 
-          const atEdge =
-            (event.translationX > 0 && !canPrev) ||
-            (event.translationX < 0 && !canNext);
-          const movementX = atEdge
-            ? event.translationX * EDGE_RESISTANCE
-            : event.translationX;
-          translateX.set(gestureStartX.get() + movementX);
+          translateX.set(
+            applySwipeResistance({
+              startX: gestureStartX.get(),
+              translationX: event.translationX,
+              canPrev,
+              canNext,
+            }),
+          );
         })
         .onEnd((event) => {
           const translationX = gestureStartX.get() + event.translationX;
