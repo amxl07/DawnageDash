@@ -3,12 +3,25 @@ import { format } from 'date-fns';
 import { useRouter } from 'expo-router';
 import { Camera, Columns2, Plus } from 'lucide-react-native';
 import { memo, useMemo, useState } from 'react';
-import { FlatList, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { PhotoCaptureSheet } from '@/components/media/PhotoCaptureSheet';
-import { PhotoViewer, type ViewerPhoto } from '@/components/media/PhotoViewer';
-import { Badge, Button, Card, EmptyState, ErrorState, PageHeader, Screen, SkeletonCard, Text ,
+import {
+  PhotoViewer,
+  photoPositionForSourceIndex,
+  type ViewerPhoto,
+} from '@/components/media/PhotoViewer';
+import {
   AnimatedFlatList,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  Screen,
+  SkeletonCard,
+  Text,
   useListMotion,
 } from '@/components/ui';
 import { useProgressPhotos, type PhotoRow } from '@/hooks/useProgressPhotos';
@@ -102,6 +115,7 @@ const WeekCard = memo(function WeekCard({
                 style={{ width: '100%', height: '100%' }}
                 contentFit="cover"
                 cachePolicy="memory-disk"
+                recyclingKey={`${row.id}:${item.label}:${item.url}`}
                 transition={motion.duration.micro}
                 accessible={false}
               />
@@ -160,15 +174,19 @@ export default function MediaScreen() {
   );
 
   const openWeek = (row: PhotoRow, weekNumber: number, index: number) => {
-    const photos = urlsOf(row)
+    const sourceSlots = urlsOf(row);
+    const viewerIndex = photoPositionForSourceIndex(sourceSlots, index);
+    if (viewerIndex == null) return;
+
+    const photos = sourceSlots
       .filter((i) => i.url)
       .map((i) => ({
         label: i.label,
+        weekLabel: `Week ${weekNumber}`,
         url: i.url!,
-        caption: `Week ${weekNumber} · ${format(parseLocalDate(row.date), 'd MMM yyyy')}`,
+        caption: format(parseLocalDate(row.date), 'd MMM yyyy'),
       }));
-    const clamped = Math.min(index, photos.length - 1);
-    if (photos.length) setViewer({ photos, index: Math.max(0, clamped) });
+    if (photos.length) setViewer({ photos, index: viewerIndex });
   };
 
   const compareWithBaseline = (row: PhotoRow, weekNumber: number) => {
@@ -177,8 +195,22 @@ export default function MediaScreen() {
     for (const a of ANGLES) {
       const now = row[a.column as keyof PhotoRow] as string | null;
       const then = baseline[a.column as keyof PhotoRow] as string | null;
-      if (then) photos.push({ label: `${a.label} · Week 0`, url: then, caption: format(parseLocalDate(baseline.date), 'd MMM yyyy') });
-      if (now) photos.push({ label: `${a.label} · Week ${weekNumber}`, url: now, caption: format(parseLocalDate(row.date), 'd MMM yyyy') });
+      if (then) {
+        photos.push({
+          label: a.label,
+          weekLabel: 'Week 0',
+          url: then,
+          caption: format(parseLocalDate(baseline.date), 'd MMM yyyy'),
+        });
+      }
+      if (now) {
+        photos.push({
+          label: a.label,
+          weekLabel: `Week ${weekNumber}`,
+          url: now,
+          caption: format(parseLocalDate(row.date), 'd MMM yyyy'),
+        });
+      }
     }
     if (photos.length) setViewer({ photos, index: 0 });
   };

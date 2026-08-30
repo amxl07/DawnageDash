@@ -1,27 +1,16 @@
 import * as Haptics from 'expo-haptics';
-import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { format } from 'date-fns';
-import { Camera, ImageIcon, RotateCcw, Trash2 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Pressable, View } from 'react-native';
+import { Alert, Linking, Pressable, View } from 'react-native';
 
 import { Button, Card, Sheet, SheetScrollView, Text } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePhotoMutation, type PhotoRow } from '@/hooks/useProgressPhotos';
 import { ANGLES, MAX_SOURCE_BYTES, uploadPhoto, type AngleKey } from '@/lib/photos';
 import { parseLocalDate } from '@/lib/dates';
-import { iconSize, radius, spacing, useTheme } from '@/theme';
-import { PoseGuide } from './PoseGuide';
-
-type SlotState = {
-  url: string | null;
-  uploading: boolean;
-  error: string | null;
-  /** Kept on failure so a retry never needs a re-shoot. */
-  pendingUri: string | null;
-  pendingDims?: { width: number; height: number };
-};
+import { spacing } from '@/theme';
+import { PhotoSlot, type SlotState } from './PhotoSlot';
 
 const emptySlots = (): Record<AngleKey, SlotState> =>
   Object.fromEntries(
@@ -38,7 +27,6 @@ type Props = {
 };
 
 export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: Props) {
-  const { colors } = useTheme();
   const { user } = useAuth();
   const mutation = usePhotoMutation();
 
@@ -76,9 +64,10 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
       canAskAgain
         ? 'Allow access to add your progress photo.'
         : 'Enable access in Settings to add your progress photo.',
-      canAskAgain
-        ? [{ text: 'OK' }]
-        : [{ text: 'Cancel', style: 'cancel' }, { text: 'Open Settings', onPress: () => void Linking.openSettings() }],
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Open Settings', onPress: () => void Linking.openSettings() },
+      ],
     );
     return false;
   };
@@ -140,10 +129,10 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
         side_right: slots.side_right.url,
       };
 
-      await Promise.all(
+      const uploadResults = await Promise.all(
         ANGLES.map(async (angle) => {
           const slot = slots[angle.key];
-          if (!slot.pendingUri) return;
+          if (!slot.pendingUri) return true;
           patch(angle.key, { uploading: true, error: null });
           try {
             const { publicUrl } = await uploadPhoto(
@@ -155,15 +144,21 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
             );
             urls[angle.key] = publicUrl;
             patch(angle.key, { url: publicUrl, uploading: false, pendingUri: null, error: null });
+            return true;
           } catch {
             patch(angle.key, {
               uploading: false,
-              error: 'Upload failed — tap Save photos to retry.',
+              error: 'Upload failed. Your selected photo is still here.',
             });
-            throw new Error('photo-upload-failed');
+            return false;
           }
         }),
       );
+
+      if (uploadResults.includes(false)) {
+        setSaveError("Couldn't upload every photo. Retry the failed photo when you're ready.");
+        return;
+      }
 
       await mutation.mutateAsync({
         date,
@@ -195,12 +190,15 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
       title={`Photos · ${format(parseLocalDate(date), 'd MMM yyyy')}`}
     >
       <SheetScrollView contentContainerStyle={{ padding: spacing.base, gap: spacing.base }}>
+        <Text variant="bodySm" tone="muted">
+          Photos upload to Dawnage only after you tap Save photos. They are used for progress review with your coaching team. You can leave any angle empty and return later.
+        </Text>
+
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
           <Text variant="bodySm" tone="muted" style={{ flex: 1 }}>
             {ghost
               ? 'Last week’s shot is shown faintly behind — line up with it so the photos compare cleanly.'
               : 'Stand square to the camera, same spot and lighting each week.'}
-            {' '}Photos upload only when you tap Save photos.
           </Text>
           <Pressable
             onPress={() => setShowGuide((v) => !v)}
@@ -217,106 +215,24 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
         </View>
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
-          {ANGLES.map((angle) => {
-            const slot = slots[angle.key];
-            return (
-              <View key={angle.key} style={{ width: '47%', gap: spacing.xs }}>
-                <Text variant="label" tone="muted">
-                  {angle.label}
-                </Text>
-                <Pressable
-                  onPress={() => chooseSource(angle.key)}
-                  disabled={slot.uploading}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${angle.label} photo, ${slot.url ? 'added' : 'empty'}`}
-                  accessibilityHint={slot.error ? 'Tap to choose a different photo' : 'Tap to add a photo'}
-                  style={{
-                    aspectRatio: 3 / 4,
-                    borderRadius: radius.md,
-                    borderWidth: 1,
-                    borderColor: slot.error ? colors.destructive : colors.borderStrong,
-                    backgroundColor: colors.elevated,
-                    overflow: 'hidden',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  {slot.url || slot.pendingUri ? (
-                    <Image
-                      source={{ uri: slot.pendingUri ?? slot.url! }}
-                      style={{ width: '100%', height: '100%' }}
-                      contentFit="cover"
-                      cachePolicy="memory-disk"
-                      accessible={false}
-                    />
-                  ) : (
-                    <View style={{ alignItems: 'center', gap: spacing.xs }}>
-                      <Camera size={iconSize.lg} color={colors.mutedForeground} strokeWidth={2} accessible={false} />
-                      <Text variant="bodySm" tone="muted">
-                        Add
-                      </Text>
-                    </View>
-                  )}
-
-                  {!slot.url ? (
-                    <PoseGuide angle={angle.key} ghostUrl={ghostFor(angle.key)} visible={showGuide} />
-                  ) : null}
-
-                  {slot.uploading ? (
-                    <View
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: colors.scrim,
-                      }}
-                    >
-                      <ActivityIndicator color={colors.onPrimary} />
-                    </View>
-                  ) : null}
-                </Pressable>
-
-                {slot.error ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                    <RotateCcw size={14} color={colors.destructive} strokeWidth={2} accessible={false} />
-                    <Text variant="bodySm" tone="primary" style={{ flex: 1 }}>
-                      {slot.error}
-                    </Text>
-                  </View>
-                ) : slot.url || slot.pendingUri ? (
-                  <Pressable
-                    onPress={() => {
-                      patch(angle.key, { url: null, pendingUri: null, error: null });
-                      setDirty(true);
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Remove ${angle.label} photo`}
-                    hitSlop={8}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 36 }}
-                  >
-                    <Trash2 size={14} color={colors.mutedForeground} strokeWidth={2} accessible={false} />
-                    <Text variant="bodySm" tone="muted">
-                      Remove
-                    </Text>
-                  </Pressable>
-                ) : (
-                  <Pressable
-                    onPress={() => void pick(angle.key, 'library')}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Choose ${angle.label} from library`}
-                    hitSlop={8}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 36 }}
-                  >
-                    <ImageIcon size={14} color={colors.mutedForeground} strokeWidth={2} accessible={false} />
-                    <Text variant="bodySm" tone="muted">
-                      Library
-                    </Text>
-                  </Pressable>
-                )}
-              </View>
-            );
-          })}
+          {ANGLES.map((angle) => (
+            <View key={angle.key} style={{ width: '47%' }}>
+              <PhotoSlot
+                angle={angle.key}
+                state={slots[angle.key]}
+                ghostUrl={ghostFor(angle.key)}
+                showGuide={showGuide}
+                onChoose={() => chooseSource(angle.key)}
+                onChooseFromLibrary={() => void pick(angle.key, 'library')}
+                onRemove={() => {
+                  patch(angle.key, { url: null, pendingUri: null, error: null });
+                  setDirty(true);
+                }}
+                onRetry={() => void save()}
+                retryDisabled={uploading || mutation.isPending}
+              />
+            </View>
+          ))}
         </View>
 
         {filled < 4 ? (

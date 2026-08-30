@@ -1,17 +1,29 @@
 import { Image } from 'expo-image';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react-native';
-import { useState } from 'react';
-import { Modal, Pressable, View, useWindowDimensions } from 'react-native';
+import { useEffect, useState } from 'react';
+import { AccessibilityInfo, Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui';
 import { HIT_SLOP_MIN, iconSize, spacing, useMotion, useTheme } from '@/theme';
 
-export type ViewerPhoto = { label: string; url: string; caption: string };
+export type ViewerPhoto = {
+  label: string;
+  weekLabel: string;
+  url: string;
+  caption: string;
+};
+
+export function photoPositionForSourceIndex(
+  sourceSlots: readonly { url: string | null }[],
+  sourceIndex: number,
+): number | null {
+  if (!sourceSlots[sourceIndex]?.url) return null;
+  return sourceSlots.slice(0, sourceIndex).filter((slot) => slot.url).length;
+}
 
 /**
- * Full-screen viewer. Prev/next are visible buttons as well as swipes —
- * swipe is never the only way to move (§03.B.2).
+ * Full-screen viewer with explicit previous/next controls.
  */
 export function PhotoViewer({
   photos,
@@ -25,15 +37,26 @@ export function PhotoViewer({
   const { colors } = useTheme();
   const motion = useMotion();
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
   const [index, setIndex] = useState(startIndex);
 
-  if (!photos.length) return null;
-  const photo = photos[Math.min(index, photos.length - 1)];
+  const safeIndex = photos.length ? Math.min(Math.max(0, index), photos.length - 1) : 0;
+  const photo = photos[safeIndex];
+  const announcement = photo
+    ? `${photo.label} photo, ${photo.weekLabel}, ${safeIndex + 1} of ${photos.length}`
+    : null;
+
+  useEffect(() => {
+    if (announcement) AccessibilityInfo.announceForAccessibility(announcement);
+  }, [announcement]);
+
+  if (!photo || !announcement) return null;
 
   return (
     <Modal visible animationType={motion.reduced ? 'none' : 'fade'} onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top }}>
+      <View
+        accessibilityViewIsModal
+        style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top }}
+      >
         <View
           style={{
             flexDirection: 'row',
@@ -55,13 +78,16 @@ export function PhotoViewer({
           </Pressable>
         </View>
 
-        <Image
-          source={{ uri: photo.url }}
-          style={{ width, flex: 1 }}
-          contentFit="contain"
-          cachePolicy="memory-disk"
-          accessibilityLabel={`${photo.label}, ${photo.caption}`}
-        />
+        <View style={{ flex: 1 }}>
+          <Image
+            source={{ uri: photo.url }}
+            style={{ width: '100%', height: '100%' }}
+            contentFit="contain"
+            cachePolicy="memory-disk"
+            recyclingKey={`viewer:${photo.url}`}
+            accessibilityLabel={announcement}
+          />
+        </View>
 
         <View
           style={{
@@ -74,28 +100,35 @@ export function PhotoViewer({
         >
           <Pressable
             onPress={() => setIndex((i) => Math.max(0, i - 1))}
-            disabled={index === 0}
+            disabled={safeIndex === 0}
             accessibilityRole="button"
             accessibilityLabel="Previous angle"
-            accessibilityState={{ disabled: index === 0 }}
-            style={{ minWidth: HIT_SLOP_MIN, minHeight: HIT_SLOP_MIN, justifyContent: 'center', opacity: index === 0 ? 0.35 : 1 }}
+            accessibilityState={{ disabled: safeIndex === 0 }}
+            style={{ minWidth: HIT_SLOP_MIN, minHeight: HIT_SLOP_MIN, justifyContent: 'center', opacity: safeIndex === 0 ? 0.35 : 1 }}
           >
             <ChevronLeft size={iconSize.xl} color={colors.foreground} strokeWidth={2} />
           </Pressable>
 
           <View style={{ alignItems: 'center', gap: spacing.xs }}>
             <Text variant="bodySm" tone="muted">
-              {photo.caption}
+              {photo.weekLabel} · {photo.caption} · {safeIndex + 1} of {photos.length}
             </Text>
-            <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+            <View
+              accessible={false}
+              importantForAccessibility="no-hide-descendants"
+              style={{ flexDirection: 'row', gap: spacing.xs }}
+            >
               {photos.map((p, i) => (
                 <View
                   key={p.label + i}
+                  testID={`photo-position-dot-${i}`}
+                  accessible={false}
+                  importantForAccessibility="no"
                   style={{
                     width: 6,
                     height: 6,
                     borderRadius: 3,
-                    backgroundColor: i === index ? colors.primary : colors.borderStrong,
+                    backgroundColor: i === safeIndex ? colors.primary : colors.borderStrong,
                   }}
                 />
               ))}
@@ -104,11 +137,11 @@ export function PhotoViewer({
 
           <Pressable
             onPress={() => setIndex((i) => Math.min(photos.length - 1, i + 1))}
-            disabled={index === photos.length - 1}
+            disabled={safeIndex === photos.length - 1}
             accessibilityRole="button"
             accessibilityLabel="Next angle"
-            accessibilityState={{ disabled: index === photos.length - 1 }}
-            style={{ minWidth: HIT_SLOP_MIN, minHeight: HIT_SLOP_MIN, alignItems: 'flex-end', justifyContent: 'center', opacity: index === photos.length - 1 ? 0.35 : 1 }}
+            accessibilityState={{ disabled: safeIndex === photos.length - 1 }}
+            style={{ minWidth: HIT_SLOP_MIN, minHeight: HIT_SLOP_MIN, alignItems: 'flex-end', justifyContent: 'center', opacity: safeIndex === photos.length - 1 ? 0.35 : 1 }}
           >
             <ChevronRight size={iconSize.xl} color={colors.foreground} strokeWidth={2} />
           </Pressable>
