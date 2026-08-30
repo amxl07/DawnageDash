@@ -89,6 +89,10 @@ function checkIn(dateString: string): ProcessedCheckIn {
 }
 
 describe('ConsistencyGrid', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('exposes one 44pt history action while leaving cells noninteractive', () => {
     let renderer: ReturnType<typeof create>;
     act(() => {
@@ -153,5 +157,26 @@ describe('ConsistencyGrid', () => {
 
     expect(mockSheetFlatListProps).toBeDefined();
     expect(mockSheetFlatListProps).not.toHaveProperty('getItemLayout');
+  });
+
+  it('reveals history cells without animating their semantic background color', () => {
+    let renderer!: ReturnType<typeof create>;
+    act(() => {
+      renderer = create(
+        <ConsistencyGrid processed={[checkIn('2026-08-29')]} onOpenHistory={jest.fn()} />,
+      );
+    });
+
+    const semanticCells = renderer.root.findAll(
+      (candidate: { props: { style?: unknown } }) =>
+        Array.isArray(candidate.props.style) &&
+        typeof candidate.props.style[0] === 'object' &&
+        candidate.props.style[0] !== null &&
+        candidate.props.style[0].backgroundColor === '#00aa00' &&
+        typeof candidate.props.style[1] === 'object' &&
+        candidate.props.style[1] !== null &&
+        !('backgroundColor' in candidate.props.style[1]),
+    );
+    expect(semanticCells.length).toBeGreaterThan(0);
   });
 });

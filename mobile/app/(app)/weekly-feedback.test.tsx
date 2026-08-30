@@ -66,6 +66,7 @@ let mockHistoryQuery: {
   refetch: typeof mockRefetchHistory;
 };
 let mockDraftStatus = 'saved';
+let mockMotionEnabled = true;
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn(async () => null),
@@ -136,6 +137,7 @@ jest.mock('@/theme', () => ({
       success: '#080',
     },
   }),
+  useMotion: () => ({ enabled: mockMotionEnabled }),
 }));
 
 jest.mock('@/components/ui', () => {
@@ -304,6 +306,7 @@ describe('WeeklyFeedbackScreen', () => {
       refetch: mockRefetchHistory,
     };
     mockDraftStatus = 'saved';
+    mockMotionEnabled = true;
     mockPreventRemoveEnabled = false;
     mockPreventRemoveCallback = undefined;
     jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
@@ -358,6 +361,27 @@ describe('WeeklyFeedbackScreen', () => {
     );
     expect(renderer.root.findByProps({ testID: 'draft-status' }).props.children).toBe('saved');
     expect(renderer.root.findByProps({ children: 'Step 2 of 5' })).toBeTruthy();
+  });
+
+  it('disables animated step and validation scrolling when Reduced Motion is enabled', async () => {
+    mockMotionEnabled = false;
+    const renderer = await renderScreen();
+    await press(renderer, 'Start');
+    mockScrollTo.mockClear();
+
+    await press(renderer, 'Next');
+    expect(mockScrollTo).toHaveBeenLastCalledWith({ y: 0, animated: false });
+
+    await press(renderer, 'Next');
+    act(() => {
+      renderer.root
+        .findByProps({ accessibilityLabel: "What's your average step count this week?" })
+        .props.onChangeText('-1');
+    });
+    mockScrollTo.mockClear();
+    await act(async () => renderer.root.findByProps({ testID: 'primary-action' }).props.onPress());
+
+    expect(mockScrollTo).toHaveBeenLastCalledWith({ y: 0, animated: false });
   });
 
   it('awaits a durable save before exit and remains on-screen when storage fails', async () => {

@@ -12,7 +12,7 @@ import { Button, Card, ErrorState, ProgressBar, Screen, SkeletonCard, Text } fro
 import { useAuth } from '@/contexts/AuthContext';
 import { questionnaireSections } from '@/lib/questionnaire-data';
 import { supabase } from '@/lib/supabase';
-import { spacing } from '@/theme';
+import { spacing, useMotion } from '@/theme';
 import { QuestionField } from './QuestionField';
 import { QuestionnaireSummary } from './QuestionnaireSummary';
 
@@ -21,6 +21,7 @@ type QuestionnaireWizardProps = { screenHeader?: React.ReactNode };
 
 export function QuestionnaireWizard({ screenHeader }: QuestionnaireWizardProps) {
   const { user } = useAuth();
+  const motion = useMotion();
   const scrollRef = useRef<ScrollView>(null);
 
   const [index, setIndex] = useState(0);
@@ -109,7 +110,7 @@ export function QuestionnaireWizard({ screenHeader }: QuestionnaireWizardProps) 
       const missing = section.questions.filter((q) => q.required && !answers[q.id]);
       if (missing.length) {
         setErrors(Object.fromEntries(missing.map((q) => [q.id, 'This question is required.'])));
-        scrollRef.current?.scrollTo({ y: 0, animated: true });
+        scrollRef.current?.scrollTo({ y: 0, animated: motion.enabled });
         AccessibilityInfo.announceForAccessibility(
           `${missing.length} required question${missing.length > 1 ? 's' : ''} still need an answer.`,
         );
@@ -131,7 +132,7 @@ export function QuestionnaireWizard({ screenHeader }: QuestionnaireWizardProps) 
         AccessibilityInfo.announceForAccessibility('Draft saved.');
       } else if (index < total - 1) {
         setIndex(index + 1);
-        scrollRef.current?.scrollTo({ y: 0, animated: true });
+        scrollRef.current?.scrollTo({ y: 0, animated: motion.enabled });
       } else {
         setShowSummary(true);
       }

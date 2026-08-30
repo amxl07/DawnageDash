@@ -2,7 +2,6 @@ import { memo, useEffect, useMemo, useRef } from 'react';
 import { Pressable, View, useWindowDimensions } from 'react-native';
 import Animated, {
   interpolate,
-  interpolateColor,
   type SharedValue,
   useAnimatedStyle,
   useSharedValue,
@@ -37,11 +36,6 @@ const GridCell = memo(function GridCell({
 }) {
   const animated = useAnimatedStyle(() => ({
     opacity: cell.inRange ? interpolate(reveal.value, [0, 1], [0, 1]) : 0.25,
-    backgroundColor: interpolateColor(
-      reveal.value,
-      [0, 1],
-      [palette[0], palette[cell.level]],
-    ),
   }));
 
   if (!cell.inRange) {
@@ -51,7 +45,15 @@ const GridCell = memo(function GridCell({
   return (
     <Animated.View
       accessible={false}
-      style={[{ width: size, height: size, borderRadius: radius.sm / 2 }, animated]}
+      style={[
+        {
+          width: size,
+          height: size,
+          borderRadius: radius.sm / 2,
+          backgroundColor: palette[cell.level],
+        },
+        animated,
+      ]}
     />
   );
 });

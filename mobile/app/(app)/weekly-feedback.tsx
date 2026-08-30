@@ -47,7 +47,7 @@ import {
 } from '@/lib/weekly-feedback';
 import { supabase } from '@/lib/supabase';
 import { num } from '@/types/db';
-import { iconSize, spacing, useTheme } from '@/theme';
+import { iconSize, spacing, useMotion, useTheme } from '@/theme';
 
 type HistoryCardProps = {
   item: WeeklyCheckIn;
@@ -88,6 +88,7 @@ const WeeklyFeedbackHistoryCard = memo(function WeeklyFeedbackHistoryCard({
 
 export default function WeeklyFeedbackScreen() {
   const { colors } = useTheme();
+  const motion = useMotion();
   const router = useRouter();
   const navigation = useNavigation();
   const queryClient = useQueryClient();
@@ -332,12 +333,12 @@ export default function WeeklyFeedbackScreen() {
     setErrors(nextErrors);
     const message = 'Please correct the highlighted fields before continuing.';
     AccessibilityInfo.announceForAccessibility(message);
-    scrollRef.current?.scrollTo({ y: 0, animated: true });
+    scrollRef.current?.scrollTo({ y: 0, animated: motion.enabled });
     requestAnimationFrame(() => {
       const handle = findNodeHandle(errorSummaryRef.current);
       if (handle !== null) AccessibilityInfo.setAccessibilityFocus(handle);
     });
-  }, []);
+  }, [motion.enabled]);
 
   const validateCurrentStep = useCallback(() => {
     if (!ownsCurrentForm || activeFlowIdentityRef.current !== flowIdentity) return false;
@@ -356,8 +357,8 @@ export default function WeeklyFeedbackScreen() {
     setSubmitError(null);
     setStep(nextStep);
     setHasUnsentChanges(true);
-    scrollRef.current?.scrollTo({ y: 0, animated: true });
-  }, [flowIdentity, ownsCurrentForm]);
+    scrollRef.current?.scrollTo({ y: 0, animated: motion.enabled });
+  }, [flowIdentity, motion.enabled, ownsCurrentForm]);
 
   const continueForward = useCallback(() => {
     if (!validateCurrentStep()) return;
