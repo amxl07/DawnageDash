@@ -114,6 +114,19 @@ function renderSetEditor(
         (node) => node.props.accessibilityRole === role && node.props.accessibilityLabel === name,
       ),
     getByTestId: (testID: string) => findOne((node) => node.props.testID === testID),
+    queryByTestId: (testID: string) => {
+      const [node] = renderer.root.findAll(
+        (candidate: { props: Record<string, unknown> }) => candidate.props.testID === testID,
+      );
+      return node ?? null;
+    },
+    setAvailableWidth: (width: number) => {
+      act(() => {
+        findOne((node) => node.props.testID === 'set-editor-container').props.onLayout({
+          nativeEvent: { layout: { width } },
+        });
+      });
+    },
     getByText: (value: string) =>
       findOne((node) =>
         Array.isArray(node.props.children)
@@ -150,11 +163,59 @@ describe('SetEditor', () => {
     expect(getByRole('checkbox', 'Mark set 1 complete')).toBeTruthy();
   });
 
-  it('uses a regular row when space is available', () => {
-    const { getByTestId } = renderSetEditor();
+  it('defaults safely to stacked controls before container measurement', () => {
+    const { getByTestId, queryByTestId } = renderSetEditor();
+
+    expect(getByTestId('set-editor-fields').props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ flexDirection: 'column' })]),
+    );
+    expect(queryByTestId('set-editor')).toBeNull();
+  });
+
+  it('keeps a common-phone measured width stacked even in regular responsive mode', () => {
+    const { getByLabelText, getByTestId, queryByTestId, setAvailableWidth } = renderSetEditor();
+
+    setAvailableWidth(390);
+
+    expect(getByTestId('set-editor-fields').props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ flexDirection: 'column' })]),
+    );
+    expect(queryByTestId('set-editor')).toBeNull();
+    expect(getByLabelText('Set 1 weight in kilograms')).toBeTruthy();
+    expect(getByLabelText('Set 1 repetitions')).toBeTruthy();
+  });
+
+  it('keeps a near-boundary container stacked until every inline control fits', () => {
+    const { getByTestId, queryByTestId, setAvailableWidth } = renderSetEditor();
+
+    setAvailableWidth(430);
+
+    expect(queryByTestId('set-editor')).toBeNull();
+    expect(getByTestId('set-editor-fields').props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ flexDirection: 'column' })]),
+    );
+  });
+
+  it('uses an inline row after measuring sufficient available width', () => {
+    const { getByTestId, setAvailableWidth } = renderSetEditor();
+
+    setAvailableWidth(600);
 
     expect(getByTestId('set-editor').props.style).toEqual(
       expect.arrayContaining([expect.objectContaining({ flexDirection: 'row' })]),
+    );
+  });
+
+  it('returns to stacked controls when a wide container resizes narrow', () => {
+    const { getByTestId, queryByTestId, setAvailableWidth } = renderSetEditor();
+
+    setAvailableWidth(600);
+    expect(getByTestId('set-editor')).toBeTruthy();
+
+    setAvailableWidth(390);
+    expect(queryByTestId('set-editor')).toBeNull();
+    expect(getByTestId('set-editor-fields').props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ flexDirection: 'column' })]),
     );
   });
 

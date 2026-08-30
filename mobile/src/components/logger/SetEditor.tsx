@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { Check, Trash2 } from 'lucide-react-native';
-import { useEffect, useRef } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Pressable, TextInput, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
   Easing,
   ReduceMotion,
@@ -25,6 +25,23 @@ import {
 } from '@/theme';
 
 type EditableSetField = 'weight' | 'reps' | 'rpe';
+
+const INLINE_FIELD_MIN_WIDTH = 76;
+const INLINE_COMPLETION_MIN_WIDTH = 104;
+const INLINE_MAX_BORDER_WIDTH = 4;
+/**
+ * 436pt = card horizontal padding (24) + current border (4) + four gaps (32)
+ * + three labeled fields (3 × 76) + completion text/check (104) + remove (44).
+ * Font scale increases the budget; global compact mode remains an
+ * unconditional stacked override.
+ */
+const INLINE_MIN_AVAILABLE_WIDTH =
+  spacing.md * 2 +
+  INLINE_MAX_BORDER_WIDTH +
+  spacing.sm * 4 +
+  INLINE_FIELD_MIN_WIDTH * 3 +
+  INLINE_COMPLETION_MIN_WIDTH +
+  HIT_SLOP_MIN;
 
 type Props = {
   index: number;
@@ -58,7 +75,9 @@ function SetField({
   const { colors } = useTheme();
 
   return (
-    <View style={{ flex: 1, minWidth: compact ? undefined : 72, gap: spacing.xs }}>
+    <View
+      style={{ flex: 1, minWidth: compact ? undefined : INLINE_FIELD_MIN_WIDTH, gap: spacing.xs }}
+    >
       <Text variant="label" tone="muted">
         {shortLabel}
       </Text>
@@ -107,9 +126,14 @@ export function SetEditor({
   onToggle,
   onRemove,
 }: Props) {
-  const { isCompact } = useResponsiveLayout();
+  const { fontScale, isCompact } = useResponsiveLayout();
   const { colors } = useTheme();
   const motion = useMotion();
+  const [availableWidth, setAvailableWidth] = useState<number | null>(null);
+  const stacked =
+    isCompact ||
+    availableWidth === null ||
+    availableWidth < INLINE_MIN_AVAILABLE_WIDTH * Math.max(1, fontScale);
   const setNumber = index + 1;
   const mounted = useRef(false);
   const completionScale = useSharedValue(1);
@@ -156,7 +180,7 @@ export function SetEditor({
         accessibilityLabel={`Mark set ${setNumber} ${set.completed ? 'incomplete' : 'complete'}`}
         accessibilityState={{ checked: set.completed }}
         style={{
-          minWidth: HIT_SLOP_MIN,
+          minWidth: stacked ? HIT_SLOP_MIN : INLINE_COMPLETION_MIN_WIDTH,
           minHeight: HIT_SLOP_MIN,
           paddingHorizontal: spacing.sm,
           flexDirection: 'row',
@@ -181,7 +205,7 @@ export function SetEditor({
 
   const weight = (
     <SetField
-      compact={isCompact}
+      compact={stacked}
       label={`Set ${setNumber} weight in kilograms`}
       shortLabel="Weight (kg)"
       value={set.weight}
@@ -191,7 +215,7 @@ export function SetEditor({
   );
   const repetitions = (
     <SetField
-      compact={isCompact}
+      compact={stacked}
       label={`Set ${setNumber} repetitions`}
       shortLabel="Repetitions"
       value={set.reps}
@@ -201,7 +225,7 @@ export function SetEditor({
   );
   const rpe = (
     <SetField
-      compact={isCompact}
+      compact={stacked}
       label={`Set ${setNumber} RPE`}
       shortLabel="RPE"
       value={set.rpe}
@@ -228,7 +252,7 @@ export function SetEditor({
       }}
     >
       <Trash2 size={iconSize.sm} color={colors.destructive} strokeWidth={2} accessible={false} />
-      {isCompact ? (
+      {stacked ? (
         <Text variant="bodySm" tone="primary">
           Remove set
         </Text>
@@ -238,6 +262,13 @@ export function SetEditor({
 
   return (
     <View
+      testID="set-editor-container"
+      onLayout={(event: LayoutChangeEvent) => {
+        const nextWidth = event.nativeEvent.layout.width;
+        setAvailableWidth((currentWidth) =>
+          currentWidth === nextWidth ? currentWidth : nextWidth,
+        );
+      }}
       style={{
         gap: spacing.sm,
         padding: spacing.md,
@@ -254,7 +285,7 @@ export function SetEditor({
         </Text>
       ) : null}
 
-      {isCompact ? (
+      {stacked ? (
         <>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>{completion}</View>
           <View testID="set-editor-fields" style={[{ flexDirection: 'column', gap: spacing.sm }]}>
