@@ -66,13 +66,19 @@ jest.mock('@/components/ui', () => {
       visible,
       children,
       onClose,
+      dismissible = true,
     }: {
       visible: boolean;
       children: React.ReactNode;
       onClose: () => void;
+      dismissible?: boolean;
     }) =>
       visible ? (
-        <Native.View testID="photo-capture-sheet" onTouchEnd={onClose}>
+        <Native.View
+          testID="photo-capture-sheet"
+          accessibilityState={{ disabled: !dismissible }}
+          onTouchEnd={onClose}
+        >
           {children}
         </Native.View>
       ) : null,
@@ -447,9 +453,31 @@ describe('PhotoCaptureSheet', () => {
     expect(mockMutateAsync).not.toHaveBeenCalled();
   });
 
-  it('invalidates a pending upload synchronously when changes are discarded', async () => {
-    const upload = deferred<{ publicUrl: string; bytes: number }>();
-    mockUploadPhoto.mockReturnValue(upload.promise);
+  it('allows explicit discard when no save operation is in flight', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    const onClose = jest.fn();
+    const { renderer, getByLabelText } = renderSheet({ onClose });
+
+    await act(async () => {
+      await getByLabelText('Choose Front photo from library').props.onPress();
+    });
+    act(() => renderer.root.findByProps({ testID: 'photo-capture-sheet' }).props.onTouchEnd());
+    const discard = alert.mock.calls
+      .find(([title]) => title === 'Discard photo changes?')?.[2]
+      ?.find((action) => action.text === 'Discard');
+    act(() => discard?.onPress?.());
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('blocks every dismissal path while database persistence is in flight', async () => {
+    const databaseSave = deferred<void>();
+    mockUploadPhoto.mockResolvedValue({
+      publicUrl: 'https://example.com/front.jpg',
+      bytes: 1000,
+    });
+    mockMutateAsync.mockReturnValue(databaseSave.promise);
     const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
     const onClose = jest.fn();
     const { renderer, getByLabelText } = renderSheet({ onClose });
@@ -461,19 +489,26 @@ describe('PhotoCaptureSheet', () => {
     act(() => {
       savePromise = getByLabelText('Save photos').props.onPress();
     });
-    act(() => renderer.root.findByProps({ testID: 'photo-capture-sheet' }).props.onTouchEnd());
-    const discard = alert.mock.calls
-      .find(([title]) => title === 'Discard photo changes?')?.[2]
-      ?.find((action) => action.text === 'Discard');
-    act(() => discard?.onPress?.());
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(mockMutateAsync).toHaveBeenCalledTimes(1);
+
+    const sheet = renderer.root.findByProps({ testID: 'photo-capture-sheet' });
+    expect(sheet.props.accessibilityState).toEqual({ disabled: true });
+    act(() => sheet.props.onTouchEnd());
+
+    const savingAlert = alert.mock.calls.at(-1);
+    expect(savingAlert?.[0]).toBe('Saving photos');
+    expect(savingAlert?.[1]).toBe('Please wait for saving to finish.');
+    expect(savingAlert?.[2]?.map((action) => action.text)).toEqual(['OK']);
+    expect(onClose).not.toHaveBeenCalled();
 
     await act(async () => {
-      upload.resolve({ publicUrl: 'https://example.com/stale.jpg', bytes: 1000 });
+      databaseSave.resolve();
       await savePromise;
     });
-
     expect(onClose).toHaveBeenCalledTimes(1);
-    expect(mockMutateAsync).not.toHaveBeenCalled();
   });
 
   it('offers cancellation and Settings after permission denial', async () => {

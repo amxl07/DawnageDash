@@ -21,6 +21,8 @@ type Props = {
   children: React.ReactNode;
   /** Fraction of screen height the sheet occupies. */
   heightRatio?: number;
+  /** Disables gesture/backdrop dismissal while an owned operation cannot be interrupted. */
+  dismissible?: boolean;
 };
 
 /**
@@ -39,7 +41,14 @@ type Props = {
  * `SheetFlatList`) rather than plain RN ones, or the inner scroll fights the
  * sheet's own pan gesture.
  */
-export function Sheet({ visible, onClose, title, children, heightRatio = 0.85 }: Props) {
+export function Sheet({
+  visible,
+  onClose,
+  title,
+  children,
+  heightRatio = 0.85,
+  dismissible = true,
+}: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const ref = useRef<BottomSheetModal>(null);
@@ -77,20 +86,27 @@ export function Sheet({ visible, onClose, title, children, heightRatio = 0.85 }:
         appearsOnIndex={0}
         disappearsOnIndex={-1}
         opacity={0.6}
-        pressBehavior="close"
+        pressBehavior={dismissible ? 'close' : 'none'}
       />
     ),
-    [],
+    [dismissible],
   );
+
+  const handleDismiss = useCallback(() => {
+    if (!dismissible && visible) {
+      ref.current?.present();
+    }
+    onClose();
+  }, [dismissible, onClose, visible]);
 
   return (
     <BottomSheetModal
       ref={ref}
       snapPoints={snapPoints}
       onChange={handleSheetChange}
-      onDismiss={onClose}
+      onDismiss={handleDismiss}
       backdropComponent={renderBackdrop}
-      enablePanDownToClose
+      enablePanDownToClose={dismissible}
       backgroundStyle={{
         backgroundColor: colors.card,
         borderTopLeftRadius: radius.card,

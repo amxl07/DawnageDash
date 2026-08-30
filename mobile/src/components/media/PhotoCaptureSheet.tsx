@@ -192,6 +192,11 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
   };
 
   const requestClose = () => {
+    if (inFlightRef.current || mutation.isPending) {
+      setSaveError('Saving photos. Please wait for saving to finish.');
+      Alert.alert('Saving photos', 'Please wait for saving to finish.', [{ text: 'OK' }]);
+      return;
+    }
     if (!dirty) {
       closeSession();
       return;
@@ -335,6 +340,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
   };
 
   const uploading = Object.values(slots).some((s) => s.uploading);
+  const saving = interactionLocked || mutation.isPending;
   const filled = Object.values(slots).filter((s) => s.url || s.pendingUri).length;
 
   const ghostFor = (key: AngleKey): string | null => {
@@ -348,6 +354,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
       visible={visible}
       onClose={requestClose}
       title={`Photos · ${format(parseLocalDate(date), 'd MMM yyyy')}`}
+      dismissible={!saving}
     >
       <SheetScrollView contentContainerStyle={{ padding: spacing.base, gap: spacing.base }}>
         <Text variant="bodySm" tone="muted">
@@ -397,7 +404,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
                 }}
                 onRetry={() => void retry(angle.key)}
                 retryDisabled={uploading || mutation.isPending}
-                disabled={interactionLocked || mutation.isPending}
+                disabled={saving}
               />
             </View>
           ))}
@@ -423,7 +430,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
           label={uploading ? 'Uploading…' : 'Save photos'}
           onPress={save}
           loading={uploading || mutation.isPending}
-          disabled={interactionLocked || mutation.isPending}
+          disabled={saving}
         />
       </View>
     </Sheet>

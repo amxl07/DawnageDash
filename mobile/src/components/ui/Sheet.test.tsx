@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Sheet } from './Sheet';
 
 let mockModalOnChange: ((index: number) => void) | undefined;
+let mockModalProps: Record<string, unknown> = {};
 
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = jest.requireActual('react');
@@ -15,10 +16,15 @@ jest.mock('@gorhom/bottom-sheet', () => {
 
   const Modal = React.forwardRef(
     (
-      { children, onChange }: { children: React.ReactNode; onChange?: (index: number) => void },
+      {
+        children,
+        onChange,
+        ...props
+      }: { children: React.ReactNode; onChange?: (index: number) => void } & Record<string, unknown>,
       ref: React.ForwardedRef<{ present: () => void; dismiss: () => void }>,
     ) => {
       mockModalOnChange = onChange;
+      mockModalProps = props;
       React.useImperativeHandle(ref, () => ({ present: jest.fn(), dismiss: jest.fn() }));
       // Rendering children must not synthesize a presentation state change.
       return React.createElement(NativeView, null, children);
@@ -83,6 +89,7 @@ describe('Sheet', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockModalOnChange = undefined;
+    mockModalProps = {};
   });
 
   it('provides a named 44pt close action and bottom safe-area clearance', () => {
@@ -136,5 +143,31 @@ describe('Sheet', () => {
     });
 
     expect(mockAccessibilityInfo.setAccessibilityFocus).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables pan and backdrop dismissal while its owner is saving', () => {
+    mockSafeAreaInsets.mockReturnValue({ top: 47, right: 0, bottom: 34, left: 0 });
+    const NonDismissibleSheet = Sheet as React.ComponentType<
+      React.ComponentProps<typeof Sheet> & { dismissible: boolean }
+    >;
+
+    act(() => {
+      create(
+        <NonDismissibleSheet
+          visible
+          dismissible={false}
+          title="Progress photos"
+          onClose={jest.fn()}
+        >
+          <Text>Saving</Text>
+        </NonDismissibleSheet>,
+      );
+    });
+
+    expect(mockModalProps.enablePanDownToClose).toBe(false);
+    const renderBackdrop = mockModalProps.backdropComponent as (props: object) => {
+      props: { pressBehavior?: string };
+    };
+    expect(renderBackdrop({}).props.pressBehavior).toBe('none');
   });
 });
