@@ -72,4 +72,22 @@ describe('swipeDecision', () => {
       }),
     ).toBe(10);
   });
+
+  it.each([
+    ['preserves existing previous-edge overscroll', 20, 0, false, true, 20],
+    ['follows inward movement from the previous edge', 20, -10, false, true, 10],
+    ['follows inward movement through zero from the previous edge', 20, -30, false, true, -10],
+    ['damps only new outward movement at the previous edge', 20, 20, false, true, 25],
+    ['damps a previous-edge crossing from the allowed region', -20, 40, false, true, 5],
+    ['preserves existing next-edge overscroll', -20, 0, true, false, -20],
+    ['follows inward movement from the next edge', -20, 10, true, false, -10],
+    ['follows inward movement through zero from the next edge', -20, 30, true, false, 10],
+    ['damps only new outward movement at the next edge', -20, -20, true, false, -25],
+    ['damps a next-edge crossing from the allowed region', 20, -40, true, false, -5],
+  ] as const)(
+    '%s',
+    (_name, startX, translationX, canPrev, canNext, expected) => {
+      expect(applySwipeResistance({ startX, translationX, canPrev, canNext })).toBe(expected);
+    },
+  );
 });

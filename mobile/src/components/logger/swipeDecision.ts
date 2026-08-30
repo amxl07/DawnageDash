@@ -12,6 +12,8 @@ type SwipeResistanceInput = Pick<SwipeDecisionInput, 'translationX' | 'canPrev' 
   startX: number;
 };
 
+const EDGE_RESISTANCE = 0.25;
+
 export function projectSwipe(translationX: number, velocityX: number): number {
   'worklet';
   return translationX + velocityX * 0.18;
@@ -41,6 +43,20 @@ export function applySwipeResistance({
 }: SwipeResistanceInput): number {
   'worklet';
   const candidateX = startX + translationX;
-  const atEdge = (candidateX > 0 && !canPrev) || (candidateX < 0 && !canNext);
-  return atEdge ? candidateX * 0.25 : candidateX;
+
+  if (candidateX > 0 && !canPrev) {
+    const capturedOvershoot = Math.max(startX, 0);
+    if (candidateX > capturedOvershoot) {
+      return capturedOvershoot + (candidateX - capturedOvershoot) * EDGE_RESISTANCE;
+    }
+  }
+
+  if (candidateX < 0 && !canNext) {
+    const capturedOvershoot = Math.min(startX, 0);
+    if (candidateX < capturedOvershoot) {
+      return capturedOvershoot + (candidateX - capturedOvershoot) * EDGE_RESISTANCE;
+    }
+  }
+
+  return candidateX;
 }
