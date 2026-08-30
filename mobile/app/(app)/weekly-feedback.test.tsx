@@ -38,7 +38,12 @@ const mockHistory = [
     overall_feeling: 'Okay',
   },
 ];
-const mockCheckIns: never[] = [];
+let mockCheckIns: {
+  daily_steps: number | null;
+  water_liters: number | null;
+  stress_level: number | null;
+}[] = [];
+let mockUser = { id: 'user-1', user_metadata: { full_name: 'Maya Singh' } };
 
 const mockLoadDraft = jest.fn(async () => null);
 const mockSaveDraft = jest.fn(async () => true);
@@ -80,9 +85,7 @@ jest.mock('@tanstack/react-query', () => ({
 }));
 
 jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({
-    user: { id: 'user-1', user_metadata: { full_name: 'Maya Singh' } },
-  }),
+  useAuth: () => ({ user: mockUser }),
 }));
 
 jest.mock('@/hooks/useDashboardData', () => ({
@@ -234,6 +237,16 @@ jest.mock('@/components/ui', () => {
 
 const WeeklyFeedbackScreen = require('./weekly-feedback').default;
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
 async function renderScreen() {
   let renderer!: ReturnType<typeof create>;
   await act(async () => {
@@ -256,6 +269,8 @@ describe('WeeklyFeedbackScreen', () => {
     mockSaveDraft.mockResolvedValue(true);
     mockClearDraft.mockResolvedValue(true);
     mockInsert.mockResolvedValue({ error: null });
+    mockCheckIns = [];
+    mockUser = { id: 'user-1', user_metadata: { full_name: 'Maya Singh' } };
     mockPreventRemoveEnabled = false;
     mockPreventRemoveCallback = undefined;
     jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
@@ -360,5 +375,148 @@ describe('WeeklyFeedbackScreen', () => {
     expect(renderer.root.findByProps({ accessibilityLabel: 'Anything else you want to share?' }).props.value)
       .toBe('Please keep this');
     expect(renderer.root.findByProps({ accessibilityLabel: 'Retry' })).toBeTruthy();
+  });
+
+  it('does not re-run restoration when daily-check-in prefill changes during active editing', async () => {
+    mockCheckIns = [{ daily_steps: 5000, water_liters: 2, stress_level: 3 }];
+    const renderer = await renderScreen();
+    await press(renderer, 'Start');
+    act(() => {
+      renderer.root
+        .findByProps({ accessibilityLabel: 'How are you feeling overall this week?' })
+        .props.onChangeText('My in-progress answer');
+    });
+    await press(renderer, 'Next');
+
+    mockCheckIns = [{ daily_steps: 9000, water_liters: 4, stress_level: 8 }];
+    await act(async () => {
+      renderer.update(<WeeklyFeedbackScreen />);
+      await Promise.resolve();
+    });
+
+    expect(renderer.root.findByProps({ children: 'Nutrition' })).toBeTruthy();
+    await press(renderer, 'Back');
+    expect(
+      renderer.root.findByProps({ accessibilityLabel: 'How are you feeling overall this week?' })
+        .props.value,
+    ).toBe('My in-progress answer');
+    expect(mockLoadDraft).toHaveBeenCalledTimes(1);
+  });
+
+  it('resets active flow state when the authenticated user changes', async () => {
+    const renderer = await renderScreen();
+    await press(renderer, 'Start');
+    act(() => {
+      renderer.root
+        .findByProps({ accessibilityLabel: 'How are you feeling overall this week?' })
+        .props.onChangeText('User one only');
+    });
+    await press(renderer, 'Next');
+
+    mockUser = { id: 'user-2', user_metadata: { full_name: 'Noor Shah' } };
+    await act(async () => {
+      renderer.update(<WeeklyFeedbackScreen />);
+      await Promise.resolve();
+    });
+
+    expect(mockPreventRemoveEnabled).toBe(false);
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Start' })).toBeTruthy();
+    await press(renderer, 'Start');
+    expect(renderer.root.findByProps({ children: 'Weekly Overview' })).toBeTruthy();
+    expect(
+      renderer.root.findByProps({ accessibilityLabel: 'How are you feeling overall this week?' })
+        .props.value,
+    ).toBe('');
+  });
+
+  it('ignores a stale submit completion after the authenticated user changes', async () => {
+    const insert = deferred<{ error: Error | null }>();
+    mockInsert.mockReturnValueOnce(insert.promise);
+    const renderer = await renderScreen();
+    await press(renderer, 'Start');
+    await press(renderer, 'Next');
+    await press(renderer, 'Next');
+    await press(renderer, 'Next');
+    await press(renderer, 'Next');
+
+    act(() => renderer.root.findByProps({ testID: 'primary-action' }).props.onPress());
+    mockUser = { id: 'user-2', user_metadata: { full_name: 'Noor Shah' } };
+    await act(async () => {
+      renderer.update(<WeeklyFeedbackScreen />);
+      await Promise.resolve();
+    });
+    await act(async () => insert.resolve({ error: null }));
+
+    expect(renderer.root.findAllByProps({ children: 'Thanks, Noor!' })).toHaveLength(0);
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Start' })).toBeTruthy();
+    expect(mockDispatch).not.toHaveBeenCalled();
+  });
+
+  it('ignores a stale exit-alert save after the authenticated user changes', async () => {
+    const renderer = await renderScreen();
+    await press(renderer, 'Start');
+    act(() => {
+      renderer.root
+        .findByProps({ accessibilityLabel: 'How are you feeling overall this week?' })
+        .props.onChangeText('User one answer');
+    });
+    mockSaveDraft.mockClear();
+    const exitSave = deferred<boolean>();
+    mockSaveDraft.mockReturnValueOnce(exitSave.promise);
+
+    act(() => mockPreventRemoveCallback?.({ data: { action: { type: 'GO_BACK' } } }));
+    const actions = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2] ?? [];
+    const saveAndExit = actions.find((action) => action.text === 'Save draft & exit');
+    act(() => {
+      void saveAndExit?.onPress?.();
+    });
+
+    mockUser = { id: 'user-2', user_metadata: { full_name: 'Noor Shah' } };
+    await act(async () => {
+      renderer.update(<WeeklyFeedbackScreen />);
+      await Promise.resolve();
+    });
+    await act(async () => exitSave.resolve(true));
+
+    expect(mockDispatch).not.toHaveBeenCalled();
+    expect(
+      renderer.root.findAllByProps({ children: 'Couldn’t save your draft. Keep editing and try again.' }),
+    ).toHaveLength(0);
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Start' })).toBeTruthy();
+  });
+
+  it('retries only local cleanup after the server has accepted the submission', async () => {
+    mockClearDraft.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    const renderer = await renderScreen();
+    await press(renderer, 'Start');
+    await press(renderer, 'Next');
+    await press(renderer, 'Next');
+    await press(renderer, 'Next');
+    await press(renderer, 'Next');
+
+    await act(async () => {
+      renderer.root.findByProps({ testID: 'primary-action' }).props.onPress();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockInsert).toHaveBeenCalledTimes(1);
+    expect(
+      renderer.root.findByProps({
+        children: 'Check-in sent, but its saved draft could not be cleared from this device.',
+      }),
+    ).toBeTruthy();
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Retry cleanup' })).toBeTruthy();
+    expect(mockPreventRemoveEnabled).toBe(true);
+
+    await press(renderer, 'Retry cleanup');
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockClearDraft).toHaveBeenCalledTimes(2);
+    expect(mockInsert).toHaveBeenCalledTimes(1);
+    expect(renderer.root.findByProps({ children: 'Thanks, Maya!' })).toBeTruthy();
   });
 });

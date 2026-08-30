@@ -268,6 +268,10 @@ describe('useWeeklyFeedbackDraft', () => {
     });
     rerender('user-2');
 
+    await act(async () => oldWrite.resolve());
+    await expect(first).resolves.toBe(false);
+    expect(result.current.draftStatus).toBe('idle');
+
     let second!: Promise<boolean>;
     await act(async () => {
       second = result.current.saveDraft(
@@ -278,14 +282,162 @@ describe('useWeeklyFeedbackDraft', () => {
       await second;
     });
     expect(result.current.draftStatus).toBe('saved');
-
-    await act(async () => oldWrite.reject(new Error('late user-one failure')));
-    await expect(first).resolves.toBe(false);
-    expect(result.current.draftStatus).toBe('saved');
     expect(mockStorage.setItem.mock.calls.map(([key]) => key)).toEqual([
       'weekly-feedback-draft:user-1',
       'weekly-feedback-draft:user-2',
     ]);
+    unmount();
+  });
+
+  it('serializes an in-flight debounced save before a newer immediate save', async () => {
+    const firstWrite = deferred<void>();
+    const secondWrite = deferred<void>();
+    mockStorage.setItem
+      .mockReturnValueOnce(firstWrite.promise)
+      .mockReturnValueOnce(secondWrite.promise);
+    const { result, unmount } = renderHook(() => useWeeklyFeedbackDraft('user-1'));
+
+    let first!: Promise<boolean>;
+    act(() => {
+      first = result.current.saveDraft(
+        { ...emptyWeekly(), feedback: 'Older answer' },
+        3,
+      );
+    });
+    await act(async () => jest.advanceTimersByTimeAsync(500));
+    expect(mockStorage.setItem).toHaveBeenCalledTimes(1);
+
+    let second!: Promise<boolean>;
+    act(() => {
+      second = result.current.saveDraft(
+        { ...emptyWeekly(), feedback: 'Newest answer' },
+        4,
+        { immediate: true },
+      );
+    });
+    expect(mockStorage.setItem).toHaveBeenCalledTimes(1);
+
+    // Resolve the newer backing promise first. Serialization means it has not
+    // been handed to AsyncStorage yet and therefore cannot overtake write one.
+    await act(async () => secondWrite.resolve());
+    expect(mockStorage.setItem).toHaveBeenCalledTimes(1);
+
+    await act(async () => firstWrite.resolve());
+    await expect(first).resolves.toBe(false);
+    expect(mockStorage.setItem).toHaveBeenCalledTimes(2);
+
+    await expect(second).resolves.toBe(true);
+    expect(mockStorage.setItem.mock.calls[1]).toEqual([
+      'weekly-feedback-draft:user-1',
+      JSON.stringify({ form: { ...emptyWeekly(), feedback: 'Newest answer' }, step: 4 }),
+    ]);
+    unmount();
+  });
+
+  it('runs clear after an in-flight save so the old write cannot resurrect the draft', async () => {
+    const write = deferred<void>();
+    mockStorage.setItem.mockReturnValueOnce(write.promise);
+    const { result, unmount } = renderHook(() => useWeeklyFeedbackDraft('user-1'));
+
+    let saving!: Promise<boolean>;
+    act(() => {
+      saving = result.current.saveDraft(emptyWeekly(), 2, { immediate: true });
+    });
+    await act(async () => Promise.resolve());
+    expect(mockStorage.setItem).toHaveBeenCalledTimes(1);
+
+    let clearing!: Promise<boolean>;
+    act(() => {
+      clearing = result.current.clearDraft();
+    });
+    expect(mockStorage.removeItem).not.toHaveBeenCalled();
+
+    await act(async () => write.resolve());
+    await expect(saving).resolves.toBe(false);
+    await expect(clearing).resolves.toBe(true);
+    expect(mockStorage.removeItem).toHaveBeenCalledWith('weekly-feedback-draft:user-1');
+    expect(mockStorage.setItem.mock.invocationCallOrder[0]).toBeLessThan(
+      mockStorage.removeItem.mock.invocationCallOrder[0]!,
+    );
+    unmount();
+  });
+
+  it('returns false when an in-flight clear belongs to a previous user', async () => {
+    const removal = deferred<void>();
+    mockStorage.removeItem.mockReturnValueOnce(removal.promise);
+    const { result, rerender, unmount } = renderUserHook('user-1');
+
+    const clearing = result.current.clearDraft();
+    rerender('user-2');
+    await act(async () => removal.resolve());
+
+    await expect(clearing).resolves.toBe(false);
+    expect(result.current.draftStatus).toBe('idle');
+    unmount();
+  });
+
+  it('returns false when an in-flight save completes after unmount', async () => {
+    const write = deferred<void>();
+    mockStorage.setItem.mockReturnValueOnce(write.promise);
+    const { result, unmount } = renderHook(() => useWeeklyFeedbackDraft('user-1'));
+
+    let saving!: Promise<boolean>;
+    act(() => {
+      saving = result.current.saveDraft(emptyWeekly(), 1, { immediate: true });
+    });
+    await act(async () => Promise.resolve());
+    unmount();
+    await act(async () => write.resolve());
+
+    await expect(saving).resolves.toBe(false);
+  });
+
+  it('does not let a stale save callback cancel the current user pending save', async () => {
+    const { result, rerender, unmount } = renderUserHook('user-1');
+    const staleSave = result.current.saveDraft;
+    rerender('user-2');
+
+    let currentSave!: Promise<boolean>;
+    act(() => {
+      currentSave = result.current.saveDraft(
+        { ...emptyWeekly(), feedback: 'Current user answer' },
+        4,
+      );
+    });
+
+    await expect(
+      staleSave({ ...emptyWeekly(), feedback: 'Old user action' }, 3, { immediate: true }),
+    ).resolves.toBe(false);
+    await act(async () => jest.advanceTimersByTimeAsync(500));
+
+    await expect(currentSave).resolves.toBe(true);
+    expect(mockStorage.setItem).toHaveBeenCalledTimes(1);
+    expect(mockStorage.setItem.mock.calls[0]?.[0]).toBe('weekly-feedback-draft:user-2');
+    unmount();
+  });
+
+  it('does not let a stale clear callback cancel the current user pending save', async () => {
+    const { result, rerender, unmount } = renderUserHook('user-1');
+    const staleClear = result.current.clearDraft;
+    rerender('user-2');
+
+    let currentSave!: Promise<boolean>;
+    act(() => {
+      currentSave = result.current.saveDraft(
+        { ...emptyWeekly(), feedback: 'Current user answer' },
+        4,
+      );
+    });
+
+    await expect(staleClear()).resolves.toBe(false);
+    await act(async () => jest.advanceTimersByTimeAsync(500));
+
+    await expect(currentSave).resolves.toBe(true);
+    expect(mockStorage.removeItem).toHaveBeenCalledWith('weekly-feedback-draft:user-1');
+    expect(mockStorage.setItem).toHaveBeenCalledWith(
+      'weekly-feedback-draft:user-2',
+      expect.any(String),
+    );
     unmount();
   });
 });

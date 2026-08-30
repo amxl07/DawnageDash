@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Camera, CheckCircle2, Ruler } from 'lucide-react-native';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   Alert,
@@ -90,11 +90,16 @@ export default function WeeklyFeedbackScreen() {
   const navigation = useNavigation();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const flowIdentity = useMemo(() => ({ userId: user?.id }), [user?.id]);
+  const activeFlowIdentityRef = useRef(flowIdentity);
   const { checkIns } = useDashboardData();
   const listMotion = useListMotion();
   const scrollRef = useRef<ScrollView>(null);
   const errorSummaryRef = useRef<View>(null);
-  const pendingExitActionRef = useRef<NavigationAction | null>(null);
+  const pendingExitActionRef = useRef<{
+    action: NavigationAction;
+    identity: typeof flowIdentity;
+  } | null>(null);
 
   const [started, setStarted] = useState(false);
   const [step, setStep] = useState(0);
@@ -106,6 +111,8 @@ export default function WeeklyFeedbackScreen() {
   const [exitError, setExitError] = useState<string | null>(null);
   const [restored, setRestored] = useState(false);
   const [hasUnsentChanges, setHasUnsentChanges] = useState(false);
+  const [submissionCommitted, setSubmissionCommitted] = useState(false);
+  const [cleanupPending, setCleanupPending] = useState(false);
   const [exitReady, setExitReady] = useState(0);
 
   const { loadDraft, saveDraft, clearDraft, draftStatus } = useWeeklyFeedbackDraft(user?.id);
@@ -142,6 +149,29 @@ export default function WeeklyFeedbackScreen() {
     };
   }, [checkIns]);
 
+  const latestPrefillRef = useRef(prefill);
+  useLayoutEffect(() => {
+    latestPrefillRef.current = prefill;
+  }, [prefill]);
+
+  useLayoutEffect(() => {
+    activeFlowIdentityRef.current = flowIdentity;
+    pendingExitActionRef.current = null;
+    setStarted(false);
+    setStep(0);
+    setForm(emptyWeekly());
+    setErrors({});
+    setSubmitting(false);
+    setSubmitted(false);
+    setSubmitError(null);
+    setExitError(null);
+    setRestored(false);
+    setHasUnsentChanges(false);
+    setSubmissionCommitted(false);
+    setCleanupPending(false);
+    setExitReady(0);
+  }, [flowIdentity]);
+
   useEffect(() => {
     if (!user?.id) {
       setRestored(true);
@@ -150,14 +180,15 @@ export default function WeeklyFeedbackScreen() {
     let active = true;
     setRestored(false);
     void loadDraft().then((draft) => {
-      if (!active) return;
+      if (!active || activeFlowIdentityRef.current !== flowIdentity) return;
+      const initialPrefill = latestPrefillRef.current;
       if (draft) {
-        setForm({ ...emptyWeekly(), ...prefill, ...draft.form });
+        setForm({ ...emptyWeekly(), ...initialPrefill, ...draft.form });
         setStep(draft.step);
         setStarted(true);
         setHasUnsentChanges(true);
       } else {
-        setForm({ ...emptyWeekly(), ...prefill });
+        setForm({ ...emptyWeekly(), ...initialPrefill });
         setStep(0);
         setStarted(false);
         setHasUnsentChanges(false);
@@ -167,12 +198,21 @@ export default function WeeklyFeedbackScreen() {
     return () => {
       active = false;
     };
-  }, [loadDraft, prefill, user?.id]);
+  }, [flowIdentity, loadDraft, user?.id]);
 
   useEffect(() => {
-    if (!restored || !started || submitted || !hasUnsentChanges) return;
+    if (!restored || !started || submitted || submissionCommitted || !hasUnsentChanges) return;
     void saveDraft(form, step);
-  }, [form, hasUnsentChanges, restored, saveDraft, started, step, submitted]);
+  }, [
+    form,
+    hasUnsentChanges,
+    restored,
+    saveDraft,
+    started,
+    step,
+    submissionCommitted,
+    submitted,
+  ]);
 
   useEffect(() => {
     if (!started) return;
@@ -183,19 +223,57 @@ export default function WeeklyFeedbackScreen() {
   }, [started, step]);
 
   useEffect(() => {
-    const action = pendingExitActionRef.current;
-    if (!exitReady || hasUnsentChanges || !action) return;
+    const pendingExit = pendingExitActionRef.current;
+    if (
+      !exitReady ||
+      hasUnsentChanges ||
+      submissionCommitted ||
+      !pendingExit ||
+      pendingExit.identity !== activeFlowIdentityRef.current
+    ) {
+      return;
+    }
     pendingExitActionRef.current = null;
-    navigation.dispatch(action);
-  }, [exitReady, hasUnsentChanges, navigation]);
+    navigation.dispatch(pendingExit.action);
+  }, [exitReady, hasUnsentChanges, navigation, submissionCommitted]);
 
-  const permitExit = useCallback((action: NavigationAction) => {
-    pendingExitActionRef.current = action;
-    setHasUnsentChanges(false);
-    setExitReady((value) => value + 1);
-  }, []);
+  const permitExit = useCallback(
+    (action: NavigationAction, identity: typeof flowIdentity) => {
+      if (activeFlowIdentityRef.current !== identity) return;
+      pendingExitActionRef.current = { action, identity };
+      setHasUnsentChanges(false);
+      setSubmissionCommitted(false);
+      setCleanupPending(false);
+      setExitReady((value) => value + 1);
+    },
+    [],
+  );
 
-  usePreventRemove(hasUnsentChanges && !submitted, ({ data }) => {
+  usePreventRemove((hasUnsentChanges || submissionCommitted) && !submitted, ({ data }) => {
+    const alertIdentity = flowIdentity;
+    if (submissionCommitted) {
+      Alert.alert(
+        'Finish local cleanup?',
+        'Your check-in was submitted, but its saved draft still needs to be removed from this device.',
+        [
+          { text: 'Keep here', style: 'cancel' },
+          {
+            text: 'Retry cleanup & exit',
+            onPress: async () => {
+              const cleared = await clearDraft();
+              if (activeFlowIdentityRef.current !== alertIdentity) return;
+              if (cleared) {
+                permitExit(data.action, alertIdentity);
+                return;
+              }
+              setExitError('Check-in sent, but local draft cleanup still failed. Try again.');
+            },
+          },
+        ],
+      );
+      return;
+    }
+
     Alert.alert('Leave weekly check-in?', 'Your answers have not been submitted yet.', [
       { text: 'Keep editing', style: 'cancel' },
       {
@@ -203,8 +281,9 @@ export default function WeeklyFeedbackScreen() {
         style: 'destructive',
         onPress: async () => {
           const cleared = await clearDraft();
+          if (activeFlowIdentityRef.current !== alertIdentity) return;
           if (cleared) {
-            permitExit(data.action);
+            permitExit(data.action, alertIdentity);
             return;
           }
           setExitError('Couldn’t discard your draft. Keep editing and try again.');
@@ -215,8 +294,9 @@ export default function WeeklyFeedbackScreen() {
         onPress: async () => {
           setExitError(null);
           const saved = await saveDraft(form, step, { immediate: true });
+          if (activeFlowIdentityRef.current !== alertIdentity) return;
           if (saved) {
-            permitExit(data.action);
+            permitExit(data.action, alertIdentity);
             return;
           }
           const message = 'Couldn’t save your draft. Keep editing and try again.';
@@ -274,36 +354,77 @@ export default function WeeklyFeedbackScreen() {
     setHasUnsentChanges(true);
   }, []);
 
+  const showSubmissionSuccess = useCallback((identity: typeof flowIdentity) => {
+    if (activeFlowIdentityRef.current !== identity) return;
+    setSubmissionCommitted(false);
+    setCleanupPending(false);
+    setSubmitError(null);
+    setSubmitted(true);
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    AccessibilityInfo.announceForAccessibility('Weekly check-in submitted.');
+  }, []);
+
+  const retryCleanup = useCallback(async () => {
+    const cleanupIdentity = flowIdentity;
+    setSubmitting(true);
+    setExitError(null);
+    const cleared = await clearDraft();
+    if (activeFlowIdentityRef.current !== cleanupIdentity) return;
+    setSubmitting(false);
+    if (cleared) {
+      showSubmissionSuccess(cleanupIdentity);
+      return;
+    }
+    setCleanupPending(true);
+    setSubmitError('Check-in sent, but its saved draft could not be cleared from this device.');
+  }, [clearDraft, flowIdentity, showSubmissionSuccess]);
+
   const submit = useCallback(async () => {
     if (!user?.id || !validateCurrentStep()) return;
+    const submissionIdentity = flowIdentity;
+    const submissionUserId = user.id;
     setSubmitting(true);
     setSubmitError(null);
     try {
       const { error } = await supabase.from('weekly_check_ins').insert({
-        user_id: user.id,
+        user_id: submissionUserId,
         ...form,
       });
       if (error) throw error;
-      await clearDraft();
+
+      const isCurrent = activeFlowIdentityRef.current === submissionIdentity;
+      if (isCurrent) {
+        setSubmissionCommitted(true);
+        setHasUnsentChanges(false);
+        void queryClient.invalidateQueries({ queryKey: ['weeklyCheckIns', submissionUserId] });
+      }
+
+      const cleared = await clearDraft();
+      if (activeFlowIdentityRef.current !== submissionIdentity) return;
+      if (!cleared) {
+        setCleanupPending(true);
+        setSubmitError('Check-in sent, but its saved draft could not be cleared from this device.');
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        return;
+      }
+
       setHasUnsentChanges(false);
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      AccessibilityInfo.announceForAccessibility('Weekly check-in submitted.');
-      void queryClient.invalidateQueries({ queryKey: ['weeklyCheckIns', user.id] });
-      setSubmitted(true);
+      showSubmissionSuccess(submissionIdentity);
     } catch {
+      if (activeFlowIdentityRef.current !== submissionIdentity) return;
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setSubmitError("Couldn’t submit. Your answers are still here — check your connection and retry.");
     } finally {
-      setSubmitting(false);
+      if (activeFlowIdentityRef.current === submissionIdentity) setSubmitting(false);
     }
-  }, [clearDraft, form, queryClient, user?.id, validateCurrentStep]);
+  }, [clearDraft, flowIdentity, form, queryClient, showSubmissionSuccess, user?.id, validateCurrentStep]);
 
   if (submitted) {
     return (
       <Screen>
         <View style={{ gap: spacing.lg, paddingTop: spacing.xl, alignItems: 'center' }}>
           <CheckCircle2 size={iconSize.xl} color={colors.success} strokeWidth={2} accessible={false} />
-          <Text variant="h1">Thanks, {firstName}!</Text>
+          <Text variant="h1">{`Thanks, ${firstName}!`}</Text>
           <Card style={{ gap: spacing.md }}>
             <CoachBadge caption="Sent to" />
             <Text variant="bodySm" tone="muted">
@@ -334,6 +455,39 @@ export default function WeeklyFeedbackScreen() {
       <Screen>
         <SkeletonCard lines={3} />
       </Screen>
+    );
+  }
+
+  if (submissionCommitted) {
+    return (
+      <View style={{ flex: 1 }}>
+        <Screen archetype="editor">
+          <View style={{ gap: spacing.lg }}>
+            <PageHeader title="Weekly check-in" onBack={() => router.back()} />
+            <Card style={{ gap: spacing.md }}>
+              <Text variant="h2">Your check-in was sent</Text>
+              <Text
+                variant="bodySm"
+                tone="primary"
+                accessibilityRole="alert"
+                accessibilityLiveRegion="polite"
+              >
+                {submitError ??
+                  'Check-in sent, but its saved draft could not be cleared from this device.'}
+              </Text>
+              <Text variant="bodySm" tone="muted">
+                Retry removes only the local draft. It will not submit your answers again.
+              </Text>
+            </Card>
+          </View>
+        </Screen>
+        <StickyActionBar
+          status={<StatusPill status={cleanupPending ? 'error' : 'saving'} />}
+          primaryLabel="Retry cleanup"
+          onPrimary={() => void retryCleanup()}
+          primaryLoading={submitting}
+        />
+      </View>
     );
   }
 

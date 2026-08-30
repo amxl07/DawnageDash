@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import {
   boundWeeklyStep,
@@ -18,10 +18,12 @@ type PendingSave = {
 };
 
 export function useWeeklyFeedbackDraft(userId: string | undefined) {
+  const identity = useMemo(() => ({ userId }), [userId]);
+  const activeIdentityRef = useRef(identity);
   const pendingRef = useRef<PendingSave | null>(null);
-  const writeVersionRef = useRef(0);
+  const operationQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const operationVersionRef = useRef(0);
   const mountedRef = useRef(true);
-  const activeUserRef = useRef(userId);
   const [draftStatus, setDraftStatus] = useState<WeeklyDraftStatus>('idle');
 
   const cancelPending = useCallback(() => {
@@ -32,102 +34,151 @@ export function useWeeklyFeedbackDraft(userId: string | undefined) {
     pendingRef.current = null;
   }, []);
 
+  const enqueueStorage = useCallback(<T,>(operation: () => Promise<T>): Promise<T> => {
+    const result = operationQueueRef.current.then(operation, operation);
+    operationQueueRef.current = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
+  }, []);
+
   const saveDraft = useCallback(
     (form: WeeklyFeedbackForm, step: number, options: SaveOptions = {}): Promise<boolean> => {
-      if (!userId) return Promise.resolve(false);
+      if (!userId || !mountedRef.current || activeIdentityRef.current !== identity) {
+        return Promise.resolve(false);
+      }
 
       cancelPending();
-      const writeVersion = ++writeVersionRef.current;
+      const operationVersion = ++operationVersionRef.current;
       const draft: WeeklyFeedbackDraft = {
         form: { ...form },
         step: boundWeeklyStep(step),
       };
-      if (mountedRef.current) setDraftStatus('saving');
+      if (mountedRef.current && activeIdentityRef.current === identity) {
+        setDraftStatus('saving');
+      }
 
-      return new Promise<boolean>((resolve) => {
-        const write = async () => {
-          pendingRef.current = null;
+      const write = () =>
+        enqueueStorage(async () => {
+          const isCurrent = () =>
+            mountedRef.current &&
+            activeIdentityRef.current === identity &&
+            operationVersionRef.current === operationVersion;
+
+          // A queued-but-not-started operation can be dropped. Once setItem has
+          // started it is allowed to finish, and all later mutations wait for it.
+          if (!isCurrent()) return false;
           try {
             await AsyncStorage.setItem(weeklyDraftKey(userId), JSON.stringify(draft));
-            if (mountedRef.current && writeVersionRef.current === writeVersion) {
-              setDraftStatus('saved');
-            }
-            resolve(true);
+            if (!isCurrent()) return false;
+            setDraftStatus('saved');
+            return true;
           } catch {
-            if (mountedRef.current && writeVersionRef.current === writeVersion) {
-              setDraftStatus('error');
-            }
-            resolve(false);
+            if (!isCurrent()) return false;
+            setDraftStatus('error');
+            return false;
           }
-        };
+        });
 
-        if (options.immediate) {
-          void write();
-          return;
-        }
+      if (options.immediate) return write();
 
-        const timer = setTimeout(() => void write(), 500);
+      return new Promise<boolean>((resolve) => {
+        const timer = setTimeout(() => {
+          pendingRef.current = null;
+          void write().then(resolve);
+        }, 500);
         pendingRef.current = { timer, resolve };
       });
     },
-    [cancelPending, userId],
+    [cancelPending, enqueueStorage, identity, userId],
   );
 
   const loadDraft = useCallback(async (): Promise<WeeklyFeedbackDraft | null> => {
     if (!userId) return null;
-    const requestedUserId = userId;
     const key = weeklyDraftKey(userId);
+    const loadVersion = operationVersionRef.current;
     let raw: string | null;
     try {
       raw = await AsyncStorage.getItem(key);
     } catch {
       return null;
     }
-    if (!mountedRef.current || activeUserRef.current !== requestedUserId || !raw) return null;
+
+    const isCurrent = () =>
+      mountedRef.current &&
+      activeIdentityRef.current === identity &&
+      operationVersionRef.current === loadVersion;
+    if (!isCurrent() || !raw) return null;
 
     try {
       const draft = normalizeWeeklyDraft(JSON.parse(raw));
-      if (!draft) await AsyncStorage.removeItem(key).catch(() => {});
-      return draft;
+      if (!draft) {
+        await enqueueStorage(async () => {
+          if (isCurrent()) await AsyncStorage.removeItem(key).catch(() => {});
+        });
+      }
+      return isCurrent() ? draft : null;
     } catch {
-      await AsyncStorage.removeItem(key).catch(() => {});
+      await enqueueStorage(async () => {
+        if (isCurrent()) await AsyncStorage.removeItem(key).catch(() => {});
+      });
       return null;
     }
-  }, [userId]);
+  }, [enqueueStorage, identity, userId]);
 
   const clearDraft = useCallback(async (): Promise<boolean> => {
-    cancelPending();
-    writeVersionRef.current += 1;
     if (!userId) {
-      if (mountedRef.current) setDraftStatus('idle');
-      return true;
+      const isCurrent = mountedRef.current && activeIdentityRef.current === identity;
+      if (isCurrent) setDraftStatus('idle');
+      return isCurrent;
     }
 
-    try {
-      await AsyncStorage.removeItem(weeklyDraftKey(userId));
-      if (mountedRef.current) setDraftStatus('idle');
-      return true;
-    } catch {
-      if (mountedRef.current) setDraftStatus('error');
-      return false;
+    if (!mountedRef.current || activeIdentityRef.current !== identity) {
+      return enqueueStorage(async () => {
+        await AsyncStorage.removeItem(weeklyDraftKey(userId)).catch(() => {});
+        return false;
+      });
     }
-  }, [cancelPending, userId]);
+
+    cancelPending();
+    const operationVersion = ++operationVersionRef.current;
+
+    return enqueueStorage(async () => {
+      try {
+        await AsyncStorage.removeItem(weeklyDraftKey(userId));
+        const isCurrent =
+          mountedRef.current &&
+          activeIdentityRef.current === identity &&
+          operationVersionRef.current === operationVersion;
+        if (isCurrent) setDraftStatus('idle');
+        return isCurrent;
+      } catch {
+        const isCurrent =
+          mountedRef.current &&
+          activeIdentityRef.current === identity &&
+          operationVersionRef.current === operationVersion;
+        if (isCurrent) setDraftStatus('error');
+        return false;
+      }
+    });
+  }, [cancelPending, enqueueStorage, identity, userId]);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      writeVersionRef.current += 1;
+      operationVersionRef.current += 1;
       cancelPending();
     };
   }, [cancelPending]);
 
-  useEffect(() => {
-    activeUserRef.current = userId;
-    writeVersionRef.current += 1;
+  useLayoutEffect(() => {
+    activeIdentityRef.current = identity;
+    operationVersionRef.current += 1;
     cancelPending();
     setDraftStatus('idle');
-  }, [cancelPending, userId]);
+  }, [cancelPending, identity]);
 
   return { loadDraft, saveDraft, clearDraft, draftStatus };
 }
