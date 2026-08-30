@@ -18,6 +18,7 @@ export type LoggedSet = {
 
 export type ParsedExercise = {
   name: string;
+  tracking?: 'weight-reps' | 'duration';
   /** Present for the current format. */
   sets: LoggedSet[];
   /** Present for the legacy object format. */
@@ -75,6 +76,16 @@ function parseSet(value: unknown, index: number, version: 2 | undefined): Logged
   return { setNumber, reps, weight, rpe: str(value.rpe), completed, ...(duration === undefined ? {} : { duration }), ...(kind === undefined ? {} : { kind }) };
 }
 
+function inferTracking(
+  explicit: unknown,
+  sets: LoggedSet[],
+): NonNullable<ParsedExercise['tracking']> {
+  if (explicit === 'duration' || explicit === 'weight-reps') return explicit;
+  const hasDurationShape = sets.some((set) => set.duration !== undefined);
+  const hasStrengthValue = sets.some((set) => isFilled(set.reps) || isFilled(set.weight));
+  return hasDurationShape && !hasStrengthValue ? 'duration' : 'weight-reps';
+}
+
 function parseExercises(entries: unknown[], version?: 2): ParsedExercise[] {
   return entries.map((entry, idx) => {
     if (!isRecord(entry)) {
@@ -83,7 +94,12 @@ function parseExercises(entries: unknown[], version?: 2): ParsedExercise[] {
 
     const name = str(entry.Exercise || entry.exercise || entry.name) || `Exercise ${idx + 1}`;
     if (Array.isArray(entry.sets)) {
-      return { name, sets: entry.sets.map((set, index) => parseSet(set, index, version)) };
+      const sets = entry.sets.map((set, index) => parseSet(set, index, version));
+      return {
+        name,
+        tracking: inferTracking(entry.tracking, sets),
+        sets,
+      };
     }
 
     return {
@@ -101,7 +117,22 @@ function parseExercises(entries: unknown[], version?: 2): ParsedExercise[] {
 }
 
 export function serializeWorkoutContent(input: Omit<WorkoutContentV2, 'version'>): string {
-  return JSON.stringify({ version: 2, ...input });
+  return JSON.stringify({
+    version: 2,
+    ...input,
+    exercises: input.exercises.map((exercise) => {
+      const tracking = inferTracking(exercise.tracking, exercise.sets);
+      return {
+        ...exercise,
+        tracking,
+        sets: exercise.sets.map((set) => {
+          if (tracking === 'duration') return { ...set, duration: set.duration ?? '' };
+          const { duration: _duration, ...strengthSet } = set;
+          return strengthSet;
+        }),
+      };
+    }),
+  });
 }
 
 export function parseWorkoutContent(content: unknown): ParsedContent {

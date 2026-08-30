@@ -17,6 +17,7 @@ describe('workout log content', () => {
       exercises: [
         {
           name: 'Squat',
+          tracking: 'weight-reps',
           sets: [{ setNumber: 1, reps: '5', weight: '80', rpe: '8', completed: true }],
         },
       ],
@@ -29,6 +30,7 @@ describe('workout log content', () => {
       exercises: [
         {
           name: 'Squat',
+          tracking: 'weight-reps',
           sets: [{ setNumber: 1, reps: '5', weight: '80', rpe: '8', completed: true }],
         },
       ],
@@ -41,6 +43,7 @@ describe('workout log content', () => {
       exercises: [
         {
           name: 'Squat',
+          tracking: 'weight-reps',
           sets: [{ setNumber: 1, reps: '5', weight: '80', rpe: '8', completed: true }],
         },
       ],
@@ -66,6 +69,122 @@ describe('workout log content', () => {
       version: 2,
       planDayNumber: null,
       exercises: [{ sets: [{ completed: false }] }],
+    });
+  });
+
+  it('round-trips blank-rep strength sets without serializing duration or misclassifying tracking', () => {
+    const content = serializeWorkoutContent({
+      planDayNumber: 1,
+      exercises: [
+        {
+          name: 'Heavy hold',
+          tracking: 'weight-reps',
+          sets: [
+            {
+              setNumber: 1,
+              reps: '',
+              weight: '100',
+              rpe: '',
+              completed: false,
+              duration: '',
+              kind: 'work',
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(JSON.parse(content).exercises[0].sets[0]).not.toHaveProperty('duration');
+    expect(parseWorkoutContent(content)).toMatchObject({
+      kind: 'exercises',
+      exercises: [{ tracking: 'weight-reps', sets: [{ weight: '100' }] }],
+    });
+  });
+
+  it('round-trips a blank unsaved duration workout through an explicit tracking contract', () => {
+    const content = serializeWorkoutContent({
+      planDayNumber: 2,
+      exercises: [
+        {
+          name: 'Plank',
+          tracking: 'duration',
+          sets: [
+            {
+              setNumber: 1,
+              reps: '',
+              weight: '',
+              rpe: '',
+              completed: false,
+              duration: '',
+              kind: 'work',
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(JSON.parse(content).exercises[0].sets[0]).toHaveProperty('duration', '');
+    expect(parseWorkoutContent(content)).toMatchObject({
+      kind: 'exercises',
+      exercises: [{ tracking: 'duration', sets: [{ duration: '' }] }],
+    });
+  });
+
+  it('does not infer duration from a stale blank duration field on a weight-bearing set', () => {
+    expect(
+      parseWorkoutContent(
+        JSON.stringify({
+          version: 2,
+          planDayNumber: null,
+          exercises: [
+            {
+              name: 'Carry',
+              sets: [
+                {
+                  setNumber: 1,
+                  reps: '',
+                  weight: '40',
+                  rpe: '',
+                  completed: false,
+                  duration: '',
+                },
+              ],
+            },
+          ],
+        }),
+      ),
+    ).toMatchObject({
+      kind: 'exercises',
+      exercises: [{ tracking: 'weight-reps' }],
+    });
+  });
+
+  it('infers duration for historical v2 content with a meaningful duration-only shape', () => {
+    expect(
+      parseWorkoutContent(
+        JSON.stringify({
+          version: 2,
+          planDayNumber: null,
+          exercises: [
+            {
+              name: 'Plank',
+              sets: [
+                {
+                  setNumber: 1,
+                  reps: '',
+                  weight: '',
+                  rpe: '',
+                  completed: true,
+                  duration: '45',
+                },
+              ],
+            },
+          ],
+        }),
+      ),
+    ).toMatchObject({
+      kind: 'exercises',
+      exercises: [{ tracking: 'duration', sets: [{ duration: '45' }] }],
     });
   });
 

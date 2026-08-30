@@ -298,12 +298,31 @@ describe('SetEditor', () => {
   });
 
   it('labels warm-up sets distinctly from work sets', () => {
-    const { getByRole, getByText } = renderSetEditor({
+    const { getByLabelText, getByRole, getByText } = renderSetEditor({
       set: { ...incompleteSet, kind: 'warmup' },
     });
 
     expect(getByText('Warm-up 1')).toBeTruthy();
     expect(getByRole('checkbox', 'Mark warm-up 1 complete')).toBeTruthy();
+    expect(getByLabelText('Warm-up 1 weight in kilograms')).toBeTruthy();
+    expect(getByLabelText('Warm-up 1 repetitions')).toBeTruthy();
+    expect(getByLabelText('Warm-up 1 RPE')).toBeTruthy();
+    expect(getByRole('button', 'Remove warm-up 1')).toBeTruthy();
+    expect(getByText('Remove warm-up 1')).toBeTruthy();
+  });
+
+  it('keeps a completed warm-up named and uses that name for duration controls', () => {
+    const { getByLabelText, getByRole, getByText } = renderSetEditor({
+      set: { ...incompleteSet, duration: '30', kind: 'warmup', completed: true },
+      tracking: 'duration',
+      isCurrent: false,
+    });
+
+    expect(getByText('Warm-up 1 completed')).toBeTruthy();
+    expect(getByRole('checkbox', 'Mark warm-up 1 incomplete')).toBeTruthy();
+    expect(getByLabelText('Warm-up 1 duration in seconds')).toBeTruthy();
+    expect(getByLabelText('Warm-up 1 RPE')).toBeTruthy();
+    expect(getByRole('button', 'Remove warm-up 1')).toBeTruthy();
   });
 
   it('offers a 44 point plate-calculator action only for weight-repetition sets', () => {
@@ -311,7 +330,7 @@ describe('SetEditor', () => {
     const weightEditor = renderSetEditor({ onOpenPlateCalculator });
     const action = weightEditor.getByRole('button', 'Calculate plates for set 1');
 
-    expect(StyleSheet.flatten(action.props.style).minHeight).toBeGreaterThanOrEqual(44);
+    expect(StyleSheet.flatten(action.props.style)).toMatchObject({ minWidth: 44, minHeight: 44 });
     act(() => action.props.onPress());
     expect(onOpenPlateCalculator).toHaveBeenCalledTimes(1);
 

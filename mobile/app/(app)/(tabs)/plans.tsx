@@ -59,7 +59,12 @@ export default function PlansScreen() {
 
   const { data: profile, isLoading: profileLoading, isError, refetch } = useUserProfile();
   const { data: plan, isLoading: planLoading } = useWorkoutPlan();
-  const { data: meal, isLoading: mealLoading } = useMealPlan();
+  const {
+    data: meal,
+    isLoading: mealLoading,
+    isError: mealIsError,
+    refetch: refetchMeal,
+  } = useMealPlan();
   const { hasChanged, markSeen, ready: provenanceReady, updatedAt } = usePlanProvenance(plan?.days);
   const progress = usePlanProgress(plan?.days ?? []);
   const pointer = parseActivePlan(profile?.active_workout_plan);
@@ -80,7 +85,11 @@ export default function PlansScreen() {
 
   const supplements = parseSupplements(profile?.supplements_data ?? null);
 
-  if (profileLoading || planLoading || (top === 'training' && progress.isLoading)) {
+  if (
+    profileLoading ||
+    (top === 'training' && (planLoading || progress.isLoading)) ||
+    (top === 'nutrition' && mealLoading)
+  ) {
     return (
       <Screen archetype="root">
         <SkeletonCard lines={2} />
@@ -90,13 +99,21 @@ export default function PlansScreen() {
     );
   }
 
-  if (isError || (top === 'training' && progress.isError)) {
+  if (
+    isError ||
+    (top === 'training' && progress.isError) ||
+    (top === 'nutrition' && mealIsError)
+  ) {
     return (
       <Screen archetype="root">
         <ErrorState
           onRetry={() => {
-            void refetch();
-            if (progress.isError) void progress.refetch();
+            if (top === 'nutrition' && mealIsError) {
+              void refetchMeal();
+            } else {
+              void refetch();
+              if (progress.isError) void progress.refetch();
+            }
           }}
         />
       </Screen>
@@ -198,7 +215,11 @@ export default function PlansScreen() {
                               onPress={() => setSelectedExercise(exercise)}
                               accessibilityRole="button"
                               accessibilityLabel={`Show details for ${exercise.name}`}
-                              style={{ minHeight: HIT_SLOP_MIN, justifyContent: 'center' }}
+                              style={{
+                                minWidth: HIT_SLOP_MIN,
+                                minHeight: HIT_SLOP_MIN,
+                                justifyContent: 'center',
+                              }}
                             >
                               <Text variant="bodySm" tone="primary">
                                 Details

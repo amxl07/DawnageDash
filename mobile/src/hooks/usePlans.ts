@@ -77,8 +77,11 @@ const optionalFiniteNumber = (value: unknown): number | undefined => {
 };
 
 const suppliedExerciseName = (exercise: Record<string, unknown>): string | undefined => {
-  const value = exercise.name ?? exercise.Exercise ?? exercise.exercise;
-  return typeof value === 'string' ? optionalString(value) : undefined;
+  for (const key of ['name', 'exercise', 'Exercise'] as const) {
+    const value = exercise[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return undefined;
 };
 
 function normalizeExercise(ex: Record<string, unknown>, index: number): PlanExercise {
@@ -105,7 +108,7 @@ function normalizeExercise(ex: Record<string, unknown>, index: number): PlanExer
 
   return {
     id: typeof ex.id === 'string' ? ex.id : String(index),
-    name: optionalString(ex.Exercise ?? ex.exercise ?? ex.name) ?? `Exercise ${index + 1}`,
+    name: suppliedExerciseName(ex) ?? `Exercise ${index + 1}`,
     sets,
     reps: String(ex.reps ?? ex.Reps ?? ''),
     ...(duration ? { duration } : {}),
@@ -231,6 +234,78 @@ export type Meal = {
 
 const MEAL_ORDER = ['Breakfast', 'Mid Morning Snack', 'Lunch', 'Evening Snack', 'Dinner'];
 
+export async function fetchMealPlan(
+  userId: string,
+  pointer: MealPointer,
+): Promise<{ meals: Meal[]; pointer: MealPointer }> {
+  const { data: rows, error } = await supabase
+    .from('meal_plans')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('calories_target', pointer.calories)
+    .eq('diet_type', pointer.dietType);
+  if (error) throw error;
+
+  const pick = (list: Record<string, unknown>[] | null | undefined) => {
+    if (!list?.length) return null;
+    // Prefer 'Daily' rows, else legacy 'Monday'.
+    const daily = list.filter((r) => r.day_of_week === 'Daily');
+    const source = daily.length ? daily : list.filter((r) => r.day_of_week === 'Monday');
+    if (!source.length) return null;
+    const byType = new Map<string, Record<string, unknown>>();
+    for (const r of source) byType.set(String(r.meal_type), r);
+    return MEAL_ORDER.filter((t) => byType.has(t)).map((t) => {
+      const r = byType.get(t)!;
+      return {
+        meal_type: t,
+        description: (r.description as string) ?? null,
+        calories: r.calories === null ? null : Number(r.calories),
+        protein: r.protein === null ? null : Number(r.protein),
+        carbs: r.carbs === null ? null : Number(r.carbs),
+        fats: r.fats === null ? null : Number(r.fats),
+      };
+    });
+  };
+
+  const fromUser = pick(rows);
+  if (fromUser?.length) return { meals: fromUser, pointer };
+
+  const { data: template, error: templateError } = await supabase
+    .from('meal_templates')
+    .select('*')
+    .is('coach_id', null)
+    .eq('calories_target', pointer.calories)
+    .eq('diet_type', pointer.dietType)
+    .maybeSingle();
+  if (templateError) throw templateError;
+
+  if (!template) return { meals: [], pointer };
+  const content = parseJson<Record<string, Record<string, unknown>>>(
+    (template.content as string) ?? null,
+  );
+  if (!content) return { meals: [], pointer };
+
+  const KEYS: [string, string][] = [
+    ['breakfast', 'Breakfast'],
+    ['mid_morning_snack', 'Mid Morning Snack'],
+    ['lunch', 'Lunch'],
+    ['evening_snack', 'Evening Snack'],
+    ['dinner', 'Dinner'],
+  ];
+  const meals = KEYS.filter(([k]) => content[k]).map(([k, label]) => {
+    const m = content[k];
+    return {
+      meal_type: label,
+      description: m.name ? String(m.name) : null,
+      calories: m.calories === undefined ? null : Number(m.calories),
+      protein: m.protein === undefined ? null : Number(m.protein),
+      carbs: m.carbs === undefined ? null : Number(m.carbs),
+      fats: m.fats === undefined ? null : Number(m.fats),
+    };
+  });
+  return { meals, pointer };
+}
+
 export function useMealPlan() {
   const { user } = useAuth();
   const { data: profile } = useUserProfile();
@@ -240,71 +315,7 @@ export function useMealPlan() {
     queryKey: ['mealPlan', user?.id, profile?.active_meal_plan],
     queryFn: async (): Promise<{ meals: Meal[]; pointer: MealPointer | null }> => {
       if (!user?.id || !pointer) return { meals: [], pointer: null };
-
-      const { data: rows } = await supabase
-        .from('meal_plans')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('calories_target', pointer.calories)
-        .eq('diet_type', pointer.dietType);
-
-      const pick = (list: Record<string, unknown>[] | null | undefined) => {
-        if (!list?.length) return null;
-        // Prefer 'Daily' rows, else legacy 'Monday'.
-        const daily = list.filter((r) => r.day_of_week === 'Daily');
-        const source = daily.length ? daily : list.filter((r) => r.day_of_week === 'Monday');
-        if (!source.length) return null;
-        const byType = new Map<string, Record<string, unknown>>();
-        for (const r of source) byType.set(String(r.meal_type), r);
-        return MEAL_ORDER.filter((t) => byType.has(t)).map((t) => {
-          const r = byType.get(t)!;
-          return {
-            meal_type: t,
-            description: (r.description as string) ?? null,
-            calories: r.calories === null ? null : Number(r.calories),
-            protein: r.protein === null ? null : Number(r.protein),
-            carbs: r.carbs === null ? null : Number(r.carbs),
-            fats: r.fats === null ? null : Number(r.fats),
-          };
-        });
-      };
-
-      const fromUser = pick(rows);
-      if (fromUser?.length) return { meals: fromUser, pointer };
-
-      const { data: template } = await supabase
-        .from('meal_templates')
-        .select('*')
-        .is('coach_id', null)
-        .eq('calories_target', pointer.calories)
-        .eq('diet_type', pointer.dietType)
-        .maybeSingle();
-
-      if (!template) return { meals: [], pointer };
-      const content = parseJson<Record<string, Record<string, unknown>>>(
-        (template.content as string) ?? null,
-      );
-      if (!content) return { meals: [], pointer };
-
-      const KEYS: [string, string][] = [
-        ['breakfast', 'Breakfast'],
-        ['mid_morning_snack', 'Mid Morning Snack'],
-        ['lunch', 'Lunch'],
-        ['evening_snack', 'Evening Snack'],
-        ['dinner', 'Dinner'],
-      ];
-      const meals = KEYS.filter(([k]) => content[k]).map(([k, label]) => {
-        const m = content[k];
-        return {
-          meal_type: label,
-          description: m.name ? String(m.name) : null,
-          calories: m.calories === undefined ? null : Number(m.calories),
-          protein: m.protein === undefined ? null : Number(m.protein),
-          carbs: m.carbs === undefined ? null : Number(m.carbs),
-          fats: m.fats === undefined ? null : Number(m.fats),
-        };
-      });
-      return { meals, pointer };
+      return fetchMealPlan(user.id, pointer);
     },
     enabled: !!user?.id && !!pointer,
   });

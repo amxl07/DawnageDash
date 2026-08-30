@@ -31,8 +31,45 @@ import { iconSize, spacing, useTheme } from '@/theme';
 
 type LogRow = { id: string; date: string; title: string | null; content: string | null };
 
+function loggedSetText(
+  set: {
+    setNumber: number;
+    reps: string;
+    weight: string;
+    rpe: string;
+    duration?: string;
+    kind?: 'warmup' | 'work';
+    completed: boolean;
+  },
+  tracking: 'weight-reps' | 'duration' | undefined,
+): { visible: string; accessibility: string } {
+  const setName = set.kind === 'warmup' ? `Warm-up ${set.setNumber}` : `Set ${set.setNumber}`;
+  const completionVisible = set.completed ? ' · Completed' : '';
+  const completionAccessibility = set.completed ? ', completed' : '';
+  const isDuration =
+    tracking === 'duration' ||
+    (set.duration !== undefined && !set.weight.trim() && !set.reps.trim());
+
+  if (isDuration) {
+    const duration = set.duration || '—';
+    return {
+      visible: `${setName}: ${duration} sec${completionVisible}`,
+      accessibility: `${setName}, ${duration} seconds${completionAccessibility}`,
+    };
+  }
+
+  const weight = set.weight || '—';
+  const reps = set.reps || '—';
+  return {
+    visible: `${setName}: ${weight} kg × ${reps}${set.rpe ? ` @ RPE ${set.rpe}` : ''}${completionVisible}`,
+    accessibility: `${setName}, ${weight} kilograms by ${reps} repetitions${
+      set.rpe ? `, RPE ${set.rpe}` : ''
+    }${completionAccessibility}`,
+  };
+}
+
 /** Renders all three historical content shapes without crashing. */
-const LogCard = memo(function LogCard({ log, onEdit }: { log: LogRow; onEdit: () => void }) {
+export const LogCard = memo(function LogCard({ log, onEdit }: { log: LogRow; onEdit: () => void }) {
   const { colors } = useTheme();
   const [open, setOpen] = useState(false);
   const parsed = useMemo(() => parseWorkoutContent(log.content), [log.content]);
@@ -98,12 +135,20 @@ const LogCard = memo(function LogCard({ log, onEdit }: { log: LogRow; onEdit: ()
               >
                 <Text>{ex.name}</Text>
                 {ex.sets.length ? (
-                  ex.sets.map((s) => (
-                    <Text key={s.setNumber} variant="bodySm" tone="muted" numeric>
-                      Set {s.setNumber}: {s.weight || '—'} kg × {s.reps || '—'}
-                      {s.rpe ? ` @ RPE ${s.rpe}` : ''}
-                    </Text>
-                  ))
+                  ex.sets.map((s) => {
+                    const label = loggedSetText(s, ex.tracking);
+                    return (
+                      <Text
+                        key={s.setNumber}
+                        variant="bodySm"
+                        tone="muted"
+                        numeric
+                        accessibilityLabel={label.accessibility}
+                      >
+                        {label.visible}
+                      </Text>
+                    );
+                  })
                 ) : ex.legacy ? (
                   // Legacy object format.
                   <Text variant="bodySm" tone="muted" numeric>

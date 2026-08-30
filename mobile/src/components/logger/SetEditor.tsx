@@ -205,7 +205,11 @@ export function SetEditor({
           <Check size={iconSize.sm} color={colors.success} strokeWidth={3} accessible={false} />
         ) : null}
         <Text variant="bodySm" tone={set.completed ? 'success' : 'muted'}>
-          {set.completed ? 'Completed' : setLabel}
+          {set.completed
+            ? set.kind === 'warmup'
+              ? `${setLabel} completed`
+              : 'Completed'
+            : setLabel}
         </Text>
       </Pressable>
     </Animated.View>
@@ -215,7 +219,7 @@ export function SetEditor({
     <View style={{ flex: 1, gap: spacing.xs }}>
       <SetField
         compact={stacked}
-        label={`Set ${setNumber} weight in kilograms`}
+        label={`${setLabel} weight in kilograms`}
         shortLabel="Weight (kg)"
         value={set.weight}
         keyboardType="decimal-pad"
@@ -225,8 +229,13 @@ export function SetEditor({
         <Pressable
           onPress={onOpenPlateCalculator}
           accessibilityRole="button"
-          accessibilityLabel={`Calculate plates for set ${setNumber}`}
-          style={{ minHeight: HIT_SLOP_MIN, alignSelf: 'flex-start', justifyContent: 'center' }}
+          accessibilityLabel={`Calculate plates for ${spokenSetLabel}`}
+          style={{
+            minWidth: HIT_SLOP_MIN,
+            minHeight: HIT_SLOP_MIN,
+            alignSelf: 'flex-start',
+            justifyContent: 'center',
+          }}
         >
           <Text variant="bodySm" tone="primary">
             Plates
@@ -238,7 +247,7 @@ export function SetEditor({
   const repetitions = (
     <SetField
       compact={stacked}
-      label={`Set ${setNumber} repetitions`}
+      label={`${setLabel} repetitions`}
       shortLabel="Repetitions"
       value={set.reps}
       keyboardType="number-pad"
@@ -248,7 +257,7 @@ export function SetEditor({
   const duration = (
     <SetField
       compact={stacked}
-      label={`Set ${setNumber} duration in seconds`}
+      label={`${setLabel} duration in seconds`}
       shortLabel="Duration (seconds)"
       value={set.duration}
       keyboardType="number-pad"
@@ -258,7 +267,7 @@ export function SetEditor({
   const rpe = (
     <SetField
       compact={stacked}
-      label={`Set ${setNumber} RPE`}
+      label={`${setLabel} RPE`}
       shortLabel="RPE"
       value={set.rpe}
       keyboardType="decimal-pad"
@@ -270,7 +279,7 @@ export function SetEditor({
       onPress={canRemove ? onRemove : undefined}
       disabled={!canRemove}
       accessibilityRole="button"
-      accessibilityLabel={`Remove set ${setNumber}`}
+      accessibilityLabel={`Remove ${spokenSetLabel}`}
       accessibilityState={{ disabled: !canRemove }}
       style={{
         minWidth: HIT_SLOP_MIN,
@@ -286,7 +295,7 @@ export function SetEditor({
       <Trash2 size={iconSize.sm} color={colors.destructive} strokeWidth={2} accessible={false} />
       {stacked ? (
         <Text variant="bodySm" tone="primary">
-          Remove set
+          Remove {spokenSetLabel}
         </Text>
       ) : null}
     </Pressable>

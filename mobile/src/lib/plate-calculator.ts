@@ -9,6 +9,15 @@ const validateNonnegativeFinite = (value: number, label: string) => {
   }
 };
 
+const MAX_DECIMAL_PLACES = 6;
+
+function decimalPlaces(value: number): number {
+  const [coefficient, exponentText] = value.toString().toLowerCase().split('e');
+  const fractionDigits = coefficient.split('.')[1]?.length ?? 0;
+  const exponent = exponentText ? Number(exponentText) : 0;
+  return Math.max(0, fractionDigits - exponent);
+}
+
 export function calculatePlates(
   targetKg: number,
   barKg: number,
@@ -22,18 +31,34 @@ export function calculatePlates(
   }
 
   const pairs = [...new Set(availablePairs.filter((pair) => pair > 0))].sort((a, b) => b - a);
+  const precision = Math.max(decimalPlaces(targetKg), decimalPlaces(barKg), ...pairs.map(decimalPlaces));
+  if (precision > MAX_DECIMAL_PLACES) {
+    throw new RangeError(`Loads support at most ${MAX_DECIMAL_PLACES} decimal places.`);
+  }
+  const scale = 10 ** precision;
+  const toUnits = (value: number, label: string) => {
+    const units = Math.round(value * scale);
+    if (!Number.isSafeInteger(units)) {
+      throw new RangeError(`${label} is outside the supported range.`);
+    }
+    return units;
+  };
+  const targetUnits = toUnits(targetKg, 'Target load');
+  const barUnits = toUnits(barKg, 'Bar load');
   const platesPerSide: number[] = [];
-  let remainingPerSide = (targetKg - barKg) / 2;
+  let remainingTotalUnits = targetUnits - barUnits;
 
   for (const plate of pairs) {
-    while (remainingPerSide + Number.EPSILON >= plate) {
+    const pairUnits = toUnits(plate * 2, 'Plate pair');
+    const pairCount = Math.floor(remainingTotalUnits / pairUnits);
+    for (let count = 0; count < pairCount; count += 1) {
       platesPerSide.push(plate);
-      remainingPerSide -= plate;
     }
+    remainingTotalUnits -= pairCount * pairUnits;
   }
 
   return {
     platesPerSide,
-    remainderKg: Math.max(0, Number((remainingPerSide * 2).toFixed(12))),
+    remainderKg: remainingTotalUnits / scale,
   };
 }

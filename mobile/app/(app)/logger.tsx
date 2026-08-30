@@ -213,11 +213,7 @@ export default function LoggerScreen() {
             ? parsed.exercises.map((e, i) => ({
                 id: String(i),
                 name: e.name,
-                tracking:
-                  e.sets.some((set) => set.duration !== undefined) &&
-                  e.sets.every((set) => !set.reps.trim())
-                    ? 'duration'
-                    : 'weight-reps',
+                tracking: e.tracking ?? 'weight-reps',
                 sets: e.sets.length
                   ? e.sets.map((s, setIndex) => ({
                       id: `${i}-set-${setIndex + 1}`,
@@ -366,13 +362,14 @@ export default function LoggerScreen() {
       planDayNumber: submittedState.selectedDay,
       exercises: submittedState.exercises.map((ex) => ({
         name: ex.name,
+        tracking: ex.tracking,
         sets: ex.sets.map((s, i) => ({
           setNumber: i + 1,
           reps: s.reps,
           weight: s.weight,
           rpe: s.rpe,
           completed: s.completed,
-          duration: s.duration,
+          ...(ex.tracking === 'duration' ? { duration: s.duration } : {}),
           kind: s.kind,
         })),
       })),

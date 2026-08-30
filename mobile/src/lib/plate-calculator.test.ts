@@ -15,6 +15,13 @@ describe('calculatePlates', () => {
     });
   });
 
+  it('uses scaled decimal units without skipping an exactly fitting plate', () => {
+    expect(calculatePlates(65.1, 20.1, [20, 10, 5, 2.5, 1.25])).toEqual({
+      platesPerSide: [20, 2.5],
+      remainderKg: 0,
+    });
+  });
+
   it('uses positive plate pairs in descending order', () => {
     expect(calculatePlates(100, 20, [0, 5, 25, 10, 20])).toEqual({
       platesPerSide: [25, 10, 5],
