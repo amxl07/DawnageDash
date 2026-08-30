@@ -53,7 +53,16 @@ export function PlateCalculatorSheet({
     if (target < barKg) {
       return { error: 'Target load must be at least the bar weight.' } as const;
     }
-    return { result: calculatePlates(target, barKg, AVAILABLE_PAIRS) } as const;
+    try {
+      return { result: calculatePlates(target, barKg, AVAILABLE_PAIRS) } as const;
+    } catch (error) {
+      return {
+        error:
+          error instanceof RangeError && error.message.includes('decimal places')
+            ? 'Use no more than 6 decimal places.'
+            : 'This load cannot be calculated. Check the target and bar weights.',
+      } as const;
+    }
   }, [barChoice, customBarKg, targetKg]);
 
   const resultLabel = calculation.result

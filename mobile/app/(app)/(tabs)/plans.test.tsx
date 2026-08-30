@@ -181,10 +181,22 @@ describe('PlansScreen plan provenance', () => {
     });
 
     act(() => renderer.root.findByProps({ accessibilityLabel: 'Nutrition' }).props.onPress());
+    expect(renderer.root.findByProps({ children: 'Your plan' })).toBeTruthy();
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Training' })).toBeTruthy();
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Nutrition' })).toBeTruthy();
     const retry = renderer.root.findByProps({ accessibilityLabel: 'Retry' });
     act(() => retry.props.onPress());
 
     expect(mockMealRefetch).toHaveBeenCalledTimes(1);
+
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'Training' }).props.onPress());
+    expect(renderer.root.findByProps({ children: 'Assigned plan' })).toBeTruthy();
+    expect(
+      renderer.root.findAll(
+        (node: { props: { accessibilityLabel?: string } }) =>
+          node.props.accessibilityLabel === 'Retry',
+      ),
+    ).toHaveLength(0);
   });
 
   it('does not let Training loading block healthy Nutrition content', () => {

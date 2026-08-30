@@ -109,4 +109,21 @@ describe('PlateCalculatorSheet', () => {
     expect(text()).toContain('Enter a finite nonnegative bar weight.');
     expect(onUse).not.toHaveBeenCalled();
   });
+
+  it('keeps unsupported finite precision editable and disables applying it', () => {
+    const { renderer, byLabel, text, onUse } = renderSheet('65.1000001');
+
+    act(() => byLabel('Custom bar').props.onPress());
+    act(() => byLabel('Custom bar weight in kilograms').props.onChangeText('20.1'));
+    expect(byLabel('Target load in kilograms').props.value).toBe('65.1000001');
+    expect(byLabel('Custom bar weight in kilograms').props.value).toBe('20.1');
+    expect(text()).toContain('Use no more than 6 decimal places.');
+    expect(renderer.root.findByProps({ accessibilityLiveRegion: 'polite' }).props.children).toBe(
+      'Use no more than 6 decimal places.',
+    );
+    const use = byLabel('Use this load');
+    expect(use.props.accessibilityState).toEqual({ disabled: true });
+    expect(use.props.onPress).toBeUndefined();
+    expect(onUse).not.toHaveBeenCalled();
+  });
 });

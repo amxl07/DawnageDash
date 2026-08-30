@@ -84,11 +84,11 @@ export default function PlansScreen() {
   }, [hasRenderedTrainingPlan, markSeen, updatedAt]);
 
   const supplements = parseSupplements(profile?.supplements_data ?? null);
+  const showNutritionExtras = !mealIsError && !mealLoading;
 
   if (
     profileLoading ||
-    (top === 'training' && (planLoading || progress.isLoading)) ||
-    (top === 'nutrition' && mealLoading)
+    (top === 'training' && (planLoading || progress.isLoading))
   ) {
     return (
       <Screen archetype="root">
@@ -99,21 +99,13 @@ export default function PlansScreen() {
     );
   }
 
-  if (
-    isError ||
-    (top === 'training' && progress.isError) ||
-    (top === 'nutrition' && mealIsError)
-  ) {
+  if (isError || (top === 'training' && progress.isError)) {
     return (
       <Screen archetype="root">
         <ErrorState
           onRetry={() => {
-            if (top === 'nutrition' && mealIsError) {
-              void refetchMeal();
-            } else {
-              void refetch();
-              if (progress.isError) void progress.refetch();
-            }
+            void refetch();
+            if (progress.isError) void progress.refetch();
           }}
         />
       </Screen>
@@ -263,7 +255,9 @@ export default function PlansScreen() {
           )
         ) : (
           <View style={{ gap: spacing.md }}>
-            {mealLoading ? (
+            {mealIsError ? (
+              <ErrorState onRetry={() => void refetchMeal()} />
+            ) : mealLoading ? (
               <SkeletonCard lines={4} />
             ) : !meal?.pointer ? (
               <Card>
@@ -319,31 +313,34 @@ export default function PlansScreen() {
               </>
             )}
 
-            <Card style={{ gap: spacing.md }}>
-              <Text variant="h2">Supplements</Text>
-              {supplements.length ? (
-                supplements.map((supplement, index) => (
-                  <View
-                    key={supplement.id ?? index}
-                    style={{
-                      gap: spacing.xs,
-                      paddingTop: index === 0 ? 0 : spacing.md,
-                      borderTopWidth: index === 0 ? 0 : 1,
-                      borderTopColor: colors.border,
-                    }}
-                  >
-                    <Text>{supplement.name}</Text>
-                    <Text variant="bodySm" tone="muted">
-                      {supplement.serving}{supplement.timing ? ` · ${supplement.timing}` : ''}
-                    </Text>
-                  </View>
-                ))
-              ) : (
-                <Text variant="bodySm" tone="muted">Nothing has been prescribed yet.</Text>
-              )}
-            </Card>
+            {showNutritionExtras ? (
+              <Card style={{ gap: spacing.md }}>
+                <Text variant="h2">Supplements</Text>
+                {supplements.length ? (
+                  supplements.map((supplement, index) => (
+                    <View
+                      key={supplement.id ?? index}
+                      style={{
+                        gap: spacing.xs,
+                        paddingTop: index === 0 ? 0 : spacing.md,
+                        borderTopWidth: index === 0 ? 0 : 1,
+                        borderTopColor: colors.border,
+                      }}
+                    >
+                      <Text>{supplement.name}</Text>
+                      <Text variant="bodySm" tone="muted">
+                        {supplement.serving}{supplement.timing ? ` · ${supplement.timing}` : ''}
+                      </Text>
+                    </View>
+                  ))
+                ) : (
+                  <Text variant="bodySm" tone="muted">Nothing has been prescribed yet.</Text>
+                )}
+              </Card>
+            ) : null}
 
-            {profile?.nutrition_note || profile?.cardio_note || profile?.steps_note ? (
+            {showNutritionExtras &&
+            (profile?.nutrition_note || profile?.cardio_note || profile?.steps_note) ? (
               <Card style={{ gap: spacing.md }}>
                 <Text variant="h2">Coach notes</Text>
                 {profile.nutrition_note ? <Text variant="bodySm">{profile.nutrition_note}</Text> : null}

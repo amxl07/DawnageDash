@@ -142,4 +142,42 @@ describe('LogCard set history', () => {
       }),
     );
   });
+
+  it('uses exercise tracking instead of a stale blank duration field for strength rows', () => {
+    const lines = expandedText(
+      JSON.stringify({
+        version: 2,
+        planDayNumber: 1,
+        exercises: [
+          {
+            name: 'Deadlift',
+            tracking: 'weight-reps',
+            sets: [
+              {
+                setNumber: 1,
+                reps: '5',
+                weight: '100',
+                rpe: '',
+                duration: '',
+                kind: 'work',
+                completed: true,
+              },
+              {
+                setNumber: 2,
+                reps: '',
+                weight: '',
+                rpe: '',
+                duration: '',
+                kind: 'work',
+                completed: false,
+              },
+            ],
+          },
+        ],
+      }),
+    );
+
+    expect(lines).toContainEqual(expect.objectContaining({ children: 'Set 2: — kg × —' }));
+    expect(lines.map((line) => String(line.children)).join(' ')).not.toContain('— sec');
+  });
 });

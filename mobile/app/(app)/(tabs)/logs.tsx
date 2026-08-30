@@ -46,9 +46,7 @@ function loggedSetText(
   const setName = set.kind === 'warmup' ? `Warm-up ${set.setNumber}` : `Set ${set.setNumber}`;
   const completionVisible = set.completed ? ' · Completed' : '';
   const completionAccessibility = set.completed ? ', completed' : '';
-  const isDuration =
-    tracking === 'duration' ||
-    (set.duration !== undefined && !set.weight.trim() && !set.reps.trim());
+  const isDuration = tracking === 'duration';
 
   if (isDuration) {
     const duration = set.duration || '—';
