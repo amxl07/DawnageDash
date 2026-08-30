@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 
 import { ExerciseSlide } from '@/components/logger/ExerciseSlide';
+import { PlanDayButton } from '@/components/logger/PlanDayButton';
 import { SwipeableSlide } from '@/components/logger/SwipeableSlide';
 import { RestTimer } from '@/components/logger/RestTimer';
 import {
@@ -552,26 +553,13 @@ export default function LoggerScreen() {
               {plan.days.map((d) => {
                 const active = d.day_number === state.selectedDay;
                 return (
-                  <Pressable
+                  <PlanDayButton
                     key={d.id}
+                    dayNumber={d.day_number}
+                    focus={d.focus}
+                    active={active}
                     onPress={() => loadDay(d.day_number, true)}
-                    accessibilityRole="tab"
-                    accessibilityLabel={`Day ${d.day_number}${d.focus ? `, ${d.focus}` : ''}`}
-                    accessibilityState={{ selected: active }}
-                    style={{
-                      minHeight: 40,
-                      justifyContent: 'center',
-                      paddingHorizontal: spacing.base,
-                      borderRadius: 999,
-                      borderWidth: 1,
-                      borderColor: active ? colors.primary : colors.borderStrong,
-                      backgroundColor: active ? colors.primaryFill : 'transparent',
-                    }}
-                  >
-                    <Text variant="bodySm" tone={active ? 'onPrimary' : 'muted'}>
-                      Day {d.day_number}
-                    </Text>
-                  </Pressable>
+                  />
                 );
               })}
             </ScrollView>

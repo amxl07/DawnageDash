@@ -67,8 +67,6 @@ export function WeekStrip({ days, onSelectDay }: Props) {
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ gap: spacing.sm }}
-        accessibilityRole="adjustable"
-        accessibilityLabel="This week"
       >
         {days.map((d) => {
           const isToday = d.isToday;

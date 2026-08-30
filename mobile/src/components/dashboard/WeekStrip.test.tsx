@@ -83,13 +83,11 @@ describe('WeekStrip', () => {
   it('keeps all 44pt days in a horizontal week strip', () => {
     const root = render(<WeekStrip days={week()} onSelectDay={jest.fn()} />);
     const [strip] = root.findAll(
-      (candidate: { props: { accessibilityRole?: string; accessibilityLabel?: string; horizontal?: boolean } }) =>
-        candidate.props.accessibilityRole === 'adjustable' &&
-        candidate.props.accessibilityLabel === 'This week' &&
-        candidate.props.horizontal === true,
+      (candidate: { props: { horizontal?: boolean } }) => candidate.props.horizontal === true,
     );
 
     expect(strip.props.contentContainerStyle).toMatchObject({ gap: 8 });
+    expect(strip.props.accessibilityRole).toBeUndefined();
     expect(button(root, 'Friday 28 August, checked in, workout done. Tap to edit.').props.style).toMatchObject({
       minWidth: 44,
       minHeight: 44,
