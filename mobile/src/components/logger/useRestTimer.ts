@@ -1,22 +1,43 @@
 import * as Haptics from 'expo-haptics';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  createContext,
+  createElement,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { AccessibilityInfo, AppState } from 'react-native';
 
 export const REST_PRESETS = [60, 90, 120, 180];
 
+export function remainingAt(endsAt: number, now: number): number {
+  return Math.max(0, Math.round((endsAt - now) / 1000));
+}
+
+export type RestTimerState = {
+  duration: number;
+  remaining: number;
+  progress: number;
+  running: boolean;
+  complete: boolean;
+  start: (seconds: number) => void;
+  toggle: () => void;
+  reset: () => void;
+  skip: () => void;
+};
+
+const RestTimerContext = createContext<RestTimerState | null>(null);
+
 /**
- * Rest timer state, driven by an absolute `endsAt` timestamp.
- *
- * NOT a decrementing interval. RN timers are throttled or suspended when the
- * app backgrounds — which is exactly when a rest timer is in use (screen off,
- * phone in a pocket). An interval-based countdown freezes or drifts; deriving
- * remaining time from Date.now() on every tick and on every foreground stays
- * correct. PerfectGymCoach's version has this bug; ours does not.
- *
- * Lifted out of the widget so the compact card and the full-screen view can
- * share one timer rather than each running their own.
+ * Owns one rest-timer run above navigation so screen and consumer remounts do
+ * not create a second clock. The display interval only requests refreshes;
+ * elapsed time always comes from the absolute end timestamp.
  */
-export function useRestTimer() {
+export function RestTimerProvider({ children }: { children: ReactNode }) {
   const [duration, setDuration] = useState(90);
   const [endsAt, setEndsAt] = useState<number | null>(null);
   const [pausedRemaining, setPausedRemaining] = useState<number | null>(null);
@@ -24,44 +45,45 @@ export function useRestTimer() {
   const [complete, setComplete] = useState(false);
   const firedRef = useRef(false);
 
-  const compute = useCallback(() => {
-    if (pausedRemaining !== null) return pausedRemaining;
-    if (endsAt === null) return duration;
-    return Math.max(0, Math.round((endsAt - Date.now()) / 1000));
-  }, [endsAt, pausedRemaining, duration]);
+  const finish = useCallback(() => {
+    if (firedRef.current) return;
+    firedRef.current = true;
+    setRemaining(0);
+    setComplete(true);
+    setEndsAt(null);
+    setPausedRemaining(null);
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    AccessibilityInfo.announceForAccessibility('Rest over.');
+  }, []);
 
-  useEffect(() => {
-    setRemaining(compute());
+  const syncFromClock = useCallback(() => {
     if (endsAt === null || pausedRemaining !== null) return;
+    const next = remainingAt(endsAt, Date.now());
+    setRemaining(next);
+    if (next === 0) finish();
+  }, [endsAt, finish, pausedRemaining]);
 
-    const id = setInterval(() => {
-      const next = Math.max(0, Math.round((endsAt - Date.now()) / 1000));
-      setRemaining(next);
-      if (next === 0 && !firedRef.current) {
-        firedRef.current = true;
-        setComplete(true);
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        AccessibilityInfo.announceForAccessibility('Rest over.');
-        setEndsAt(null);
-      }
-    }, 250);
-    return () => clearInterval(id);
-  }, [endsAt, pausedRemaining, compute]);
-
-  // Recompute immediately on foreground rather than trusting the interval.
   useEffect(() => {
-    const sub = AppState.addEventListener('change', (s) => {
-      if (s === 'active') setRemaining(compute());
-    });
-    return () => sub.remove();
-  }, [compute]);
+    if (endsAt === null || pausedRemaining !== null) return;
+    syncFromClock();
+    const id = setInterval(syncFromClock, 250);
+    return () => clearInterval(id);
+  }, [endsAt, pausedRemaining, syncFromClock]);
 
-  const start = useCallback((secs: number) => {
-    setDuration(secs);
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') syncFromClock();
+    });
+    return () => subscription.remove();
+  }, [syncFromClock]);
+
+  const start = useCallback((seconds: number) => {
     firedRef.current = false;
+    setDuration(seconds);
+    setRemaining(seconds);
     setComplete(false);
     setPausedRemaining(null);
-    setEndsAt(Date.now() + secs * 1000);
+    setEndsAt(Date.now() + seconds * 1000);
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, []);
 
@@ -69,47 +91,63 @@ export function useRestTimer() {
 
   const toggle = useCallback(() => {
     if (running && endsAt !== null) {
-      setPausedRemaining(Math.max(0, Math.round((endsAt - Date.now()) / 1000)));
+      const next = remainingAt(endsAt, Date.now());
+      if (next === 0) {
+        finish();
+        return;
+      }
+      setRemaining(next);
+      setPausedRemaining(next);
       setEndsAt(null);
-    } else if (pausedRemaining !== null) {
-      firedRef.current = false;
+      return;
+    }
+
+    if (pausedRemaining !== null) {
       setComplete(false);
       setEndsAt(Date.now() + pausedRemaining * 1000);
       setPausedRemaining(null);
-    } else {
-      start(duration);
+      return;
     }
-  }, [running, endsAt, pausedRemaining, duration, start]);
+
+    start(duration);
+  }, [duration, endsAt, finish, pausedRemaining, running, start]);
 
   const reset = useCallback(() => {
+    firedRef.current = false;
     setEndsAt(null);
     setPausedRemaining(null);
-    firedRef.current = false;
-    setComplete(false);
     setRemaining(duration);
+    setComplete(false);
   }, [duration]);
 
   const skip = useCallback(() => {
+    firedRef.current = true;
     setEndsAt(null);
     setPausedRemaining(null);
-    firedRef.current = true;
-    setComplete(false);
     setRemaining(0);
+    setComplete(false);
   }, []);
 
-  const progress = duration > 0 ? 1 - remaining / duration : 0;
+  const value = useMemo<RestTimerState>(() => {
+    const progress = duration > 0 ? 1 - remaining / duration : 0;
+    return {
+      duration,
+      remaining,
+      progress: Math.max(0, Math.min(1, progress)),
+      running,
+      complete,
+      start,
+      toggle,
+      reset,
+      skip,
+    };
+  }, [complete, duration, remaining, reset, running, skip, start, toggle]);
 
-  return {
-    duration,
-    remaining,
-    progress: Math.max(0, Math.min(1, progress)),
-    running,
-    complete,
-    start,
-    toggle,
-    reset,
-    skip,
-  };
+  return createElement(RestTimerContext.Provider, { value }, children);
 }
 
-export type RestTimerState = ReturnType<typeof useRestTimer>;
+export function useRestTimer(): RestTimerState {
+  const timer = useContext(RestTimerContext);
+  if (!timer) throw new Error('useRestTimer must be used inside <RestTimerProvider>');
+  return timer;
+}

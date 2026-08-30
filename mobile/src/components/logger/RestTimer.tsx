@@ -66,7 +66,7 @@ function Presets({ timer }: { timer: RestTimerState }) {
           accessibilityState={{ selected: timer.duration === p }}
           style={{
             flex: 1,
-            minHeight: 40,
+            minHeight: HIT_SLOP_MIN,
             alignItems: 'center',
             justifyContent: 'center',
             borderRadius: radius.sm,

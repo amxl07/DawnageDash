@@ -2,6 +2,7 @@ import { Redirect, Stack, usePathname } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 
 import { ClientOnlyGate } from '@/components/auth/ClientOnlyGate';
+import { RestTimerProvider } from '@/components/logger/useRestTimer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotificationRouting } from '@/hooks/useNotificationRouting';
 import { useOnboarding } from '@/hooks/useOnboarding';
@@ -48,15 +49,17 @@ export default function AppLayout() {
   if (step >= 3 && onOnboarding) return <Redirect href="/(app)/(tabs)" />;
 
   return (
-    <Stack
-      screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
-    >
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
-      {/* The exercise carousel owns horizontal pans, so the interactive
-          back-swipe must be off or swiping between exercises pops the screen.
-          The header X is the way out. */}
-      <Stack.Screen name="logger" options={{ gestureEnabled: false }} />
-    </Stack>
+    <RestTimerProvider>
+      <Stack
+        screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
+      >
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
+        {/* The exercise carousel owns horizontal pans, so the interactive
+            back-swipe must be off or swiping between exercises pops the screen.
+            The header X is the way out. */}
+        <Stack.Screen name="logger" options={{ gestureEnabled: false }} />
+      </Stack>
+    </RestTimerProvider>
   );
 }

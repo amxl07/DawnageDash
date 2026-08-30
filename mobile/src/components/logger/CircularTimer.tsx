@@ -1,14 +1,12 @@
 import { Check } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
   withTiming,
-  runOnJS,
 } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 
@@ -16,8 +14,6 @@ import { Text } from '@/components/ui';
 import { useMotion, useTheme } from '@/theme';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-
-type Stage = 'running' | 'filling' | 'fading' | 'done';
 
 type Props = {
   /** 0..1 elapsed. */
@@ -31,6 +27,8 @@ type Props = {
 
 const mmss = (s: number) =>
   `${Math.floor(Math.max(0, s) / 60)}:${String(Math.max(0, s) % 60).padStart(2, '0')}`;
+
+const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
 
 /**
  * Circular rest timer with a choreographed completion.
@@ -58,64 +56,59 @@ export function CircularTimer({
 }: Props) {
   const { colors } = useTheme();
   const motion = useMotion();
-  const [stage, setStage] = useState<Stage>('running');
 
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
 
   const fill = useSharedValue(progress);
   const contentOpacity = useSharedValue(1);
-  const tickScale = useSharedValue(0);
-
-  // Track the live progress while running.
-  useEffect(() => {
-    if (stage !== 'running') return;
-    fill.value = withTiming(progress, { duration: 250, easing: Easing.linear });
-  }, [progress, stage, fill]);
+  const tickScale = useSharedValue(0.92);
+  const tickOpacity = useSharedValue(0);
 
   // Completion choreography.
   useEffect(() => {
-    if (!complete || stage !== 'running') return;
-
-    if (!motion.enabled) {
-      fill.value = 1;
-      contentOpacity.value = 0;
-      tickScale.value = 1;
-      setStage('done');
+    if (!complete) {
+      contentOpacity.set(1);
+      tickScale.set(0.92);
+      tickOpacity.set(0);
+      fill.set(
+        progress === 0 ? 0 : withTiming(progress, { duration: 250, easing: Easing.linear }),
+      );
       return;
     }
 
-    setStage('filling');
-    // (i) rush the ring to full
-    fill.value = withTiming(1, { duration: 280, easing: Easing.out(Easing.cubic) }, (done) => {
-      if (!done) return;
-      runOnJS(setStage)('fading');
-      // (ii) fade the ring and the countdown away
-      contentOpacity.value = withTiming(0, { duration: 220 }, (faded) => {
-        if (!faded) return;
-        runOnJS(setStage)('done');
-        // (iii) the tick lands
-        tickScale.value = withSpring(1, { mass: 0.8, damping: 11, stiffness: 160 });
-      });
-    });
-  }, [complete, stage, motion.enabled, fill, contentOpacity, tickScale]);
+    if (!motion.enabled) {
+      fill.set(1);
+      contentOpacity.set(0);
+      tickScale.set(1);
+      tickOpacity.set(1);
+      return;
+    }
 
-  // Reset when a new timer starts.
-  useEffect(() => {
-    if (complete) return;
-    setStage('running');
-    contentOpacity.value = 1;
-    tickScale.value = 0;
-  }, [complete, contentOpacity, tickScale]);
+    fill.set(
+      withTiming(1, { duration: 180, easing: EASE_OUT }, (filled) => {
+        'worklet';
+        if (!filled) return;
+        contentOpacity.set(
+          withTiming(0, { duration: 120, easing: EASE_OUT }, (faded) => {
+            'worklet';
+            if (!faded) return;
+            tickOpacity.set(withTiming(1, { duration: 160, easing: EASE_OUT }));
+            tickScale.set(withTiming(1, { duration: 160, easing: EASE_OUT }));
+          }),
+        );
+      }),
+    );
+  }, [complete, contentOpacity, fill, motion.enabled, progress, tickOpacity, tickScale]);
 
   const circleProps = useAnimatedProps(() => ({
-    strokeDashoffset: circumference * (1 - fill.value),
+    strokeDashoffset: circumference * (1 - fill.get()),
   }));
 
-  const ringStyle = useAnimatedStyle(() => ({ opacity: contentOpacity.value }));
+  const ringStyle = useAnimatedStyle(() => ({ opacity: contentOpacity.get() }));
   const tickStyle = useAnimatedStyle(() => ({
-    opacity: tickScale.value,
-    transform: [{ scale: tickScale.value }],
+    opacity: tickOpacity.get(),
+    transform: [{ scale: tickScale.get() }],
   }));
 
   return (
@@ -124,7 +117,7 @@ export function CircularTimer({
       accessible
       accessibilityRole="timer"
       accessibilityLabel={
-        stage === 'done' ? 'Rest complete' : `${mmss(remainingSeconds)} of rest remaining`
+        complete ? 'Rest complete' : `${mmss(remainingSeconds)} of rest remaining`
       }
     >
       <Animated.View style={[{ position: 'absolute' }, ringStyle]}>
