@@ -1,15 +1,23 @@
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  runOnJS,
+  Easing,
+  Extrapolation,
+  interpolate,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { useMotion } from '@/theme';
+import { decideSwipe, type SwipeDirection } from './swipeDecision';
 
-const SWIPE_THRESHOLD = 60;
-const SWIPE_VELOCITY = 500;
+const EDGE_RESISTANCE = 0.25;
+const COMMIT_DISTANCE_RATIO = 0.25;
+const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
 
 /**
  * Horizontal swipe between exercises, with the card following the finger.
@@ -39,35 +47,93 @@ export function SwipeableSlide({
   onNext: () => void;
 }) {
   const motion = useMotion();
+  const { width } = useWindowDimensions();
   const translateX = useSharedValue(0);
+  const gestureStartX = useSharedValue(0);
+  const navigationRef = useRef({ onPrev, onNext });
 
-  const pan = Gesture.Pan()
-    .activeOffsetX([-12, 12])
-    .failOffsetY([-10, 10])
-    .onUpdate((e) => {
-      // Resist at the ends so the boundary is felt, not just enforced.
-      const atEdge = (e.translationX > 0 && !canPrev) || (e.translationX < 0 && !canNext);
-      translateX.value = atEdge ? e.translationX * 0.25 : e.translationX;
-    })
-    .onEnd((e) => {
-      const passed =
-        Math.abs(e.translationX) > SWIPE_THRESHOLD || Math.abs(e.velocityX) > SWIPE_VELOCITY;
+  useEffect(() => {
+    navigationRef.current = { onPrev, onNext };
+  }, [onNext, onPrev]);
 
-      if (passed && e.translationX < 0 && canNext) {
-        runOnJS(onNext)();
-      } else if (passed && e.translationX > 0 && canPrev) {
-        runOnJS(onPrev)();
-      }
-      translateX.value = withSpring(0, { damping: 20, stiffness: 200 });
-    });
+  const navigate = useCallback((direction: Exclude<SwipeDirection, 'stay'>) => {
+    if (direction === 'previous') navigationRef.current.onPrev();
+    else navigationRef.current.onNext();
+  }, []);
+
+  const pan = useMemo(
+    () =>
+      Gesture.Pan()
+        .activeOffsetX([-12, 12])
+        .failOffsetY([-10, 10])
+        .onStart(() => {
+          gestureStartX.set(translateX.get());
+        })
+        .onUpdate((event) => {
+          if (!motion.enabled) {
+            translateX.set(0);
+            return;
+          }
+
+          const atEdge =
+            (event.translationX > 0 && !canPrev) ||
+            (event.translationX < 0 && !canNext);
+          const movementX = atEdge
+            ? event.translationX * EDGE_RESISTANCE
+            : event.translationX;
+          translateX.set(gestureStartX.get() + movementX);
+        })
+        .onEnd((event) => {
+          const translationX = gestureStartX.get() + event.translationX;
+          const direction = decideSwipe({
+            translationX,
+            velocityX: event.velocityX,
+            width,
+            canPrev,
+            canNext,
+          });
+
+          if (!motion.enabled) {
+            translateX.set(0);
+            if (direction !== 'stay') scheduleOnRN(navigate, direction);
+            return;
+          }
+
+          if (direction === 'stay') {
+            translateX.set(
+              withSpring(0, {
+                duration: 400,
+                dampingRatio: 0.8,
+                velocity: event.velocityX,
+              }),
+            );
+            return;
+          }
+
+          const destination =
+            direction === 'next'
+              ? -width * COMMIT_DISTANCE_RATIO
+              : width * COMMIT_DISTANCE_RATIO;
+          translateX.set(
+            withTiming(destination, { duration: 180, easing: EASE_OUT }, (finished) => {
+              if (!finished) return;
+              translateX.set(0);
+              scheduleOnRN(navigate, direction);
+            }),
+          );
+        }),
+    [canNext, canPrev, gestureStartX, motion.enabled, navigate, translateX, width],
+  );
 
   const animated = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
+    opacity: interpolate(
+      Math.abs(translateX.get()),
+      [0, width * COMMIT_DISTANCE_RATIO],
+      [1, 0.72],
+      Extrapolation.CLAMP,
+    ),
+    transform: [{ translateX: translateX.get() }],
   }));
-
-  // With reduced motion the card should not track the finger at all; the
-  // buttons remain the way to move.
-  if (!motion.enabled) return <>{children}</>;
 
   return (
     <GestureDetector gesture={pan}>
