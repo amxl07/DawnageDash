@@ -1,4 +1,4 @@
-import { Text as MockNativeText, View } from 'react-native';
+import { Pressable as MockPressable, Text as MockNativeText, View } from 'react-native';
 
 // @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
@@ -35,7 +35,9 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 
 jest.mock('./Button', () => ({
-  Button: ({ label }: { label: string }) => <MockNativeText>{label}</MockNativeText>,
+  Button: ({ label, testID }: { label: string; testID?: string }) => (
+    <MockPressable testID={testID} accessibilityRole="button" accessibilityLabel={label} />
+  ),
 }));
 
 jest.mock('./Text', () => ({
@@ -108,6 +110,7 @@ describe('StatusPill', () => {
             </View>
           }
           primaryLabel="Continue"
+          primaryTestID="checkin-next"
           onPrimary={jest.fn()}
         />,
       );
@@ -118,5 +121,13 @@ describe('StatusPill', () => {
     expect(renderer.root.findByProps({ role: 'status' }).props.accessibilityLabel).toBe(
       'Saved on this device',
     );
+    const primaryAction = renderer.root.findAllByProps({ testID: 'checkin-next' }).find(
+      (node: { props: { accessibilityRole?: string } }) =>
+        node.props.accessibilityRole === 'button',
+    );
+    expect(primaryAction?.props).toMatchObject({
+      accessibilityRole: 'button',
+      accessibilityLabel: 'Continue',
+    });
   });
 });

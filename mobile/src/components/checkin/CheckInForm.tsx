@@ -226,6 +226,10 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
               max={10}
               value={form[key]}
               onChange={(v) => set(key, v)}
+              accessibilityMode="options"
+              optionTestIDPrefix={
+                key === 'energyLevel' ? 'checkin-energy-rating' : 'checkin-stress-rating'
+              }
             />
             <FieldError message={errors[key]} />
           </View>

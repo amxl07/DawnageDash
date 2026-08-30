@@ -2,7 +2,7 @@ appId: com.dawnage.app
 name: Workout draft and timer survive interruption
 ---
 - runFlow: helpers/sign-in.yaml
-- tapOn: "Plans"
+- tapOn: "Your training and nutrition plans"
 - tapOn:
     id: "plan-current-day"
 - tapOn:
@@ -11,7 +11,7 @@ name: Workout draft and timer survive interruption
     visible: "Workout title"
     timeout: 10000
 - tapOn:
-    text: "Mark (warm-up|set) 1 complete"
+    text: "Mark set 1 complete"
 - extendedWaitUntil:
     visible: "Saved on this device"
     timeout: 5000
@@ -27,9 +27,9 @@ name: Workout draft and timer survive interruption
 - launchApp
 - runFlow:
     when:
-      visible: "Home"
+      visible: "Home, your dashboard"
     commands:
-      - tapOn: "Plans"
+      - tapOn: "Your training and nutrition plans"
 - runFlow:
     when:
       visible:
@@ -43,4 +43,4 @@ name: Workout draft and timer survive interruption
     visible: "Workout title"
     timeout: 10000
 - assertVisible:
-    text: "Mark (warm-up|set) 1 incomplete"
+    text: "Mark set 1 incomplete"

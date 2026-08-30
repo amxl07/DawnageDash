@@ -7,6 +7,6 @@ Install a Dawnage development build (`com.dawnage.app`) before running these flo
 - `DAWNAGE_E2E_ONBOARD_EMAIL`
 - `DAWNAGE_E2E_ONBOARD_PASSWORD`
 
-The general account must be a client with no check-in for the current local day, an assigned workout plan, and no active workout draft. The onboarding account must be dedicated test data reset to onboarding step zero before every run.
+The general account must be a client with no check-in for the current local day, an assigned workout plan whose current day starts with a work set, and no active workout draft. The onboarding account must be dedicated test data reset to onboarding step zero before every run.
 
 Run from `mobile/` with `maestro test .maestro`. The progress flow opens the photo sheet and verifies its disclosure without choosing a source or uploading media; system permission dialogs remain in the physical-device validation matrix.

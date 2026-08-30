@@ -2,7 +2,7 @@ appId: com.dawnage.app
 name: Measurements and photo permission entry points
 ---
 - runFlow: helpers/sign-in.yaml
-- tapOn: "More"
+- tapOn: "More options"
 - tapOn: "Measurements"
 - assertVisible: "Measurements"
 - tapOn:
@@ -16,6 +16,7 @@ name: Measurements and photo permission entry points
 - tapOn:
     id: "photo-add-current-week"
 - assertVisible: "Save photos"
-- assertVisible: "Photos upload to Dawnage only after you tap Save photos."
+- assertVisible:
+    text: '^Photos upload to Dawnage only after you tap Save photos\..*'
 - tapOn:
     text: "Close Photos .*"

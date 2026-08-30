@@ -90,7 +90,22 @@ jest.mock('@/components/ui', () => {
     ProgressBar: () => null,
     Screen: ({ children }: { children: React.ReactNode }) => <MockView>{children}</MockView>,
     SkeletonCard: () => null,
-    StickyActionBar: ({ onPrimary }: { onPrimary: () => void }) => <MockPressable testID="submit" onPress={onPrimary} />,
+    StickyActionBar: ({
+      onPrimary,
+      primaryLabel,
+      primaryTestID,
+    }: {
+      onPrimary: () => void;
+      primaryLabel: string;
+      primaryTestID?: string;
+    }) => (
+      <MockPressable
+        testID={primaryTestID}
+        accessibilityRole="button"
+        accessibilityLabel={primaryLabel}
+        onPress={onPrimary}
+      />
+    ),
     Text: ({ children, ...props }: { children: React.ReactNode }) => <MockText {...props}>{children}</MockText>,
   };
 });
@@ -120,10 +135,15 @@ describe('CheckInScreen restored Finish validation', () => {
     expect(renderer.root.findByProps({ testID: 'active-step' }).props.children).toBe('finish');
 
     await act(async () => {
-      await renderer.root.findByProps({ testID: 'submit' }).props.onPress();
+      const saveAction = renderer.root.findByProps({ testID: 'checkin-save' });
+      expect(saveAction.props.accessibilityLabel).toBe('Submit check-in');
+      await saveAction.props.onPress();
     });
 
     expect(renderer.root.findByProps({ testID: 'active-step' }).props.children).toBe('readiness');
+    expect(renderer.root.findByProps({ testID: 'checkin-next' }).props.accessibilityLabel).toBe(
+      'Continue',
+    );
     expect(renderer.root.findByProps({ testID: 'error-energy' }).props.children).toBe('Choose your energy level.');
     expect(mockAccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith('Please complete the highlighted fields.');
     expect(mockAccessibilityInfo.setAccessibilityFocus).not.toHaveBeenCalled();

@@ -20,7 +20,24 @@ jest.mock('@/components/ui', () => ({
           <MockText>{value}</MockText>
         </MockPressable>
       ),
-      RatingRow: () => <MockView />,
+      RatingRow: ({
+        label,
+        onChange,
+        accessibilityMode,
+        optionTestIDPrefix,
+      }: {
+        label: string;
+        onChange: (value: number) => void;
+        accessibilityMode?: string;
+        optionTestIDPrefix?: string;
+      }) => (
+        <MockPressable
+          testID={`rating-${label}`}
+          accessibilityMode={accessibilityMode}
+          optionTestIDPrefix={optionTestIDPrefix}
+          onPress={() => onChange(5)}
+        />
+      ),
       SegmentedControl: ({ label, onChange }: { label: string; onChange: (value: string) => void }) => (
         <MockPressable testID={`segment-${label}`} onPress={() => onChange(label === 'Workout' ? 'rest_day' : 'none')} />
       ),
@@ -51,6 +68,30 @@ const COMPLETE_FORM: FormState = {
 };
 
 describe('CheckInForm', () => {
+  it('opts only Energy and Stress into labelled rating-option selectors', () => {
+    let renderer!: ReturnType<typeof create>;
+    act(() => {
+      renderer = create(
+        <CheckInForm
+          form={EMPTY_FORM}
+          setForm={() => {}}
+          previous={null}
+          step="readiness"
+          errors={{}}
+        />,
+      );
+    });
+
+    expect(renderer.root.findByProps({ testID: 'rating-Energy out of 10' }).props).toMatchObject({
+      accessibilityMode: 'options',
+      optionTestIDPrefix: 'checkin-energy-rating',
+    });
+    expect(renderer.root.findByProps({ testID: 'rating-Stress out of 10' }).props).toMatchObject({
+      accessibilityMode: 'options',
+      optionTestIDPrefix: 'checkin-stress-rating',
+    });
+  });
+
   it('clears performance when a workout becomes a rest day and normalizes its payload', () => {
     let current = COMPLETE_FORM;
     let renderer!: ReturnType<typeof create>;

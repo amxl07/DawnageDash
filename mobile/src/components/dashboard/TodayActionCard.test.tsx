@@ -49,7 +49,9 @@ describe('TodayActionCard', () => {
     let renderer: ReturnType<typeof create>;
 
     act(() => {
-      renderer = create(<TodayActionCard action={action} onPress={onPress} />);
+      renderer = create(
+        <TodayActionCard testID="home-today-action" action={action} onPress={onPress} />,
+      );
     });
 
     const root = renderer!.root;
@@ -66,7 +68,18 @@ describe('TodayActionCard', () => {
     expect(buttons[0]!.props).toMatchObject({
       label: 'Review your updated plan',
       accessibilityHint: 'Your coach changed your training plan.',
+      testID: 'home-today-action',
     });
+    expect(
+      root.findAll(
+        (candidate: {
+          props: { testID?: string; accessibilityRole?: string; accessibilityLabel?: string };
+        }) =>
+          candidate.props.testID === 'home-today-action' &&
+          candidate.props.accessibilityRole === 'button' &&
+          candidate.props.accessibilityLabel === 'Review your updated plan',
+      ).length,
+    ).toBeGreaterThan(0);
 
     act(() => buttons[0]!.props.onPress());
     expect(onPress).toHaveBeenCalledTimes(1);

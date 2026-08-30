@@ -88,10 +88,15 @@ const day: PlanDay = {
   updated_at: '2026-08-29T10:00:00.000Z',
 };
 
-function renderCard(status: 'today' | 'active' | 'complete' | 'upcoming' = 'today') {
+function renderCard(
+  status: 'today' | 'active' | 'complete' | 'upcoming' = 'today',
+  testID?: string,
+) {
   let renderer!: ReturnType<typeof create>;
   act(() => {
-    renderer = create(<PlanDayCard day={day} status={status} onStart={jest.fn()} />);
+    renderer = create(
+      <PlanDayCard day={day} status={status} onStart={jest.fn()} testID={testID} />,
+    );
   });
   return renderer;
 }
@@ -123,12 +128,13 @@ describe('PlanDayCard', () => {
   });
 
   it('preserves count, notes, video alternative, expansion state, and 44pt actions', () => {
-    const renderer = renderCard();
+    const renderer = renderCard('today', 'plan-current-day');
     const disclosure = renderer.root.findByProps({
       accessibilityLabel: 'Day 2, Upper body, 1 exercise, status: Today',
     });
 
     expect(disclosure.props.accessibilityState).toEqual({ expanded: false });
+    expect(disclosure.props.testID).toBe('plan-current-day');
     expect(StyleSheet.flatten(disclosure.props.style)).toMatchObject({ minHeight: 44 });
     expect(renderer.root.findByProps({ children: 'Upper body · 1 exercise' })).toBeTruthy();
 

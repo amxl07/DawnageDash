@@ -21,5 +21,5 @@ name: Onboarding completes with a goal and timezone
 - assertVisible: "Your timezone"
 - tapOn: "Finish setup"
 - extendedWaitUntil:
-    visible: "Home"
+    visible: "Home, your dashboard"
     timeout: 20000

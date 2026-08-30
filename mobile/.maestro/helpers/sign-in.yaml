@@ -11,5 +11,5 @@ appId: com.dawnage.app
 - inputText: ${DAWNAGE_E2E_PASSWORD}
 - tapOn: "Sign in"
 - extendedWaitUntil:
-    visible: "Home"
+    visible: "Home, your dashboard"
     timeout: 20000
