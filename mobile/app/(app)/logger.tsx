@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { format } from 'date-fns';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, ChevronRight, Trophy, X } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react-native';
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
@@ -14,12 +14,15 @@ import {
   ScrollView,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ExerciseSlide } from '@/components/logger/ExerciseSlide';
 import { SwipeableSlide } from '@/components/logger/SwipeableSlide';
 import { RestTimer } from '@/components/logger/RestTimer';
-import { Button, Card, Input, Screen, Text } from '@/components/ui';
+import {
+  type WorkoutResult,
+  WorkoutSummary,
+} from '@/components/logger/WorkoutSummary';
+import { Button, Card, Input, Screen, StatusPill, StickyActionBar, Text } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   initialWorkoutState,
@@ -29,7 +32,7 @@ import {
 import { useWorkoutPlan } from '@/hooks/usePlans';
 import { useWorkoutDraft } from '@/hooks/useWorkoutDraft';
 import { localDateString, parseLocalDate } from '@/lib/dates';
-import { enqueue, flushOutbox } from '@/lib/outbox';
+import { enqueue, flushOutbox, readOutbox } from '@/lib/outbox';
 import { supabase } from '@/lib/supabase';
 import {
   countSets,
@@ -40,9 +43,14 @@ import {
 } from '@/lib/workout-content';
 import { HIT_SLOP_MIN, iconSize, spacing, useTheme } from '@/theme';
 
+function elapsedLabel(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
 export default function LoggerScreen() {
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -54,13 +62,12 @@ export default function LoggerScreen() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [summary, setSummary] = useState<null | {
-    volume: number;
-    sets: number;
-    minutes: number;
-    prs: string[];
+    result: WorkoutResult;
+    syncStatus: 'saved' | 'offline';
   }>(null);
   const [newExercise, setNewExercise] = useState('');
   const openedAt = useRef(Date.now());
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const { saveDraft, saveDraftNow, loadDraft, clearDraft, draftStatus } = useWorkoutDraft(
     user?.id,
@@ -111,6 +118,14 @@ export default function LoggerScreen() {
     enabled: !!user?.id,
     staleTime: 5 * 60 * 1000,
   });
+
+  useEffect(() => {
+    const updateElapsed = () =>
+      setElapsedSeconds(Math.max(0, Math.floor((Date.now() - openedAt.current) / 1000)));
+    updateElapsed();
+    const timer = setInterval(updateElapsed, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Seed order: draft → existing log → plan day → empty.
   const seeded = useRef(false);
@@ -233,6 +248,7 @@ export default function LoggerScreen() {
 
   const currentPlanDay = plan?.days.find((d) => d.day_number === state.selectedDay);
   const currentExercise = state.exercises[index];
+  const currentExerciseName = currentExercise?.name;
   const planMeta = currentPlanDay?.exercises.find(
     (e) => e.name.toLowerCase() === currentExercise?.name.toLowerCase(),
   );
@@ -240,6 +256,13 @@ export default function LoggerScreen() {
   const completedCount = state.exercises.filter((ex) =>
     ex.sets.some((s) => s.completed),
   ).length;
+
+  useEffect(() => {
+    if (!currentExerciseName) return;
+    AccessibilityInfo.announceForAccessibility(
+      `Exercise ${index + 1} of ${state.exercises.length}: ${currentExerciseName}`,
+    );
+  }, [currentExerciseName, index, state.exercises.length]);
 
   const close = () => {
     if (!state.isDirty) {
@@ -315,42 +338,62 @@ export default function LoggerScreen() {
       prs,
     };
 
+    let syncStatus: 'saved' | 'offline' = 'saved';
     try {
-      if (state.existingLogId) {
-        const { error } = await supabase
-          .from('workout_logs')
-          .update(payload)
-          .eq('id', state.existingLogId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('workout_logs').insert(payload);
-        if (error) throw error;
+      try {
+        if (state.existingLogId) {
+          const { error } = await supabase
+            .from('workout_logs')
+            .update(payload)
+            .eq('id', state.existingLogId);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from('workout_logs').insert(payload);
+          if (error) throw error;
+        }
+        void queryClient.invalidateQueries({ queryKey: ['workoutLogs'] });
+      } catch {
+        try {
+          const outboxPayload = {
+            user_id: user.id,
+            date,
+            title: payload.title,
+            content,
+            existingLogId: state.existingLogId,
+          };
+          await enqueue(outboxPayload);
+          const queued = (await readOutbox()).some(
+            (item) =>
+              item.user_id === outboxPayload.user_id &&
+              item.date === outboxPayload.date &&
+              item.title === outboxPayload.title &&
+              item.content === outboxPayload.content &&
+              item.existingLogId === outboxPayload.existingLogId,
+          );
+          if (!queued) throw new Error('Outbox write was not durable');
+          syncStatus = 'offline';
+        } catch {
+          setSaveError('Couldn’t save or queue this workout. Your draft is still here — try again.');
+          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          return;
+        }
       }
+
       await clearDraft();
       dispatch({ type: 'MARK_CLEAN' });
-      void queryClient.invalidateQueries({ queryKey: ['workoutLogs'] });
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      void Haptics.notificationAsync(
+        syncStatus === 'saved'
+          ? Haptics.NotificationFeedbackType.Success
+          : Haptics.NotificationFeedbackType.Warning,
+      );
       if (prs.length) {
         void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
         setTimeout(() => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 90);
       }
       AccessibilityInfo.announceForAccessibility(
-        `Workout saved. ${result.volume} kilograms total volume.${prs.length ? ` New personal record on ${prs.join(', ')}.` : ''}`,
+        `${syncStatus === 'saved' ? 'Workout saved and synced.' : 'Workout saved here, waiting to sync.'} ${result.volume} kilograms total volume.${prs.length ? ` New personal record on ${prs.join(', ')}.` : ''}`,
       );
-      setSummary(result);
-    } catch {
-      // Network failure → queue it, tell the user plainly.
-      await enqueue({
-        user_id: user.id,
-        date,
-        title: payload.title,
-        content,
-        existingLogId: state.existingLogId,
-      });
-      await clearDraft();
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      setSummary({ ...result, prs });
-      setSaveError('Saved on this device — it will sync when you’re back online.');
+      setSummary({ result, syncStatus });
     } finally {
       setSaving(false);
     }
@@ -360,64 +403,11 @@ export default function LoggerScreen() {
   if (summary) {
     return (
       <Screen>
-        <View style={{ gap: spacing.lg, paddingTop: spacing.xl }}>
-          <Text variant="h1">Workout saved</Text>
-          {saveError ? (
-            <Card>
-              <Text variant="bodySm" tone="gold">
-                {saveError}
-              </Text>
-            </Card>
-          ) : null}
-          <View style={{ flexDirection: 'row', gap: spacing.md }}>
-            <Card style={{ flex: 1, gap: spacing.xs }}>
-              <Text variant="label" tone="muted">
-                Volume
-              </Text>
-              <Text variant="metric" numeric>
-                {summary.volume.toLocaleString()}
-              </Text>
-              <Text variant="bodySm" tone="muted">
-                kg total
-              </Text>
-            </Card>
-            <Card style={{ flex: 1, gap: spacing.xs }}>
-              <Text variant="label" tone="muted">
-                Sets
-              </Text>
-              <Text variant="metric" numeric>
-                {summary.sets}
-              </Text>
-              <Text variant="bodySm" tone="muted">
-                completed
-              </Text>
-            </Card>
-          </View>
-          <Card style={{ gap: spacing.xs }}>
-            <Text variant="label" tone="muted">
-              Duration
-            </Text>
-            <Text variant="h2" numeric>
-              {summary.minutes} min
-            </Text>
-          </Card>
-
-          {summary.prs.length ? (
-            <Card style={{ gap: spacing.sm, borderColor: colors.gold, borderWidth: 2 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <Trophy size={iconSize.lg} color={colors.gold} strokeWidth={2} accessible={false} />
-                <Text variant="h2">New PR</Text>
-              </View>
-              {summary.prs.map((p) => (
-                <Text key={p} variant="bodySm">
-                  {p} — heaviest set yet
-                </Text>
-              ))}
-            </Card>
-          ) : null}
-
-          <Button label="Done" onPress={() => router.back()} />
-        </View>
+        <WorkoutSummary
+          result={summary.result}
+          syncStatus={summary.syncStatus}
+          onDone={() => router.back()}
+        />
       </Screen>
     );
   }
@@ -426,7 +416,7 @@ export default function LoggerScreen() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Screen archetype="editor">
         <View style={{ gap: spacing.base }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm }}>
             {/* Explicit close: the stack's back-swipe is disabled on this route. */}
             <Pressable
               onPress={close}
@@ -437,24 +427,33 @@ export default function LoggerScreen() {
             >
               <X size={iconSize.lg} color={colors.foreground} strokeWidth={2} />
             </Pressable>
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1, gap: spacing.xs }}>
               <Text variant="h2">{format(parseLocalDate(date), 'EEE d MMM')}</Text>
+              <Text variant="bodySm" tone="muted" numeric>
+                {elapsedLabel(elapsedSeconds)} elapsed ·{' '}
+                {state.exercises.length
+                  ? `Exercise ${index + 1} of ${state.exercises.length}`
+                  : 'No exercises'}
+              </Text>
               {state.isDirty ? (
-                <Text
-                  variant="bodySm"
-                  tone={draftStatus === 'saved' ? 'success' : draftStatus === 'error' ? 'gold' : 'muted'}
-                  accessibilityLiveRegion="polite"
-                >
-                  {draftStatus === 'saving'
-                    ? 'Saving locally…'
-                    : draftStatus === 'saved'
-                      ? 'Saved locally'
-                      : draftStatus === 'error'
-                        ? 'Could not save draft'
-                        : 'Draft restored'}
-                </Text>
+                <StatusPill
+                  status={draftStatus}
+                  label={draftStatus === 'idle' ? 'Draft has changes' : undefined}
+                />
               ) : null}
             </View>
+            <Pressable
+              onPress={() => void save()}
+              disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel={state.existingLogId ? 'Save workout changes' : 'Finish workout'}
+              accessibilityState={{ disabled: saving, busy: saving }}
+              style={{ minWidth: HIT_SLOP_MIN, minHeight: HIT_SLOP_MIN, justifyContent: 'center' }}
+            >
+              <Text variant="bodySm" tone="primary">
+                {state.existingLogId ? 'Save' : 'Finish'}
+              </Text>
+            </Pressable>
           </View>
 
           <Input
@@ -620,34 +619,15 @@ export default function LoggerScreen() {
             />
           </Card>
 
-          {saveError ? (
-            <Text variant="bodySm" tone="primary" accessibilityLiveRegion="polite">
-              {saveError}
-            </Text>
-          ) : null}
         </View>
       </Screen>
 
-      <View
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          paddingHorizontal: spacing.base,
-          paddingTop: spacing.sm,
-          paddingBottom: insets.bottom + spacing.sm,
-          backgroundColor: colors.card,
-          borderTopWidth: 1,
-          borderTopColor: colors.border,
-        }}
-      >
-        <Button
-          label={state.existingLogId ? 'Update workout' : 'Save workout'}
-          onPress={save}
-          loading={saving}
-        />
-      </View>
+      <StickyActionBar
+        status={saveError ?? undefined}
+        primaryLabel={state.existingLogId ? 'Save workout' : 'Finish and save'}
+        onPrimary={() => void save()}
+        primaryLoading={saving}
+      />
     </KeyboardAvoidingView>
   );
 }

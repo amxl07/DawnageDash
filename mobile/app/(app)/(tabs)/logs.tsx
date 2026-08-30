@@ -2,15 +2,24 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import NetInfo from '@react-native-community/netinfo';
 import { format, startOfWeek } from 'date-fns';
 import { useRouter } from 'expo-router';
-import { CalendarDays, ChevronDown, CloudOff, Dumbbell, Plus } from 'lucide-react-native';
-import { useScrollToTop } from '@react-navigation/native';
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { CalendarDays, ChevronDown, Dumbbell, Plus } from 'lucide-react-native';
+import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, FlatList, Pressable, View } from 'react-native';
 import Animated, { FadeInDown, FadeOutUp, LinearTransition } from 'react-native-reanimated';
 
 import { MetricCard } from '@/components/dashboard/MetricCard';
-import { AdaptiveGrid, Button, Card, EmptyState, ErrorState, Screen, SkeletonCard, Text ,
+import {
+  AdaptiveGrid,
   AnimatedFlatList,
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  Screen,
+  SkeletonCard,
+  StatusPill,
+  Text,
   useListMotion,
 } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
@@ -149,7 +158,11 @@ export default function LogsScreen() {
   });
 
   // Pending outbox state must be VISIBLE — a silent queue is worse than none.
-  const refreshPending = () => void readOutbox().then((items) => setPending(items.length));
+  const refreshPending = useCallback(
+    () => void readOutbox().then((items) => setPending(items.length)),
+    [],
+  );
+  useFocusEffect(refreshPending);
   useEffect(() => {
     refreshPending();
     const appSub = AppState.addEventListener('change', (s) => {
@@ -172,7 +185,7 @@ export default function LogsScreen() {
       appSub.remove();
       netSub();
     };
-  }, [queryClient]);
+  }, [queryClient, refreshPending]);
 
   const metrics = useMemo(() => {
     const all = logs ?? [];
@@ -212,12 +225,10 @@ export default function LogsScreen() {
           exiting={listMotion.enabled ? FadeOutUp.duration(200) : undefined}
           layout={listMotion.enabled ? LinearTransition.duration(240) : undefined}
         >
-        <Card style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderColor: colors.gold, borderWidth: 1 }}>
-          <CloudOff size={iconSize.md} color={colors.gold} strokeWidth={2} accessible={false} />
-          <Text variant="bodySm" tone="gold" style={{ flex: 1 }} accessibilityLiveRegion="polite">
-            {pending} workout{pending > 1 ? 's' : ''} saved on this device, waiting to sync.
-          </Text>
-        </Card>
+          <StatusPill
+            status="offline"
+            label={`${pending} workouts saved here · waiting to sync`}
+          />
         </Animated.View>
       ) : null}
 
