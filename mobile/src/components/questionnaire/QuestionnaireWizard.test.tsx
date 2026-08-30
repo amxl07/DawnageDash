@@ -3,6 +3,7 @@ import * as React from 'react';
 
 // @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
+import { QuestionnaireWizard } from './QuestionnaireWizard';
 
 const mockScrollTo = jest.fn();
 const mockInsert = jest.fn(async () => ({ error: null }));
@@ -86,8 +87,6 @@ jest.mock('./QuestionField', () => {
 });
 
 jest.mock('./QuestionnaireSummary', () => ({ QuestionnaireSummary: () => null }));
-
-import { QuestionnaireWizard } from './QuestionnaireWizard';
 
 async function renderWizard() {
   let renderer!: ReturnType<typeof create>;
