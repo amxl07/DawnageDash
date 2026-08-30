@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, TextInput, View } from 'react-native';
 
-import { Button, Input, Sheet, SheetScrollView, Text } from '@/components/ui';
+import { Button, Input, Sheet, SheetScrollView, StatusPill, Text } from '@/components/ui';
 import { useMeasurementMutation } from '@/hooks/useMeasurements';
 import { localDateString, parseLocalDate } from '@/lib/dates';
 import {
@@ -124,6 +124,7 @@ export function MeasurementSheet({ visible, onClose, editing, previous, onSaved 
               onChangeText={(t) => {
                 setDraft((p) => ({ ...p, [f.key]: t }));
                 setErrors((p) => ({ ...p, [f.key]: undefined }));
+                setSaveError(null);
               }}
               onBlur={() =>
                 setErrors((p) => ({
@@ -149,8 +150,18 @@ export function MeasurementSheet({ visible, onClose, editing, previous, onSaved 
           ) : null}
         </SheetScrollView>
 
-        <View style={{ padding: spacing.base }}>
-          <Button label="Save" onPress={save} loading={mutation.isPending} />
+        <View style={{ padding: spacing.base, gap: spacing.sm }}>
+          {mutation.isPending || saveError ? (
+            <StatusPill
+              status={mutation.isPending ? 'saving' : 'error'}
+              label={saveError ? 'Measurement not saved' : 'Saving measurement…'}
+            />
+          ) : null}
+          <Button
+            label={saveError ? 'Retry save' : 'Save'}
+            onPress={save}
+            loading={mutation.isPending}
+          />
         </View>
       </View>
     </Sheet>

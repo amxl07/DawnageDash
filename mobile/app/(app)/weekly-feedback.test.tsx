@@ -51,6 +51,7 @@ const mockUser2SaveDraft = jest.fn(async () => true);
 const mockClearDraft = jest.fn(async () => true);
 const mockInsert = jest.fn(async () => ({ error: null as Error | null }));
 const mockInvalidateQueries = jest.fn();
+const mockRefetchHistory = jest.fn();
 const mockDispatch = jest.fn();
 const mockRouterBack = jest.fn();
 const mockScrollTo = jest.fn();
@@ -58,6 +59,13 @@ let mockPreventRemoveEnabled = false;
 let mockPreventRemoveCallback:
   | ((event: { data: { action: { type: string } } }) => void)
   | undefined;
+let mockHistoryQuery: {
+  data: typeof mockHistory | undefined;
+  isLoading: boolean;
+  isError: boolean;
+  refetch: typeof mockRefetchHistory;
+};
+let mockDraftStatus = 'saved';
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn(async () => null),
@@ -81,7 +89,7 @@ jest.mock('expo-router', () => ({
 }));
 
 jest.mock('@tanstack/react-query', () => ({
-  useQuery: () => ({ data: mockHistory, isLoading: false }),
+  useQuery: () => mockHistoryQuery,
   useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
 }));
 
@@ -98,7 +106,7 @@ jest.mock('@/hooks/useWeeklyFeedbackDraft', () => ({
     loadDraft: mockLoadDraft,
     saveDraft: mockUser.id === 'user-1' ? mockSaveDraft : mockUser2SaveDraft,
     clearDraft: mockClearDraft,
-    draftStatus: 'saved',
+    draftStatus: mockDraftStatus,
   }),
 }));
 
@@ -153,12 +161,14 @@ jest.mock('@/components/ui', () => {
       renderItem,
       keyExtractor,
       ListHeaderComponent,
+      ListEmptyComponent,
       ...props
     }: {
       data: typeof mockHistory;
       renderItem: (info: { item: (typeof mockHistory)[number]; index: number }) => React.ReactNode;
       keyExtractor: (item: (typeof mockHistory)[number]) => string;
       ListHeaderComponent: React.ReactNode;
+      ListEmptyComponent?: React.ReactNode;
       initialNumToRender: number;
       windowSize: number;
     }) => (
@@ -168,6 +178,7 @@ jest.mock('@/components/ui', () => {
         {...props}
       >
         {ListHeaderComponent}
+        {!data.length ? ListEmptyComponent : null}
         {data.map((item, index) => (
           <MockView key={keyExtractor(item)}>{renderItem({ item, index })}</MockView>
         ))}
@@ -178,6 +189,19 @@ jest.mock('@/components/ui', () => {
     ),
     Card: ({ children, ...props }: React.ComponentProps<typeof MockView>) => (
       <MockView {...props}>{children}</MockView>
+    ),
+    EmptyState: ({ title, message }: { title: string; message?: string }) => (
+      <MockView>
+        <MockText>{title}</MockText>
+        {message ? <MockText>{message}</MockText> : null}
+      </MockView>
+    ),
+    ErrorState: ({ onRetry }: { onRetry?: () => void }) => (
+      <MockView>
+        {onRetry ? (
+          <MockPressable accessibilityRole="button" accessibilityLabel="Retry" onPress={onRetry} />
+        ) : null}
+      </MockView>
     ),
     Input: ({ label, value, onChangeText, error }: {
       label: string;
@@ -273,6 +297,13 @@ describe('WeeklyFeedbackScreen', () => {
     mockInsert.mockResolvedValue({ error: null });
     mockCheckIns = [];
     mockUser = { id: 'user-1', user_metadata: { full_name: 'Maya Singh' } };
+    mockHistoryQuery = {
+      data: mockHistory,
+      isLoading: false,
+      isError: false,
+      refetch: mockRefetchHistory,
+    };
+    mockDraftStatus = 'saved';
     mockPreventRemoveEnabled = false;
     mockPreventRemoveCallback = undefined;
     jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
@@ -359,7 +390,9 @@ describe('WeeklyFeedbackScreen', () => {
   });
 
   it('retains answers after a network failure and changes the submit action to Retry', async () => {
-    mockInsert.mockResolvedValueOnce({ error: new Error('offline') });
+    mockInsert
+      .mockResolvedValueOnce({ error: new Error('offline') })
+      .mockResolvedValueOnce({ error: null });
     const renderer = await renderScreen();
     await press(renderer, 'Start');
     await press(renderer, 'Next');
@@ -377,6 +410,86 @@ describe('WeeklyFeedbackScreen', () => {
     expect(renderer.root.findByProps({ accessibilityLabel: 'Anything else you want to share?' }).props.value)
       .toBe('Please keep this');
     expect(renderer.root.findByProps({ accessibilityLabel: 'Retry' })).toBeTruthy();
+
+    await press(renderer, 'Retry');
+
+    expect(mockInsert).toHaveBeenCalledTimes(2);
+    expect(mockInsert.mock.calls[0]).toEqual(mockInsert.mock.calls[1]);
+  });
+
+  it('renders a shape-matched initial loading state', async () => {
+    mockHistoryQuery = {
+      data: undefined,
+      isLoading: true,
+      isError: false,
+      refetch: mockRefetchHistory,
+    };
+
+    const renderer = await renderScreen();
+
+    expect(renderer.root.findByProps({ testID: 'progress-skeleton' })).toBeTruthy();
+  });
+
+  it('keeps the check-in action available when history loading fails and offers retry', async () => {
+    mockHistoryQuery = {
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      refetch: mockRefetchHistory,
+    };
+    const renderer = await renderScreen();
+
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Start' })).toBeTruthy();
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'Retry' }).props.onPress());
+    expect(mockRefetchHistory).toHaveBeenCalledTimes(1);
+  });
+
+  it('explains an empty history without hiding the first check-in action', async () => {
+    mockHistoryQuery = {
+      data: [],
+      isLoading: false,
+      isError: false,
+      refetch: mockRefetchHistory,
+    };
+    const renderer = await renderScreen();
+
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Start' })).toBeTruthy();
+    expect(
+      renderer.root.findByProps({
+        children: 'Your submitted weekly check-ins will appear here for easy review.',
+      }),
+    ).toBeTruthy();
+  });
+
+  it('preserves cached weekly history when its refresh fails', async () => {
+    mockHistoryQuery = {
+      data: mockHistory,
+      isLoading: false,
+      isError: true,
+      refetch: mockRefetchHistory,
+    };
+    const renderer = await renderScreen();
+
+    expect(renderer.root.findByProps({ children: 'Strong week' })).toBeTruthy();
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Retry' })).toBeTruthy();
+  });
+
+  it('shows draft failure status without replacing active answers', async () => {
+    mockDraftStatus = 'error';
+    const renderer = await renderScreen();
+    await press(renderer, 'Start');
+
+    act(() => {
+      renderer.root
+        .findByProps({ accessibilityLabel: 'How are you feeling overall this week?' })
+        .props.onChangeText('Still editing');
+    });
+
+    expect(renderer.root.findByProps({ testID: 'draft-status' }).props.children).toBe('error');
+    expect(
+      renderer.root.findByProps({ accessibilityLabel: 'How are you feeling overall this week?' })
+        .props.value,
+    ).toBe('Still editing');
   });
 
   it('does not re-run restoration when daily-check-in prefill changes during active editing', async () => {

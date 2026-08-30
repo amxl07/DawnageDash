@@ -179,16 +179,24 @@ export default function MeasurementsScreen() {
   if (isLoading) {
     return (
       <Screen>
-        <SkeletonCard lines={2} />
-        <View style={{ height: spacing.base }} />
-        <SkeletonCard lines={4} />
+        <PageHeader title="Measurements" onBack={() => router.back()} />
+        <View testID="progress-skeleton" style={{ gap: spacing.base }}>
+          <AdaptiveGrid>
+            <SkeletonCard lines={2} />
+            <SkeletonCard lines={2} />
+          </AdaptiveGrid>
+          <SkeletonCard lines={2} />
+          <SkeletonCard lines={5} />
+          <SkeletonCard lines={3} />
+        </View>
       </Screen>
     );
   }
 
-  if (isError) {
+  if (isError && rows === undefined) {
     return (
       <Screen>
+        <PageHeader title="Measurements" onBack={() => router.back()} />
         <ErrorState onRetry={refetch} />
       </Screen>
     );
@@ -197,6 +205,14 @@ export default function MeasurementsScreen() {
   const header = (
     <View style={{ gap: spacing.lg, marginBottom: spacing.base }}>
       <PageHeader title="Measurements" onBack={() => router.back()} />
+
+      {isError ? (
+        <ErrorState
+          title="Measurements couldn’t refresh"
+          message="Your saved measurements are still shown below. Retry when you’re connected."
+          onRetry={refetch}
+        />
+      ) : null}
 
       {payoff ? (
         <Card>

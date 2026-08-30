@@ -218,16 +218,19 @@ export default function MediaScreen() {
   if (isLoading) {
     return (
       <Screen>
-        <SkeletonCard lines={3} />
-        <View style={{ height: spacing.base }} />
-        <SkeletonCard lines={3} />
+        <PageHeader title="Progress photos" onBack={() => router.back()} />
+        <View testID="progress-skeleton" style={{ gap: spacing.base }}>
+          <SkeletonCard lines={4} />
+          <SkeletonCard lines={4} />
+        </View>
       </Screen>
     );
   }
 
-  if (isError) {
+  if (isError && rows === undefined) {
     return (
       <Screen>
+        <PageHeader title="Progress photos" onBack={() => router.back()} />
         <ErrorState onRetry={refetch} />
       </Screen>
     );
@@ -236,6 +239,13 @@ export default function MediaScreen() {
   const header = (
     <View style={{ gap: spacing.base, marginBottom: spacing.base }}>
       <PageHeader title="Progress photos" onBack={() => router.back()} />
+      {isError ? (
+        <ErrorState
+          title="Photo history couldn’t refresh"
+          message="Your saved photo sets are still shown below. Retry when you’re connected."
+          onRetry={refetch}
+        />
+      ) : null}
       <Button
         label="Add this week's photos"
         icon={<Plus size={iconSize.md} color={colors.onPrimary} strokeWidth={2.5} />}
@@ -274,7 +284,7 @@ export default function MediaScreen() {
             <EmptyState
               icon={Camera}
               title="No progress photos yet"
-              message="Four angles, same spot each week. The first set becomes your baseline."
+              message="Choose only the angles you want. Nothing uploads until you tap Save photos; your first saved set becomes the baseline."
               actionLabel="Add your first set"
               onAction={() => {
                 setEditDate(localDateString());

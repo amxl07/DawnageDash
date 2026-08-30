@@ -44,6 +44,9 @@ jest.mock('@/components/ui', () => {
     SheetScrollView: ({ children }: { children: React.ReactNode }) => (
       <Native.View>{children}</Native.View>
     ),
+    StatusPill: ({ status, label }: { status: string; label?: string }) => (
+      <Native.Text testID="save-status">{label ?? status}</Native.Text>
+    ),
     Text: ({ children, ...props }: React.ComponentProps<typeof Native.Text>) => (
       <Native.Text {...props}>{children}</Native.Text>
     ),
@@ -114,6 +117,54 @@ describe('MeasurementSheet', () => {
       arms: 34,
     });
     expect(onSaved).toHaveBeenCalledWith('Waist −7.5 cm since last time');
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains entered values and retries only the failed save operation', async () => {
+    mockMutateAsync.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(undefined);
+    const onSaved = jest.fn();
+    const onClose = jest.fn();
+    let renderer!: ReturnType<typeof create>;
+    await act(async () => {
+      renderer = create(
+        <MeasurementSheet
+          visible
+          editing={null}
+          previous={previous}
+          onSaved={onSaved}
+          onClose={onClose}
+        />,
+      );
+    });
+
+    const waist = renderer.root.find(
+      (node: { type: unknown; props: { accessibilityLabel?: string } }) =>
+        node.type === TextInput && node.props.accessibilityLabel === 'Waist (cm)',
+    );
+    act(() => waist.props.onChangeText('82.5'));
+
+    const press = async (label: string) => {
+      await act(async () => {
+        await renderer.root.findByProps({ accessibilityLabel: label }).props.onPress();
+      });
+    };
+    await press('Save');
+
+    expect(
+      renderer.root.find(
+        (node: { type: unknown; props: { accessibilityLabel?: string } }) =>
+          node.type === TextInput && node.props.accessibilityLabel === 'Waist (cm)',
+      ).props.value,
+    ).toBe('82.5');
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Retry save' })).toBeTruthy();
+    expect(renderer.root.findByProps({ testID: 'save-status' }).props.children).toBe(
+      'Measurement not saved',
+    );
+
+    await press('Retry save');
+
+    expect(mockMutateAsync).toHaveBeenCalledTimes(2);
+    expect(mockMutateAsync.mock.calls[0]).toEqual(mockMutateAsync.mock.calls[1]);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

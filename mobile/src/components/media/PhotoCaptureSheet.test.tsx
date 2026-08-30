@@ -85,6 +85,9 @@ jest.mock('@/components/ui', () => {
     SheetScrollView: ({ children }: { children: React.ReactNode }) => (
       <Native.View>{children}</Native.View>
     ),
+    StatusPill: ({ status, label }: { status: string; label?: string }) => (
+      <Native.Text testID="save-status">{label ?? status}</Native.Text>
+    ),
     Text: ({ children, ...props }: React.ComponentProps<typeof Native.Text>) => (
       <Native.Text {...props}>{children}</Native.Text>
     ),
@@ -226,6 +229,39 @@ describe('PhotoCaptureSheet', () => {
       side_left_url: null,
       side_right_url: null,
     });
+  });
+
+  it('retains uploaded slots and retries only database persistence after a save failure', async () => {
+    mockUploadPhoto.mockResolvedValue({
+      publicUrl: 'https://example.com/front.jpg',
+      bytes: 1000,
+    });
+    mockMutateAsync.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(undefined);
+    const onClose = jest.fn();
+    const { getByLabelText, renderer } = renderSheet({ onClose });
+
+    await act(async () => {
+      await getByLabelText('Choose Front photo from library').props.onPress();
+    });
+    await act(async () => {
+      await getByLabelText('Save photos').props.onPress();
+    });
+
+    expect(getByLabelText('Front photo, uploaded')).toBeTruthy();
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Retry save' })).toBeTruthy();
+    expect(renderer.root.findByProps({ testID: 'save-status' }).props.children).toBe(
+      'Photo set not saved',
+    );
+    expect(onClose).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await getByLabelText('Retry save').props.onPress();
+    });
+
+    expect(mockUploadPhoto).toHaveBeenCalledTimes(1);
+    expect(mockMutateAsync).toHaveBeenCalledTimes(2);
+    expect(mockMutateAsync.mock.calls[0]).toEqual(mockMutateAsync.mock.calls[1]);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('preserves a valid pending selection when a replacement is oversized', async () => {

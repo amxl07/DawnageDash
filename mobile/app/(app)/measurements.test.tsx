@@ -1,4 +1,10 @@
-import { InteractionManager, StyleSheet, Text as NativeText, View } from 'react-native';
+import {
+  InteractionManager,
+  Pressable as MockPressable,
+  StyleSheet,
+  Text as NativeText,
+  View,
+} from 'react-native';
 
 // @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
@@ -15,6 +21,7 @@ const MockListView = View as unknown as React.ComponentType<
   }
 >;
 const mockLineChartRender = jest.fn();
+const mockRefetch = jest.fn();
 const mockRows = [
   {
     id: 'latest-id',
@@ -37,6 +44,12 @@ const mockRows = [
     arms: 34,
   },
 ];
+let mockMeasurementQuery: {
+  data: typeof mockRows | undefined;
+  isLoading: boolean;
+  isError: boolean;
+  refetch: typeof mockRefetch;
+};
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ back: jest.fn() }),
@@ -67,7 +80,8 @@ jest.mock('@/components/measurements/MeasurementHistoryRow', () => ({
 }));
 
 jest.mock('@/components/measurements/MeasurementSheet', () => ({
-  MeasurementSheet: () => null,
+  MeasurementSheet: ({ visible }: { visible: boolean }) =>
+    visible ? <MockView testID="measurement-sheet" /> : null,
 }));
 
 jest.mock('@/components/ui', () => {
@@ -78,12 +92,14 @@ jest.mock('@/components/ui', () => {
       data,
       keyExtractor,
       ListHeaderComponent,
+      ListEmptyComponent,
       renderItem,
       ...props
     }: {
       data: { id: string }[];
       keyExtractor: (item: { id: string }) => string;
       ListHeaderComponent: React.ReactNode;
+      ListEmptyComponent?: React.ReactNode;
       renderItem: (info: { item: { id: string }; index: number }) => React.ReactNode;
       onLayout?: (event: unknown) => void;
       onScrollEndDrag?: (event: unknown) => void;
@@ -97,20 +113,49 @@ jest.mock('@/components/ui', () => {
         accessibilityHint={data.map(keyExtractor).join(',')}
       >
         {ListHeaderComponent}
+        {!data.length ? ListEmptyComponent : null}
         {data.map((item, index) => (
           <MockView key={keyExtractor(item)}>{renderItem({ item, index })}</MockView>
         ))}
       </MockListView>
     ),
     Button: ({ label, onPress }: { label: string; onPress: () => void }) => (
-      <MockView accessibilityLabel={label} onTouchEnd={onPress} />
+      <MockPressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} />
     ),
     Card: ({ children, ...props }: React.ComponentProps<typeof MockView>) => (
       <MockView {...props}>{children}</MockView>
     ),
-    EmptyState: () => null,
-    ErrorState: () => null,
-    PageHeader: () => null,
+    EmptyState: ({
+      title,
+      message,
+      actionLabel,
+      onAction,
+    }: {
+      title: string;
+      message?: string;
+      actionLabel?: string;
+      onAction?: () => void;
+    }) => (
+      <MockView>
+        <MockNativeText>{title}</MockNativeText>
+        {message ? <MockNativeText>{message}</MockNativeText> : null}
+        {actionLabel && onAction ? (
+          <MockPressable
+            accessibilityRole="button"
+            accessibilityLabel={actionLabel}
+            onPress={onAction}
+          />
+        ) : null}
+      </MockView>
+    ),
+    ErrorState: ({ onRetry }: { onRetry?: () => void }) => (
+      <MockView>
+        {onRetry ? (
+          <MockPressable accessibilityRole="button" accessibilityLabel="Retry" onPress={onRetry} />
+        ) : null}
+      </MockView>
+    ),
+    PageHeader: ({ title }: { title: string }) => <MockNativeText>{title}</MockNativeText>,
     Screen: ({ children }: { children: React.ReactNode }) => <MockView>{children}</MockView>,
     SkeletonCard: () => null,
     Text: ({ children, ...props }: React.ComponentProps<typeof MockNativeText>) => (
@@ -125,12 +170,7 @@ jest.mock('@/hooks/useDashboardData', () => ({
 }));
 
 jest.mock('@/hooks/useMeasurements', () => ({
-  useMeasurements: () => ({
-    data: mockRows,
-    isLoading: false,
-    isError: false,
-    refetch: jest.fn(),
-  }),
+  useMeasurements: () => mockMeasurementQuery,
 }));
 
 jest.mock('@/hooks/useResponsiveLayout', () => ({
@@ -168,6 +208,12 @@ describe('MeasurementsScreen', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockMeasurementQuery = {
+      data: mockRows,
+      isLoading: false,
+      isError: false,
+      refetch: mockRefetch,
+    };
     interactionCallbacks = [];
     mockedUseResponsiveLayout.mockReturnValue({
       width: 320,
@@ -260,5 +306,77 @@ describe('MeasurementsScreen', () => {
     expect(renderer.root.findByProps({ testID: 'measurement-list' }).props.accessibilityHint).toBe(
       'latest-id,baseline-id',
     );
+  });
+
+  it('renders a shape-matched initial loading state', () => {
+    mockMeasurementQuery = {
+      data: undefined,
+      isLoading: true,
+      isError: false,
+      refetch: mockRefetch,
+    };
+
+    const renderer = renderScreen();
+
+    expect(renderer.root.findByProps({ testID: 'progress-skeleton' })).toBeTruthy();
+  });
+
+  it('offers a query retry when no measurement content is available', () => {
+    mockMeasurementQuery = {
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      refetch: mockRefetch,
+    };
+    const renderer = renderScreen();
+
+    expect(renderer.root.findByProps({ children: 'Measurements' })).toBeTruthy();
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'Retry' }).props.onPress());
+
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('explains the baseline and opens the entry sheet from the empty action', () => {
+    mockMeasurementQuery = {
+      data: [],
+      isLoading: false,
+      isError: false,
+      refetch: mockRefetch,
+    };
+    const renderer = renderScreen();
+
+    expect(
+      renderer.root.findByProps({
+        children: 'Your first entry becomes the baseline every future week is compared against.',
+      }),
+    ).toBeTruthy();
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'Add your first' }).props.onPress());
+    expect(renderer.root.findByProps({ testID: 'measurement-sheet' })).toBeTruthy();
+  });
+
+  it('keeps cached measurement content visible when a refresh fails', () => {
+    mockMeasurementQuery = {
+      data: mockRows,
+      isLoading: false,
+      isError: true,
+      refetch: mockRefetch,
+    };
+    const renderer = renderScreen();
+
+    expect(renderer.root.findByProps({ testID: 'history-latest-id' })).toBeTruthy();
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Retry' })).toBeTruthy();
+  });
+
+  it('keeps the baseline action available when an empty cached result fails to refresh', () => {
+    mockMeasurementQuery = {
+      data: [],
+      isLoading: false,
+      isError: true,
+      refetch: mockRefetch,
+    };
+    const renderer = renderScreen();
+
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Add your first' })).toBeTruthy();
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Retry' })).toBeTruthy();
   });
 });

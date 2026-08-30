@@ -20,6 +20,8 @@ import {
   AnimatedFlatList,
   Button,
   Card,
+  EmptyState,
+  ErrorState,
   Input,
   OptionRow,
   PageHeader,
@@ -119,7 +121,7 @@ export default function WeeklyFeedbackScreen() {
 
   const { loadDraft, saveDraft, clearDraft, draftStatus } = useWeeklyFeedbackDraft(user?.id);
 
-  const { data: history, isLoading } = useQuery({
+  const { data: history, isLoading, isError, refetch } = useQuery({
     queryKey: ['weeklyCheckIns', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
@@ -472,10 +474,19 @@ export default function WeeklyFeedbackScreen() {
     );
   }
 
-  if (isLoading || !restored || Boolean(user?.id && !ownsCurrentForm)) {
+  if (
+    isLoading ||
+    !restored ||
+    Boolean(user?.id && !ownsCurrentForm)
+  ) {
     return (
       <Screen>
-        <SkeletonCard lines={3} />
+        <PageHeader title="Weekly check-in" onBack={() => router.back()} />
+        <View testID="progress-skeleton" style={{ gap: spacing.base }}>
+          <SkeletonCard lines={3} />
+          <SkeletonCard lines={4} />
+          <SkeletonCard lines={4} />
+        </View>
       </Screen>
     );
   }
@@ -532,6 +543,13 @@ export default function WeeklyFeedbackScreen() {
           />
         </Card>
         {history?.length ? <Text variant="h2">Past check-ins</Text> : null}
+        {history?.length && isError ? (
+          <ErrorState
+            title="Past check-ins couldn’t refresh"
+            message="Your saved history is still shown below. Retry when you’re connected."
+            onRetry={() => void refetch()}
+          />
+        ) : null}
       </View>
     );
 
@@ -547,6 +565,21 @@ export default function WeeklyFeedbackScreen() {
               weekNumber={(history?.length ?? 1) - index}
             />
           )}
+          ListEmptyComponent={
+            isError ? (
+              <ErrorState
+                title="Past check-ins didn’t load"
+                message="You can still start this week’s check-in, or retry your history."
+                onRetry={() => void refetch()}
+              />
+            ) : (
+              <EmptyState
+                icon={CheckCircle2}
+                title="No submitted check-ins yet"
+                message="Your submitted weekly check-ins will appear here for easy review."
+              />
+            )
+          }
           initialNumToRender={6}
           windowSize={5}
           itemLayoutAnimation={listMotion.itemLayoutAnimation}

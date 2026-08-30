@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Linking, Pressable, View } from 'react-native';
 
-import { Button, Card, Sheet, SheetScrollView, Text } from '@/components/ui';
+import { Button, Card, Sheet, SheetScrollView, StatusPill, Text } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePhotoMutation, type PhotoRow } from '@/hooks/useProgressPhotos';
 import { ANGLES, MAX_SOURCE_BYTES, uploadPhoto, type AngleKey } from '@/lib/photos';
@@ -39,6 +39,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
   const [showGuide, setShowGuide] = useState(true);
   const [dirty, setDirty] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [persistFailed, setPersistFailed] = useState(false);
   const [interactionLocked, setInteractionLocked] = useState(false);
   const slotsRef = useRef(slots);
   const sessionRef = useRef(0);
@@ -88,6 +89,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
     setSlots(next);
     setDirty(false);
     setSaveError(null);
+    setPersistFailed(false);
   }, [date, existing, visible]);
 
   const patch = (key: AngleKey, fields: Partial<SlotState>) => {
@@ -178,6 +180,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
       error: null,
       errorKind: null,
     });
+    setPersistFailed(false);
     setDirty(true);
     void Haptics.selectionAsync();
   };
@@ -273,6 +276,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
     const operation = beginOperation();
     if (!operation) return;
     setSaveError(null);
+    setPersistFailed(false);
 
     try {
       const pendingAngles = ANGLES.filter((angle) => slotsRef.current[angle.key].pendingUri);
@@ -293,6 +297,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
       closeSession();
     } catch {
       if (isCurrentOperation(operation)) {
+        setPersistFailed(true);
         setSaveError("Couldn't save. Check your connection and try again.");
       }
     } finally {
@@ -308,6 +313,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
     const operation = beginOperation();
     if (!operation) return;
     setSaveError(null);
+    setPersistFailed(false);
 
     try {
       const uploadResult = await uploadAngle(key, operation);
@@ -332,6 +338,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
       closeSession();
     } catch {
       if (isCurrentOperation(operation)) {
+        setPersistFailed(true);
         setSaveError("Couldn't save. Check your connection and try again.");
       }
     } finally {
@@ -400,6 +407,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
                     error: null,
                     errorKind: null,
                   });
+                  setPersistFailed(false);
                   setDirty(true);
                 }}
                 onRetry={() => void retry(angle.key)}
@@ -425,9 +433,21 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
         ) : null}
       </SheetScrollView>
 
-      <View style={{ padding: spacing.base }}>
+      <View style={{ padding: spacing.base, gap: spacing.sm }}>
+        {saving || saveError ? (
+          <StatusPill
+            status={saving ? 'saving' : 'error'}
+            label={
+              saving
+                ? 'Saving photo set…'
+                : persistFailed
+                  ? 'Photo set not saved'
+                  : 'Some photos need attention'
+            }
+          />
+        ) : null}
         <Button
-          label={uploading ? 'Uploading…' : 'Save photos'}
+          label={uploading ? 'Uploading…' : persistFailed ? 'Retry save' : 'Save photos'}
           onPress={save}
           loading={uploading || mutation.isPending}
           disabled={saving}
