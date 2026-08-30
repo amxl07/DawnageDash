@@ -23,11 +23,27 @@ const mockNotificationAsync = jest.mocked(Haptics.notificationAsync);
 const mockStorage = jest.mocked(AsyncStorage);
 let persisted = new Map<string, string>();
 
-function Provider({ children }: PropsWithChildren) {
-  return <RestTimerProvider userId="user-1">{children}</RestTimerProvider>;
+function Provider({ children, userId = 'user-1' }: PropsWithChildren<{ userId?: string }>) {
+  return <RestTimerProvider userId={userId}>{children}</RestTimerProvider>;
 }
 
-function renderTimer() {
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
+async function flushStorage() {
+  await act(async () => {
+    for (let index = 0; index < 8; index += 1) await Promise.resolve();
+  });
+}
+
+function renderTimer(userId = 'user-1') {
   let current: RestTimerState | undefined;
 
   function Probe() {
@@ -38,7 +54,7 @@ function renderTimer() {
   let renderer!: ReturnType<typeof create>;
   act(() => {
     renderer = create(
-      <Provider>
+      <Provider userId={userId}>
         <Probe />
       </Provider>,
     );
@@ -121,12 +137,12 @@ describe('rest timer absolute-time lifecycle', () => {
   it('restores a running timer from its absolute timestamp after a provider remount', async () => {
     const first = renderTimer();
     act(() => first.result.current.start(90));
-    await act(async () => Promise.resolve());
+    await flushStorage();
     first.unmount();
 
     jest.setSystemTime(30_400);
     const restored = renderTimer();
-    await act(async () => Promise.resolve());
+    await flushStorage();
 
     expect(restored.result.current).toMatchObject({
       duration: 90,
@@ -135,6 +151,177 @@ describe('rest timer absolute-time lifecycle', () => {
       complete: false,
     });
     restored.unmount();
+  });
+
+  it('restores a paused timer with its exact remaining milliseconds', async () => {
+    const first = renderTimer();
+    act(() => first.result.current.start(1));
+    jest.setSystemTime(400);
+    act(() => first.result.current.toggle());
+    await flushStorage();
+
+    expect(JSON.parse(persisted.get('rest-timer:user-1')!)).toMatchObject({
+      duration: 1,
+      endsAt: null,
+      pausedRemainingMs: 600,
+    });
+    first.unmount();
+
+    jest.setSystemTime(10_000);
+    const restored = renderTimer();
+    await flushStorage();
+    expect(restored.result.current).toMatchObject({ remaining: 1, running: false, complete: false });
+
+    act(() => restored.result.current.toggle());
+    await flushStorage();
+    expect(JSON.parse(persisted.get('rest-timer:user-1')!)).toMatchObject({
+      duration: 1,
+      endsAt: 10_600,
+      pausedRemainingMs: null,
+    });
+    restored.unmount();
+  });
+
+  it('isolates persisted timers by user', async () => {
+    const firstUser = renderTimer('user-1');
+    act(() => firstUser.result.current.start(120));
+    await flushStorage();
+    firstUser.unmount();
+
+    const secondUser = renderTimer('user-2');
+    await flushStorage();
+    expect(secondUser.result.current).toMatchObject({
+      duration: 90,
+      remaining: 90,
+      running: false,
+      complete: false,
+    });
+    expect(mockStorage.getItem).toHaveBeenLastCalledWith('rest-timer:user-2');
+    secondUser.unmount();
+
+    const restoredFirstUser = renderTimer('user-1');
+    await flushStorage();
+    expect(restoredFirstUser.result.current).toMatchObject({
+      duration: 120,
+      remaining: 120,
+      running: true,
+      complete: false,
+    });
+    restoredFirstUser.unmount();
+  });
+
+  it('does not let delayed hydration overwrite a newer timer interaction', async () => {
+    const pendingRead = deferred<string | null>();
+    mockStorage.getItem.mockReturnValueOnce(pendingRead.promise);
+    const timer = renderTimer();
+
+    act(() => timer.result.current.start(120));
+    pendingRead.resolve(
+      JSON.stringify({ version: 1, duration: 60, endsAt: 60_000, pausedRemainingMs: null }),
+    );
+    await flushStorage();
+
+    expect(timer.result.current).toMatchObject({
+      duration: 120,
+      remaining: 120,
+      running: true,
+      complete: false,
+    });
+    timer.unmount();
+  });
+
+  it.each([
+    ['corrupt JSON', '{'],
+    [
+      'wrong schema version',
+      JSON.stringify({ version: 2, duration: 90, endsAt: 90_000, pausedRemainingMs: null }),
+    ],
+    [
+      'inactive persisted state',
+      JSON.stringify({ version: 1, duration: 90, endsAt: null, pausedRemainingMs: null }),
+    ],
+    [
+      'invalid duration',
+      JSON.stringify({ version: 1, duration: -1, endsAt: 90_000, pausedRemainingMs: null }),
+    ],
+  ])('ignores and removes %s', async (_label, raw) => {
+    persisted.set('rest-timer:user-1', raw);
+    const timer = renderTimer();
+    await flushStorage();
+
+    expect(timer.result.current).toMatchObject({
+      duration: 90,
+      remaining: 90,
+      running: false,
+      complete: false,
+    });
+    expect(mockStorage.removeItem).toHaveBeenCalledWith('rest-timer:user-1');
+    expect(persisted.has('rest-timer:user-1')).toBe(false);
+    timer.unmount();
+  });
+
+  it.each([
+    ['reset', 90],
+    ['skip', 0],
+  ] as const)('%s removes the persisted timer state', async (control, remaining) => {
+    const timer = renderTimer();
+    act(() => timer.result.current.start(90));
+    await flushStorage();
+    expect(persisted.has('rest-timer:user-1')).toBe(true);
+
+    act(() => timer.result.current[control]());
+    await flushStorage();
+
+    expect(timer.result.current).toMatchObject({ running: false, complete: false, remaining });
+    expect(persisted.has('rest-timer:user-1')).toBe(false);
+    timer.unmount();
+  });
+
+  it('natural completion removes the persisted timer state', async () => {
+    const timer = renderTimer();
+    act(() => timer.result.current.start(1));
+    await flushStorage();
+    expect(persisted.has('rest-timer:user-1')).toBe(true);
+
+    await act(async () => jest.advanceTimersByTimeAsync(1_000));
+    await flushStorage();
+
+    expect(timer.result.current).toMatchObject({ remaining: 0, running: false, complete: true });
+    expect(persisted.has('rest-timer:user-1')).toBe(false);
+    expect(mockNotificationAsync).toHaveBeenCalledTimes(1);
+    timer.unmount();
+  });
+
+  it('continues safely after storage read, write, and removal rejections', async () => {
+    mockStorage.getItem.mockRejectedValueOnce(new Error('read failed'));
+    mockStorage.setItem.mockRejectedValueOnce(new Error('write failed'));
+    mockStorage.removeItem.mockRejectedValueOnce(new Error('remove failed'));
+    const timer = renderTimer();
+    await flushStorage();
+
+    expect(timer.result.current).toMatchObject({ remaining: 90, running: false, complete: false });
+
+    act(() => timer.result.current.start(90));
+    await flushStorage();
+    expect(timer.result.current).toMatchObject({ remaining: 90, running: true, complete: false });
+
+    jest.setSystemTime(400);
+    act(() => timer.result.current.toggle());
+    await flushStorage();
+    expect(timer.result.current).toMatchObject({ remaining: 90, running: false, complete: false });
+    expect(persisted.has('rest-timer:user-1')).toBe(true);
+
+    act(() => timer.result.current.reset());
+    await flushStorage();
+    expect(timer.result.current).toMatchObject({ remaining: 90, running: false, complete: false });
+    expect(persisted.has('rest-timer:user-1')).toBe(true);
+
+    act(() => timer.result.current.start(60));
+    act(() => timer.result.current.skip());
+    await flushStorage();
+    expect(timer.result.current).toMatchObject({ remaining: 0, running: false, complete: false });
+    expect(persisted.has('rest-timer:user-1')).toBe(false);
+    timer.unmount();
   });
 
   it('recomputes on foreground and fires completion feedback once per run', () => {
