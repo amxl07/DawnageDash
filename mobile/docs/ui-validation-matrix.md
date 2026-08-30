@@ -16,7 +16,7 @@ The baseline commit identifies the approved pre-implementation source. It does n
 
 | Field | Recorded value |
 | --- | --- |
-| Git commit | 9ef1bd8a6dc59e53ac3db174802d48eaaf31cf83 — source revision reviewed by the automated/source gate; no app binary |
+| Git commit | 52f34258d60cc98e4201365e22ae548048d72035 — source revision reviewed by the automated/source gate; no app binary |
 | Expo build | Not available — no immutable development or preview build was produced for this matrix |
 | Supabase environment | Not recorded — no runtime validation session was conducted |
 | Reviewer/date | Not assigned / 2026-08-30 — runtime review pending |
@@ -99,7 +99,7 @@ Capture the implemented routes at matched data state and dimensions for compact/
 
 ## Release sign-off
 
-Verdict: BLOCKED — 9ef1bd8a6dc59e53ac3db174802d48eaaf31cf83 — Codex automated/source gate — 2026-08-30 — PRIV-PHOTO-BUCKET-PUBLIC, PRIV-PHOTO-PUBLIC-URL, EVIDENCE-IMMUTABLE-BUILD-UNAVAILABLE, E2E-IOS-MAESTRO-UNAVAILABLE, E2E-ANDROID-MAESTRO-UNAVAILABLE, PRIV-CROSS-ACCOUNT-UNVERIFIED
+Verdict: BLOCKED — 52f34258d60cc98e4201365e22ae548048d72035 — Codex automated/source gate — 2026-08-30 — PRIV-PHOTO-BUCKET-PUBLIC, PRIV-PHOTO-PUBLIC-URL, EVIDENCE-IMMUTABLE-BUILD-UNAVAILABLE, E2E-IOS-MAESTRO-UNAVAILABLE, E2E-ANDROID-MAESTRO-UNAVAILABLE, PRIV-CROSS-ACCOUNT-UNVERIFIED
 
 Release is blocked while any required row is `Not run`, `Blocked`, or `Fail`, or while an unresolved P0/P1 defect exists. Source-only checks never satisfy physical-device, accessibility-service, or runtime-performance rows.
 
