@@ -27,12 +27,21 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   initialWorkoutState,
   workoutReducer,
+  type WorkoutAction,
   type WorkoutExercise,
 } from '@/features/workout/workoutReducer';
+import {
+  acquireWorkoutSave,
+  applyWorkoutEdit,
+  assertExistingWorkoutUpdated,
+  finalizeWorkoutSave,
+  releaseWorkoutSave,
+  type WorkoutEditAction,
+} from '@/features/workout/workoutSave';
 import { useWorkoutPlan } from '@/hooks/usePlans';
 import { useWorkoutDraft } from '@/hooks/useWorkoutDraft';
 import { localDateString, parseLocalDate } from '@/lib/dates';
-import { enqueue, flushOutbox, readOutbox } from '@/lib/outbox';
+import { enqueue, flushOutbox } from '@/lib/outbox';
 import { supabase } from '@/lib/supabase';
 import {
   countSets,
@@ -57,7 +66,10 @@ export default function LoggerScreen() {
   const params = useLocalSearchParams<{ date?: string; day?: string; logId?: string }>();
 
   const date = params.date && params.date <= localDateString() ? params.date : localDateString();
-  const [state, dispatch] = useReducer(workoutReducer, initialWorkoutState);
+  const [state, reducerDispatch] = useReducer(workoutReducer, initialWorkoutState);
+  const editSnapshotRef = useRef({ generation: 0, state });
+  editSnapshotRef.current.state = state;
+  const savingRef = useRef(false);
   const [index, setIndex] = useState(0);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -68,6 +80,26 @@ export default function LoggerScreen() {
   const [newExercise, setNewExercise] = useState('');
   const openedAt = useRef(Date.now());
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  const dispatchEdit = useCallback((action: WorkoutEditAction) => {
+    editSnapshotRef.current = applyWorkoutEdit(editSnapshotRef.current, action);
+    reducerDispatch(action);
+  }, []);
+
+  const dispatchWithoutEdit = useCallback((action: WorkoutAction) => {
+    editSnapshotRef.current = {
+      ...editSnapshotRef.current,
+      state: workoutReducer(editSnapshotRef.current.state, action),
+    };
+    reducerDispatch(action);
+  }, []);
+
+  const markNonReducerEdit = useCallback(() => {
+    editSnapshotRef.current = {
+      ...editSnapshotRef.current,
+      generation: editSnapshotRef.current.generation + 1,
+    };
+  }, []);
 
   const { saveDraft, saveDraftNow, loadDraft, clearDraft, draftStatus } = useWorkoutDraft(
     user?.id,
@@ -137,7 +169,7 @@ export default function LoggerScreen() {
       const draft = await loadDraft();
       if (draft) {
         const selectedDay = Number(draft.selectedPlanId);
-        dispatch({
+        dispatchWithoutEdit({
           type: 'RESTORE_DRAFT',
           payload: {
             title: draft.workoutTitle,
@@ -180,7 +212,7 @@ export default function LoggerScreen() {
                     ],
               }))
             : [];
-        dispatch({
+        dispatchWithoutEdit({
           type: 'LOAD_EXISTING_LOG',
           payload: {
             logId: existingLog.id,
@@ -199,10 +231,10 @@ export default function LoggerScreen() {
   }, [existingLog, plan]);
 
   const loadDay = useCallback(
-    (dayNumber: number) => {
+    (dayNumber: number, userInitiated = false) => {
       const day = plan?.days.find((d) => d.day_number === dayNumber);
       if (!day) return;
-      dispatch({
+      const action: WorkoutEditAction = {
         type: 'LOAD_DEFAULT_PLAN',
         payload: {
           day: dayNumber,
@@ -217,10 +249,12 @@ export default function LoggerScreen() {
             })),
           })),
         },
-      });
+      };
+      if (userInitiated) dispatchEdit(action);
+      else dispatchWithoutEdit(action);
       setIndex(0);
     },
-    [plan],
+    [dispatchEdit, dispatchWithoutEdit, plan],
   );
 
   // Debounced draft autosave.
@@ -295,7 +329,12 @@ export default function LoggerScreen() {
 
   const save = async () => {
     if (!user?.id) return;
-    if (!state.title.trim()) {
+    if (!acquireWorkoutSave(savingRef)) return;
+
+    const submittedSnapshot = editSnapshotRef.current;
+    const submittedState = submittedSnapshot.state;
+    if (!submittedState.title.trim()) {
+      releaseWorkoutSave(savingRef);
       setSaveError('Give this workout a title first.');
       return;
     }
@@ -303,8 +342,8 @@ export default function LoggerScreen() {
     setSaveError(null);
 
     const content = serializeWorkoutContent({
-      planDayNumber: state.selectedDay,
-      exercises: state.exercises.map((ex) => ({
+      planDayNumber: submittedState.selectedDay,
+      exercises: submittedState.exercises.map((ex) => ({
         name: ex.name,
         sets: ex.sets.map((s, i) => ({
           setNumber: i + 1,
@@ -317,11 +356,11 @@ export default function LoggerScreen() {
         })),
       })),
     });
-    const payload = { user_id: user.id, date, title: state.title.trim(), content };
+    const payload = { user_id: user.id, date, title: submittedState.title.trim(), content };
 
     // PR detection against the previous-session data.
     const prs: string[] = [];
-    for (const ex of state.exercises) {
+    for (const ex of submittedState.exercises) {
       const prev = previousData?.[ex.name.toLowerCase().trim()];
       if (!prev?.length) continue;
       const todayMax = maxWeightFor(ex.sets.map((s, i) => ({ setNumber: i + 1, ...s })));
@@ -341,12 +380,14 @@ export default function LoggerScreen() {
     let syncStatus: 'saved' | 'offline' = 'saved';
     try {
       try {
-        if (state.existingLogId) {
-          const { error } = await supabase
+        if (submittedState.existingLogId) {
+          const updateResult = await supabase
             .from('workout_logs')
             .update(payload)
-            .eq('id', state.existingLogId);
-          if (error) throw error;
+            .eq('id', submittedState.existingLogId)
+            .select('id')
+            .maybeSingle();
+          assertExistingWorkoutUpdated(updateResult, submittedState.existingLogId);
         } else {
           const { error } = await supabase.from('workout_logs').insert(payload);
           if (error) throw error;
@@ -359,18 +400,9 @@ export default function LoggerScreen() {
             date,
             title: payload.title,
             content,
-            existingLogId: state.existingLogId,
+            existingLogId: submittedState.existingLogId,
           };
           await enqueue(outboxPayload);
-          const queued = (await readOutbox()).some(
-            (item) =>
-              item.user_id === outboxPayload.user_id &&
-              item.date === outboxPayload.date &&
-              item.title === outboxPayload.title &&
-              item.content === outboxPayload.content &&
-              item.existingLogId === outboxPayload.existingLogId,
-          );
-          if (!queued) throw new Error('Outbox write was not durable');
           syncStatus = 'offline';
         } catch {
           setSaveError('Couldn’t save or queue this workout. Your draft is still here — try again.');
@@ -379,8 +411,33 @@ export default function LoggerScreen() {
         }
       }
 
-      await clearDraft();
-      dispatch({ type: 'MARK_CLEAN' });
+      const finalization = await finalizeWorkoutSave({
+        savedGeneration: submittedSnapshot.generation,
+        getCurrentGeneration: () => editSnapshotRef.current.generation,
+        clearDraft,
+        repersistLatestDraft: () => {
+          const latest = editSnapshotRef.current.state;
+          return saveDraftNow({
+            workoutTitle: latest.title,
+            exercises: latest.exercises,
+            selectedPlanId: String(latest.selectedDay ?? 'custom'),
+            existingLogId: latest.existingLogId,
+          });
+        },
+      });
+      if (finalization === 'edited') {
+        const submittedStatus =
+          syncStatus === 'saved'
+            ? 'The submitted version was saved and synced.'
+            : 'The submitted version was saved here and is waiting to sync.';
+        setSaveError(`${submittedStatus} Newer edits are still open — save again when ready.`);
+        AccessibilityInfo.announceForAccessibility(
+          `${submittedStatus} Newer edits remain in the workout editor.`,
+        );
+        return;
+      }
+
+      dispatchWithoutEdit({ type: 'MARK_CLEAN' });
       void Haptics.notificationAsync(
         syncStatus === 'saved'
           ? Haptics.NotificationFeedbackType.Success
@@ -395,6 +452,7 @@ export default function LoggerScreen() {
       );
       setSummary({ result, syncStatus });
     } finally {
+      releaseWorkoutSave(savingRef);
       setSaving(false);
     }
   };
@@ -459,7 +517,7 @@ export default function LoggerScreen() {
           <Input
             label="Workout title"
             value={state.title}
-            onChangeText={(t) => dispatch({ type: 'SET_TITLE', payload: t })}
+            onChangeText={(t) => dispatchEdit({ type: 'SET_TITLE', payload: t })}
             placeholder="e.g. Push Day"
           />
 
@@ -470,7 +528,7 @@ export default function LoggerScreen() {
                 return (
                   <Pressable
                     key={d.id}
-                    onPress={() => loadDay(d.day_number)}
+                    onPress={() => loadDay(d.day_number, true)}
                     accessibilityRole="tab"
                     accessibilityLabel={`Day ${d.day_number}${d.focus ? `, ${d.focus}` : ''}`}
                     accessibilityState={{ selected: active }}
@@ -559,22 +617,22 @@ export default function LoggerScreen() {
                   notes={planMeta?.notes}
                   previous={previousData?.[currentExercise.name.toLowerCase().trim()]}
                   onUpdateSet={(setIdx, field, value) =>
-                    dispatch({
+                    dispatchEdit({
                       type: 'UPDATE_SET',
                       payload: { exerciseIndex: index, setIndex: setIdx, field, value },
                     })
                   }
                   onToggleSet={(setIdx) =>
-                    dispatch({
+                    dispatchEdit({
                       type: 'TOGGLE_SET',
                       payload: { exerciseIndex: index, setIndex: setIdx },
                     })
                   }
                   onAddSet={() =>
-                    dispatch({ type: 'ADD_SET', payload: { exerciseIndex: index } })
+                    dispatchEdit({ type: 'ADD_SET', payload: { exerciseIndex: index } })
                   }
                   onRemoveSet={(setIdx) =>
-                    dispatch({
+                    dispatchEdit({
                       type: 'REMOVE_SET',
                       payload: { exerciseIndex: index, setIndex: setIdx },
                     })
@@ -597,12 +655,15 @@ export default function LoggerScreen() {
             <Input
               label="Add an exercise"
               value={newExercise}
-              onChangeText={setNewExercise}
+              onChangeText={(value) => {
+                markNonReducerEdit();
+                setNewExercise(value);
+              }}
               placeholder="e.g. Cable Fly"
               returnKeyType="done"
               onSubmitEditing={() => {
                 if (!newExercise.trim()) return;
-                dispatch({ type: 'ADD_EXERCISE', payload: { name: newExercise.trim() } });
+                dispatchEdit({ type: 'ADD_EXERCISE', payload: { name: newExercise.trim() } });
                 setNewExercise('');
                 setIndex(state.exercises.length);
               }}
@@ -612,7 +673,7 @@ export default function LoggerScreen() {
               variant="secondary"
               onPress={() => {
                 if (!newExercise.trim()) return;
-                dispatch({ type: 'ADD_EXERCISE', payload: { name: newExercise.trim() } });
+                dispatchEdit({ type: 'ADD_EXERCISE', payload: { name: newExercise.trim() } });
                 setNewExercise('');
                 setIndex(state.exercises.length);
               }}
