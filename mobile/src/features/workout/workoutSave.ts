@@ -65,19 +65,30 @@ export function attachPersistedWorkoutId(
 type FinalizeOptions = {
   savedGeneration: number;
   getCurrentGeneration: () => number;
-  clearDraft: () => Promise<void>;
-  repersistLatestDraft: () => Promise<void>;
+  clearDraft: () => Promise<boolean>;
+  repersistLatestDraft: () => Promise<boolean>;
 };
 
 async function repersistStableDraft(
   getCurrentGeneration: () => number,
-  repersistLatestDraft: () => Promise<void>,
-): Promise<void> {
+  repersistLatestDraft: () => Promise<boolean>,
+): Promise<boolean> {
   let persistedGeneration: number;
   do {
     persistedGeneration = getCurrentGeneration();
-    await repersistLatestDraft();
+    if (!(await repersistLatestDraft())) return false;
   } while (getCurrentGeneration() !== persistedGeneration);
+  return true;
+}
+
+/** Runs a draft mutation before leaving and never exits on an unconfirmed mutation. */
+export async function runDraftMutationBeforeExit(
+  mutateDraft: () => Promise<boolean>,
+  exit: () => void,
+): Promise<boolean> {
+  const confirmed = await mutateDraft();
+  if (confirmed) exit();
+  return confirmed;
 }
 
 /** Clears only an unchanged submitted snapshot and repairs an edit racing the clear. */
@@ -86,17 +97,23 @@ export async function finalizeWorkoutSave({
   getCurrentGeneration,
   clearDraft,
   repersistLatestDraft,
-}: FinalizeOptions): Promise<'finalized' | 'edited'> {
+}: FinalizeOptions): Promise<
+  'finalized' | 'edited' | 'cleanup-failed' | 'draft-persistence-failed'
+> {
   if (getCurrentGeneration() !== savedGeneration) {
-    await repersistStableDraft(getCurrentGeneration, repersistLatestDraft);
-    return 'edited';
+    const persisted = await repersistStableDraft(getCurrentGeneration, repersistLatestDraft);
+    return persisted ? 'edited' : 'draft-persistence-failed';
   }
 
-  await clearDraft();
+  const cleared = await clearDraft();
+  if (!cleared) {
+    const persisted = await repersistStableDraft(getCurrentGeneration, repersistLatestDraft);
+    return persisted ? 'cleanup-failed' : 'draft-persistence-failed';
+  }
 
   if (getCurrentGeneration() !== savedGeneration) {
-    await repersistStableDraft(getCurrentGeneration, repersistLatestDraft);
-    return 'edited';
+    const persisted = await repersistStableDraft(getCurrentGeneration, repersistLatestDraft);
+    return persisted ? 'edited' : 'draft-persistence-failed';
   }
 
   return 'finalized';

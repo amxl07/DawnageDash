@@ -9,6 +9,7 @@ import {
   applyWorkoutEdit,
   attachPersistedWorkoutId,
   finalizeWorkoutSave,
+  runDraftMutationBeforeExit,
   releaseWorkoutSave,
 } from './workoutSave';
 
@@ -23,6 +24,30 @@ function deferred() {
 }
 
 describe('workout save integrity', () => {
+  it('does not exit when a requested draft mutation is not durable', async () => {
+    const exit = jest.fn();
+
+    await expect(
+      runDraftMutationBeforeExit(jest.fn(async () => false), exit),
+    ).resolves.toBe(false);
+    expect(exit).not.toHaveBeenCalled();
+  });
+
+  it('exits only after a requested draft mutation is confirmed', async () => {
+    const events: string[] = [];
+
+    await expect(
+      runDraftMutationBeforeExit(
+        async () => {
+          events.push('persisted');
+          return true;
+        },
+        () => events.push('exit'),
+      ),
+    ).resolves.toBe(true);
+    expect(events).toEqual(['persisted', 'exit']);
+  });
+
   it('admits only one save until the synchronous lock is released', () => {
     const lock = { current: false };
 
@@ -91,9 +116,10 @@ describe('workout save integrity', () => {
       finalizeWorkoutSave({
         savedGeneration: submittedGeneration,
         getCurrentGeneration: () => snapshot.generation,
-        clearDraft: jest.fn(async () => undefined),
+        clearDraft: jest.fn(async () => true),
         repersistLatestDraft: async () => {
           persistedId = snapshot.state.existingLogId;
+          return true;
         },
       }),
     ).resolves.toBe('edited');
@@ -110,12 +136,15 @@ describe('workout save integrity', () => {
   it('keeps and repersists an edit that arrives while draft clearing is pending', async () => {
     let generation = 7;
     const clear = deferred();
-    const repersistLatestDraft = jest.fn(async () => undefined);
+    const repersistLatestDraft = jest.fn(async () => true);
 
     const finalizing = finalizeWorkoutSave({
       savedGeneration: 7,
       getCurrentGeneration: () => generation,
-      clearDraft: () => clear.promise,
+      clearDraft: async () => {
+        await clear.promise;
+        return true;
+      },
       repersistLatestDraft,
     });
     generation = 8;
@@ -126,8 +155,8 @@ describe('workout save integrity', () => {
   });
 
   it('does not clear when an edit already follows the submitted snapshot', async () => {
-    const clearDraft = jest.fn(async () => undefined);
-    const repersistLatestDraft = jest.fn(async () => undefined);
+    const clearDraft = jest.fn(async () => true);
+    const repersistLatestDraft = jest.fn(async () => true);
 
     await expect(
       finalizeWorkoutSave({
@@ -142,8 +171,8 @@ describe('workout save integrity', () => {
   });
 
   it('clears and finalizes when the submitted snapshot is still current', async () => {
-    const clearDraft = jest.fn(async () => undefined);
-    const repersistLatestDraft = jest.fn(async () => undefined);
+    const clearDraft = jest.fn(async () => true);
+    const repersistLatestDraft = jest.fn(async () => true);
 
     await expect(
       finalizeWorkoutSave({
@@ -155,6 +184,31 @@ describe('workout save integrity', () => {
     ).resolves.toBe('finalized');
     expect(clearDraft).toHaveBeenCalledTimes(1);
     expect(repersistLatestDraft).not.toHaveBeenCalled();
+  });
+
+  it('keeps the editor recoverable and republishes the latest draft when removal fails', async () => {
+    const repersistLatestDraft = jest.fn(async () => true);
+
+    await expect(
+      finalizeWorkoutSave({
+        savedGeneration: 4,
+        getCurrentGeneration: () => 4,
+        clearDraft: jest.fn(async () => false),
+        repersistLatestDraft,
+      }),
+    ).resolves.toBe('cleanup-failed');
+    expect(repersistLatestDraft).toHaveBeenCalledTimes(1);
+  });
+
+  it('surfaces failure when neither draft removal nor recovery persistence succeeds', async () => {
+    await expect(
+      finalizeWorkoutSave({
+        savedGeneration: 4,
+        getCurrentGeneration: () => 4,
+        clearDraft: jest.fn(async () => false),
+        repersistLatestDraft: jest.fn(async () => false),
+      }),
+    ).resolves.toBe('draft-persistence-failed');
   });
 
 });

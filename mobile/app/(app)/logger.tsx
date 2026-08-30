@@ -38,6 +38,7 @@ import {
   attachPersistedWorkoutId,
   finalizeWorkoutSave,
   releaseWorkoutSave,
+  runDraftMutationBeforeExit,
   type WorkoutEditAction,
 } from '@/features/workout/workoutSave';
 import { useWorkoutPlan, type PlanExercise } from '@/hooks/usePlans';
@@ -325,20 +326,33 @@ export default function LoggerScreen() {
       {
         text: 'Discard draft',
         style: 'destructive',
-        onPress: () => {
-          void clearDraft();
-          router.back();
+        onPress: async () => {
+          setSaveError(null);
+          const cleared = await runDraftMutationBeforeExit(clearDraft, router.back);
+          if (!cleared) {
+            setSaveError('Couldn’t discard your draft. Keep editing and try again.');
+          }
         },
       },
       {
         text: 'Save draft & exit',
-        onPress: () => {
-          void saveDraftNow({
-            workoutTitle: state.title,
-            exercises: state.exercises,
-            selectedPlanId: String(state.selectedDay ?? 'custom'),
-            existingLogId: state.existingLogId,
-          }).then(() => router.back());
+        onPress: async () => {
+          setSaveError(null);
+          const saved = await runDraftMutationBeforeExit(
+            () =>
+              saveDraftNow({
+                workoutTitle: state.title,
+                exercises: state.exercises,
+                selectedPlanId: String(state.selectedDay ?? 'custom'),
+                existingLogId: state.existingLogId,
+              }),
+            router.back,
+          );
+          if (!saved) {
+            const message = 'Couldn’t save your draft. Keep editing and try again.';
+            setSaveError(message);
+            AccessibilityInfo.announceForAccessibility(message);
+          }
         },
       },
     ]);
@@ -432,15 +446,19 @@ export default function LoggerScreen() {
           });
         },
       });
-      if (finalization === 'edited') {
+      if (finalization !== 'finalized') {
         const submittedStatus =
           syncStatus === 'saved'
             ? 'The submitted version was saved and synced.'
             : 'The submitted version was saved here and is waiting to sync.';
-        setSaveError(`${submittedStatus} Newer edits are still open — save again when ready.`);
-        AccessibilityInfo.announceForAccessibility(
-          `${submittedStatus} Newer edits remain in the workout editor.`,
-        );
+        const message =
+          finalization === 'edited'
+            ? `${submittedStatus} Newer edits are still open — save again when ready.`
+            : finalization === 'cleanup-failed'
+              ? `${submittedStatus} The local draft could not be cleared, so it remains open for a safe retry.`
+              : `${submittedStatus} The latest draft could not be secured locally. Keep this screen open and try again.`;
+        setSaveError(message);
+        AccessibilityInfo.announceForAccessibility(message);
         return;
       }
 
