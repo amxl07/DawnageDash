@@ -482,7 +482,14 @@ export default function WeeklyFeedbackScreen() {
     return (
       <Screen>
         <PageHeader title="Weekly check-in" onBack={() => router.back()} />
-        <View testID="progress-skeleton" style={{ gap: spacing.base }}>
+        <View
+          testID="progress-skeleton"
+          accessible
+          accessibilityRole="progressbar"
+          accessibilityLabel="Loading weekly check-in"
+          accessibilityState={{ busy: true }}
+          style={{ gap: spacing.base }}
+        >
           <SkeletonCard lines={3} />
           <SkeletonCard lines={4} />
           <SkeletonCard lines={4} />

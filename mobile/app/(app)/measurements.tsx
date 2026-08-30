@@ -24,7 +24,7 @@ import {
   ErrorState,
   PageHeader,
   Screen,
-  SkeletonCard,
+  Skeleton,
   Text,
   useListMotion,
 } from '@/components/ui';
@@ -45,6 +45,19 @@ const SERIES = [
 ] as const;
 
 type SeriesKey = (typeof SERIES)[number]['key'];
+
+function MeasurementMetricSkeleton() {
+  return (
+    <Card testID="measurement-metric-skeleton" style={{ gap: spacing.md }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+        <Skeleton width={36} height={36} />
+        <Skeleton width="45%" height={14} />
+      </View>
+      <Skeleton width="55%" height={32} />
+      <Skeleton width="70%" height={14} />
+    </Card>
+  );
+}
 
 export default function MeasurementsScreen() {
   const { colors } = useTheme();
@@ -180,14 +193,31 @@ export default function MeasurementsScreen() {
     return (
       <Screen>
         <PageHeader title="Measurements" onBack={() => router.back()} />
-        <View testID="progress-skeleton" style={{ gap: spacing.base }}>
+        <View
+          testID="progress-skeleton"
+          accessible
+          accessibilityRole="progressbar"
+          accessibilityLabel="Loading measurement progress"
+          accessibilityState={{ busy: true }}
+          style={{ gap: spacing.base }}
+        >
           <AdaptiveGrid>
-            <SkeletonCard lines={2} />
-            <SkeletonCard lines={2} />
+            <MeasurementMetricSkeleton />
+            <MeasurementMetricSkeleton />
           </AdaptiveGrid>
-          <SkeletonCard lines={2} />
-          <SkeletonCard lines={5} />
-          <SkeletonCard lines={3} />
+          <MeasurementMetricSkeleton />
+          <Card testID="measurement-chart-skeleton" style={{ gap: spacing.md, minHeight: 260 }}>
+            <Skeleton width="35%" height={24} />
+            <Skeleton width="72%" height={14} />
+            <Skeleton height={200} />
+          </Card>
+          {[0, 1].map((index) => (
+            <Card key={index} testID="measurement-history-skeleton" style={{ gap: spacing.sm }}>
+              <Skeleton width="28%" height={18} />
+              <Skeleton width="100%" height={16} />
+              <Skeleton width="78%" height={16} />
+            </Card>
+          ))}
         </View>
       </Screen>
     );

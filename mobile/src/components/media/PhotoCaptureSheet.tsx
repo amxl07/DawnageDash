@@ -6,7 +6,11 @@ import { Alert, Linking, Pressable, View } from 'react-native';
 
 import { Button, Card, Sheet, SheetScrollView, StatusPill, Text } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
-import { usePhotoMutation, type PhotoRow } from '@/hooks/useProgressPhotos';
+import {
+  usePhotoMutation,
+  type PhotoPayload,
+  type PhotoRow,
+} from '@/hooks/useProgressPhotos';
 import { ANGLES, MAX_SOURCE_BYTES, uploadPhoto, type AngleKey } from '@/lib/photos';
 import { parseLocalDate } from '@/lib/dates';
 import { spacing } from '@/theme';
@@ -39,9 +43,10 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
   const [showGuide, setShowGuide] = useState(true);
   const [dirty, setDirty] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [persistFailed, setPersistFailed] = useState(false);
+  const [failedPersistence, setFailedPersistence] = useState<PhotoPayload | null>(null);
   const [interactionLocked, setInteractionLocked] = useState(false);
   const slotsRef = useRef(slots);
+  const failedPersistenceRef = useRef<PhotoPayload | null>(null);
   const sessionRef = useRef(0);
   const operationRef = useRef(0);
   const inFlightRef = useRef(false);
@@ -89,7 +94,8 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
     setSlots(next);
     setDirty(false);
     setSaveError(null);
-    setPersistFailed(false);
+    failedPersistenceRef.current = null;
+    setFailedPersistence(null);
   }, [date, existing, visible]);
 
   const patch = (key: AngleKey, fields: Partial<SlotState>) => {
@@ -180,7 +186,9 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
       error: null,
       errorKind: null,
     });
-    setPersistFailed(false);
+    failedPersistenceRef.current = null;
+    setFailedPersistence(null);
+    setSaveError(null);
     setDirty(true);
     void Haptics.selectionAsync();
   };
@@ -258,16 +266,20 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
     }
   };
 
-  const persistUploadedUrls = async (operation: Operation) => {
-    if (!isCurrentOperation(operation)) return false;
+  const payloadForCurrentSlots = (): PhotoPayload => {
     const current = slotsRef.current;
-    await mutation.mutateAsync({
+    return {
       date,
       front_url: current.front.url,
       back_url: current.back.url,
       side_left_url: current.side_left.url,
       side_right_url: current.side_right.url,
-    });
+    };
+  };
+
+  const persistUploadedUrls = async (operation: Operation, payload: PhotoPayload) => {
+    if (!isCurrentOperation(operation)) return false;
+    await mutation.mutateAsync(payload);
     return isCurrentOperation(operation);
   };
 
@@ -276,7 +288,9 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
     const operation = beginOperation();
     if (!operation) return;
     setSaveError(null);
-    setPersistFailed(false);
+    failedPersistenceRef.current = null;
+    setFailedPersistence(null);
+    let persistencePayload: PhotoPayload | null = null;
 
     try {
       const pendingAngles = ANGLES.filter((angle) => slotsRef.current[angle.key].pendingUri);
@@ -290,14 +304,18 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
         return;
       }
 
-      if (!(await persistUploadedUrls(operation))) return;
+      persistencePayload = payloadForCurrentSlots();
+      if (!(await persistUploadedUrls(operation, persistencePayload))) return;
 
+      failedPersistenceRef.current = null;
+      setFailedPersistence(null);
       setDirty(false);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       closeSession();
     } catch {
       if (isCurrentOperation(operation)) {
-        setPersistFailed(true);
+        failedPersistenceRef.current = persistencePayload;
+        setFailedPersistence(persistencePayload);
         setSaveError("Couldn't save. Check your connection and try again.");
       }
     } finally {
@@ -313,7 +331,9 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
     const operation = beginOperation();
     if (!operation) return;
     setSaveError(null);
-    setPersistFailed(false);
+    failedPersistenceRef.current = null;
+    setFailedPersistence(null);
+    let persistencePayload: PhotoPayload | null = null;
 
     try {
       const uploadResult = await uploadAngle(key, operation);
@@ -323,8 +343,11 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
         return;
       }
 
-      if (!(await persistUploadedUrls(operation))) return;
+      persistencePayload = payloadForCurrentSlots();
+      if (!(await persistUploadedUrls(operation, persistencePayload))) return;
 
+      failedPersistenceRef.current = null;
+      setFailedPersistence(null);
       const hasUnsentSelections = Object.values(slotsRef.current).some(
         (candidate) => candidate.pendingUri,
       );
@@ -338,7 +361,42 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
       closeSession();
     } catch {
       if (isCurrentOperation(operation)) {
-        setPersistFailed(true);
+        failedPersistenceRef.current = persistencePayload;
+        setFailedPersistence(persistencePayload);
+        setSaveError("Couldn't save. Check your connection and try again.");
+      }
+    } finally {
+      finishOperation(operation);
+    }
+  };
+
+  const retryPersistence = async () => {
+    const payload = failedPersistenceRef.current;
+    if (!user?.id || !payload) return;
+    const operation = beginOperation();
+    if (!operation) return;
+    setSaveError(null);
+
+    try {
+      if (!(await persistUploadedUrls(operation, payload))) return;
+
+      failedPersistenceRef.current = null;
+      setFailedPersistence(null);
+      const hasUnsentSelections = Object.values(slotsRef.current).some(
+        (candidate) => candidate.pendingUri,
+      );
+      setDirty(hasUnsentSelections);
+      if (hasUnsentSelections) {
+        setSaveError('Uploaded photos are saved. Other selected photos still need attention.');
+        return;
+      }
+
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      closeSession();
+    } catch {
+      if (isCurrentOperation(operation)) {
+        failedPersistenceRef.current = payload;
+        setFailedPersistence(payload);
         setSaveError("Couldn't save. Check your connection and try again.");
       }
     } finally {
@@ -407,7 +465,9 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
                     error: null,
                     errorKind: null,
                   });
-                  setPersistFailed(false);
+                  failedPersistenceRef.current = null;
+                  setFailedPersistence(null);
+                  setSaveError(null);
                   setDirty(true);
                 }}
                 onRetry={() => void retry(angle.key)}
@@ -440,15 +500,15 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
             label={
               saving
                 ? 'Saving photo set…'
-                : persistFailed
+                : failedPersistence
                   ? 'Photo set not saved'
                   : 'Some photos need attention'
             }
           />
         ) : null}
         <Button
-          label={uploading ? 'Uploading…' : persistFailed ? 'Retry save' : 'Save photos'}
-          onPress={save}
+          label={uploading ? 'Uploading…' : failedPersistence ? 'Retry save' : 'Save photos'}
+          onPress={failedPersistence ? retryPersistence : save}
           loading={uploading || mutation.isPending}
           disabled={saving}
         />

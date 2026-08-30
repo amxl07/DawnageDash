@@ -112,6 +112,7 @@ jest.mock('@/components/ui', () => {
     ),
     PageHeader: ({ title }: { title: string }) => <Native.Text>{title}</Native.Text>,
     Screen: ({ children }: { children: React.ReactNode }) => <Native.View>{children}</Native.View>,
+    Skeleton: () => <Native.View accessibilityElementsHidden />,
     SkeletonCard: () => null,
     Text: ({ children, ...props }: React.ComponentProps<typeof Native.Text>) => (
       <Native.Text {...props}>{children}</Native.Text>
@@ -197,7 +198,23 @@ describe('MediaScreen', () => {
       renderer = create(<MediaScreen />);
     });
 
-    expect(renderer.root.findByProps({ testID: 'progress-skeleton' })).toBeTruthy();
+    const loading = renderer.root.findByProps({ testID: 'progress-skeleton' });
+    expect(loading.props.accessibilityLabel).toBe('Loading progress photos');
+    expect(loading.props.accessibilityState).toEqual({ busy: true });
+    expect(
+      renderer.root.findAll(
+        (node: { type?: unknown; props: { testID?: string } }) =>
+          node.type === 'View' && node.props.testID === 'photo-week-skeleton',
+      ),
+    ).toHaveLength(2);
+    const thumbnails = renderer.root.findAll(
+      (node: { type?: unknown; props: { testID?: string } }) =>
+        node.type === 'View' && node.props.testID === 'photo-thumbnail-skeleton',
+    );
+    expect(thumbnails).toHaveLength(8);
+    for (const thumbnail of thumbnails) {
+      expect(thumbnail.props.style).toMatchObject({ width: '22%', aspectRatio: 3 / 4 });
+    }
   });
 
   it('offers a query retry when no photo history is available', () => {

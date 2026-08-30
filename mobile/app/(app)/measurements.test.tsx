@@ -157,6 +157,7 @@ jest.mock('@/components/ui', () => {
     ),
     PageHeader: ({ title }: { title: string }) => <MockNativeText>{title}</MockNativeText>,
     Screen: ({ children }: { children: React.ReactNode }) => <MockView>{children}</MockView>,
+    Skeleton: () => <MockView accessibilityElementsHidden />,
     SkeletonCard: () => null,
     Text: ({ children, ...props }: React.ComponentProps<typeof MockNativeText>) => (
       <MockNativeText {...props}>{children}</MockNativeText>
@@ -318,7 +319,29 @@ describe('MeasurementsScreen', () => {
 
     const renderer = renderScreen();
 
-    expect(renderer.root.findByProps({ testID: 'progress-skeleton' })).toBeTruthy();
+    const loading = renderer.root.findByProps({ testID: 'progress-skeleton' });
+    expect(loading.props.accessibilityLabel).toBe('Loading measurement progress');
+    expect(loading.props.accessibilityState).toEqual({ busy: true });
+    expect(
+      renderer.root.findAll(
+        (node: { type?: unknown; props: { testID?: string } }) =>
+          node.type === 'View' && node.props.testID === 'measurement-metric-skeleton',
+      ),
+    ).toHaveLength(3);
+    const [chartSkeleton] = renderer.root.findAll(
+      (node: { type?: unknown; props: { testID?: string } }) =>
+        node.type === 'View' && node.props.testID === 'measurement-chart-skeleton',
+    );
+    if (!chartSkeleton) throw new Error('Measurement chart skeleton was not rendered');
+    expect(
+      StyleSheet.flatten(chartSkeleton.props.style),
+    ).toMatchObject({ minHeight: 260 });
+    expect(
+      renderer.root.findAll(
+        (node: { type?: unknown; props: { testID?: string } }) =>
+          node.type === 'View' && node.props.testID === 'measurement-history-skeleton',
+      ),
+    ).toHaveLength(2);
   });
 
   it('offers a query retry when no measurement content is available', () => {

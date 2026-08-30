@@ -20,7 +20,7 @@ import {
   ErrorState,
   PageHeader,
   Screen,
-  SkeletonCard,
+  Skeleton,
   Text,
   useListMotion,
 } from '@/components/ui';
@@ -31,6 +31,29 @@ import { iconSize, radius, spacing, useMotion, useTheme } from '@/theme';
 
 const urlsOf = (row: PhotoRow) =>
   ANGLES.map((a) => ({ label: a.label, url: row[a.column as keyof PhotoRow] as string | null }));
+
+function PhotoWeekSkeleton() {
+  return (
+    <Card testID="photo-week-skeleton" style={{ gap: spacing.md }}>
+      <View style={{ gap: spacing.xs }}>
+        <Skeleton width="32%" height={22} />
+        <Skeleton width="24%" height={14} />
+      </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm }}>
+        {ANGLES.map((angle) => (
+          <View
+            key={angle.key}
+            testID="photo-thumbnail-skeleton"
+            style={{ width: '22%', aspectRatio: 3 / 4 }}
+          >
+            <Skeleton width="100%" height="100%" />
+          </View>
+        ))}
+      </View>
+      <Skeleton width="62%" height={16} />
+    </Card>
+  );
+}
 
 const WeekCard = memo(function WeekCard({
   row,
@@ -219,9 +242,16 @@ export default function MediaScreen() {
     return (
       <Screen>
         <PageHeader title="Progress photos" onBack={() => router.back()} />
-        <View testID="progress-skeleton" style={{ gap: spacing.base }}>
-          <SkeletonCard lines={4} />
-          <SkeletonCard lines={4} />
+        <View
+          testID="progress-skeleton"
+          accessible
+          accessibilityRole="progressbar"
+          accessibilityLabel="Loading progress photos"
+          accessibilityState={{ busy: true }}
+          style={{ gap: spacing.base }}
+        >
+          <PhotoWeekSkeleton />
+          <PhotoWeekSkeleton />
         </View>
       </Screen>
     );

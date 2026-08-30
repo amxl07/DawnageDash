@@ -427,7 +427,9 @@ describe('WeeklyFeedbackScreen', () => {
 
     const renderer = await renderScreen();
 
-    expect(renderer.root.findByProps({ testID: 'progress-skeleton' })).toBeTruthy();
+    const loading = renderer.root.findByProps({ testID: 'progress-skeleton' });
+    expect(loading.props.accessibilityLabel).toBe('Loading weekly check-in');
+    expect(loading.props.accessibilityState).toEqual({ busy: true });
   });
 
   it('keeps the check-in action available when history loading fails and offers retry', async () => {

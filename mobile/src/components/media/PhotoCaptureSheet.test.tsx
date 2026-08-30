@@ -171,6 +171,8 @@ describe('PhotoCaptureSheet', () => {
     jest.clearAllMocks();
     mockUploadPhoto.mockReset();
     mockMutateAsync.mockReset();
+    mockImagePicker.requestMediaLibraryPermissionsAsync.mockReset();
+    mockImagePicker.launchImageLibraryAsync.mockReset();
     mockMutateAsync.mockResolvedValue(undefined);
     mockImagePicker.requestMediaLibraryPermissionsAsync.mockResolvedValue({
       granted: true,
@@ -262,6 +264,73 @@ describe('PhotoCaptureSheet', () => {
     expect(mockMutateAsync).toHaveBeenCalledTimes(2);
     expect(mockMutateAsync.mock.calls[0]).toEqual(mockMutateAsync.mock.calls[1]);
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries a failed persistence snapshot without re-uploading unrelated failed slots', async () => {
+    mockImagePicker.launchImageLibraryAsync
+      .mockResolvedValueOnce({
+        canceled: false,
+        assets: [photoAsset('file://front.jpg')],
+      })
+      .mockResolvedValueOnce({
+        canceled: false,
+        assets: [photoAsset('file://back.jpg')],
+      })
+      .mockResolvedValueOnce({
+        canceled: false,
+        assets: [photoAsset('file://left.jpg')],
+      });
+    mockUploadPhoto
+      .mockRejectedValueOnce(new Error('front offline'))
+      .mockRejectedValueOnce(new Error('back offline'))
+      .mockRejectedValueOnce(new Error('left offline'))
+      .mockResolvedValueOnce({ publicUrl: 'https://example.com/front.jpg', bytes: 1000 });
+    const persistenceRetry = deferred<void>();
+    mockMutateAsync
+      .mockRejectedValueOnce(new Error('database offline'))
+      .mockReturnValueOnce(persistenceRetry.promise);
+    const onClose = jest.fn();
+    const { getByLabelText } = renderSheet({ onClose });
+
+    await act(async () => {
+      await getByLabelText('Choose Front photo from library').props.onPress();
+      await getByLabelText('Choose Back photo from library').props.onPress();
+      await getByLabelText('Choose Left photo from library').props.onPress();
+    });
+    await act(async () => {
+      await getByLabelText('Save photos').props.onPress();
+    });
+    await act(async () => {
+      await getByLabelText('Retry Front photo upload').props.onPress();
+    });
+
+    expect(getByLabelText('Front photo, uploaded')).toBeTruthy();
+    expect(getByLabelText('Back photo, upload failed')).toBeTruthy();
+    expect(getByLabelText('Left photo, upload failed')).toBeTruthy();
+    expect(getByLabelText('Retry save')).toBeTruthy();
+    expect(mockUploadPhoto).toHaveBeenCalledTimes(4);
+    expect(mockMutateAsync).toHaveBeenCalledTimes(1);
+
+    let retryPromise!: Promise<void>;
+    act(() => {
+      retryPromise = getByLabelText('Retry save').props.onPress();
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(mockUploadPhoto).toHaveBeenCalledTimes(4);
+    expect(mockMutateAsync).toHaveBeenCalledTimes(2);
+    expect(mockMutateAsync.mock.calls[1]).toEqual(mockMutateAsync.mock.calls[0]);
+
+    await act(async () => {
+      persistenceRetry.resolve();
+      await retryPromise;
+    });
+
+    expect(getByLabelText('Back photo, upload failed')).toBeTruthy();
+    expect(getByLabelText('Left photo, upload failed')).toBeTruthy();
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it('preserves a valid pending selection when a replacement is oversized', async () => {
