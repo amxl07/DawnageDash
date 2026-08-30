@@ -9,7 +9,7 @@ import { localDateString, parseLocalDate } from '@/lib/dates';
 import {
   EMPTY_MEASUREMENT_DRAFT,
   MEASUREMENT_FIELDS,
-  validateMeasurementDraft,
+  parseMeasurementDraft,
   validateMeasurementValue,
   type MeasurementDraft,
   type MeasurementErrors,
@@ -56,7 +56,7 @@ export function MeasurementSheet({ visible, onClose, editing, previous, onSaved 
   }, [visible, editing, previous]);
 
   const save = async () => {
-    const next = validateMeasurementDraft(draft);
+    const { values, errors: next } = parseMeasurementDraft(draft);
     setErrors(next);
     if (Object.keys(next).length) return;
 
@@ -64,18 +64,14 @@ export function MeasurementSheet({ visible, onClose, editing, previous, onSaved 
     try {
       await mutation.mutateAsync({
         date,
-        chest: draft.chest ? parseFloat(draft.chest) : null,
-        waist: draft.waist ? parseFloat(draft.waist) : null,
-        hips: draft.hips ? parseFloat(draft.hips) : null,
-        thighs: draft.thighs ? parseFloat(draft.thighs) : null,
-        arms: draft.arms ? parseFloat(draft.arms) : null,
+        ...values,
       });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       // Delta payoff against the previous entry.
       let payoff = 'Measurements saved.';
-      if (previous && draft.waist) {
-        const delta = num(previous.waist) - parseFloat(draft.waist);
+      if (previous && values.waist !== null) {
+        const delta = num(previous.waist) - values.waist;
         if (Math.abs(delta) >= 0.1) {
           payoff = `Waist ${delta > 0 ? '−' : '+'}${Math.abs(delta).toFixed(1)} cm since last time`;
         }

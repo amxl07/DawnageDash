@@ -45,12 +45,18 @@ function LineChartInner({ series, summary, height = 200, legend = true, yAxisSuf
         data={primary.data}
         data2={datasets[1]?.data}
         data3={datasets[2]?.data}
+        data4={datasets[3]?.data}
+        data5={datasets[4]?.data}
         color1={series[0]?.color}
         color2={series[1]?.color}
         color3={series[2]?.color}
+        color4={series[3]?.color}
+        color5={series[4]?.color}
         strokeDashArray1={series[0]?.dash}
         strokeDashArray2={series[1]?.dash}
         strokeDashArray3={series[2]?.dash}
+        strokeDashArray4={series[3]?.dash}
+        strokeDashArray5={series[4]?.dash}
         height={height}
         thickness={2}
         curved
