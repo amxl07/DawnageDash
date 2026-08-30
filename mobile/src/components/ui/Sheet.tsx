@@ -54,17 +54,20 @@ export function Sheet({
   const ref = useRef<BottomSheetModal>(null);
   const titleRef = useRef<View>(null);
   const hasFocusedTitle = useRef(false);
+  const controlledDismissPending = useRef(false);
 
   const snapPoints = useMemo(() => [`${Math.round(heightRatio * 100)}%`], [heightRatio]);
 
   useEffect(() => {
     if (!visible) {
       hasFocusedTitle.current = false;
+      controlledDismissPending.current = true;
       ref.current?.dismiss();
       return;
     }
 
     hasFocusedTitle.current = false;
+    controlledDismissPending.current = false;
     ref.current?.present();
   }, [visible]);
 
@@ -93,6 +96,11 @@ export function Sheet({
   );
 
   const handleDismiss = useCallback(() => {
+    if (controlledDismissPending.current) {
+      controlledDismissPending.current = false;
+      return;
+    }
+
     if (!dismissible && visible) {
       ref.current?.present();
     }

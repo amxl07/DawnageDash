@@ -173,12 +173,44 @@ describe('Sheet', () => {
     expect(renderBackdrop({}).props.pressBehavior).toBe('none');
   });
 
-  it('re-presents before forwarding an unexpected native dismissal while locked', () => {
+  it('consumes the native onDismiss after a controlled clean close', () => {
     mockSafeAreaInsets.mockReturnValue({ top: 47, right: 0, bottom: 34, left: 0 });
     const onClose = jest.fn();
+    let renderer: ReturnType<typeof create>;
 
     act(() => {
-      create(
+      renderer = create(
+        <Sheet visible title="Exercise details" onClose={onClose}>
+          <Text>Prescription</Text>
+        </Sheet>,
+      );
+    });
+
+    const staleOnDismiss = mockModalProps.onDismiss as (() => void) | undefined;
+    const closeButton = renderer!.root.findByProps({ accessibilityLabel: 'Close Exercise details' });
+    act(() => closeButton.props.onPress());
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      renderer!.update(
+        <Sheet visible={false} title="Exercise details" onClose={onClose}>
+          <Text>Prescription</Text>
+        </Sheet>,
+      );
+    });
+    expect(mockDismiss).toHaveBeenCalledTimes(1);
+
+    act(() => staleOnDismiss?.());
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-presents an unexpected dirty dismissal and consumes the native dismissal after Discard', () => {
+    mockSafeAreaInsets.mockReturnValue({ top: 47, right: 0, bottom: 34, left: 0 });
+    const onClose = jest.fn();
+    let renderer: ReturnType<typeof create>;
+
+    act(() => {
+      renderer = create(
         <Sheet visible dismissible={false} title="Progress photos" onClose={onClose}>
           <Text>Unsaved photo</Text>
         </Sheet>,
@@ -194,5 +226,74 @@ describe('Sheet', () => {
     expect(mockPresent).toHaveBeenCalledTimes(2);
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(mockPresent.mock.invocationCallOrder[1]).toBeLessThan(onClose.mock.invocationCallOrder[0]);
+
+    act(() => {
+      renderer!.update(
+        <Sheet visible={false} dismissible={false} title="Progress photos" onClose={onClose}>
+          <Text>Unsaved photo</Text>
+        </Sheet>,
+      );
+    });
+    expect(mockDismiss).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      (mockModalProps.onDismiss as (() => void) | undefined)?.();
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(mockPresent).toHaveBeenCalledTimes(2);
+  });
+
+  it('forwards an unexpected dismissible native dismissal once', () => {
+    mockSafeAreaInsets.mockReturnValue({ top: 47, right: 0, bottom: 34, left: 0 });
+    const onClose = jest.fn();
+
+    act(() => {
+      create(
+        <Sheet visible title="Exercise details" onClose={onClose}>
+          <Text>Prescription</Text>
+        </Sheet>,
+      );
+    });
+
+    act(() => {
+      (mockModalProps.onDismiss as (() => void) | undefined)?.();
+    });
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(mockPresent).toHaveBeenCalledTimes(1);
+  });
+
+  it('resets controlled-dismiss suppression when the sheet is presented again', () => {
+    mockSafeAreaInsets.mockReturnValue({ top: 47, right: 0, bottom: 34, left: 0 });
+    const onClose = jest.fn();
+    let renderer: ReturnType<typeof create>;
+
+    act(() => {
+      renderer = create(
+        <Sheet visible title="Exercise details" onClose={onClose}>
+          <Text>Prescription</Text>
+        </Sheet>,
+      );
+    });
+    act(() => {
+      renderer!.update(
+        <Sheet visible={false} title="Exercise details" onClose={onClose}>
+          <Text>Prescription</Text>
+        </Sheet>,
+      );
+    });
+    act(() => {
+      renderer!.update(
+        <Sheet visible title="Exercise details" onClose={onClose}>
+          <Text>Prescription</Text>
+        </Sheet>,
+      );
+    });
+
+    act(() => {
+      (mockModalProps.onDismiss as (() => void) | undefined)?.();
+    });
+
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
