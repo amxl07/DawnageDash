@@ -47,6 +47,7 @@ let mockUser = { id: 'user-1', user_metadata: { full_name: 'Maya Singh' } };
 
 const mockLoadDraft = jest.fn(async () => null);
 const mockSaveDraft = jest.fn(async () => true);
+const mockUser2SaveDraft = jest.fn(async () => true);
 const mockClearDraft = jest.fn(async () => true);
 const mockInsert = jest.fn(async () => ({ error: null as Error | null }));
 const mockInvalidateQueries = jest.fn();
@@ -95,7 +96,7 @@ jest.mock('@/hooks/useDashboardData', () => ({
 jest.mock('@/hooks/useWeeklyFeedbackDraft', () => ({
   useWeeklyFeedbackDraft: () => ({
     loadDraft: mockLoadDraft,
-    saveDraft: mockSaveDraft,
+    saveDraft: mockUser.id === 'user-1' ? mockSaveDraft : mockUser2SaveDraft,
     clearDraft: mockClearDraft,
     draftStatus: 'saved',
   }),
@@ -267,6 +268,7 @@ describe('WeeklyFeedbackScreen', () => {
     jest.clearAllMocks();
     mockLoadDraft.mockResolvedValue(null);
     mockSaveDraft.mockResolvedValue(true);
+    mockUser2SaveDraft.mockResolvedValue(true);
     mockClearDraft.mockResolvedValue(true);
     mockInsert.mockResolvedValue({ error: null });
     mockCheckIns = [];
@@ -427,6 +429,32 @@ describe('WeeklyFeedbackScreen', () => {
       renderer.root.findByProps({ accessibilityLabel: 'How are you feeling overall this week?' })
         .props.value,
     ).toBe('');
+  });
+
+  it('never autosaves the outgoing user form through the incoming user draft callback', async () => {
+    const renderer = await renderScreen();
+    await press(renderer, 'Start');
+    act(() => {
+      renderer.root
+        .findByProps({ accessibilityLabel: 'How are you feeling overall this week?' })
+        .props.onChangeText('Private answer owned by user one');
+    });
+    mockSaveDraft.mockClear();
+    mockUser2SaveDraft.mockClear();
+
+    mockUser = { id: 'user-2', user_metadata: { full_name: 'Noor Shah' } };
+    await act(async () => {
+      renderer.update(<WeeklyFeedbackScreen />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockUser2SaveDraft).not.toHaveBeenCalledWith(
+      expect.objectContaining({ overall_feeling: 'Private answer owned by user one' }),
+      expect.any(Number),
+    );
+    expect(mockUser2SaveDraft).not.toHaveBeenCalled();
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Start' })).toBeTruthy();
   });
 
   it('ignores a stale submit completion after the authenticated user changes', async () => {

@@ -104,6 +104,7 @@ export default function WeeklyFeedbackScreen() {
   const [started, setStarted] = useState(false);
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<WeeklyFeedbackForm>(emptyWeekly);
+  const [formOwnerUserId, setFormOwnerUserId] = useState<string | undefined>(user?.id);
   const [errors, setErrors] = useState<WeeklyFeedbackErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -114,6 +115,7 @@ export default function WeeklyFeedbackScreen() {
   const [submissionCommitted, setSubmissionCommitted] = useState(false);
   const [cleanupPending, setCleanupPending] = useState(false);
   const [exitReady, setExitReady] = useState(0);
+  const ownsCurrentForm = Boolean(user?.id && formOwnerUserId === user.id);
 
   const { loadDraft, saveDraft, clearDraft, draftStatus } = useWeeklyFeedbackDraft(user?.id);
 
@@ -160,6 +162,7 @@ export default function WeeklyFeedbackScreen() {
     setStarted(false);
     setStep(0);
     setForm(emptyWeekly());
+    setFormOwnerUserId(undefined);
     setErrors({});
     setSubmitting(false);
     setSubmitted(false);
@@ -174,6 +177,7 @@ export default function WeeklyFeedbackScreen() {
 
   useEffect(() => {
     if (!user?.id) {
+      setFormOwnerUserId(undefined);
       setRestored(true);
       return;
     }
@@ -184,11 +188,13 @@ export default function WeeklyFeedbackScreen() {
       const initialPrefill = latestPrefillRef.current;
       if (draft) {
         setForm({ ...emptyWeekly(), ...initialPrefill, ...draft.form });
+        setFormOwnerUserId(user.id);
         setStep(draft.step);
         setStarted(true);
         setHasUnsentChanges(true);
       } else {
         setForm({ ...emptyWeekly(), ...initialPrefill });
+        setFormOwnerUserId(user.id);
         setStep(0);
         setStarted(false);
         setHasUnsentChanges(false);
@@ -201,11 +207,21 @@ export default function WeeklyFeedbackScreen() {
   }, [flowIdentity, loadDraft, user?.id]);
 
   useEffect(() => {
-    if (!restored || !started || submitted || submissionCommitted || !hasUnsentChanges) return;
+    if (
+      !ownsCurrentForm ||
+      !restored ||
+      !started ||
+      submitted ||
+      submissionCommitted ||
+      !hasUnsentChanges
+    ) {
+      return;
+    }
     void saveDraft(form, step);
   }, [
     form,
     hasUnsentChanges,
+    ownsCurrentForm,
     restored,
     saveDraft,
     started,
@@ -249,63 +265,66 @@ export default function WeeklyFeedbackScreen() {
     [],
   );
 
-  usePreventRemove((hasUnsentChanges || submissionCommitted) && !submitted, ({ data }) => {
-    const alertIdentity = flowIdentity;
-    if (submissionCommitted) {
-      Alert.alert(
-        'Finish local cleanup?',
-        'Your check-in was submitted, but its saved draft still needs to be removed from this device.',
-        [
-          { text: 'Keep here', style: 'cancel' },
-          {
-            text: 'Retry cleanup & exit',
-            onPress: async () => {
-              const cleared = await clearDraft();
-              if (activeFlowIdentityRef.current !== alertIdentity) return;
-              if (cleared) {
-                permitExit(data.action, alertIdentity);
-                return;
-              }
-              setExitError('Check-in sent, but local draft cleanup still failed. Try again.');
+  usePreventRemove(
+    ownsCurrentForm && (hasUnsentChanges || submissionCommitted) && !submitted,
+    ({ data }) => {
+      const alertIdentity = flowIdentity;
+      if (submissionCommitted) {
+        Alert.alert(
+          'Finish local cleanup?',
+          'Your check-in was submitted, but its saved draft still needs to be removed from this device.',
+          [
+            { text: 'Keep here', style: 'cancel' },
+            {
+              text: 'Retry cleanup & exit',
+              onPress: async () => {
+                const cleared = await clearDraft();
+                if (activeFlowIdentityRef.current !== alertIdentity) return;
+                if (cleared) {
+                  permitExit(data.action, alertIdentity);
+                  return;
+                }
+                setExitError('Check-in sent, but local draft cleanup still failed. Try again.');
+              },
             },
-          },
-        ],
-      );
-      return;
-    }
+          ],
+        );
+        return;
+      }
 
-    Alert.alert('Leave weekly check-in?', 'Your answers have not been submitted yet.', [
-      { text: 'Keep editing', style: 'cancel' },
-      {
-        text: 'Discard draft',
-        style: 'destructive',
-        onPress: async () => {
-          const cleared = await clearDraft();
-          if (activeFlowIdentityRef.current !== alertIdentity) return;
-          if (cleared) {
-            permitExit(data.action, alertIdentity);
-            return;
-          }
-          setExitError('Couldn’t discard your draft. Keep editing and try again.');
+      Alert.alert('Leave weekly check-in?', 'Your answers have not been submitted yet.', [
+        { text: 'Keep editing', style: 'cancel' },
+        {
+          text: 'Discard draft',
+          style: 'destructive',
+          onPress: async () => {
+            const cleared = await clearDraft();
+            if (activeFlowIdentityRef.current !== alertIdentity) return;
+            if (cleared) {
+              permitExit(data.action, alertIdentity);
+              return;
+            }
+            setExitError('Couldn’t discard your draft. Keep editing and try again.');
+          },
         },
-      },
-      {
-        text: 'Save draft & exit',
-        onPress: async () => {
-          setExitError(null);
-          const saved = await saveDraft(form, step, { immediate: true });
-          if (activeFlowIdentityRef.current !== alertIdentity) return;
-          if (saved) {
-            permitExit(data.action, alertIdentity);
-            return;
-          }
-          const message = 'Couldn’t save your draft. Keep editing and try again.';
-          setExitError(message);
-          AccessibilityInfo.announceForAccessibility(message);
+        {
+          text: 'Save draft & exit',
+          onPress: async () => {
+            setExitError(null);
+            const saved = await saveDraft(form, step, { immediate: true });
+            if (activeFlowIdentityRef.current !== alertIdentity) return;
+            if (saved) {
+              permitExit(data.action, alertIdentity);
+              return;
+            }
+            const message = 'Couldn’t save your draft. Keep editing and try again.';
+            setExitError(message);
+            AccessibilityInfo.announceForAccessibility(message);
+          },
         },
-      },
-    ]);
-  });
+      ]);
+    },
+  );
 
   const focusErrors = useCallback((nextErrors: WeeklyFeedbackErrors) => {
     setErrors(nextErrors);
@@ -319,6 +338,7 @@ export default function WeeklyFeedbackScreen() {
   }, []);
 
   const validateCurrentStep = useCallback(() => {
+    if (!ownsCurrentForm || activeFlowIdentityRef.current !== flowIdentity) return false;
     const nextErrors = validateWeeklyStep(step, form);
     if (Object.keys(nextErrors).length) {
       focusErrors(nextErrors);
@@ -326,15 +346,16 @@ export default function WeeklyFeedbackScreen() {
     }
     setErrors({});
     return true;
-  }, [focusErrors, form, step]);
+  }, [flowIdentity, focusErrors, form, ownsCurrentForm, step]);
 
   const moveToStep = useCallback((nextStep: number) => {
+    if (!ownsCurrentForm || activeFlowIdentityRef.current !== flowIdentity) return;
     setErrors({});
     setSubmitError(null);
     setStep(nextStep);
     setHasUnsentChanges(true);
     scrollRef.current?.scrollTo({ y: 0, animated: true });
-  }, []);
+  }, [flowIdentity, ownsCurrentForm]);
 
   const continueForward = useCallback(() => {
     if (!validateCurrentStep()) return;
@@ -342,6 +363,7 @@ export default function WeeklyFeedbackScreen() {
   }, [moveToStep, step, validateCurrentStep]);
 
   const updateField = useCallback((key: string, value: string) => {
+    if (!ownsCurrentForm || activeFlowIdentityRef.current !== flowIdentity) return;
     setForm((previous) => ({ ...previous, [key]: value }));
     setErrors((previous) => {
       if (!previous[key]) return previous;
@@ -352,7 +374,7 @@ export default function WeeklyFeedbackScreen() {
     setSubmitError(null);
     setExitError(null);
     setHasUnsentChanges(true);
-  }, []);
+  }, [flowIdentity, ownsCurrentForm]);
 
   const showSubmissionSuccess = useCallback((identity: typeof flowIdentity) => {
     if (activeFlowIdentityRef.current !== identity) return;
@@ -450,7 +472,7 @@ export default function WeeklyFeedbackScreen() {
     );
   }
 
-  if (isLoading || !restored) {
+  if (isLoading || !restored || Boolean(user?.id && !ownsCurrentForm)) {
     return (
       <Screen>
         <SkeletonCard lines={3} />
