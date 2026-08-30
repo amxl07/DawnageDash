@@ -131,6 +131,62 @@ describe('useWorkoutDraft durability', () => {
     unmount();
   });
 
+  it('keeps a newer debounced edit current while an older write finishes, then saves the edit', async () => {
+    const olderWrite = deferred<void>();
+    mockStorage.setItem.mockReturnValueOnce(olderWrite.promise).mockResolvedValueOnce(undefined);
+    const { result, unmount } = renderHook();
+
+    let olderSave!: Promise<boolean>;
+    act(() => {
+      olderSave = result.current.saveDraftNow(draft('Older write'));
+    });
+    await act(async () => Promise.resolve());
+
+    let latestSave!: Promise<boolean>;
+    act(() => {
+      latestSave = result.current.saveDraft(draft('Latest edit'));
+    });
+    expect(result.current.draftStatus).toBe('saving');
+
+    await act(async () => olderWrite.resolve());
+    await expect(olderSave).resolves.toBe(false);
+    expect(result.current.draftStatus).toBe('saving');
+    expect(mockStorage.setItem).toHaveBeenCalledTimes(1);
+
+    await act(async () => jest.advanceTimersByTimeAsync(500));
+    await expect(latestSave).resolves.toBe(true);
+    expect(result.current.draftStatus).toBe('saved');
+    expect(mockStorage.setItem.mock.calls[1]).toEqual([
+      'workout-draft:user-1:2026-08-30',
+      expect.stringContaining('"workoutTitle":"Latest edit"'),
+    ]);
+    unmount();
+  });
+
+  it('does not present an older completed write as current when the latest debounce is cancelled on unmount', async () => {
+    const olderWrite = deferred<void>();
+    mockStorage.setItem.mockReturnValueOnce(olderWrite.promise);
+    const { result, unmount } = renderHook();
+
+    let olderSave!: Promise<boolean>;
+    act(() => {
+      olderSave = result.current.saveDraftNow(draft('Older write'));
+    });
+    await act(async () => Promise.resolve());
+
+    let latestSave!: Promise<boolean>;
+    act(() => {
+      latestSave = result.current.saveDraft(draft('Latest edit'));
+    });
+    unmount();
+    await act(async () => olderWrite.resolve());
+
+    await expect(olderSave).resolves.toBe(false);
+    await expect(latestSave).resolves.toBe(false);
+    await act(async () => jest.advanceTimersByTimeAsync(500));
+    expect(mockStorage.setItem).toHaveBeenCalledTimes(1);
+  });
+
   it('cancels a queued debounce before clearing', async () => {
     const { result, unmount } = renderHook();
 

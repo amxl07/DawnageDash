@@ -108,6 +108,10 @@ export function useWorkoutDraft(userId: string | undefined, dateKey: string) {
       }
 
       cancelPending();
+      // The newest edit becomes authoritative when it is scheduled, not when
+      // its timer fires. This prevents an older in-flight write from reporting
+      // itself as the current saved draft during the debounce window.
+      operationVersionRef.current += 1;
       setDraftStatus('saving');
 
       return new Promise<boolean>((resolve) => {
