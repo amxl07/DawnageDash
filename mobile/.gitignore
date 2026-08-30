@@ -45,3 +45,7 @@ example
 # secrets
 .env
 .env.local
+
+# Local UI validation evidence may contain account data or device metadata.
+docs/ui-release-evidence/*
+!docs/ui-release-evidence/.gitkeep
