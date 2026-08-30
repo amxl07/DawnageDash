@@ -15,6 +15,12 @@ export type OutboxItem = {
   queuedAt: number;
 };
 
+type WorkoutSaveInput = Omit<OutboxItem, 'id' | 'queuedAt'>;
+
+export type WorkoutSaveResult =
+  | { status: 'synced'; logId: string }
+  | { status: 'offline'; logId: null };
+
 /**
  * Submit-time failure queue for workout logs ONLY (per plan — deliberately not
  * generalised). Drafts already survive process death; this covers the case
@@ -53,6 +59,34 @@ export function enqueue(item: Omit<OutboxItem, 'id' | 'queuedAt'>): Promise<void
     const filtered = items.filter((i) => !(i.user_id === item.user_id && i.date === item.date));
     filtered.push({ ...item, id: `${item.user_id}:${item.date}`, queuedAt: Date.now() });
     await writeOutbox(filtered);
+  });
+}
+
+/** Atomically supersedes an older queued save and persists the newest payload. */
+export function saveWorkoutLog(item: WorkoutSaveInput): Promise<WorkoutSaveResult> {
+  return serializeMutation(async () => {
+    const items = await readOutboxStrict();
+    const filtered = items.filter((i) => !(i.user_id === item.user_id && i.date === item.date));
+
+    // Remove stale work durably before its replacement can reach the server.
+    await writeOutbox(filtered);
+
+    try {
+      const logId = await persistWorkoutLog(
+        {
+          user_id: item.user_id,
+          date: item.date,
+          title: item.title,
+          content: item.content,
+        },
+        item.existingLogId,
+      );
+      return { status: 'synced', logId };
+    } catch {
+      filtered.push({ ...item, id: `${item.user_id}:${item.date}`, queuedAt: Date.now() });
+      await writeOutbox(filtered);
+      return { status: 'offline', logId: null };
+    }
   });
 }
 

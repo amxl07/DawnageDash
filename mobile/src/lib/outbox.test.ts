@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { enqueue, flushOutbox, readOutbox } from './outbox';
+import { enqueue, flushOutbox, readOutbox, saveWorkoutLog } from './outbox';
 import { persistWorkoutLog } from './workoutPersistence';
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
@@ -65,6 +65,137 @@ describe('workout outbox durability', () => {
     await expect(readOutbox()).resolves.toEqual([
       expect.objectContaining({ title: 'Newest', content: '{"version":2,"title":"Newest"}' }),
     ]);
+  });
+
+  it('durably removes an older same-date queue item before a newer direct save', async () => {
+    await enqueue(payload('Older queued'));
+    mockPersistWorkoutLog.mockImplementationOnce(async () => {
+      expect(stored).toBe('[]');
+      return 'log-1';
+    });
+
+    await expect(saveWorkoutLog(payload('Newest direct'))).resolves.toEqual({
+      status: 'synced',
+      logId: 'log-1',
+    });
+    await expect(readOutbox()).resolves.toEqual([]);
+  });
+
+  it('lets the newest direct save win when a flush starts first', async () => {
+    await enqueue(payload('Older queued'));
+    const flushStarted = deferred<void>();
+    const flushResponse = deferred<string>();
+    let serverTitle = '';
+    mockPersistWorkoutLog
+      .mockImplementationOnce(async (remotePayload) => {
+        flushStarted.resolve();
+        const logId = await flushResponse.promise;
+        serverTitle = remotePayload.title;
+        return logId;
+      })
+      .mockImplementationOnce(async (remotePayload) => {
+        serverTitle = remotePayload.title;
+        return 'log-1';
+      });
+
+    const flushing = flushOutbox();
+    await flushStarted.promise;
+    const saving = saveWorkoutLog(payload('Newest direct'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const titleBeforeFlushFinished = serverTitle;
+    const callsBeforeFlushFinished = mockPersistWorkoutLog.mock.calls.length;
+    flushResponse.resolve('log-1');
+
+    await expect(flushing).resolves.toBe(1);
+    await expect(saving).resolves.toEqual({ status: 'synced', logId: 'log-1' });
+    expect(titleBeforeFlushFinished).toBe('');
+    expect(callsBeforeFlushFinished).toBe(1);
+    expect(serverTitle).toBe('Newest direct');
+    await expect(readOutbox()).resolves.toEqual([]);
+  });
+
+  it('removes stale queued work before a direct-first save allows a flush to run', async () => {
+    await enqueue(payload('Older queued'));
+    const directStarted = deferred<void>();
+    const directResponse = deferred<string>();
+    let serverTitle = '';
+    mockPersistWorkoutLog.mockImplementationOnce(async (remotePayload) => {
+      directStarted.resolve();
+      const logId = await directResponse.promise;
+      serverTitle = remotePayload.title;
+      return logId;
+    });
+
+    const saving = saveWorkoutLog(payload('Newest direct'));
+    await directStarted.promise;
+    const flushing = flushOutbox();
+    let flushSettled = false;
+    void flushing.then(() => {
+      flushSettled = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const flushSettledBeforeDirect = flushSettled;
+    const callsBeforeDirectFinished = mockPersistWorkoutLog.mock.calls.length;
+    directResponse.resolve('created-1');
+
+    await expect(saving).resolves.toEqual({ status: 'synced', logId: 'created-1' });
+    await expect(flushing).resolves.toBe(0);
+    expect(flushSettledBeforeDirect).toBe(false);
+    expect(callsBeforeDirectFinished).toBe(1);
+    expect(serverTitle).toBe('Newest direct');
+    expect(mockPersistWorkoutLog).toHaveBeenCalledTimes(1);
+    await expect(readOutbox()).resolves.toEqual([]);
+  });
+
+  it('durably replaces an older queue item with the newest payload when direct sync fails', async () => {
+    await enqueue(payload('Older queued'));
+    mockPersistWorkoutLog.mockRejectedValueOnce(new Error('offline'));
+
+    await expect(saveWorkoutLog(payload('Newest offline'))).resolves.toEqual({
+      status: 'offline',
+      logId: null,
+    });
+    await expect(readOutbox()).resolves.toEqual([
+      expect.objectContaining({
+        title: 'Newest offline',
+        content: '{"version":2,"title":"Newest offline"}',
+      }),
+    ]);
+  });
+
+  it('rejects before remote persistence when stale-queue removal cannot be written', async () => {
+    await enqueue(payload('Older queued'));
+    mockStorage.setItem.mockRejectedValueOnce(new Error('cleanup failed'));
+
+    await expect(saveWorkoutLog(payload('Newest direct'))).rejects.toThrow('cleanup failed');
+    expect(mockPersistWorkoutLog).not.toHaveBeenCalled();
+    await expect(readOutbox()).resolves.toEqual([
+      expect.objectContaining({ title: 'Older queued' }),
+    ]);
+  });
+
+  it('rejects a direct save when its strict queue read fails', async () => {
+    mockStorage.getItem.mockRejectedValueOnce(new Error('read failed'));
+
+    await expect(saveWorkoutLog(payload('Must remain a draft'))).rejects.toThrow('read failed');
+    expect(mockStorage.setItem).not.toHaveBeenCalled();
+    expect(mockPersistWorkoutLog).not.toHaveBeenCalled();
+  });
+
+  it('rejects a failed offline enqueue and leaves the coordinator usable', async () => {
+    mockPersistWorkoutLog.mockRejectedValueOnce(new Error('offline'));
+    mockStorage.setItem
+      .mockImplementationOnce(async (_key, value) => {
+        stored = value;
+      })
+      .mockRejectedValueOnce(new Error('disk full'));
+
+    await expect(saveWorkoutLog(payload('Not durable'))).rejects.toThrow('disk full');
+    await expect(readOutbox()).resolves.toEqual([]);
+    await expect(saveWorkoutLog(payload('Retry'))).resolves.toEqual({
+      status: 'synced',
+      logId: 'log-1',
+    });
   });
 
   it('rejects enqueue when its durable storage write fails', async () => {

@@ -41,7 +41,7 @@ import {
 import { useWorkoutPlan } from '@/hooks/usePlans';
 import { useWorkoutDraft } from '@/hooks/useWorkoutDraft';
 import { localDateString, parseLocalDate } from '@/lib/dates';
-import { enqueue, flushOutbox } from '@/lib/outbox';
+import { flushOutbox, saveWorkoutLog } from '@/lib/outbox';
 import { supabase } from '@/lib/supabase';
 import {
   countSets,
@@ -50,7 +50,6 @@ import {
   serializeWorkoutContent,
   totalVolume,
 } from '@/lib/workout-content';
-import { persistWorkoutLog } from '@/lib/workoutPersistence';
 import { HIT_SLOP_MIN, iconSize, spacing, useTheme } from '@/theme';
 
 function elapsedLabel(totalSeconds: number): string {
@@ -386,25 +385,20 @@ export default function LoggerScreen() {
     let syncStatus: 'saved' | 'offline' = 'saved';
     try {
       try {
-        const persistedId = await persistWorkoutLog(payload, submittedState.existingLogId);
-        attachPersistedId(persistedId);
-        void queryClient.invalidateQueries({ queryKey: ['workoutLogs'] });
-      } catch {
-        try {
-          const outboxPayload = {
-            user_id: user.id,
-            date,
-            title: payload.title,
-            content,
-            existingLogId: submittedState.existingLogId,
-          };
-          await enqueue(outboxPayload);
+        const saveResult = await saveWorkoutLog({
+          ...payload,
+          existingLogId: submittedState.existingLogId,
+        });
+        if (saveResult.status === 'synced') {
+          attachPersistedId(saveResult.logId);
+          void queryClient.invalidateQueries({ queryKey: ['workoutLogs'] });
+        } else {
           syncStatus = 'offline';
-        } catch {
-          setSaveError('Couldn’t save or queue this workout. Your draft is still here — try again.');
-          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-          return;
         }
+      } catch {
+        setSaveError('Couldn’t save or queue this workout. Your draft is still here — try again.');
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        return;
       }
 
       const finalization = await finalizeWorkoutSave({
