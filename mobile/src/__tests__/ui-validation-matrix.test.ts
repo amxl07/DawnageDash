@@ -49,6 +49,40 @@ const readBuildField = (matrix: string, field: string) => {
   return matrix.match(new RegExp(`^\\| ${escapedField} \\| ([^|]+) \\|$`, 'm'))?.[1].trim();
 };
 
+const validateObservedResultMetadata = (matrix: string) => {
+  const errors: string[] = [];
+  const passRows = matrix
+    .split('\n')
+    .filter((line) => /^\|.*\| Pass \|.*\|$/.test(line));
+
+  if (passRows.length === 0) return errors;
+
+  if (!/^[0-9a-f]{40}\b/.test(readBuildField(matrix, 'Git commit') ?? '')) {
+    errors.push('Git commit must identify the immutable source revision');
+  }
+  const expoBuild = readBuildField(matrix, 'Expo build') ?? '';
+  const hasImmutableBuildIdentifier = /^[A-Za-z0-9][A-Za-z0-9._:-]{2,}$/.test(
+    expoBuild,
+  );
+  const isPlaceholderBuild = /^(?:not(?: available| recorded)?|pending|blocked|blank|none|n\/a|tbd|unknown|[-—])(?:\b|\s|$)/i.test(
+    expoBuild,
+  );
+  if (!hasImmutableBuildIdentifier || isPlaceholderBuild) {
+    errors.push('Expo build must identify the immutable app binary');
+  }
+  const reviewer = readBuildField(matrix, 'Reviewer/date') ?? '';
+  if (!reviewer || /^(?:Not assigned|Not recorded|Pending)\b/i.test(reviewer)) {
+    errors.push('Reviewer/date must identify the person who observed the result');
+  }
+  for (const row of passRows) {
+    if (/(?:not run|unavailable|pending|no .*session)/i.test(row)) {
+      errors.push('Pass evidence cannot describe an unavailable or pending observation');
+    }
+  }
+
+  return errors;
+};
+
 describe('UI release evidence contract', () => {
   it('keeps the complete release-gate row set in the validation matrix', () => {
     const matrix = readMatrix();
@@ -61,36 +95,62 @@ describe('UI release evidence contract', () => {
 
   it('requires observed results to identify a source revision and reviewer', () => {
     const matrix = readMatrix();
-    const passRows = matrix
-      .split('\n')
-      .filter((line) => /^\|.*\| Pass \|.*\|$/.test(line));
-
-    if (passRows.length > 0) {
-      expect(readBuildField(matrix, 'Git commit')).toMatch(/^[0-9a-f]{40}\b/);
-      expect(readBuildField(matrix, 'Reviewer/date')).not.toMatch(
-        /^(?:Not assigned|Not recorded|Pending)\b/i,
-      );
-      for (const row of passRows) {
-        expect(row).not.toMatch(/(?:not run|unavailable|pending|no .*session)/i);
-      }
-    }
+    expect(validateObservedResultMetadata(matrix)).toEqual([]);
 
     expect(matrix).toMatch(/Release is blocked while any required row is `Not run`, `Blocked`, or `Fail`/);
   });
 
-  it('ignores local evidence while leaving only the placeholder trackable', () => {
-    const privateEvidence = spawnSync(
-      'git',
-      ['check-ignore', '--quiet', 'docs/ui-release-evidence/device-capture.png'],
-      { cwd: mobileRoot },
+  it('rejects a Pass when the matrix still has no immutable Expo build identifier', () => {
+    const matrix = readMatrix();
+    const falsePass = matrix.replace(
+      '| Blocked | No immutable build or iOS device session; compact layout',
+      '| Pass | Observed compact layout on the recorded build',
+    ).replace(' and keyboard checks remain pending', '');
+
+    expect(falsePass).not.toBe(matrix);
+    expect(validateObservedResultMetadata(falsePass)).toContain(
+      'Expo build must identify the immutable app binary',
     );
+
+    const observedPass = falsePass
+      .replace(
+        '| Expo build | Not available — no immutable development or preview build was produced for this matrix |',
+        '| Expo build | preview-20260830.1 |',
+      )
+      .replace(
+        '| Reviewer/date | Not assigned / 2026-08-30 — runtime review pending |',
+        '| Reviewer/date | Release QA / 2026-08-30 |',
+      );
+    expect(validateObservedResultMetadata(observedPass)).toEqual([]);
+  });
+
+  it('ignores local evidence while leaving only the placeholder trackable', () => {
+    const privateEvidencePaths = [
+      'docs/ui-release-evidence/ios/home-light.png',
+      'docs/ui-release-evidence/android/logger.mp4',
+      'docs/ui-release-evidence/profiles/workout.ettrace',
+      'docs/ui-release-evidence/profiles/cpu-profile.json',
+      'docs/ui-release-evidence/metadata/findings.json',
+      'docs/ui-release-evidence/.device-metadata',
+    ];
     const placeholder = spawnSync(
       'git',
       ['check-ignore', '--quiet', 'docs/ui-release-evidence/.gitkeep'],
       { cwd: mobileRoot },
     );
+    const trackedPlaceholder = spawnSync(
+      'git',
+      ['ls-files', '--error-unmatch', 'docs/ui-release-evidence/.gitkeep'],
+      { cwd: mobileRoot },
+    );
 
-    expect(privateEvidence.status).toBe(0);
+    for (const evidencePath of privateEvidencePaths) {
+      const result = spawnSync('git', ['check-ignore', '--quiet', evidencePath], {
+        cwd: mobileRoot,
+      });
+      expect(result.status).toBe(0);
+    }
     expect(placeholder.status).toBe(1);
+    expect(trackedPlaceholder.status).toBe(0);
   });
 });
