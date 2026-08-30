@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
-import { AccessibilityInfo, Modal, Pressable, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, findNodeHandle, Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui';
@@ -38,6 +38,9 @@ export function PhotoViewer({
   const motion = useMotion();
   const insets = useSafeAreaInsets();
   const [index, setIndex] = useState(startIndex);
+  const photoRef = useRef<View>(null);
+  const modalShownRef = useRef(false);
+  const focusedAnnouncementRef = useRef<string | null>(null);
 
   const safeIndex = photos.length ? Math.min(Math.max(0, index), photos.length - 1) : 0;
   const photo = photos[safeIndex];
@@ -45,14 +48,36 @@ export function PhotoViewer({
     ? `${photo.label} photo, ${photo.weekLabel}, ${safeIndex + 1} of ${photos.length}`
     : null;
 
-  useEffect(() => {
-    if (announcement) AccessibilityInfo.announceForAccessibility(announcement);
+  const focusAndAnnounce = useCallback(() => {
+    if (!announcement) return;
+    const handle = findNodeHandle(photoRef.current);
+    if (handle != null) AccessibilityInfo.setAccessibilityFocus(handle);
+    AccessibilityInfo.announceForAccessibility(announcement);
+    focusedAnnouncementRef.current = announcement;
   }, [announcement]);
+
+  useEffect(() => {
+    if (
+      modalShownRef.current &&
+      announcement &&
+      focusedAnnouncementRef.current !== announcement
+    ) {
+      focusAndAnnounce();
+    }
+  }, [announcement, focusAndAnnounce]);
 
   if (!photo || !announcement) return null;
 
   return (
-    <Modal visible animationType={motion.reduced ? 'none' : 'fade'} onRequestClose={onClose}>
+    <Modal
+      visible
+      animationType={motion.reduced ? 'none' : 'fade'}
+      onRequestClose={onClose}
+      onShow={() => {
+        modalShownRef.current = true;
+        if (focusedAnnouncementRef.current !== announcement) focusAndAnnounce();
+      }}
+    >
       <View
         accessibilityViewIsModal
         style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top }}
@@ -78,14 +103,20 @@ export function PhotoViewer({
           </Pressable>
         </View>
 
-        <View style={{ flex: 1 }}>
+        <View
+          ref={photoRef}
+          accessible
+          accessibilityRole="image"
+          accessibilityLabel={announcement}
+          style={{ flex: 1 }}
+        >
           <Image
             source={{ uri: photo.url }}
             style={{ width: '100%', height: '100%' }}
             contentFit="contain"
             cachePolicy="memory-disk"
             recyclingKey={`viewer:${photo.url}`}
-            accessibilityLabel={announcement}
+            accessible={false}
           />
         </View>
 

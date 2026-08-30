@@ -131,6 +131,8 @@ describe('MediaScreen', () => {
         node.type === 'ExpoImage' && node.props.recyclingKey?.startsWith('viewer:'),
     );
     expect(viewerImage.props.source).toEqual({ uri: 'https://example.com/back.jpg' });
-    expect(viewerImage.props.accessibilityLabel).toBe('Back photo, Week 0, 1 of 2');
+    expect(
+      renderer.root.findByProps({ accessibilityLabel: 'Back photo, Week 0, 1 of 2' }).props,
+    ).toMatchObject({ accessible: true, accessibilityRole: 'image' });
   });
 });

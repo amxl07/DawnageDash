@@ -1,4 +1,4 @@
-import { AccessibilityInfo, Modal } from 'react-native';
+import { AccessibilityInfo, findNodeHandle, Modal } from 'react-native';
 
 // @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
@@ -24,7 +24,15 @@ jest.mock('react-native', () => {
   const mock = Object.create(actual);
   Object.defineProperty(mock, 'AccessibilityInfo', {
     configurable: true,
-    value: { ...actual.AccessibilityInfo, announceForAccessibility: jest.fn() },
+    value: {
+      ...actual.AccessibilityInfo,
+      announceForAccessibility: jest.fn(),
+      setAccessibilityFocus: jest.fn(),
+    },
+  });
+  Object.defineProperty(mock, 'findNodeHandle', {
+    configurable: true,
+    value: jest.fn(() => 42),
   });
   return mock;
 });
@@ -74,15 +82,31 @@ describe('PhotoViewer', () => {
     mockUseMotion.mockReturnValue({ reduced: false });
   });
 
-  it('announces angle, week, and position on open and explicit navigation', () => {
+  it('waits for native modal presentation, then focuses and announces each position', () => {
     let renderer!: ReturnType<typeof create>;
     act(() => {
       renderer = create(<PhotoViewer photos={photos} startIndex={0} onClose={jest.fn()} />);
     });
 
+    expect(findNodeHandle).not.toHaveBeenCalled();
+    expect(AccessibilityInfo.setAccessibilityFocus).not.toHaveBeenCalled();
+    expect(AccessibilityInfo.announceForAccessibility).not.toHaveBeenCalled();
+
+    const modal = renderer.root.findByType(Modal);
+    act(() => modal.props.onShow());
+
+    expect(findNodeHandle).toHaveBeenCalledTimes(1);
+    expect(AccessibilityInfo.setAccessibilityFocus).toHaveBeenLastCalledWith(42);
     expect(AccessibilityInfo.announceForAccessibility).toHaveBeenLastCalledWith(
       'Front photo, Week 3, 1 of 2',
     );
+    expect(
+      jest.mocked(AccessibilityInfo.setAccessibilityFocus).mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      jest.mocked(AccessibilityInfo.announceForAccessibility).mock.invocationCallOrder[0],
+    );
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Front photo, Week 3, 1 of 2' }).props)
+      .toMatchObject({ accessible: true, accessibilityRole: 'image' });
 
     const next = renderer.root.find(
       (node: { props: { accessibilityLabel?: string } }) =>
@@ -90,8 +114,15 @@ describe('PhotoViewer', () => {
     );
     act(() => next.props.onPress());
 
+    expect(findNodeHandle).toHaveBeenCalledTimes(2);
+    expect(AccessibilityInfo.setAccessibilityFocus).toHaveBeenCalledTimes(2);
     expect(AccessibilityInfo.announceForAccessibility).toHaveBeenLastCalledWith(
       'Back photo, Week 3, 2 of 2',
+    );
+    expect(
+      jest.mocked(AccessibilityInfo.setAccessibilityFocus).mock.invocationCallOrder[1],
+    ).toBeLessThan(
+      jest.mocked(AccessibilityInfo.announceForAccessibility).mock.invocationCallOrder[1],
     );
   });
 

@@ -65,6 +65,7 @@ function renderPhotoSlot(
     onRemove?: () => void;
     onRetry?: () => void;
   } = {},
+  disabled = false,
 ) {
   let renderer!: ReturnType<typeof create>;
   act(() => {
@@ -78,6 +79,7 @@ function renderPhotoSlot(
         onChooseFromLibrary={callbacks.onChooseFromLibrary ?? jest.fn()}
         onRemove={callbacks.onRemove ?? jest.fn()}
         onRetry={callbacks.onRetry ?? jest.fn()}
+        disabled={disabled}
       />,
     );
   });
@@ -127,6 +129,27 @@ describe('PhotoSlot', () => {
       busy: true,
       disabled: true,
     });
+  });
+
+  it('keeps a selection-validation error separate from upload failure', () => {
+    const state: SlotState = {
+      ...emptyState,
+      pendingUri: 'file://front.jpg',
+      error: 'That image is over 10MB. Pick a smaller one.',
+      errorKind: 'selection',
+    };
+    const { renderer, getByLabelText } = renderPhotoSlot(state);
+
+    expect(getByLabelText('Front photo, selected and not uploaded')).toBeTruthy();
+    expect(
+      renderer.root.findByProps({ children: 'That image is over 10MB. Pick a smaller one.' }),
+    ).toBeTruthy();
+    expect(
+      renderer.root.findAll(
+        (node: { props: { accessibilityLabel?: string } }) =>
+          node.props.accessibilityLabel === 'Retry Front photo upload',
+      ),
+    ).toHaveLength(0);
   });
 
   it('retains the failed local preview and offers a visible retry action', () => {
@@ -181,5 +204,27 @@ describe('PhotoSlot', () => {
     expect(StyleSheet.flatten(remove.props.style).minHeight).toBeGreaterThanOrEqual(44);
     act(() => remove.props.onPress());
     expect(onRemove).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables every slot mutation while another save operation is in flight', () => {
+    const empty = renderPhotoSlot(emptyState, {}, true);
+    expect(empty.getByLabelText('Front photo, empty').props.disabled).toBe(true);
+    expect(empty.getByLabelText('Choose Front photo from library').props.disabled).toBe(true);
+
+    const uploaded = renderPhotoSlot(
+      { ...emptyState, url: 'https://example.com/front.jpg' },
+      {},
+      true,
+    );
+    expect(uploaded.getByLabelText('Front photo, uploaded').props.disabled).toBe(true);
+    expect(uploaded.getByLabelText('Remove Front photo').props.disabled).toBe(true);
+
+    const failed = renderPhotoSlot(
+      { ...emptyState, pendingUri: 'file://front.jpg', error: 'Upload failed' },
+      {},
+      true,
+    );
+    expect(failed.getByLabelText('Retry Front photo upload').props.disabled).toBe(true);
+    expect(failed.getByLabelText('Remove Front photo').props.disabled).toBe(true);
   });
 });

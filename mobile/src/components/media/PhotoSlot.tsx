@@ -13,6 +13,8 @@ export type SlotState = {
   url: string | null;
   uploading: boolean;
   error: string | null;
+  /** Omitted error kinds are treated as upload failures for existing callers. */
+  errorKind?: 'selection' | 'upload' | null;
   /** Kept on failure so retry never requires another photo selection. */
   pendingUri: string | null;
   pendingDims?: { width: number; height: number };
@@ -28,11 +30,12 @@ type Props = {
   onChooseFromLibrary?: () => void;
   onRetry?: () => void;
   retryDisabled?: boolean;
+  disabled?: boolean;
 };
 
 function slotStatus(state: SlotState) {
   if (state.uploading) return 'uploading';
-  if (state.pendingUri && state.error) return 'upload failed';
+  if (state.pendingUri && state.error && state.errorKind !== 'selection') return 'upload failed';
   if (state.pendingUri) return 'selected and not uploaded';
   if (state.url) return 'uploaded';
   return 'empty';
@@ -48,6 +51,7 @@ export function PhotoSlot({
   onChooseFromLibrary = onChoose,
   onRetry,
   retryDisabled = false,
+  disabled = false,
 }: Props) {
   const { colors } = useTheme();
   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
@@ -55,6 +59,8 @@ export function PhotoSlot({
   const status = slotStatus(state);
   const failed = status === 'upload failed';
   const hasPhoto = Boolean(previewUri);
+  const slotDisabled = disabled || state.uploading;
+  const retryInactive = disabled || retryDisabled;
 
   return (
     <View style={{ gap: spacing.xs }}>
@@ -64,11 +70,11 @@ export function PhotoSlot({
 
       <Pressable
         onPress={onChoose}
-        disabled={state.uploading}
+        disabled={slotDisabled}
         accessibilityRole="button"
         accessibilityLabel={`${label} photo, ${status}`}
         accessibilityHint={hasPhoto ? 'Choose a replacement photo' : 'Choose a photo'}
-        accessibilityState={{ busy: state.uploading, disabled: state.uploading }}
+        accessibilityState={{ busy: state.uploading, disabled: slotDisabled }}
         style={{
           aspectRatio: 3 / 4,
           borderRadius: radius.md,
@@ -141,15 +147,15 @@ export function PhotoSlot({
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
           <Pressable
             onPress={onRetry}
-            disabled={retryDisabled}
+            disabled={retryInactive}
             accessibilityRole="button"
             accessibilityLabel={`Retry ${label} photo upload`}
-            accessibilityState={{ disabled: retryDisabled, busy: retryDisabled }}
+            accessibilityState={{ disabled: retryInactive, busy: state.uploading }}
             style={{
               minHeight: HIT_SLOP_MIN,
               flexGrow: 1,
               justifyContent: 'center',
-              opacity: retryDisabled ? 0.45 : 1,
+              opacity: retryInactive ? 0.45 : 1,
             }}
           >
             <Text variant="bodySm" tone="primary">
@@ -158,13 +164,16 @@ export function PhotoSlot({
           </Pressable>
           <Pressable
             onPress={onRemove}
+            disabled={disabled}
             accessibilityRole="button"
             accessibilityLabel={`Remove ${label} photo`}
+            accessibilityState={{ disabled }}
             style={{
               minHeight: HIT_SLOP_MIN,
               flexDirection: 'row',
               alignItems: 'center',
               gap: spacing.xs,
+              opacity: disabled ? 0.45 : 1,
             }}
           >
             <Trash2 size={14} color={colors.mutedForeground} strokeWidth={2} accessible={false} />
@@ -176,13 +185,16 @@ export function PhotoSlot({
       ) : hasPhoto ? (
         <Pressable
           onPress={onRemove}
+          disabled={disabled}
           accessibilityRole="button"
           accessibilityLabel={`Remove ${label} photo`}
+          accessibilityState={{ disabled }}
           style={{
             minHeight: HIT_SLOP_MIN,
             flexDirection: 'row',
             alignItems: 'center',
             gap: spacing.xs,
+            opacity: disabled ? 0.45 : 1,
           }}
         >
           <Trash2 size={14} color={colors.mutedForeground} strokeWidth={2} accessible={false} />
@@ -193,13 +205,16 @@ export function PhotoSlot({
       ) : (
         <Pressable
           onPress={onChooseFromLibrary}
+          disabled={disabled}
           accessibilityRole="button"
           accessibilityLabel={`Choose ${label} photo from library`}
+          accessibilityState={{ disabled }}
           style={{
             minHeight: HIT_SLOP_MIN,
             flexDirection: 'row',
             alignItems: 'center',
             gap: spacing.xs,
+            opacity: disabled ? 0.45 : 1,
           }}
         >
           <ImageIcon size={14} color={colors.mutedForeground} strokeWidth={2} accessible={false} />

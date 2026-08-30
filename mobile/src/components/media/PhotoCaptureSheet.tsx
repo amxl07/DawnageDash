@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { format } from 'date-fns';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Linking, Pressable, View } from 'react-native';
 
 import { Button, Card, Sheet, SheetScrollView, Text } from '@/components/ui';
@@ -14,8 +14,13 @@ import { PhotoSlot, type SlotState } from './PhotoSlot';
 
 const emptySlots = (): Record<AngleKey, SlotState> =>
   Object.fromEntries(
-    ANGLES.map((a) => [a.key, { url: null, uploading: false, error: null, pendingUri: null }]),
+    ANGLES.map((a) => [
+      a.key,
+      { url: null, uploading: false, error: null, errorKind: null, pendingUri: null },
+    ]),
   ) as Record<AngleKey, SlotState>;
+
+type Operation = { id: number; session: number };
 
 type Props = {
   visible: boolean;
@@ -34,9 +39,44 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
   const [showGuide, setShowGuide] = useState(true);
   const [dirty, setDirty] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [interactionLocked, setInteractionLocked] = useState(false);
+  const slotsRef = useRef(slots);
+  const sessionRef = useRef(0);
+  const operationRef = useRef(0);
+  const inFlightRef = useRef(false);
+  const wasVisibleRef = useRef(false);
+  const sessionDateRef = useRef<string | null>(null);
+
+  useEffect(
+    () => () => {
+      sessionRef.current += 1;
+      operationRef.current += 1;
+      inFlightRef.current = false;
+    },
+    [],
+  );
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) {
+      if (wasVisibleRef.current) {
+        sessionRef.current += 1;
+        operationRef.current += 1;
+      }
+      wasVisibleRef.current = false;
+      sessionDateRef.current = null;
+      inFlightRef.current = false;
+      setInteractionLocked(false);
+      return;
+    }
+
+    if (wasVisibleRef.current && sessionDateRef.current === date) return;
+    wasVisibleRef.current = true;
+    sessionDateRef.current = date;
+    sessionRef.current += 1;
+    operationRef.current += 1;
+    inFlightRef.current = false;
+    setInteractionLocked(false);
+
     const next = emptySlots();
     if (existing) {
       next.front.url = existing.front_url;
@@ -44,13 +84,48 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
       next.side_left.url = existing.side_left_url;
       next.side_right.url = existing.side_right_url;
     }
+    slotsRef.current = next;
     setSlots(next);
     setDirty(false);
     setSaveError(null);
-  }, [visible, existing]);
+  }, [date, existing, visible]);
 
-  const patch = (key: AngleKey, p: Partial<SlotState>) =>
-    setSlots((prev) => ({ ...prev, [key]: { ...prev[key], ...p } }));
+  const patch = (key: AngleKey, fields: Partial<SlotState>) => {
+    const next = {
+      ...slotsRef.current,
+      [key]: { ...slotsRef.current[key], ...fields },
+    };
+    slotsRef.current = next;
+    setSlots(next);
+  };
+
+  const canMutateSlots = () => !inFlightRef.current && !mutation.isPending;
+
+  const beginOperation = (): Operation | null => {
+    if (!canMutateSlots()) return null;
+    const operation = { id: operationRef.current + 1, session: sessionRef.current };
+    operationRef.current = operation.id;
+    inFlightRef.current = true;
+    setInteractionLocked(true);
+    return operation;
+  };
+
+  const isCurrentOperation = (operation: Operation) =>
+    operation.id === operationRef.current && operation.session === sessionRef.current;
+
+  const finishOperation = (operation: Operation) => {
+    if (!isCurrentOperation(operation)) return;
+    inFlightRef.current = false;
+    setInteractionLocked(false);
+  };
+
+  const closeSession = () => {
+    sessionRef.current += 1;
+    operationRef.current += 1;
+    inFlightRef.current = false;
+    setInteractionLocked(false);
+    onClose();
+  };
 
   const ensurePermission = async (mode: 'camera' | 'library'): Promise<boolean> => {
     const req =
@@ -73,7 +148,10 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
   };
 
   const pick = async (key: AngleKey, mode: 'camera' | 'library') => {
+    if (!canMutateSlots()) return;
+    const session = sessionRef.current;
     if (!(await ensurePermission(mode))) return;
+    if (!canMutateSlots() || session !== sessionRef.current) return;
     const opts: ImagePicker.ImagePickerOptions = {
       mediaTypes: ['images'],
       quality: 1,
@@ -83,23 +161,29 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
       mode === 'camera'
         ? await ImagePicker.launchCameraAsync(opts)
         : await ImagePicker.launchImageLibraryAsync(opts);
+    if (!canMutateSlots() || session !== sessionRef.current) return;
     if (result.canceled || !result.assets?.length) return;
 
     const asset = result.assets[0];
     if (asset.fileSize && asset.fileSize > MAX_SOURCE_BYTES) {
-      patch(key, { error: 'That image is over 10MB. Pick a smaller one.' });
+      patch(key, {
+        error: 'That image is over 10MB. Pick a smaller one.',
+        errorKind: 'selection',
+      });
       return;
     }
     patch(key, {
       pendingUri: asset.uri,
       pendingDims: { width: asset.width, height: asset.height },
       error: null,
+      errorKind: null,
     });
     setDirty(true);
     void Haptics.selectionAsync();
   };
 
   const chooseSource = (key: AngleKey) => {
+    if (!canMutateSlots()) return;
     Alert.alert(ANGLES.find((a) => a.key === key)!.label, 'Add a photo', [
       { text: 'Take photo', onPress: () => void pick(key, 'camera') },
       { text: 'Choose from library', onPress: () => void pick(key, 'library') },
@@ -109,68 +193,144 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
 
   const requestClose = () => {
     if (!dirty) {
-      onClose();
+      closeSession();
       return;
     }
     Alert.alert('Discard photo changes?', 'Selected photos have not been saved.', [
       { text: 'Keep editing', style: 'cancel' },
-      { text: 'Discard', style: 'destructive', onPress: onClose },
+      { text: 'Discard', style: 'destructive', onPress: closeSession },
     ]);
   };
 
-  const save = async () => {
-    setSaveError(null);
-    if (!user?.id) return;
+  const uploadAngle = async (key: AngleKey, operation: Operation) => {
+    const angle = ANGLES.find((candidate) => candidate.key === key);
+    const slot = slotsRef.current[key];
+    const pendingUri = slot.pendingUri;
+    if (!angle || !pendingUri) return 'skipped' as const;
+
+    patch(key, { uploading: true, error: null, errorKind: null });
     try {
-      const urls: Record<AngleKey, string | null> = {
-        front: slots.front.url,
-        back: slots.back.url,
-        side_left: slots.side_left.url,
-        side_right: slots.side_right.url,
-      };
-
-      const uploadResults = await Promise.all(
-        ANGLES.map(async (angle) => {
-          const slot = slots[angle.key];
-          if (!slot.pendingUri) return true;
-          patch(angle.key, { uploading: true, error: null });
-          try {
-            const { publicUrl } = await uploadPhoto(
-              slot.pendingUri,
-              user.id,
-              date,
-              angle.label,
-              slot.pendingDims,
-            );
-            urls[angle.key] = publicUrl;
-            patch(angle.key, { url: publicUrl, uploading: false, pendingUri: null, error: null });
-            return true;
-          } catch {
-            patch(angle.key, {
-              uploading: false,
-              error: 'Upload failed. Your selected photo is still here.',
-            });
-            return false;
-          }
-        }),
+      const { publicUrl } = await uploadPhoto(
+        pendingUri,
+        user!.id,
+        date,
+        angle.label,
+        slot.pendingDims,
       );
+      if (
+        !isCurrentOperation(operation) ||
+        slotsRef.current[key].pendingUri !== pendingUri
+      ) {
+        return 'stale' as const;
+      }
 
-      if (uploadResults.includes(false)) {
-        setSaveError("Couldn't upload every photo. Retry the failed photo when you're ready.");
+      patch(key, {
+        url: publicUrl,
+        uploading: false,
+        pendingUri: null,
+        pendingDims: undefined,
+        error: null,
+        errorKind: null,
+      });
+      return 'success' as const;
+    } catch {
+      if (
+        !isCurrentOperation(operation) ||
+        slotsRef.current[key].pendingUri !== pendingUri
+      ) {
+        return 'stale' as const;
+      }
+
+      patch(key, {
+        uploading: false,
+        error: 'Upload failed. Your selected photo is still here.',
+        errorKind: 'upload',
+      });
+      return 'failed' as const;
+    }
+  };
+
+  const persistUploadedUrls = async (operation: Operation) => {
+    if (!isCurrentOperation(operation)) return false;
+    const current = slotsRef.current;
+    await mutation.mutateAsync({
+      date,
+      front_url: current.front.url,
+      back_url: current.back.url,
+      side_left_url: current.side_left.url,
+      side_right_url: current.side_right.url,
+    });
+    return isCurrentOperation(operation);
+  };
+
+  const save = async () => {
+    if (!user?.id) return;
+    const operation = beginOperation();
+    if (!operation) return;
+    setSaveError(null);
+
+    try {
+      const pendingAngles = ANGLES.filter((angle) => slotsRef.current[angle.key].pendingUri);
+      const uploadResults = await Promise.all(
+        pendingAngles.map((angle) => uploadAngle(angle.key, operation)),
+      );
+      if (!isCurrentOperation(operation) || uploadResults.includes('stale')) return;
+
+      if (uploadResults.includes('failed')) {
+        setSaveError("Couldn't upload every photo. Retry each failed photo when you're ready.");
         return;
       }
 
-      await mutation.mutateAsync({
-        date,
-        front_url: urls.front,
-        back_url: urls.back,
-        side_left_url: urls.side_left,
-        side_right_url: urls.side_right,
-      });
+      if (!(await persistUploadedUrls(operation))) return;
+
+      setDirty(false);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      onClose();
+      closeSession();
     } catch {
-      setSaveError("Couldn't save. Check your connection and try again.");
+      if (isCurrentOperation(operation)) {
+        setSaveError("Couldn't save. Check your connection and try again.");
+      }
+    } finally {
+      finishOperation(operation);
+    }
+  };
+
+  const retry = async (key: AngleKey) => {
+    if (!user?.id) return;
+    const slot = slotsRef.current[key];
+    if (!slot.pendingUri || !slot.error || slot.errorKind === 'selection') return;
+
+    const operation = beginOperation();
+    if (!operation) return;
+    setSaveError(null);
+
+    try {
+      const uploadResult = await uploadAngle(key, operation);
+      if (!isCurrentOperation(operation) || uploadResult === 'stale') return;
+      if (uploadResult === 'failed') {
+        setSaveError("Couldn't upload that photo. Your selection is still here.");
+        return;
+      }
+
+      if (!(await persistUploadedUrls(operation))) return;
+
+      const hasUnsentSelections = Object.values(slotsRef.current).some(
+        (candidate) => candidate.pendingUri,
+      );
+      setDirty(hasUnsentSelections);
+      if (hasUnsentSelections) {
+        setSaveError('That photo is saved. Other selected photos still need attention.');
+        return;
+      }
+
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      closeSession();
+    } catch {
+      if (isCurrentOperation(operation)) {
+        setSaveError("Couldn't save. Check your connection and try again.");
+      }
+    } finally {
+      finishOperation(operation);
     }
   };
 
@@ -225,11 +385,19 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
                 onChoose={() => chooseSource(angle.key)}
                 onChooseFromLibrary={() => void pick(angle.key, 'library')}
                 onRemove={() => {
-                  patch(angle.key, { url: null, pendingUri: null, error: null });
+                  if (!canMutateSlots()) return;
+                  patch(angle.key, {
+                    url: null,
+                    pendingUri: null,
+                    pendingDims: undefined,
+                    error: null,
+                    errorKind: null,
+                  });
                   setDirty(true);
                 }}
-                onRetry={() => void save()}
+                onRetry={() => void retry(angle.key)}
                 retryDisabled={uploading || mutation.isPending}
+                disabled={interactionLocked || mutation.isPending}
               />
             </View>
           ))}
@@ -255,7 +423,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
           label={uploading ? 'Uploading…' : 'Save photos'}
           onPress={save}
           loading={uploading || mutation.isPending}
-          disabled={uploading}
+          disabled={interactionLocked || mutation.isPending}
         />
       </View>
     </Sheet>

@@ -5,6 +5,8 @@ import { act, create } from 'react-test-renderer';
 
 import * as ImagePicker from 'expo-image-picker';
 
+import type { PhotoRow } from '@/hooks/useProgressPhotos';
+
 import { PhotoCaptureSheet } from './PhotoCaptureSheet';
 
 const mockUploadPhoto = jest.fn();
@@ -60,8 +62,20 @@ jest.mock('@/components/ui', () => {
       />
     ),
     Card: ({ children }: { children: React.ReactNode }) => <Native.View>{children}</Native.View>,
-    Sheet: ({ visible, children }: { visible: boolean; children: React.ReactNode }) =>
-      visible ? <Native.View>{children}</Native.View> : null,
+    Sheet: ({
+      visible,
+      children,
+      onClose,
+    }: {
+      visible: boolean;
+      children: React.ReactNode;
+      onClose: () => void;
+    }) =>
+      visible ? (
+        <Native.View testID="photo-capture-sheet" onTouchEnd={onClose}>
+          {children}
+        </Native.View>
+      ) : null,
     SheetScrollView: ({ children }: { children: React.ReactNode }) => (
       <Native.View>{children}</Native.View>
     ),
@@ -90,18 +104,44 @@ jest.mock('@/theme', () => ({
 
 const mockImagePicker = jest.mocked(ImagePicker);
 
-function renderSheet() {
+const photoAsset = (uri: string, fileSize = 1024) => ({
+  uri,
+  width: 1200,
+  height: 1600,
+  fileName: uri.split('/').at(-1) ?? 'photo.jpg',
+  fileSize,
+  type: 'image' as const,
+});
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((onResolve, onReject) => {
+    resolve = onResolve;
+    reject = onReject;
+  });
+  return { promise, resolve, reject };
+}
+
+function renderSheet({
+  existing = null,
+  onClose = jest.fn(),
+}: {
+  existing?: PhotoRow | null;
+  onClose?: jest.Mock;
+} = {}) {
   let renderer!: ReturnType<typeof create>;
+  const render = (visible: boolean, row: PhotoRow | null) => (
+    <PhotoCaptureSheet
+      visible={visible}
+      onClose={onClose}
+      date="2026-08-30"
+      existing={row}
+      ghost={null}
+    />
+  );
   act(() => {
-    renderer = create(
-      <PhotoCaptureSheet
-        visible
-        onClose={jest.fn()}
-        date="2026-08-30"
-        existing={null}
-        ghost={null}
-      />,
-    );
+    renderer = create(render(true, existing));
   });
 
   const getByLabelText = (accessibilityLabel: string) =>
@@ -110,7 +150,11 @@ function renderSheet() {
         node.props.accessibilityLabel === accessibilityLabel,
     );
 
-  return { renderer, getByLabelText };
+  const update = (visible: boolean, row: PhotoRow | null) => {
+    act(() => renderer.update(render(visible, row)));
+  };
+
+  return { renderer, getByLabelText, onClose, update };
 }
 
 describe('PhotoCaptureSheet', () => {
@@ -127,16 +171,7 @@ describe('PhotoCaptureSheet', () => {
     });
     mockImagePicker.launchImageLibraryAsync.mockResolvedValue({
       canceled: false,
-      assets: [
-        {
-          uri: 'file://front.jpg',
-          width: 1200,
-          height: 1600,
-          fileName: 'front.jpg',
-          fileSize: 1024,
-          type: 'image',
-        },
-      ],
+      assets: [photoAsset('file://front.jpg')],
     });
   });
 
@@ -187,43 +222,64 @@ describe('PhotoCaptureSheet', () => {
     });
   });
 
-  it('preserves successful concurrent uploads while retaining only the failed URI for retry', async () => {
+  it('preserves a valid pending selection when a replacement is oversized', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    const { renderer, getByLabelText } = renderSheet();
+
+    await act(async () => {
+      await getByLabelText('Choose Front photo from library').props.onPress();
+    });
+    mockImagePicker.launchImageLibraryAsync.mockResolvedValueOnce({
+      canceled: false,
+      assets: [photoAsset('file://oversized.jpg', 10 * 1024 * 1024 + 1)],
+    });
+    act(() => getByLabelText('Front photo, selected and not uploaded').props.onPress());
+    const sourceActions = alert.mock.calls.find(([title]) => title === 'Front')?.[2];
+    const libraryAction = sourceActions?.find((action) => action.text === 'Choose from library');
+    await act(async () => {
+      libraryAction?.onPress?.();
+      await Promise.resolve();
+    });
+
+    expect(getByLabelText('Front photo, selected and not uploaded')).toBeTruthy();
+    expect(renderer.root.findByType('ExpoImage').props.source).toEqual({ uri: 'file://front.jpg' });
+    expect(
+      renderer.root.findByProps({ children: 'That image is over 10MB. Pick a smaller one.' }),
+    ).toBeTruthy();
+    expect(
+      renderer.root.findAll(
+        (node: { props: { accessibilityLabel?: string } }) =>
+          node.props.accessibilityLabel === 'Retry Front photo upload',
+      ),
+    ).toHaveLength(0);
+  });
+
+  it('retries only the requested angle and persists successes without sending other failures', async () => {
     mockImagePicker.launchImageLibraryAsync
       .mockResolvedValueOnce({
         canceled: false,
-        assets: [
-          {
-            uri: 'file://front.jpg',
-            width: 1200,
-            height: 1600,
-            fileName: 'front.jpg',
-            fileSize: 1024,
-            type: 'image',
-          },
-        ],
+        assets: [photoAsset('file://front.jpg')],
       })
       .mockResolvedValueOnce({
         canceled: false,
-        assets: [
-          {
-            uri: 'file://back.jpg',
-            width: 1200,
-            height: 1600,
-            fileName: 'back.jpg',
-            fileSize: 1024,
-            type: 'image',
-          },
-        ],
+        assets: [photoAsset('file://back.jpg')],
+      })
+      .mockResolvedValueOnce({
+        canceled: false,
+        assets: [photoAsset('file://left.jpg')],
       });
     mockUploadPhoto
       .mockResolvedValueOnce({ publicUrl: 'https://example.com/front.jpg', bytes: 1000 })
       .mockRejectedValueOnce(new Error('offline'))
+      .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce({ publicUrl: 'https://example.com/back.jpg', bytes: 1000 });
-    const { getByLabelText } = renderSheet();
+    const onClose = jest.fn();
+    const { getByLabelText } = renderSheet({ onClose });
 
     await act(async () => {
       await getByLabelText('Choose Front photo from library').props.onPress();
       await getByLabelText('Choose Back photo from library').props.onPress();
+      await getByLabelText('Choose Left photo from library').props.onPress();
     });
     await act(async () => {
       await getByLabelText('Save photos').props.onPress();
@@ -231,13 +287,17 @@ describe('PhotoCaptureSheet', () => {
 
     expect(getByLabelText('Front photo, uploaded')).toBeTruthy();
     expect(getByLabelText('Back photo, upload failed')).toBeTruthy();
+    expect(getByLabelText('Left photo, upload failed')).toBeTruthy();
 
     await act(async () => {
       await getByLabelText('Retry Back photo upload').props.onPress();
     });
 
-    expect(mockUploadPhoto).toHaveBeenCalledTimes(3);
+    expect(mockUploadPhoto).toHaveBeenCalledTimes(4);
     expect(mockUploadPhoto.mock.calls.filter(([uri]) => uri === 'file://front.jpg')).toHaveLength(1);
+    expect(mockUploadPhoto.mock.calls.filter(([uri]) => uri === 'file://back.jpg')).toHaveLength(2);
+    expect(mockUploadPhoto.mock.calls.filter(([uri]) => uri === 'file://left.jpg')).toHaveLength(1);
+    expect(getByLabelText('Left photo, upload failed')).toBeTruthy();
     expect(mockMutateAsync).toHaveBeenCalledWith({
       date: '2026-08-30',
       front_url: 'https://example.com/front.jpg',
@@ -245,6 +305,175 @@ describe('PhotoCaptureSheet', () => {
       side_left_url: null,
       side_right_url: null,
     });
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('uses a synchronous guard to ignore same-tick duplicate saves', async () => {
+    const upload = deferred<{ publicUrl: string; bytes: number }>();
+    mockUploadPhoto.mockReturnValue(upload.promise);
+    const { getByLabelText } = renderSheet();
+
+    await act(async () => {
+      await getByLabelText('Choose Front photo from library').props.onPress();
+    });
+
+    const saveButton = getByLabelText('Save photos');
+    let firstSave!: Promise<void>;
+    let secondSave!: Promise<void>;
+    act(() => {
+      firstSave = saveButton.props.onPress();
+      secondSave = saveButton.props.onPress();
+    });
+    expect(mockUploadPhoto).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      upload.resolve({ publicUrl: 'https://example.com/front.jpg', bytes: 1000 });
+      await Promise.all([firstSave, secondSave]);
+    });
+    expect(mockMutateAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it('locks slot mutations while the database save is pending', async () => {
+    const databaseSave = deferred<void>();
+    mockUploadPhoto.mockResolvedValue({
+      publicUrl: 'https://example.com/front.jpg',
+      bytes: 1000,
+    });
+    mockMutateAsync.mockReturnValue(databaseSave.promise);
+    const { getByLabelText } = renderSheet();
+
+    await act(async () => {
+      await getByLabelText('Choose Front photo from library').props.onPress();
+    });
+    let savePromise!: Promise<void>;
+    act(() => {
+      savePromise = getByLabelText('Save photos').props.onPress();
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const uploaded = getByLabelText('Front photo, uploaded');
+    const remove = getByLabelText('Remove Front photo');
+    expect(uploaded.props.disabled).toBe(true);
+    expect(remove.props.disabled).toBe(true);
+    act(() => remove.props.onPress());
+    expect(getByLabelText('Front photo, uploaded')).toBeTruthy();
+
+    await act(async () => {
+      databaseSave.resolve();
+      await savePromise;
+    });
+  });
+
+  it('ignores a stale upload completion after the slot is replaced externally', async () => {
+    const upload = deferred<{ publicUrl: string; bytes: number }>();
+    mockUploadPhoto.mockReturnValue(upload.promise);
+    const replacement: PhotoRow = {
+      id: 'replacement',
+      user_id: 'user-1',
+      date: '2026-08-30',
+      front_url: 'https://example.com/replacement.jpg',
+      back_url: null,
+      side_left_url: null,
+      side_right_url: null,
+    };
+    const { renderer, getByLabelText, update } = renderSheet();
+
+    await act(async () => {
+      await getByLabelText('Choose Front photo from library').props.onPress();
+    });
+    let savePromise!: Promise<void>;
+    act(() => {
+      savePromise = getByLabelText('Save photos').props.onPress();
+    });
+    update(false, null);
+    update(true, replacement);
+
+    await act(async () => {
+      upload.resolve({ publicUrl: 'https://example.com/stale.jpg', bytes: 1000 });
+      await savePromise;
+    });
+
+    expect(renderer.root.findByType('ExpoImage').props.source).toEqual({
+      uri: 'https://example.com/replacement.jpg',
+    });
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('ignores a stale upload completion after the pending selection is discarded', async () => {
+    const upload = deferred<{ publicUrl: string; bytes: number }>();
+    mockUploadPhoto.mockReturnValue(upload.promise);
+    const { getByLabelText, update } = renderSheet();
+
+    await act(async () => {
+      await getByLabelText('Choose Front photo from library').props.onPress();
+    });
+    let savePromise!: Promise<void>;
+    act(() => {
+      savePromise = getByLabelText('Save photos').props.onPress();
+    });
+    update(false, null);
+    update(true, null);
+
+    await act(async () => {
+      upload.resolve({ publicUrl: 'https://example.com/stale.jpg', bytes: 1000 });
+      await savePromise;
+    });
+
+    expect(getByLabelText('Front photo, empty')).toBeTruthy();
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('does not persist an upload that completes after the sheet unmounts', async () => {
+    const upload = deferred<{ publicUrl: string; bytes: number }>();
+    mockUploadPhoto.mockReturnValue(upload.promise);
+    const { renderer, getByLabelText } = renderSheet();
+
+    await act(async () => {
+      await getByLabelText('Choose Front photo from library').props.onPress();
+    });
+    let savePromise!: Promise<void>;
+    act(() => {
+      savePromise = getByLabelText('Save photos').props.onPress();
+    });
+    act(() => renderer.unmount());
+
+    await act(async () => {
+      upload.resolve({ publicUrl: 'https://example.com/stale.jpg', bytes: 1000 });
+      await savePromise;
+    });
+
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('invalidates a pending upload synchronously when changes are discarded', async () => {
+    const upload = deferred<{ publicUrl: string; bytes: number }>();
+    mockUploadPhoto.mockReturnValue(upload.promise);
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    const onClose = jest.fn();
+    const { renderer, getByLabelText } = renderSheet({ onClose });
+
+    await act(async () => {
+      await getByLabelText('Choose Front photo from library').props.onPress();
+    });
+    let savePromise!: Promise<void>;
+    act(() => {
+      savePromise = getByLabelText('Save photos').props.onPress();
+    });
+    act(() => renderer.root.findByProps({ testID: 'photo-capture-sheet' }).props.onTouchEnd());
+    const discard = alert.mock.calls
+      .find(([title]) => title === 'Discard photo changes?')?.[2]
+      ?.find((action) => action.text === 'Discard');
+    act(() => discard?.onPress?.());
+
+    await act(async () => {
+      upload.resolve({ publicUrl: 'https://example.com/stale.jpg', bytes: 1000 });
+      await savePromise;
+    });
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(mockMutateAsync).not.toHaveBeenCalled();
   });
 
   it('offers cancellation and Settings after permission denial', async () => {
