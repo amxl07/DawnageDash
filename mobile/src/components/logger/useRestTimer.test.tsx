@@ -107,9 +107,9 @@ describe('rest timer absolute-time lifecycle', () => {
     const addEventListener = jest
       .spyOn(AppState, 'addEventListener')
       .mockImplementation((_event, listener) => {
-      onAppStateChange = listener as (state: string) => void;
-      return { remove };
-    });
+        onAppStateChange = listener as (state: string) => void;
+        return { remove };
+      });
     const timer = renderTimer();
 
     act(() => timer.result.current.start(2));
@@ -130,6 +130,27 @@ describe('rest timer absolute-time lifecycle', () => {
     expect(remove).toHaveBeenCalledTimes(addEventListener.mock.calls.length);
   });
 
+  it('shows rounded zero without completing before the absolute end', () => {
+    let onAppStateChange: ((state: string) => void) | undefined;
+    jest.spyOn(AppState, 'addEventListener').mockImplementation((_event, listener) => {
+      onAppStateChange = listener as (state: string) => void;
+      return { remove: jest.fn() };
+    });
+    const timer = renderTimer();
+    act(() => timer.result.current.start(1));
+
+    jest.setSystemTime(600);
+    act(() => onAppStateChange?.('active'));
+    expect(timer.result.current).toMatchObject({ remaining: 0, running: true, complete: false });
+    expect(mockNotificationAsync).not.toHaveBeenCalled();
+
+    jest.setSystemTime(1_000);
+    act(() => onAppStateChange?.('active'));
+    expect(timer.result.current).toMatchObject({ remaining: 0, running: false, complete: true });
+    expect(mockNotificationAsync).toHaveBeenCalledTimes(1);
+    timer.unmount();
+  });
+
   it('pauses from absolute time, resumes without drift, and resets to the selected duration', () => {
     const timer = renderTimer();
     act(() => timer.result.current.start(90));
@@ -143,10 +164,77 @@ describe('rest timer absolute-time lifecycle', () => {
     act(() => timer.result.current.toggle());
     expect(timer.result.current.running).toBe(true);
     act(() => jest.advanceTimersByTime(59_500));
-    expect(timer.result.current.remaining).toBe(1);
+    expect(timer.result.current).toMatchObject({ remaining: 0, running: true, complete: false });
 
     act(() => timer.result.current.reset());
     expect(timer.result.current).toMatchObject({ running: false, remaining: 90, complete: false });
+    timer.unmount();
+  });
+
+  it('preserves exact paused milliseconds when resuming', () => {
+    let onAppStateChange: ((state: string) => void) | undefined;
+    jest.spyOn(AppState, 'addEventListener').mockImplementation((_event, listener) => {
+      onAppStateChange = listener as (state: string) => void;
+      return { remove: jest.fn() };
+    });
+    const timer = renderTimer();
+    act(() => timer.result.current.start(1));
+
+    jest.setSystemTime(400);
+    act(() => timer.result.current.toggle());
+    expect(timer.result.current).toMatchObject({ remaining: 1, running: false, complete: false });
+
+    jest.setSystemTime(10_000);
+    act(() => timer.result.current.toggle());
+    jest.setSystemTime(10_599);
+    act(() => onAppStateChange?.('active'));
+    expect(timer.result.current.running).toBe(true);
+
+    jest.setSystemTime(10_600);
+    act(() => onAppStateChange?.('active'));
+    expect(timer.result.current).toMatchObject({ remaining: 0, running: false, complete: true });
+    timer.unmount();
+  });
+
+  it('ignores a queued AppState callback from a run replaced by start', () => {
+    const listeners: ((state: string) => void)[] = [];
+    jest.spyOn(AppState, 'addEventListener').mockImplementation((_event, listener) => {
+      listeners.push(listener as (state: string) => void);
+      return { remove: jest.fn() };
+    });
+    const timer = renderTimer();
+    act(() => timer.result.current.start(1));
+    const staleRunCallback = listeners.at(-1)!;
+
+    jest.setSystemTime(500);
+    act(() => timer.result.current.start(10));
+    jest.setSystemTime(1_100);
+    act(() => staleRunCallback('active'));
+
+    expect(timer.result.current).toMatchObject({ remaining: 10, running: true, complete: false });
+    expect(mockNotificationAsync).not.toHaveBeenCalled();
+    timer.unmount();
+  });
+
+  it.each([
+    ['reset', 10],
+    ['skip', 0],
+  ] as const)('ignores a queued interval callback after %s', (control, expectedRemaining) => {
+    const intervalSpy = jest.spyOn(global, 'setInterval');
+    const timer = renderTimer();
+    act(() => timer.result.current.start(10));
+    const staleRunCallback = intervalSpy.mock.calls.at(-1)?.[0] as () => void;
+
+    act(() => timer.result.current[control]());
+    jest.setSystemTime(1_000);
+    act(() => staleRunCallback());
+
+    expect(timer.result.current).toMatchObject({
+      remaining: expectedRemaining,
+      running: false,
+      complete: false,
+    });
+    expect(mockNotificationAsync).not.toHaveBeenCalled();
     timer.unmount();
   });
 

@@ -59,11 +59,12 @@ export function CircularTimer({
 
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
+  const showFinalImmediately = complete && !motion.enabled;
 
-  const fill = useSharedValue(progress);
-  const contentOpacity = useSharedValue(1);
-  const tickScale = useSharedValue(0.92);
-  const tickOpacity = useSharedValue(0);
+  const fill = useSharedValue(showFinalImmediately ? 1 : progress);
+  const contentOpacity = useSharedValue(showFinalImmediately ? 0 : 1);
+  const tickScale = useSharedValue(showFinalImmediately ? 1 : 0.92);
+  const tickOpacity = useSharedValue(showFinalImmediately ? 1 : 0);
 
   // Completion choreography.
   useEffect(() => {

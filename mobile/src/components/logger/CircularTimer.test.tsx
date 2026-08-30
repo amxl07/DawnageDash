@@ -13,6 +13,7 @@ const mockSharedValues: {
   get: jest.Mock<number, []>;
   set: jest.Mock<void, [number]>;
 }[] = [];
+const mockAnimatedStyles: object[] = [];
 const mockWithTiming = jest.fn(
   (value: number, _config?: object, callback?: (finished: boolean) => void) => {
     callback?.(true);
@@ -48,7 +49,11 @@ jest.mock('react-native-reanimated', () => {
       linear: 'linear',
     },
     useAnimatedProps: (factory: () => object) => factory(),
-    useAnimatedStyle: (factory: () => object) => factory(),
+    useAnimatedStyle: (factory: () => object) => {
+      const style = factory();
+      mockAnimatedStyles.push(style);
+      return style;
+    },
     useSharedValue: (initial: number) => {
       const ref = react.useRef<{
         initial: number;
@@ -99,6 +104,7 @@ describe('CircularTimer completion choreography', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSharedValues.length = 0;
+    mockAnimatedStyles.length = 0;
     mockMotion.enabled = true;
   });
 
@@ -160,10 +166,11 @@ describe('CircularTimer completion choreography', () => {
     });
 
     expect(mockWithTiming).not.toHaveBeenCalled();
-    expect(mockSharedValues[0].set).toHaveBeenCalledWith(1);
-    expect(mockSharedValues[1].set).toHaveBeenCalledWith(0);
-    expect(mockSharedValues[2].set).toHaveBeenCalledWith(1);
-    expect(mockSharedValues[3].set).toHaveBeenCalledWith(1);
+    expect(mockSharedValues.map(({ initial }) => initial)).toEqual([1, 0, 1, 1]);
+    expect(mockAnimatedStyles).toEqual([
+      { opacity: 0 },
+      { opacity: 1, transform: [{ scale: 1 }] },
+    ]);
     act(() => renderer.unmount());
   });
 

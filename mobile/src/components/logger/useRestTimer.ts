@@ -40,93 +40,140 @@ const RestTimerContext = createContext<RestTimerState | null>(null);
 export function RestTimerProvider({ children }: { children: ReactNode }) {
   const [duration, setDuration] = useState(90);
   const [endsAt, setEndsAt] = useState<number | null>(null);
-  const [pausedRemaining, setPausedRemaining] = useState<number | null>(null);
+  const [pausedRemainingMs, setPausedRemainingMs] = useState<number | null>(null);
   const [remaining, setRemaining] = useState(90);
   const [complete, setComplete] = useState(false);
+  const [generation, setGeneration] = useState(0);
+  const generationRef = useRef(0);
+  const endsAtRef = useRef<number | null>(null);
   const firedRef = useRef(false);
 
-  const finish = useCallback(() => {
-    if (firedRef.current) return;
-    firedRef.current = true;
-    setRemaining(0);
-    setComplete(true);
-    setEndsAt(null);
-    setPausedRemaining(null);
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    AccessibilityInfo.announceForAccessibility('Rest over.');
+  const advanceGeneration = useCallback(() => {
+    const next = generationRef.current + 1;
+    generationRef.current = next;
+    setGeneration(next);
+    return next;
   }, []);
 
-  const syncFromClock = useCallback(() => {
-    if (endsAt === null || pausedRemaining !== null) return;
-    const next = remainingAt(endsAt, Date.now());
-    setRemaining(next);
-    if (next === 0) finish();
-  }, [endsAt, finish, pausedRemaining]);
+  const finish = useCallback(
+    (expectedGeneration: number, expectedEndsAt: number, now = Date.now()) => {
+      if (
+        generationRef.current !== expectedGeneration ||
+        endsAtRef.current !== expectedEndsAt ||
+        now < expectedEndsAt ||
+        firedRef.current
+      ) {
+        return;
+      }
+      firedRef.current = true;
+      endsAtRef.current = null;
+      advanceGeneration();
+      setRemaining(0);
+      setComplete(true);
+      setEndsAt(null);
+      setPausedRemainingMs(null);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      AccessibilityInfo.announceForAccessibility('Rest over.');
+    },
+    [advanceGeneration],
+  );
+
+  const syncFromClock = useCallback(
+    (expectedGeneration: number, expectedEndsAt: number) => {
+      if (
+        generationRef.current !== expectedGeneration ||
+        endsAtRef.current !== expectedEndsAt
+      ) {
+        return;
+      }
+      const now = Date.now();
+      setRemaining(remainingAt(expectedEndsAt, now));
+      if (now >= expectedEndsAt) finish(expectedGeneration, expectedEndsAt, now);
+    },
+    [finish],
+  );
 
   useEffect(() => {
-    if (endsAt === null || pausedRemaining !== null) return;
-    syncFromClock();
-    const id = setInterval(syncFromClock, 250);
+    if (endsAt === null || pausedRemainingMs !== null) return;
+    const tick = () => syncFromClock(generation, endsAt);
+    tick();
+    const id = setInterval(tick, 250);
     return () => clearInterval(id);
-  }, [endsAt, pausedRemaining, syncFromClock]);
+  }, [endsAt, generation, pausedRemainingMs, syncFromClock]);
 
   useEffect(() => {
+    if (endsAt === null || pausedRemainingMs !== null) return;
+    const expectedGeneration = generation;
+    const expectedEndsAt = endsAt;
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') syncFromClock();
+      if (state === 'active') syncFromClock(expectedGeneration, expectedEndsAt);
     });
     return () => subscription.remove();
-  }, [syncFromClock]);
+  }, [endsAt, generation, pausedRemainingMs, syncFromClock]);
 
   const start = useCallback((seconds: number) => {
+    const nextEndsAt = Date.now() + seconds * 1000;
+    advanceGeneration();
+    endsAtRef.current = nextEndsAt;
     firedRef.current = false;
     setDuration(seconds);
     setRemaining(seconds);
     setComplete(false);
-    setPausedRemaining(null);
-    setEndsAt(Date.now() + seconds * 1000);
+    setPausedRemainingMs(null);
+    setEndsAt(nextEndsAt);
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }, []);
+  }, [advanceGeneration]);
 
-  const running = endsAt !== null && pausedRemaining === null;
+  const running = endsAt !== null && pausedRemainingMs === null;
 
   const toggle = useCallback(() => {
     if (running && endsAt !== null) {
-      const next = remainingAt(endsAt, Date.now());
-      if (next === 0) {
-        finish();
+      const now = Date.now();
+      if (now >= endsAt) {
+        finish(generationRef.current, endsAt, now);
         return;
       }
-      setRemaining(next);
-      setPausedRemaining(next);
+      const nextRemainingMs = endsAt - now;
+      advanceGeneration();
+      endsAtRef.current = null;
+      setRemaining(remainingAt(endsAt, now));
+      setPausedRemainingMs(nextRemainingMs);
       setEndsAt(null);
       return;
     }
 
-    if (pausedRemaining !== null) {
+    if (pausedRemainingMs !== null) {
+      const nextEndsAt = Date.now() + pausedRemainingMs;
+      advanceGeneration();
+      endsAtRef.current = nextEndsAt;
       setComplete(false);
-      setEndsAt(Date.now() + pausedRemaining * 1000);
-      setPausedRemaining(null);
+      setEndsAt(nextEndsAt);
+      setPausedRemainingMs(null);
       return;
     }
 
     start(duration);
-  }, [duration, endsAt, finish, pausedRemaining, running, start]);
+  }, [advanceGeneration, duration, endsAt, finish, pausedRemainingMs, running, start]);
 
   const reset = useCallback(() => {
+    advanceGeneration();
+    endsAtRef.current = null;
     firedRef.current = false;
     setEndsAt(null);
-    setPausedRemaining(null);
+    setPausedRemainingMs(null);
     setRemaining(duration);
     setComplete(false);
-  }, [duration]);
+  }, [advanceGeneration, duration]);
 
   const skip = useCallback(() => {
+    advanceGeneration();
+    endsAtRef.current = null;
     firedRef.current = true;
     setEndsAt(null);
-    setPausedRemaining(null);
+    setPausedRemainingMs(null);
     setRemaining(0);
     setComplete(false);
-  }, []);
+  }, [advanceGeneration]);
 
   const value = useMemo<RestTimerState>(() => {
     const progress = duration > 0 ? 1 - remaining / duration : 0;
