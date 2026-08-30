@@ -9,6 +9,8 @@ import { Sheet } from './Sheet';
 
 let mockModalOnChange: ((index: number) => void) | undefined;
 let mockModalProps: Record<string, unknown> = {};
+const mockPresent = jest.fn();
+const mockDismiss = jest.fn();
 
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = jest.requireActual('react');
@@ -25,7 +27,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
     ) => {
       mockModalOnChange = onChange;
       mockModalProps = props;
-      React.useImperativeHandle(ref, () => ({ present: jest.fn(), dismiss: jest.fn() }));
+      React.useImperativeHandle(ref, () => ({ present: mockPresent, dismiss: mockDismiss }));
       // Rendering children must not synthesize a presentation state change.
       return React.createElement(NativeView, null, children);
     },
@@ -169,5 +171,28 @@ describe('Sheet', () => {
       props: { pressBehavior?: string };
     };
     expect(renderBackdrop({}).props.pressBehavior).toBe('none');
+  });
+
+  it('re-presents before forwarding an unexpected native dismissal while locked', () => {
+    mockSafeAreaInsets.mockReturnValue({ top: 47, right: 0, bottom: 34, left: 0 });
+    const onClose = jest.fn();
+
+    act(() => {
+      create(
+        <Sheet visible dismissible={false} title="Progress photos" onClose={onClose}>
+          <Text>Unsaved photo</Text>
+        </Sheet>,
+      );
+    });
+
+    expect(mockPresent).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      (mockModalProps.onDismiss as (() => void) | undefined)?.();
+    });
+
+    expect(mockPresent).toHaveBeenCalledTimes(2);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(mockPresent.mock.invocationCallOrder[1]).toBeLessThan(onClose.mock.invocationCallOrder[0]);
   });
 });

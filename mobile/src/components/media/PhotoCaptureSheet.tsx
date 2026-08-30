@@ -354,7 +354,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
       visible={visible}
       onClose={requestClose}
       title={`Photos · ${format(parseLocalDate(date), 'd MMM yyyy')}`}
-      dismissible={!saving}
+      dismissible={!dirty && !saving}
     >
       <SheetScrollView contentContainerStyle={{ padding: spacing.base, gap: spacing.base }}>
         <Text variant="bodySm" tone="muted">

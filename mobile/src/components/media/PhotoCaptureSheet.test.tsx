@@ -471,6 +471,51 @@ describe('PhotoCaptureSheet', () => {
     expect(mockMutateAsync).not.toHaveBeenCalled();
   });
 
+  it('keeps a dirty sheet native-locked through Keep editing, then allows explicit Discard', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    const onClose = jest.fn();
+    const { renderer, getByLabelText } = renderSheet({ onClose });
+
+    await act(async () => {
+      await getByLabelText('Choose Front photo from library').props.onPress();
+    });
+
+    const sheet = renderer.root.findByProps({ testID: 'photo-capture-sheet' });
+    expect(sheet.props.accessibilityState).toEqual({ disabled: true });
+    act(() => sheet.props.onTouchEnd());
+
+    const firstConfirmation = alert.mock.calls.at(-1);
+    expect(firstConfirmation?.[0]).toBe('Discard photo changes?');
+    expect(firstConfirmation?.[2]?.map((action) => action.text)).toEqual([
+      'Keep editing',
+      'Discard',
+    ]);
+    const keepEditing = firstConfirmation?.[2]?.find((action) => action.text === 'Keep editing');
+    act(() => keepEditing?.onPress?.());
+    expect(onClose).not.toHaveBeenCalled();
+    expect(renderer.root.findByProps({ testID: 'photo-capture-sheet' })).toBeTruthy();
+
+    act(() => sheet.props.onTouchEnd());
+    const discard = alert.mock.calls
+      .at(-1)?.[2]
+      ?.find((action) => action.text === 'Discard');
+    act(() => discard?.onPress?.());
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows an idle clean sheet to dismiss without confirmation', () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    const onClose = jest.fn();
+    const { renderer } = renderSheet({ onClose });
+    const sheet = renderer.root.findByProps({ testID: 'photo-capture-sheet' });
+
+    expect(sheet.props.accessibilityState).toEqual({ disabled: false });
+    act(() => sheet.props.onTouchEnd());
+
+    expect(alert).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('blocks every dismissal path while database persistence is in flight', async () => {
     const databaseSave = deferred<void>();
     mockUploadPhoto.mockResolvedValue({
