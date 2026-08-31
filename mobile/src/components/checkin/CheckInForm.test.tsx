@@ -1,5 +1,12 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  Text as MockNativeText,
+  View as MockView,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 // @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
@@ -58,6 +65,13 @@ jest.mock('react-native-reanimated', () => {
 });
 jest.mock('@/hooks/useResponsiveLayout', () => ({
   useResponsiveLayout: jest.fn(),
+}));
+jest.mock('@/features/checkin/components/TickRuler', () => ({
+  TickRuler: ({ label, testID }: { label: string; testID?: string }) => (
+    <MockView testID={testID} accessibilityRole="adjustable" accessibilityLabel={label}>
+      <MockNativeText>{label}</MockNativeText>
+    </MockView>
+  ),
 }));
 jest.mock('@/components/ui', () => ({
   ...jest.requireActual('@/components/ui/Card'),
@@ -335,6 +349,16 @@ describe('CheckInForm', () => {
       'Steps',
       'More detail (optional)',
     ]);
+  });
+
+  it('uses tactile rulers only for weight, sleep, and water', () => {
+    expect(renderForm('readiness').root.findByProps({ testID: 'checkin-ruler-weight' })).toBeTruthy();
+    expect(renderForm('recovery').root.findByProps({ testID: 'checkin-ruler-sleep' })).toBeTruthy();
+
+    const adherence = renderForm('adherence');
+    expect(adherence.root.findByProps({ testID: 'checkin-ruler-water' })).toBeTruthy();
+    expect(adherence.root.findAllByProps({ testID: 'checkin-ruler-calories' })).toHaveLength(0);
+    expect(adherence.root.findAllByProps({ testID: 'checkin-ruler-steps' })).toHaveLength(0);
   });
 
   it.each([

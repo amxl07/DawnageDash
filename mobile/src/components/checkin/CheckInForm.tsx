@@ -33,6 +33,7 @@ import {
 } from '@/components/ui';
 import type { CheckInPayload } from '@/hooks/useCheckInMutation';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+import { TickRuler } from '@/features/checkin/components/TickRuler';
 import { parseLocalDate } from '@/lib/dates';
 import { requiresWorkoutPerformance } from '@/lib/checkin-validation';
 import { num, type DailyCheckIn, type Digestion, type WorkoutStatus } from '@/types/db';
@@ -207,7 +208,7 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
         <Text variant="label" tone="muted">
           Readiness and energy
         </Text>
-        <Stepper
+        <TickRuler
           label="Morning weight"
           value={form.morningWeight}
           onChange={(v) => set('morningWeight', v)}
@@ -215,9 +216,11 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
           precision={1}
           min={20}
           max={400}
-          suffix="kg"
+          unit="kg"
+          pxPerStep={12}
           hint={prevHint.weight}
           error={errors.morningWeight}
+          testID="checkin-ruler-weight"
         />
         {(
           [
@@ -251,7 +254,7 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
         <Text variant="label" tone="muted">
           Sleep and recovery
         </Text>
-        <Stepper
+        <TickRuler
           label="Sleep"
           value={form.sleepHours}
           onChange={(v) => set('sleepHours', v)}
@@ -259,9 +262,11 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
           precision={1}
           min={0}
           max={24}
-          suffix="h"
+          unit="h"
+          pxPerStep={24}
           hint={prevHint.sleep}
           error={errors.sleepHours}
+          testID="checkin-ruler-sleep"
         />
         <CheckInFieldBlock
           label="Hunger"
@@ -368,7 +373,7 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
           hint={prevHint.calories}
           error={errors.calorieIntake}
         />
-        <Stepper
+        <TickRuler
           label="Water"
           value={form.waterLiters}
           onChange={(v) => set('waterLiters', v)}
@@ -376,9 +381,11 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
           precision={2}
           min={0}
           max={20}
-          suffix="L"
+          unit="L"
+          pxPerStep={20}
           hint={prevHint.water}
           error={errors.waterLiters}
+          testID="checkin-ruler-water"
         />
         <Stepper
           label="Steps"
