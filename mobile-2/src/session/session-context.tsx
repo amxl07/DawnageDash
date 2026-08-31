@@ -17,6 +17,16 @@ export type SessionState = {
   session: AppSession | null;
 };
 
+export type TabAccessDecision = 'redirect-welcome' | 'render-tabs' | 'restoring';
+
+export function getTabAccessDecision({ restoreStatus, session }: Pick<SessionState, 'restoreStatus' | 'session'>): TabAccessDecision {
+  if (restoreStatus === 'restoring') {
+    return 'restoring';
+  }
+
+  return session ? 'render-tabs' : 'redirect-welcome';
+}
+
 type SessionAction =
   | { savedServerUrl: string | null; session: AppSession | null; type: 'restored' }
   | { type: 'demo-entered' }

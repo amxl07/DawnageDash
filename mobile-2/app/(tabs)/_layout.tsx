@@ -1,5 +1,9 @@
+import { Redirect } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { ActivityIndicator, View } from 'react-native';
 
+import { AppText } from '@/components/ui/app-text';
+import { getTabAccessDecision, useSession } from '@/session/session-context';
 import { useTheme } from '@/theme/theme';
 
 type TabIconProps = {
@@ -23,6 +27,22 @@ function TabTrigger({ icon, label, name }: { icon: TabIconProps; label: string; 
 
 export default function TabLayout() {
   const { colors } = useTheme();
+  const { restoreStatus, session } = useSession();
+  const access = getTabAccessDecision({ restoreStatus, session });
+
+  if (access === 'restoring') {
+    return (
+      <View accessibilityLabel="Restoring your session" accessibilityRole="progressbar" style={{ alignItems: 'center', backgroundColor: colors.background, flex: 1, gap: 12, justifyContent: 'center', padding: 24 }}>
+        <ActivityIndicator color={colors.accent} />
+        <AppText tone="muted">Restoring your session…</AppText>
+      </View>
+    );
+  }
+
+  if (access === 'redirect-welcome') {
+    return <Redirect href="/welcome" />;
+  }
+
   return (
     <NativeTabs backgroundColor={colors.surface} iconColor={{ default: colors.muted, selected: colors.accent }} labelStyle={{ default: { color: colors.muted }, selected: { color: colors.accent } }}>
       <TabTrigger icon={{ md: 'home', selectedSf: 'house.fill', sf: 'house' }} label="Today" name="index" />
