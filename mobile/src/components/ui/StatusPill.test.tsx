@@ -1,4 +1,11 @@
-import { Pressable as MockPressable, Text as MockNativeText, View } from 'react-native';
+import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
+import {
+  Pressable as MockPressable,
+  StyleSheet,
+  Text as MockNativeText,
+  View,
+  type ViewStyle,
+} from 'react-native';
 
 // @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
@@ -31,7 +38,7 @@ jest.mock('@/theme', () => ({
 }));
 
 jest.mock('react-native-safe-area-context', () => ({
-  useSafeAreaInsets: () => ({ bottom: 0 }),
+  useSafeAreaInsets: () => ({ bottom: 34 }),
 }));
 
 jest.mock('./Button', () => ({
@@ -129,5 +136,31 @@ describe('StatusPill', () => {
       accessibilityRole: 'button',
       accessibilityLabel: 'Continue',
     });
+  });
+
+  it('places a tab-hosted action bar above the navigation bar without duplicating the safe area', () => {
+    const previousExpoOS = process.env.EXPO_OS;
+    process.env.EXPO_OS = 'ios';
+
+    let renderer!: ReturnType<typeof create>;
+    act(() => {
+      renderer = create(
+        <BottomTabBarHeightContext.Provider value={90}>
+          <StickyActionBar primaryLabel="Continue" onPrimary={jest.fn()} />
+        </BottomTabBarHeightContext.Provider>,
+      );
+    });
+
+    const actionBar = renderer.root.findAllByType(View).find((node: { props: { style?: ViewStyle } }) => {
+      const style = StyleSheet.flatten(node.props.style);
+      return style?.position === 'absolute';
+    });
+
+    expect(StyleSheet.flatten(actionBar?.props.style)).toMatchObject({
+      bottom: 90,
+      paddingBottom: 8,
+    });
+
+    process.env.EXPO_OS = previousExpoOS;
   });
 });
