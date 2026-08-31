@@ -71,3 +71,22 @@
 ### Remaining validation limitation
 
 The requested smoke test and Expo-aware lint configuration are present, but this machine does not complete either Jest execution or ESLint execution within the required 60-second safety cap. No lint rules or Expo/TypeScript configuration were weakened to mask that issue. Re-run `npm test -- --runInBand` and `npm run lint` in CI or a fresh local shell before relying on the validation gate.
+
+## Fix round 2: scoped validation evidence
+
+### What changed
+
+- Expanded the lint script to target `src` as well as every current config, setup, and test path, so future authored app code is included.
+- Added `--no-error-on-unmatched-pattern` to the scoped ESLint invocation. The empty `src/.gitkeep` placeholder is intentionally ignored by ESLint; this flag prevents that empty directory from being treated as a lint failure while still linting every matching future source file.
+
+### Diagnosis and fresh verification
+
+The earlier 60-second cap was cutting off tool initialization, not exposing a Jest mock or ESLint-rule failure. Focused, one-at-a-time runs were allowed to finish and their retained exit-status files supplied the following evidence:
+
+| Command | Result |
+| --- | --- |
+| `npm test -- --runInBand` | Exit 0. The real `__tests__/jest-setup.test.ts` smoke test passed: 1 suite, 1 test. It imported the SecureStore mock through `jest.setup.ts` and verified independent per-key values. |
+| `npm run lint` | Exit 0. The command uses the unchanged Expo/TypeScript-aware `eslint-config-expo/flat` preset and targets `app.config.ts`, Jest configuration/setup, `src`, and `__tests__`. |
+| `npm run typecheck` | Exit 0. |
+
+The focused lint run initially exited 2 because the only `src` entry was the ignored `.gitkeep` placeholder. The unmatched-pattern flag is the smallest principled adjustment: it does not suppress any lint rules or exclude future TypeScript/TSX files under `src`.

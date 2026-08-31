@@ -50,7 +50,7 @@
     "ios": "expo start --ios",
     "test": "jest",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint app.config.ts eslint.config.js jest.config.js jest.setup.ts __tests__",
+    "lint": "eslint --no-error-on-unmatched-pattern app.config.ts eslint.config.js jest.config.js jest.setup.ts src __tests__",
     "check": "npm run typecheck && npm run lint && npm run test",
     "export": "expo export"
   },
