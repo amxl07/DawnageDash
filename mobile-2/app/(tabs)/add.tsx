@@ -1,12 +1,17 @@
 import * as Haptics from 'expo-haptics';
-import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { useState } from 'react';
+import { KeyboardAvoidingView, Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { AppButton } from '@/components/ui/app-button';
 import { AppText } from '@/components/ui/app-text';
 import { StatusBanner } from '@/components/ui/status-banner';
+import { TabScreenBoundary } from '@/components/ui/tab-screen-boundary';
 import { formatDate } from '@/domain/date';
 import type { Food } from '@/domain/models';
+import {
+  getQuickLogMealTypes,
+  resolveSelectedMealTypeId,
+} from '@/features/diary/meal-type-visibility';
 import { getInitialFoodQuantity, shouldClearFoodSelection } from '@/features/food/food-selection';
 import { FoodSearchRow } from '@/features/food/food-search-row';
 import { useAddFoodEntry, useFoodSearch } from '@/features/food/use-food-search';
@@ -28,12 +33,11 @@ export default function AddScreen() {
   const { session } = useSession();
   const { colors, radii, spacing } = useTheme();
   const connectedOffline = session?.mode === 'connected' && !isOnline;
-
-  useEffect(() => {
-    if (!selectedMealId && mealTypesQuery.data?.[0]) {
-      setSelectedMealId(mealTypesQuery.data[0].id);
-    }
-  }, [mealTypesQuery.data, selectedMealId]);
+  const quickLogMealTypes = getQuickLogMealTypes(mealTypesQuery.data ?? []);
+  const resolvedMealTypeId = resolveSelectedMealTypeId(
+    selectedMealId,
+    quickLogMealTypes,
+  );
 
   const submit = () => {
     const parsedQuantity = Number(quantity);
@@ -41,7 +45,7 @@ export default function AddScreen() {
       setFormError('Choose a food before adding it.');
       return;
     }
-    if (!selectedMealId) {
+    if (!resolvedMealTypeId) {
       setFormError('Choose a meal before adding it.');
       return;
     }
@@ -54,7 +58,7 @@ export default function AddScreen() {
       return;
     }
     setFormError(null);
-    addMutation.mutate({ date: formatDate(new Date()), foodId: selectedFood.id, mealTypeId: selectedMealId, quantity: parsedQuantity, unit: selectedFood.servingUnit, variantId: selectedFood.variantId }, {
+    addMutation.mutate({ date: formatDate(new Date()), foodId: selectedFood.id, mealTypeId: resolvedMealTypeId, quantity: parsedQuantity, unit: selectedFood.servingUnit, variantId: selectedFood.variantId }, {
       onError: (error) => setFormError(error instanceof Error ? error.message : 'We could not add that food.'),
       onSuccess: () => {
         setSelectedFood(null);
@@ -74,8 +78,9 @@ export default function AddScreen() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', default: undefined })} style={{ backgroundColor: colors.background, flex: 1 }}>
-      <ScrollView contentContainerStyle={{ gap: spacing.md, padding: spacing.md, paddingBottom: spacing.xxl }} keyboardShouldPersistTaps="handled">
+    <TabScreenBoundary>
+    <KeyboardAvoidingView behavior={process.env.EXPO_OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ gap: spacing.md, padding: spacing.md, paddingBottom: spacing.xxl }} keyboardShouldPersistTaps="handled">
         <View style={{ gap: 4 }}><AppText variant="title">Quick log</AppText><AppText tone="muted">Find a food, choose the meal, and keep moving.</AppText></View>
         {connectedOffline ? <StatusBanner>Reconnect to add food to your connected diary.</StatusBanner> : null}
         {formError ? <StatusBanner tone="danger">{formError}</StatusBanner> : null}
@@ -93,8 +98,8 @@ export default function AddScreen() {
           {mealTypesQuery.isLoading ? <AppText tone="muted">Loading meal choices…</AppText> : null}
           {mealTypesQuery.isError ? <StatusBanner tone="danger">Meal choices are unavailable. Pull to refresh later.</StatusBanner> : null}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {mealTypesQuery.data?.map((mealType) => {
-              const selected = mealType.id === selectedMealId;
+            {quickLogMealTypes.map((mealType) => {
+              const selected = mealType.id === resolvedMealTypeId;
               return <Pressable accessibilityLabel={`Log to ${mealType.name}`} accessibilityRole="radio" accessibilityState={{ selected }} key={mealType.id} onPress={() => setSelectedMealId(mealType.id)} style={({ pressed }) => ({ alignItems: 'center', backgroundColor: selected ? colors.accent : colors.surface, borderColor: selected ? colors.accent : colors.border, borderRadius: radii.pill, borderWidth: 1, justifyContent: 'center', minHeight: 44, opacity: pressed ? 0.72 : 1, paddingHorizontal: 16 })}><AppText tone={selected ? 'inverse' : 'default'} variant="caption">{mealType.name}</AppText></Pressable>;
             })}
           </View>
@@ -106,5 +111,6 @@ export default function AddScreen() {
         <AppButton accessibilityLabel="Add selected food" disabled={connectedOffline || mealTypesQuery.isLoading} loading={addMutation.isPending} onPress={submit}>Add to diary</AppButton>
       </ScrollView>
     </KeyboardAvoidingView>
+    </TabScreenBoundary>
   );
 }

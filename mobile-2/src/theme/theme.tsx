@@ -1,10 +1,36 @@
 import { createContext, useContext, useMemo } from 'react';
 import type { PropsWithChildren } from 'react';
 import { useColorScheme } from 'react-native';
+import {
+  DarkTheme as NavigationDarkTheme,
+  DefaultTheme as NavigationLightTheme,
+  type Theme as NavigationTheme,
+} from 'expo-router';
 
 import { darkColors, lightColors } from '@/theme/colors';
 
-type ThemeColors = Record<keyof typeof lightColors, string>;
+export type ThemeColors = Record<keyof typeof lightColors, string>;
+
+export function createNavigationTheme(
+  colors: ThemeColors,
+  isDark: boolean,
+): NavigationTheme {
+  const baseTheme = isDark ? NavigationDarkTheme : NavigationLightTheme;
+
+  return {
+    ...baseTheme,
+    dark: isDark,
+    colors: {
+      ...baseTheme.colors,
+      background: colors.background,
+      border: colors.border,
+      card: colors.surface,
+      notification: colors.danger,
+      primary: colors.accent,
+      text: colors.text,
+    },
+  };
+}
 
 export type AppTheme = {
   colors: ThemeColors;

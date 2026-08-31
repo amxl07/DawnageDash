@@ -9,6 +9,7 @@ describe('summary helpers', () => {
     const summary: DailySummary = {
       calories: { consumed: 0, goal: 2200 },
       date: '2026-09-01',
+      macroGoals: { carbohydrates: 275, fat: 70, protein: 160 },
       macros: { carbohydrates: 0, fat: 0, protein: 0 },
       meals: [],
     };
@@ -24,6 +25,7 @@ describe('summary helpers', () => {
     const summary: DailySummary = {
       calories: { consumed: 2460, goal: 2200 },
       date: '2026-09-01',
+      macroGoals: { carbohydrates: 275, fat: 70, protein: 160 },
       macros: { carbohydrates: 0, fat: 0, protein: 0 },
       meals: [],
     };

@@ -3,6 +3,7 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { ActivityIndicator, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
+import { TabScreenBoundary } from '@/components/ui/tab-screen-boundary';
 import { getTabAccessDecision, useSession } from '@/session/session-context';
 import { useTheme } from '@/theme/theme';
 
@@ -32,10 +33,12 @@ export default function TabLayout() {
 
   if (access === 'restoring') {
     return (
-      <View accessibilityLabel="Restoring your session" accessibilityRole="progressbar" style={{ alignItems: 'center', backgroundColor: colors.background, flex: 1, gap: 12, justifyContent: 'center', padding: 24 }}>
-        <ActivityIndicator color={colors.accent} />
-        <AppText tone="muted">Restoring your session…</AppText>
-      </View>
+      <TabScreenBoundary>
+        <View accessibilityLabel="Restoring your session" accessibilityRole="progressbar" style={{ alignItems: 'center', flex: 1, gap: 12, justifyContent: 'center', padding: 24 }}>
+          <ActivityIndicator color={colors.accent} />
+          <AppText tone="muted">Restoring your session…</AppText>
+        </View>
+      </TabScreenBoundary>
     );
   }
 

@@ -1,4 +1,7 @@
-import { getTabAccessDecision } from '@/session/session-context';
+import {
+  getPublicRouteAccessDecision,
+  getTabAccessDecision,
+} from '@/session/session-context';
 
 describe('getTabAccessDecision', () => {
   it.each([
@@ -7,5 +10,16 @@ describe('getTabAccessDecision', () => {
     ['renders tabs for an authenticated session after restoration', 'ready', { email: 'member@example.com', mode: 'connected', serverUrl: 'https://fitness.example', token: 'token-123' }, 'render-tabs'],
   ] as const)('%s', (_description, restoreStatus, session, expected) => {
     expect(getTabAccessDecision({ restoreStatus, session })).toBe(expected);
+  });
+});
+
+describe('getPublicRouteAccessDecision', () => {
+  it.each([
+    ['suspends public routes while restoration is pending', 'restoring', null, 'restoring'],
+    ['renders public routes for a signed-out visitor', 'ready', null, 'render-public'],
+    ['redirects demo sessions away from public routes', 'ready', { email: 'demo@dawnage.local', mode: 'demo' }, 'redirect-tabs'],
+    ['redirects connected sessions away from public routes', 'ready', { email: 'member@example.com', mode: 'connected', serverUrl: 'https://fitness.example', token: 'token-123' }, 'redirect-tabs'],
+  ] as const)('%s', (_description, restoreStatus, session, expected) => {
+    expect(getPublicRouteAccessDecision({ restoreStatus, session })).toBe(expected);
   });
 });

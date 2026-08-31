@@ -20,6 +20,7 @@ export type SessionState = {
 };
 
 export type TabAccessDecision = 'redirect-welcome' | 'render-tabs' | 'restoring';
+export type PublicRouteAccessDecision = 'redirect-tabs' | 'render-public' | 'restoring';
 
 export function getTabAccessDecision({ restoreStatus, session }: Pick<SessionState, 'restoreStatus' | 'session'>): TabAccessDecision {
   if (restoreStatus === 'restoring') {
@@ -27,6 +28,14 @@ export function getTabAccessDecision({ restoreStatus, session }: Pick<SessionSta
   }
 
   return session ? 'render-tabs' : 'redirect-welcome';
+}
+
+export function getPublicRouteAccessDecision({ restoreStatus, session }: Pick<SessionState, 'restoreStatus' | 'session'>): PublicRouteAccessDecision {
+  if (restoreStatus === 'restoring') {
+    return 'restoring';
+  }
+
+  return session ? 'redirect-tabs' : 'render-public';
 }
 
 type SessionAction =
@@ -101,6 +110,9 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 export function SessionProvider({ children }: PropsWithChildren) {
   const [state, dispatch] = useReducer(sessionReducer, initialSessionState);
   const savedServerUrlRef = useRef<string | null>(null);
+  const operationVersionRef = useRef(0);
+  const requestAbortRef = useRef<AbortController | null>(null);
+  const identityCommitQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     let isMounted = true;
@@ -131,35 +143,88 @@ export function SessionProvider({ children }: PropsWithChildren) {
     }
   }, [state.restoreStatus]);
 
+  const beginOperation = useCallback(() => {
+    requestAbortRef.current?.abort();
+    const abortController = new AbortController();
+    requestAbortRef.current = abortController;
+    operationVersionRef.current += 1;
+
+    return {
+      signal: abortController.signal,
+      version: operationVersionRef.current,
+    };
+  }, []);
+
+  const isLatestOperation = useCallback(
+    (version: number) => operationVersionRef.current === version,
+    [],
+  );
+
+  const replaceIdentity = useCallback(async (
+    version: number,
+    session: AppSession | null,
+  ) => {
+    const commit = identityCommitQueueRef.current
+      .catch(() => undefined)
+      .then(async () => {
+        if (!isLatestOperation(version)) return;
+
+        await queryClient.cancelQueries();
+        if (!isLatestOperation(version)) return;
+        queryClient.clear();
+
+        if (session) {
+          await saveStoredSession(session);
+        } else {
+          await clearStoredSession();
+        }
+
+        if (!isLatestOperation(version)) return;
+        dispatch(session?.mode === 'connected'
+          ? { session, type: 'connected' }
+          : session?.mode === 'demo'
+            ? { type: 'demo-entered' }
+            : { type: 'signed-out' });
+      });
+
+    identityCommitQueueRef.current = commit.catch(() => undefined);
+    await commit;
+  }, [isLatestOperation]);
+
   const enterDemo = useCallback(async () => {
     assertRestorationComplete();
+    const { version } = beginOperation();
     const session: AppSession = { email: 'demo@dawnage.local', mode: 'demo' };
-    await saveStoredSession(session);
-    dispatch({ type: 'demo-entered' });
-  }, [assertRestorationComplete]);
+    await replaceIdentity(version, session);
+  }, [assertRestorationComplete, beginOperation, replaceIdentity]);
 
   const saveServer = useCallback(async (input: string) => {
     assertRestorationComplete();
+    const { signal, version } = beginOperation();
     const serverUrl = validateServerUrl(input, isDevelopmentBuild());
     let response: Response;
 
     try {
-      response = await fetch(`${serverUrl}/api/auth/settings`, { method: 'GET' });
+      response = await fetch(`${serverUrl}/api/auth/settings`, { method: 'GET', signal });
     } catch {
+      if (!isLatestOperation(version)) return;
       throw new Error('Unable to reach the server settings. Check the URL and your connection.');
     }
 
+    if (!isLatestOperation(version)) return;
     if (!response.ok) {
       throw responseError('Server validation', response.status);
     }
 
     await saveStoredServerUrl(serverUrl);
+    if (!isLatestOperation(version)) return;
     savedServerUrlRef.current = serverUrl;
     dispatch({ serverUrl, type: 'server-saved' });
-  }, [assertRestorationComplete]);
+  }, [assertRestorationComplete, beginOperation, isLatestOperation]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     assertRestorationComplete();
+    const { signal, version } = beginOperation();
     const serverUrl = savedServerUrlRef.current;
     if (!serverUrl) {
       throw new Error('Choose and validate a server before signing in.');
@@ -175,11 +240,14 @@ export function SessionProvider({ children }: PropsWithChildren) {
           Origin: new URL(serverUrl).origin,
         },
         method: 'POST',
+        signal,
       });
     } catch {
+      if (!isLatestOperation(version)) return;
       throw new Error('Unable to reach the sign-in service. Check your connection and try again.');
     }
 
+    if (!isLatestOperation(version)) return;
     const result = signInWireSchema.safeParse(await responseJson(response, 'Sign in'));
     if (!result.success) {
       throw new Error('Sign in returned an invalid response. Try again or check the server.');
@@ -204,16 +272,14 @@ export function SessionProvider({ children }: PropsWithChildren) {
       token,
     };
 
-    await saveStoredSession(session);
-    dispatch({ session, type: 'connected' });
-  }, [assertRestorationComplete]);
+    await replaceIdentity(version, session);
+  }, [assertRestorationComplete, beginOperation, isLatestOperation, replaceIdentity]);
 
   const signOut = useCallback(async () => {
     assertRestorationComplete();
-    await clearStoredSession();
-    queryClient.clear();
-    dispatch({ type: 'signed-out' });
-  }, [assertRestorationComplete]);
+    const { version } = beginOperation();
+    await replaceIdentity(version, null);
+  }, [assertRestorationComplete, beginOperation, replaceIdentity]);
 
   const value = useMemo<SessionContextValue>(
     () => ({ ...state, enterDemo, saveServer, signIn, signOut }),

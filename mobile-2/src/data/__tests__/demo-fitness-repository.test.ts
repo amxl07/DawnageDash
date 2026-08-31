@@ -6,22 +6,23 @@ describe('demo fitness repository', () => {
     const secondRepository = createDemoFitnessRepository();
 
     await expect(firstRepository.getMealTypes()).resolves.toEqual([
-      { id: 'breakfast', name: 'Breakfast' },
-      { id: 'lunch', name: 'Lunch' },
-      { id: 'dinner', name: 'Dinner' },
-      { id: 'snacks', name: 'Snacks' },
+      { id: 'breakfast', isVisible: true, name: 'Breakfast', showInQuickLog: true },
+      { id: 'lunch', isVisible: true, name: 'Lunch', showInQuickLog: true },
+      { id: 'dinner', isVisible: true, name: 'Dinner', showInQuickLog: true },
+      { id: 'snacks', isVisible: true, name: 'Snacks', showInQuickLog: true },
     ]);
     await expect(secondRepository.getMealTypes()).resolves.toEqual([
-      { id: 'breakfast', name: 'Breakfast' },
-      { id: 'lunch', name: 'Lunch' },
-      { id: 'dinner', name: 'Dinner' },
-      { id: 'snacks', name: 'Snacks' },
+      { id: 'breakfast', isVisible: true, name: 'Breakfast', showInQuickLog: true },
+      { id: 'lunch', isVisible: true, name: 'Lunch', showInQuickLog: true },
+      { id: 'dinner', isVisible: true, name: 'Dinner', showInQuickLog: true },
+      { id: 'snacks', isVisible: true, name: 'Snacks', showInQuickLog: true },
     ]);
   });
 
   it('adds a full serving of selected food to its meal and increases that day’s calories', async () => {
     const repository = createDemoFitnessRepository();
     const before = await repository.getDailySummary('2026-09-01');
+    expect(before.macroGoals).toEqual({ carbohydrates: 275, fat: 70, protein: 160 });
     const [oats] = (await repository.searchFoods('oats')).items;
 
     expect(oats).toMatchObject({ variantId: 'demo-oats-default' });

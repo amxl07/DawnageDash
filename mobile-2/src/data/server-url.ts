@@ -17,7 +17,7 @@ function parseServerUrl(input: string): URL {
 }
 
 function isDevelopmentHost(hostname: string): boolean {
-  if (hostname === 'localhost' || hostname === '::1') {
+  if (hostname === 'localhost' || hostname === '::1' || hostname === '[::1]') {
     return true;
   }
 

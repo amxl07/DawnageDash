@@ -91,17 +91,26 @@ function mapDailySummary(
     }),
     { calories: 0, carbohydrates: 0, fat: 0, protein: 0 },
   );
+  const supplements = summary.supplementTotals;
+  const goals = summary.adjustedGoals ?? summary.goals;
 
   return {
     calories: {
-      consumed: summary.calorieBalance?.eaten ?? calculatedNutrition.calories,
-      goal: summary.adjustedGoals?.calories ?? summary.goals.calories,
+      consumed:
+        summary.calorieBalance?.eaten ??
+        calculatedNutrition.calories + (supplements?.calories ?? 0),
+      goal: goals.calories,
     },
     date,
+    macroGoals: {
+      carbohydrates: goals.carbs,
+      fat: goals.fat,
+      protein: goals.protein,
+    },
     macros: {
-      carbohydrates: calculatedNutrition.carbohydrates,
-      fat: calculatedNutrition.fat,
-      protein: calculatedNutrition.protein,
+      carbohydrates: calculatedNutrition.carbohydrates + (supplements?.carbs ?? 0),
+      fat: calculatedNutrition.fat + (supplements?.fat ?? 0),
+      protein: calculatedNutrition.protein + (supplements?.protein ?? 0),
     },
     meals: [...meals.values()],
   };
@@ -113,10 +122,10 @@ function mapFoodSearch(result: z.infer<typeof foodSearchWireSchema>): FoodSearch
     id: food.id,
     name: food.name,
     nutrition: {
-      calories: food.default_variant.calories,
-      carbohydrates: food.default_variant.carbs,
-      fat: food.default_variant.fat,
-      protein: food.default_variant.protein,
+      calories: food.default_variant.calories ?? 0,
+      carbohydrates: food.default_variant.carbs ?? 0,
+      fat: food.default_variant.fat ?? 0,
+      protein: food.default_variant.protein ?? 0,
     },
     servingSize: food.default_variant.serving_size,
     servingUnit: food.default_variant.serving_unit,
@@ -127,7 +136,12 @@ function mapFoodSearch(result: z.infer<typeof foodSearchWireSchema>): FoodSearch
 }
 
 function mapMealTypes(types: z.infer<typeof mealTypesWireSchema>): MealType[] {
-  return types.map((mealType) => ({ id: mealType.id, name: mealType.name }));
+  return types.map((mealType) => ({
+    id: mealType.id,
+    isVisible: mealType.is_visible ?? true,
+    name: mealType.name,
+    showInQuickLog: mealType.show_in_quick_log ?? true,
+  }));
 }
 
 export function createConnectedFitnessRepository(

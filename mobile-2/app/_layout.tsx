@@ -1,13 +1,17 @@
-import { Stack } from 'expo-router';
+import { Stack, ThemeProvider as NavigationThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
 import { AppProviders } from '@/query/query-provider';
-import { ThemeProvider, useTheme } from '@/theme/theme';
+import {
+  createNavigationTheme,
+  ThemeProvider,
+  useTheme,
+} from '@/theme/theme';
 
 function RootNavigator() {
-  const { isDark } = useTheme();
+  const { colors, isDark } = useTheme();
   return (
-    <>
+    <NavigationThemeProvider value={createNavigationTheme(colors, isDark)}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack screenOptions={{ animation: 'default' }}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -16,7 +20,7 @@ function RootNavigator() {
         <Stack.Screen name="sign-in" options={{ title: 'Sign in' }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
-    </>
+    </NavigationThemeProvider>
   );
 }
 

@@ -6,15 +6,16 @@ import { AppButton } from '@/components/ui/app-button';
 import { AppText } from '@/components/ui/app-text';
 import { StatusBanner } from '@/components/ui/status-banner';
 import { Surface } from '@/components/ui/surface';
+import { TabScreenBoundary } from '@/components/ui/tab-screen-boundary';
 import { useSession } from '@/session/session-context';
 import { useTheme } from '@/theme/theme';
 
 export default function SettingsScreen() {
   const { session, signOut } = useSession();
-  const { colors, spacing } = useTheme();
+  const { spacing } = useTheme();
   const [error, setError] = useState<string | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  if (!session) return null;
+  if (!session) return <TabScreenBoundary />;
   const connection = session.mode === 'demo' ? 'Local demo data' : new URL(session.serverUrl).host;
 
   const handleSignOut = async () => {
@@ -31,7 +32,8 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={{ backgroundColor: colors.background, gap: spacing.md, padding: spacing.md, paddingBottom: spacing.xxl }}>
+    <TabScreenBoundary>
+    <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ gap: spacing.md, padding: spacing.md, paddingBottom: spacing.xxl }}>
       <View style={{ gap: 4 }}><AppText variant="title">You</AppText><AppText tone="muted">Your current connection and account.</AppText></View>
       {error ? <StatusBanner tone="danger">{error}</StatusBanner> : null}
       <Surface elevated style={{ gap: 14 }}>
@@ -41,5 +43,6 @@ export default function SettingsScreen() {
       <Surface style={{ gap: 8 }}><AppText style={{ fontWeight: '700' }}>Your privacy</AppText><AppText tone="muted">Your sign-in token stays in secure device storage and is never shown here.</AppText></Surface>
       <AppButton loading={isSigningOut} onPress={() => void handleSignOut()} tone="danger">Sign out</AppButton>
     </ScrollView>
+    </TabScreenBoundary>
   );
 }

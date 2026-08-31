@@ -2,6 +2,18 @@ import { z } from 'zod';
 
 const finiteNumber = z.number().finite();
 const nonEmptyString = z.string().min(1);
+const macroGoalsWireSchema = z.object({
+  calories: finiteNumber,
+  carbs: finiteNumber,
+  fat: finiteNumber,
+  protein: finiteNumber,
+});
+const supplementTotalsWireSchema = z.object({
+  calories: finiteNumber.nullish(),
+  carbs: finiteNumber.nullish(),
+  fat: finiteNumber.nullish(),
+  protein: finiteNumber.nullish(),
+}).passthrough();
 
 export const foodEntryWireSchema = z.object({
   calories: finiteNumber.nullish(),
@@ -21,7 +33,7 @@ export const foodEntryWireSchema = z.object({
 });
 
 export const dailySummaryWireSchema = z.object({
-  adjustedGoals: z.object({ calories: finiteNumber }).nullable().optional(),
+  adjustedGoals: macroGoalsWireSchema.nullable().optional(),
   calorieBalance: z.object({ eaten: finiteNumber.optional() }).optional(),
   exerciseSessions: z.array(z.unknown()),
   foodEntries: z.array(
@@ -29,9 +41,9 @@ export const dailySummaryWireSchema = z.object({
       meal_type: nonEmptyString,
     }),
   ),
-  goals: z.object({ calories: finiteNumber }),
+  goals: macroGoalsWireSchema,
   stepCalories: z.unknown(),
-  supplementTotals: z.unknown(),
+  supplementTotals: supplementTotalsWireSchema.nullish(),
   waterIntake: z.unknown(),
 });
 
@@ -40,11 +52,11 @@ export const foodSearchWireSchema = z.object({
     z.object({
       brand: nonEmptyString.nullish(),
       default_variant: z.object({
-        calories: finiteNumber,
-        carbs: finiteNumber,
-        fat: finiteNumber,
+        calories: finiteNumber.nullish(),
+        carbs: finiteNumber.nullish(),
+        fat: finiteNumber.nullish(),
         id: nonEmptyString,
-        protein: finiteNumber,
+        protein: finiteNumber.nullish(),
         serving_size: finiteNumber.positive(),
         serving_unit: nonEmptyString,
       }),
@@ -58,7 +70,9 @@ export const foodSearchWireSchema = z.object({
 export const mealTypesWireSchema = z.array(
   z.object({
     id: nonEmptyString,
+    is_visible: z.boolean().nullish(),
     name: nonEmptyString,
+    show_in_quick_log: z.boolean().nullish(),
   }),
 );
 
@@ -71,6 +85,4 @@ export const signInWireSchema = z.object({
   }).nullable().optional(),
 });
 
-export const createdFoodEntryWireSchema = foodEntryWireSchema.extend({
-  meal_type: nonEmptyString,
-});
+export const createdFoodEntryWireSchema = foodEntryWireSchema;

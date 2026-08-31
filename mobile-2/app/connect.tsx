@@ -6,6 +6,7 @@ import { AppButton } from '@/components/ui/app-button';
 import { AppText } from '@/components/ui/app-text';
 import { StatusBanner } from '@/components/ui/status-banner';
 import { useSession } from '@/session/session-context';
+import { PublicRouteBoundary } from '@/session/public-route-boundary';
 import { useTheme } from '@/theme/theme';
 
 export default function ConnectScreen() {
@@ -28,29 +29,31 @@ export default function ConnectScreen() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={process.env.EXPO_OS === 'ios' ? 'padding' : undefined} style={{ backgroundColor: colors.background, flex: 1 }}>
-      <ScrollView contentContainerStyle={{ flexGrow: 1, gap: spacing.lg, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
-        <View style={{ gap: spacing.sm }}>
-          <AppText variant="title">Your server, your data.</AppText>
-          <AppText tone="muted">Enter the full address of your compatible server. We will check it before you sign in.</AppText>
-        </View>
-        <View style={{ gap: spacing.sm }}>
-          <AppText style={{ fontWeight: '700' }}>Server address</AppText>
-          <TextInput
-            accessibilityLabel="Server address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="url"
-            onChangeText={setServerUrl}
-            placeholder="https://fitness.example"
-            placeholderTextColor={colors.muted}
-            style={{ backgroundColor: colors.surface, borderColor: error ? colors.danger : colors.border, borderRadius: radii.control, borderWidth: 1, color: colors.text, fontSize: 16, minHeight: 48, paddingHorizontal: 14 }}
-            value={serverUrl}
-          />
-          {error ? <StatusBanner tone="danger">{error}</StatusBanner> : null}
-        </View>
-        <AppButton loading={saving} onPress={validate}>Check server</AppButton>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    <PublicRouteBoundary>
+      <KeyboardAvoidingView behavior={process.env.EXPO_OS === 'ios' ? 'padding' : undefined} style={{ backgroundColor: colors.background, flex: 1 }}>
+        <ScrollView contentContainerStyle={{ flexGrow: 1, gap: spacing.lg, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
+          <View style={{ gap: spacing.sm }}>
+            <AppText variant="title">Your server, your data.</AppText>
+            <AppText tone="muted">Enter the full address of your compatible server. We will check it before you sign in.</AppText>
+          </View>
+          <View style={{ gap: spacing.sm }}>
+            <AppText style={{ fontWeight: '700' }}>Server address</AppText>
+            <TextInput
+              accessibilityLabel="Server address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              onChangeText={setServerUrl}
+              placeholder="https://fitness.example"
+              placeholderTextColor={colors.muted}
+              style={{ backgroundColor: colors.surface, borderColor: error ? colors.danger : colors.border, borderRadius: radii.control, borderWidth: 1, color: colors.text, fontSize: 16, minHeight: 48, paddingHorizontal: 14 }}
+              value={serverUrl}
+            />
+            {error ? <StatusBanner tone="danger">{error}</StatusBanner> : null}
+          </View>
+          <AppButton loading={saving} onPress={validate}>Check server</AppButton>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </PublicRouteBoundary>
   );
 }

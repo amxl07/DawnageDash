@@ -34,6 +34,12 @@ describe('server URL policy', () => {
     );
   });
 
+  it('accepts bracketed IPv6 loopback over HTTP during development', () => {
+    expect(validateServerUrl('http://[::1]:3000/', true)).toBe(
+      'http://[::1]:3000',
+    );
+  });
+
   it('rejects private-network HTTP URLs outside development', () => {
     expect(() => validateServerUrl('http://192.168.1.44:8080', false)).toThrow(
       'Use HTTPS outside development.',

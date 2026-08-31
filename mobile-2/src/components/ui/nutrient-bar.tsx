@@ -9,7 +9,7 @@ export function NutrientBar({ current, goal, label, unit }: { current: number; g
   const identifier = label.toLocaleLowerCase().replace(/\s+/g, '-');
   return (
     <View accessibilityLabel={`${label}: ${current} ${unit} of ${goal} ${unit}`} accessibilityRole="progressbar" style={{ gap: 8 }}>
-      <View style={{ alignItems: 'baseline', flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
+      <View style={{ alignItems: 'baseline', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12 }}>
         <AppText style={{ fontWeight: '700' }}>{label}</AppText>
         <AppText tone="muted" variant="caption">{current} {unit} / {goal} {unit}</AppText>
       </View>

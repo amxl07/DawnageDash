@@ -22,7 +22,9 @@ export interface FoodSearchResult {
 
 export interface MealType {
   id: string;
+  isVisible: boolean;
   name: string;
+  showInQuickLog: boolean;
 }
 
 export interface FoodEntry extends Nutrition {
@@ -46,6 +48,7 @@ export interface DailySummary {
     consumed: number;
     goal: number;
   };
+  macroGoals: Omit<Nutrition, 'calories'>;
   macros: Omit<Nutrition, 'calories'>;
   meals: DailyMeal[];
 }

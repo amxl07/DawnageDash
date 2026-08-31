@@ -41,7 +41,6 @@ describe('SessionProvider actions', () => {
   let latestSession: SessionContextValue;
   let fetchMock: jest.Mock;
   let originalFetch: typeof fetch;
-  let restoreGetItemMock: (() => void) | undefined;
 
   beforeAll(() => {
     (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean })
@@ -51,6 +50,7 @@ describe('SessionProvider actions', () => {
   beforeEach(async () => {
     await clearStoredSession();
     await SecureStore.deleteItemAsync(SERVER_URL_STORAGE_KEY);
+    queryClient.clear();
     latestSession = undefined as never;
     fetchMock = jest.fn();
     originalFetch = globalThis.fetch;
@@ -58,8 +58,6 @@ describe('SessionProvider actions', () => {
   });
 
   afterEach(() => {
-    restoreGetItemMock?.();
-    restoreGetItemMock = undefined;
     globalThis.fetch = originalFetch;
   });
 
@@ -168,20 +166,9 @@ describe('SessionProvider actions', () => {
   it('gates actions until delayed restoration finishes, then uses the newly saved server', async () => {
     const restoredSession = deferred<string | null>();
     const restoredServerUrl = deferred<string | null>();
-    restoreGetItemMock = jest
-      .spyOn(SecureStore, 'getItemAsync')
-      .mockImplementation((key) => {
-        if (key === SESSION_STORAGE_KEY) {
-          return restoredSession.promise;
-        }
-
-        if (key === SERVER_URL_STORAGE_KEY) {
-          return restoredServerUrl.promise;
-        }
-
-        return Promise.resolve(null);
-      })
-      .mockRestore;
+    (SecureStore.getItemAsync as jest.Mock)
+      .mockImplementationOnce(() => restoredSession.promise)
+      .mockImplementationOnce(() => restoredServerUrl.promise);
     await mountSession();
 
     await act(async () => {
@@ -229,5 +216,140 @@ describe('SessionProvider actions', () => {
     });
 
     expect(queryClient.getQueryData(['daily-summary', '2026-09-01'])).toBeUndefined();
+  });
+
+  it('clears private queries when replacing an identity with demo mode', async () => {
+    await renderSession();
+    queryClient.setQueryData(['daily-summary', '2026-09-01'], { owner: 'previous' });
+    queryClient.setQueryData(['meal-types'], [{ id: 'private-meal' }]);
+
+    await act(async () => {
+      await latestSession.enterDemo();
+    });
+
+    expect(queryClient.getQueryData(['daily-summary', '2026-09-01'])).toBeUndefined();
+    expect(queryClient.getQueryData(['meal-types'])).toBeUndefined();
+  });
+
+  it('clears demo queries before installing a connected identity', async () => {
+    await saveStoredServerUrl('https://fitness.example');
+    fetchMock.mockResolvedValueOnce(jsonResponse({ token: 'connected-token', user: {} }));
+    await renderSession();
+    queryClient.setQueryData(['food-search', 'oats'], { owner: 'demo' });
+
+    await act(async () => {
+      await latestSession.signIn('member@example.com', 'not-persisted');
+    });
+
+    expect(queryClient.getQueryData(['food-search', 'oats'])).toBeUndefined();
+    expect(latestSession.session).toMatchObject({
+      mode: 'connected',
+      token: 'connected-token',
+    });
+  });
+
+  it('ignores a late sign-in completion after the user chooses demo mode', async () => {
+    const signInResponse = deferred<Response>();
+    await saveStoredServerUrl('https://fitness.example');
+    fetchMock.mockReturnValueOnce(signInResponse.promise);
+    await renderSession();
+
+    let signInPromise!: Promise<void>;
+    await act(async () => {
+      signInPromise = latestSession.signIn('member@example.com', 'not-persisted');
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await latestSession.enterDemo();
+    });
+
+    await act(async () => {
+      signInResponse.resolve(jsonResponse({ token: 'late-token', user: {} }));
+      await signInPromise;
+    });
+
+    expect(latestSession.session).toEqual({
+      email: 'demo@dawnage.local',
+      mode: 'demo',
+    });
+    await expect(SecureStore.getItemAsync(SESSION_STORAGE_KEY)).resolves.toBe(
+      JSON.stringify({ email: 'demo@dawnage.local', mode: 'demo' }),
+    );
+  });
+
+  it('keeps the newest server when overlapping validations finish out of order', async () => {
+    const firstResponse = deferred<Response>();
+    const secondResponse = deferred<Response>();
+    fetchMock
+      .mockReturnValueOnce(firstResponse.promise)
+      .mockReturnValueOnce(secondResponse.promise);
+    await renderSession();
+
+    let firstSave!: Promise<void>;
+    let secondSave!: Promise<void>;
+    await act(async () => {
+      firstSave = latestSession.saveServer('https://old.example');
+      secondSave = latestSession.saveServer('https://new.example');
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      secondResponse.resolve(jsonResponse({ registrationEnabled: true }));
+      await secondSave;
+    });
+    await act(async () => {
+      firstResponse.resolve(jsonResponse({ registrationEnabled: true }));
+      await firstSave;
+    });
+
+    expect(latestSession.savedServerUrl).toBe('https://new.example');
+    await expect(SecureStore.getItemAsync(SERVER_URL_STORAGE_KEY)).resolves.toBe(
+      'https://new.example',
+    );
+  });
+
+  it('persists the newest identity when an older secure-store write finishes late', async () => {
+    await saveStoredServerUrl('https://fitness.example');
+    fetchMock.mockResolvedValueOnce(jsonResponse({ token: 'connected-token', user: {} }));
+    await renderSession();
+
+    const staleWrite = deferred<void>();
+    const setItemMock = SecureStore.setItemAsync as jest.Mock;
+    const defaultSetItem = setItemMock.getMockImplementation();
+    expect(defaultSetItem).toBeDefined();
+    setItemMock.mockImplementationOnce(async (...args: [string, string]) => {
+      await staleWrite.promise;
+      return defaultSetItem?.(...args);
+    });
+
+    let signInPromise!: Promise<void>;
+    await act(async () => {
+      signInPromise = latestSession.signIn('member@example.com', 'not-persisted');
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(setItemMock).toHaveBeenCalledWith(
+      SESSION_STORAGE_KEY,
+      expect.stringContaining('connected-token'),
+    ));
+
+    let demoPromise!: Promise<void>;
+    await act(async () => {
+      demoPromise = latestSession.enterDemo();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      staleWrite.resolve();
+      await Promise.all([signInPromise, demoPromise]);
+    });
+
+    expect(latestSession.session).toEqual({
+      email: 'demo@dawnage.local',
+      mode: 'demo',
+    });
+    await expect(SecureStore.getItemAsync(SESSION_STORAGE_KEY)).resolves.toBe(
+      JSON.stringify({ email: 'demo@dawnage.local', mode: 'demo' }),
+    );
   });
 });

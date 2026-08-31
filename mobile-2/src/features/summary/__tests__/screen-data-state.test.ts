@@ -12,4 +12,8 @@ describe('getOfflineColdStartState', () => {
   it('does not block the local demo while offline', () => {
     expect(getOfflineColdStartState({ hasData: false, isOnline: false, mode: 'demo' })).toBe('data');
   });
+
+  it('marks connected Insights without any cached days as unavailable offline', () => {
+    expect(getOfflineColdStartState({ hasData: false, isOnline: false, mode: 'connected' })).toBe('unavailable');
+  });
 });

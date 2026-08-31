@@ -19,5 +19,5 @@ export function AppText({ style, tone = 'default', variant = 'body', ...props }:
   const { colors } = useTheme();
   const color = tone === 'danger' ? colors.danger : tone === 'inverse' ? colors.textInverse : tone === 'muted' ? colors.muted : colors.text;
 
-  return <Text allowFontScaling maxFontSizeMultiplier={1.6} style={[variants[variant], { color }, style]} {...props} />;
+  return <Text allowFontScaling style={[variants[variant], { color }, style]} {...props} />;
 }

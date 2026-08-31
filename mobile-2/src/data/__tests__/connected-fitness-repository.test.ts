@@ -17,7 +17,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 function dailySummaryWire(overrides: Record<string, unknown> = {}) {
   return {
-    adjustedGoals: { calories: 2150 },
+    adjustedGoals: { calories: 2150, protein: 150, carbs: 250, fat: 65 },
     calorieBalance: { eaten: 640 },
     exerciseSessions: [],
     foodEntries: [
@@ -37,9 +37,9 @@ function dailySummaryWire(overrides: Record<string, unknown> = {}) {
         unit: 'g',
       },
     ],
-    goals: { calories: 2200 },
+    goals: { calories: 2200, protein: 140, carbs: 240, fat: 70 },
     stepCalories: 0,
-    supplementTotals: {},
+    supplementTotals: { calories: 40, protein: 3, carbs: 2, fat: 1 },
     waterIntake: 0,
     ...overrides,
   };
@@ -53,7 +53,8 @@ describe('connected fitness repository', () => {
     await expect(repository.getDailySummary('2026-09-01')).resolves.toEqual({
       calories: { consumed: 640, goal: 2150 },
       date: '2026-09-01',
-      macros: { carbohydrates: 6, fat: 1.5, protein: 5 },
+      macroGoals: { carbohydrates: 250, fat: 65, protein: 150 },
+      macros: { carbohydrates: 8, fat: 2.5, protein: 8 },
       meals: [
         {
           entries: [
@@ -93,7 +94,7 @@ describe('connected fitness repository', () => {
     const repository = createConnectedFitnessRepository(session, fetchImpl);
 
     await expect(repository.getDailySummary('2026-09-01')).resolves.toMatchObject({
-      calories: { consumed: 60, goal: 2150 },
+      calories: { consumed: 100, goal: 2150 },
     });
   });
 
@@ -140,6 +141,7 @@ describe('connected fitness repository', () => {
               quantity: 1,
             },
           ],
+          supplementTotals: {},
         }),
       ),
     );
@@ -147,6 +149,7 @@ describe('connected fitness repository', () => {
 
     await expect(repository.getDailySummary('2026-09-01')).resolves.toMatchObject({
       calories: { consumed: 0, goal: 2150 },
+      macroGoals: { carbohydrates: 250, fat: 65, protein: 150 },
       macros: { carbohydrates: 0, fat: 0, protein: 0 },
       meals: [
         {
@@ -166,6 +169,26 @@ describe('connected fitness repository', () => {
           ],
         },
       ],
+    });
+  });
+
+  it('uses base macro goals when adjusted goals are absent and adds supplement macros', async () => {
+    const fetchImpl = jest.fn(async () =>
+      jsonResponse(
+        dailySummaryWire({
+          adjustedGoals: null,
+          calorieBalance: {},
+          goals: { calories: 2300, protein: 130, carbs: 260, fat: 75 },
+          supplementTotals: { calories: 20, protein: 4, carbs: 6, fat: 2 },
+        }),
+      ),
+    );
+    const repository = createConnectedFitnessRepository(session, fetchImpl);
+
+    await expect(repository.getDailySummary('2026-09-01')).resolves.toMatchObject({
+      calories: { consumed: 80, goal: 2300 },
+      macroGoals: { carbohydrates: 260, fat: 75, protein: 130 },
+      macros: { carbohydrates: 12, fat: 3.5, protein: 9 },
     });
   });
 
@@ -273,14 +296,74 @@ describe('connected fitness repository', () => {
     });
   });
 
+  it('maps nullable server nutrient values in food search to zero', async () => {
+    const fetchImpl = jest.fn(async () =>
+      jsonResponse({
+        foods: [
+          {
+            brand: null,
+            default_variant: {
+              calories: null,
+              carbs: null,
+              fat: null,
+              id: 'variant-null-nutrition',
+              protein: null,
+              serving_size: 1,
+              serving_unit: 'serving',
+            },
+            id: 'food-null-nutrition',
+            name: 'Server food',
+          },
+        ],
+        totalCount: 1,
+      }),
+    );
+    const repository = createConnectedFitnessRepository(session, fetchImpl);
+
+    await expect(repository.searchFoods('server')).resolves.toEqual({
+      items: [
+        expect.objectContaining({
+          id: 'food-null-nutrition',
+          nutrition: { calories: 0, carbohydrates: 0, fat: 0, protein: 0 },
+        }),
+      ],
+      total: 1,
+    });
+  });
+
   it('loads meal types from the compatible meal-types endpoint', async () => {
     const fetchImpl = jest.fn(async () =>
-      jsonResponse([{ extra_server_field: true, id: 'breakfast', name: 'Breakfast' }]),
+      jsonResponse([
+        {
+          extra_server_field: true,
+          id: 'breakfast',
+          is_visible: true,
+          name: 'Breakfast',
+          show_in_quick_log: null,
+        },
+        {
+          id: 'late-night',
+          is_visible: false,
+          name: 'Late night',
+          show_in_quick_log: false,
+        },
+      ]),
     );
     const repository = createConnectedFitnessRepository(session, fetchImpl);
 
     await expect(repository.getMealTypes()).resolves.toEqual([
-      { id: 'breakfast', name: 'Breakfast' },
+      {
+        id: 'breakfast',
+        isVisible: true,
+        name: 'Breakfast',
+        showInQuickLog: true,
+      },
+      {
+        id: 'late-night',
+        isVisible: false,
+        name: 'Late night',
+        showInQuickLog: false,
+      },
     ]);
     expect(fetchImpl).toHaveBeenCalledWith(
       'https://fitness.example/api/meal-types',
@@ -290,7 +373,7 @@ describe('connected fitness repository', () => {
     );
   });
 
-  it('posts compatible snake-case food-entry data and maps the response', async () => {
+  it('accepts the raw food_entries row returned after a successful create', async () => {
     const fetchImpl = jest.fn(async () =>
       jsonResponse({
         calories: 150,
@@ -300,12 +383,12 @@ describe('connected fitness repository', () => {
         food_id: 'food-1',
         food_name: 'Greek yogurt',
         id: 'entry-2',
-        meal_type: 'Breakfast',
         meal_type_id: 'breakfast',
         protein: 18,
         quantity: 1,
         serving_size: 1,
         unit: 'serving',
+        user_id: 'user-123',
         variant_id: 'variant-1',
       }),
     );
@@ -363,7 +446,6 @@ describe('connected fitness repository', () => {
         food_name: null,
         id: 'entry-created-null',
         meal_id: 'meal-created-4',
-        meal_type: 'Lunch',
         meal_type_id: 'lunch',
         protein: null,
         quantity: 2,

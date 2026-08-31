@@ -10,10 +10,10 @@ import type {
 } from '@/domain/models';
 
 const mealTypes: MealType[] = [
-  { id: 'breakfast', name: 'Breakfast' },
-  { id: 'lunch', name: 'Lunch' },
-  { id: 'dinner', name: 'Dinner' },
-  { id: 'snacks', name: 'Snacks' },
+  { id: 'breakfast', isVisible: true, name: 'Breakfast', showInQuickLog: true },
+  { id: 'lunch', isVisible: true, name: 'Lunch', showInQuickLog: true },
+  { id: 'dinner', isVisible: true, name: 'Dinner', showInQuickLog: true },
+  { id: 'snacks', isVisible: true, name: 'Snacks', showInQuickLog: true },
 ];
 
 const foods: Food[] = [
@@ -115,6 +115,11 @@ export function createDemoFitnessRepository(): FitnessRepository {
     return {
       calories: { consumed: total.calories, goal: 2200 },
       date,
+      macroGoals: {
+        carbohydrates: 275,
+        fat: 70,
+        protein: 160,
+      },
       macros: {
         carbohydrates: total.carbohydrates,
         fat: total.fat,
