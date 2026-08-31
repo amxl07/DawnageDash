@@ -24,11 +24,15 @@ describe('demo fitness repository', () => {
     const before = await repository.getDailySummary('2026-09-01');
     const [oats] = (await repository.searchFoods('oats')).items;
 
+    expect(oats).toMatchObject({ variantId: 'demo-oats-default' });
+
     await repository.addFoodEntry({
       date: '2026-09-01',
       foodId: oats.id,
       mealTypeId: 'lunch',
       quantity: 1,
+      unit: oats.servingUnit,
+      variantId: oats.variantId,
     });
 
     const after = await repository.getDailySummary('2026-09-01');
@@ -49,6 +53,8 @@ describe('demo fitness repository', () => {
       foodId: 'demo-oats',
       mealTypeId: 'breakfast',
       quantity: 1,
+      unit: 'g',
+      variantId: 'demo-oats-default',
     });
 
     const secondRepository = createDemoFitnessRepository();

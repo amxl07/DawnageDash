@@ -7,6 +7,7 @@ export interface Nutrition {
 
 export interface Food {
   id: string;
+  variantId: string;
   name: string;
   brand?: string;
   servingSize: number;
@@ -52,6 +53,8 @@ export interface DailySummary {
 export interface AddFoodEntryInput {
   date: string;
   foodId: string;
+  variantId: string;
   mealTypeId: string;
   quantity: number;
+  unit: string;
 }

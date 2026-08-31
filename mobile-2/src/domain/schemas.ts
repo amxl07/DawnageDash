@@ -1,60 +1,64 @@
 import { z } from 'zod';
 
-const nutritionSchema = z.object({
-  calories: z.number().finite(),
-  carbohydrates: z.number().finite(),
-  fat: z.number().finite(),
-  protein: z.number().finite(),
+const finiteNumber = z.number().finite();
+const nonEmptyString = z.string().min(1);
+
+export const foodEntryWireSchema = z.object({
+  calories: finiteNumber,
+  carbs: finiteNumber,
+  fat: finiteNumber,
+  food_id: nonEmptyString,
+  food_name: nonEmptyString,
+  id: nonEmptyString,
+  meal_type_id: nonEmptyString,
+  protein: finiteNumber,
+  quantity: finiteNumber.nonnegative(),
+  serving_size: finiteNumber.positive(),
+  unit: nonEmptyString,
 });
 
-export const foodEntrySchema = nutritionSchema.extend({
-  foodId: z.string().min(1),
-  foodName: z.string().min(1),
-  id: z.string().min(1),
-  mealTypeId: z.string().min(1),
-  quantity: z.number().positive(),
-  unit: z.string().min(1),
-});
-
-export const dailySummarySchema = z.object({
-  calories: z.object({
-    consumed: z.number().finite(),
-    goal: z.number().positive(),
-  }),
-  date: z.string().date(),
-  macros: z.object({
-    carbohydrates: z.number().finite(),
-    fat: z.number().finite(),
-    protein: z.number().finite(),
-  }),
-  meals: z.array(
-    z.object({
-      entries: z.array(foodEntrySchema),
-      mealTypeId: z.string().min(1),
-      name: z.string().min(1),
+export const dailySummaryWireSchema = z.object({
+  adjustedGoals: z.object({ calories: finiteNumber }).nullable().optional(),
+  calorieBalance: z.object({ eaten: finiteNumber.optional() }).optional(),
+  exerciseSessions: z.array(z.unknown()),
+  foodEntries: z.array(
+    foodEntryWireSchema.extend({
+      meal_type: nonEmptyString,
     }),
   ),
+  goals: z.object({ calories: finiteNumber }),
+  stepCalories: z.unknown(),
+  supplementTotals: z.unknown(),
+  waterIntake: z.unknown(),
 });
 
-export const foodSchema = nutritionSchema.extend({
-  brand: z.string().min(1).optional(),
-  id: z.string().min(1),
-  name: z.string().min(1),
-  servingSize: z.number().positive(),
-  servingUnit: z.string().min(1),
-}).transform(({ calories, carbohydrates, fat, protein, ...food }) => ({
-  ...food,
-  nutrition: { calories, carbohydrates, fat, protein },
-}));
-
-export const foodSearchResultSchema = z.object({
-  items: z.array(foodSchema),
-  total: z.number().int().nonnegative(),
+export const foodSearchWireSchema = z.object({
+  foods: z.array(
+    z.object({
+      brand: nonEmptyString.optional(),
+      default_variant: z.object({
+        calories: finiteNumber,
+        carbs: finiteNumber,
+        fat: finiteNumber,
+        id: nonEmptyString,
+        protein: finiteNumber,
+        serving_size: finiteNumber.positive(),
+        serving_unit: nonEmptyString,
+      }),
+      id: nonEmptyString,
+      name: nonEmptyString,
+    }),
+  ),
+  totalCount: z.number().int().nonnegative(),
 });
 
-export const mealTypesSchema = z.array(
+export const mealTypesWireSchema = z.array(
   z.object({
-    id: z.string().min(1),
-    name: z.string().min(1),
+    id: nonEmptyString,
+    name: nonEmptyString,
   }),
 );
+
+export const createdFoodEntryWireSchema = foodEntryWireSchema.extend({
+  variant_id: nonEmptyString,
+});

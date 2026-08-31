@@ -19,6 +19,7 @@ const mealTypes: MealType[] = [
 const foods: Food[] = [
   {
     id: 'demo-oats',
+    variantId: 'demo-oats-default',
     name: 'Steel cut oats',
     servingSize: 100,
     servingUnit: 'g',
@@ -26,6 +27,7 @@ const foods: Food[] = [
   },
   {
     id: 'demo-yogurt',
+    variantId: 'demo-yogurt-default',
     name: 'Greek yogurt',
     servingSize: 170,
     servingUnit: 'g',
@@ -33,6 +35,7 @@ const foods: Food[] = [
   },
   {
     id: 'demo-salmon',
+    variantId: 'demo-salmon-default',
     name: 'Roasted salmon',
     servingSize: 140,
     servingUnit: 'g',
@@ -142,12 +145,20 @@ export function createDemoFitnessRepository(): FitnessRepository {
         throw new Error('Choose a food before adding it.');
       }
 
+      if (food.variantId !== input.variantId) {
+        throw new Error('Choose a food serving before adding it.');
+      }
+
       if (!mealTypes.some((mealType) => mealType.id === input.mealTypeId)) {
         throw new Error('Choose a meal before adding a food.');
       }
 
       if (!Number.isFinite(input.quantity) || input.quantity <= 0) {
         throw new Error('Enter a quantity greater than zero.');
+      }
+
+      if (!input.unit.trim()) {
+        throw new Error('Choose a unit before adding a food.');
       }
 
       const entry: FoodEntry = {
@@ -160,7 +171,7 @@ export function createDemoFitnessRepository(): FitnessRepository {
         mealTypeId: input.mealTypeId,
         protein: roundNutrition(food.nutrition.protein * input.quantity),
         quantity: input.quantity,
-        unit: food.servingUnit,
+        unit: input.unit,
       };
       entriesFor(input.date).push(entry);
 
