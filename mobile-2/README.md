@@ -32,12 +32,13 @@ npx eas-cli@latest build --profile development --platform ios
 npx expo start --dev-client
 ```
 
-To run an already configured local Android toolchain instead of EAS:
+To build, install, and start the development client with an already configured local Android toolchain instead of EAS:
 
 ```sh
 npx expo run:android
-npx expo start --dev-client
 ```
+
+`npx expo run:android` starts Metro for this initial build/install flow. For later launches of the already installed development client, start Metro separately with `npx expo start --dev-client`, then open the client on the emulator or device.
 
 The local Android route needs Android Studio, an Android SDK/emulator or USB-debuggable device, the SDK command-line tools on `PATH`, and a supported JDK (use JDK 17 for the Android build toolchain). Set `ANDROID_HOME`/`ANDROID_SDK_ROOT` to the installed SDK location.
 
