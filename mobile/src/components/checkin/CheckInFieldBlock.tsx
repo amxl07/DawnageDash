@@ -3,6 +3,7 @@ import { type ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { Text } from '@/components/ui';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { iconSize, radius, spacing, useTheme } from '@/theme';
 
 type Props = {
@@ -15,13 +16,15 @@ type Props = {
 
 export function CheckInFieldBlock({ label, complete, error, children, testID }: Props) {
   const { colors } = useTheme();
+  const { isCompact } = useResponsiveLayout();
 
   return (
     <View
       testID={testID}
       style={{
         gap: spacing.sm,
-        padding: spacing.md,
+        paddingVertical: spacing.md,
+        paddingHorizontal: isCompact ? spacing.xs : spacing.md,
         borderRadius: radius.md,
         borderWidth: error || complete ? 2 : 1,
         borderColor: error ? colors.primary : complete ? colors.borderStrong : colors.border,

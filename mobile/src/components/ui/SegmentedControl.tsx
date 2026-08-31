@@ -16,6 +16,8 @@ type Props<T extends string> = {
   onChange: (v: T) => void;
   /** Stack as a wrapping grid of big targets rather than a compact row. */
   large?: boolean;
+  /** Keep the group label for accessibility while allowing a parent to present it visibly. */
+  showLabel?: boolean;
 };
 
 /**
@@ -31,6 +33,7 @@ export function SegmentedControl<T extends string>({
   value,
   onChange,
   large = false,
+  showLabel = true,
 }: Props<T>) {
   const { colors } = useTheme();
   const motion = useMotion();
@@ -56,12 +59,15 @@ export function SegmentedControl<T extends string>({
 
   return (
     <View style={{ gap: spacing.xs }}>
-      <Text variant="label" tone="muted">
-        {label}
-      </Text>
+      {showLabel ? (
+        <Text variant="label" tone="muted">
+          {label}
+        </Text>
+      ) : null}
 
       <View
         accessibilityRole="radiogroup"
+        accessibilityLabel={label}
         onLayout={large ? undefined : onContainerLayout}
         style={{
           position: 'relative',

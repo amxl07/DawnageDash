@@ -44,6 +44,7 @@ function render(ui: React.ReactElement) {
   });
 
   return {
+    renderer,
     root: renderer.root,
     getByRole: (role: string, name: string) => {
       const [node] = renderer.root.findAll(
@@ -54,6 +55,15 @@ function render(ui: React.ReactElement) {
       return node;
     },
   };
+}
+
+type RenderedNode = ReturnType<ReturnType<typeof create>['toJSON']>;
+
+function visibleStrings(node: RenderedNode): string[] {
+  if (node === null) return [];
+  if (typeof node === 'string') return [node];
+  if (Array.isArray(node)) return node.flatMap(visibleStrings);
+  return node.children?.flatMap(visibleStrings) ?? [];
 }
 
 function press(node: { props: { onPress?: () => void } }) {
@@ -136,5 +146,44 @@ describe('SegmentedControl', () => {
       borderColor: '#00a000',
     });
     expect(root.findAll((node: { props: { pointerEvents?: string } }) => node.props.pointerEvents === 'none')).toHaveLength(0);
+  });
+
+  it('can omit its visible label while retaining the exact accessible group label', () => {
+    const defaultControl = render(
+      <SegmentedControl
+        label="Workout"
+        value="done"
+        onChange={jest.fn()}
+        segments={[
+          { value: 'done', label: 'Done' },
+          { value: 'rest', label: 'Rest' },
+        ]}
+      />,
+    );
+    expect(visibleStrings(defaultControl.renderer.toJSON()).filter((text) => text === 'Workout'))
+      .toHaveLength(1);
+
+    const fieldLabelOwnsPresentation = render(
+      <SegmentedControl
+        label="Workout"
+        showLabel={false}
+        value="done"
+        onChange={jest.fn()}
+        segments={[
+          { value: 'done', label: 'Done' },
+          { value: 'rest', label: 'Rest' },
+        ]}
+      />,
+    );
+
+    expect(
+      visibleStrings(fieldLabelOwnsPresentation.renderer.toJSON())
+        .filter((text) => text === 'Workout'),
+    ).toHaveLength(0);
+    expect(fieldLabelOwnsPresentation.root.findByProps({
+      accessibilityRole: 'radiogroup',
+      accessibilityLabel: 'Workout',
+    })).toBeTruthy();
+    expect(fieldLabelOwnsPresentation.getByRole('radio', 'Done')).toBeTruthy();
   });
 });

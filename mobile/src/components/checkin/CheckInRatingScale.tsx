@@ -130,9 +130,10 @@ export function CheckInRatingScale({
   accessibilityMode = 'adjustable',
   optionTestIDPrefix,
 }: Props) {
-  const { isWide } = useResponsiveLayout();
+  const { isCompact, isWide } = useResponsiveLayout();
   const rows = isWide ? [values] : [values.slice(0, 5), values.slice(5, 10)];
   const exposesOptions = accessibilityMode === 'options';
+  const rowGap = isCompact ? spacing.xs : spacing.sm;
 
   const select = (next: number) => {
     if (next === value) return;
@@ -169,7 +170,7 @@ export function CheckInRatingScale({
           testID={
             optionTestIDPrefix ? `${optionTestIDPrefix}-row-${rowIndex + 1}` : undefined
           }
-          style={{ flexDirection: 'row', gap: spacing.sm }}
+          style={{ flexDirection: 'row', gap: rowGap }}
         >
           {row.map((option) => (
             <RatingOption

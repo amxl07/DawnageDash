@@ -1,15 +1,19 @@
-import { Pressable } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 // @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { CheckInForm, EMPTY_FORM, toPayload, type CheckInStep, type FormState } from './CheckInForm';
 
 const mockMotion = {
   enabled: true,
+  reduced: false,
   duration: { feedback: 160, enter: 200, micro: 120 },
   easing: { standard: [0.16, 1, 0.3, 1] as const },
   pressScale: 0.97,
 };
+const mockWithTiming = jest.fn((value: number, _config?: object) => value);
 const pressableType = (Pressable as unknown as { type: unknown }).type;
 
 jest.mock('lucide-react-native', () => new Proxy({}, { get: () => () => null }));
@@ -25,6 +29,18 @@ jest.mock('react-native-reanimated', () => {
     },
     Easing: { bezier: jest.fn(() => 'standard-easing') },
     FadeIn: { duration: jest.fn((duration: number) => ({ type: 'fade-in', duration })) },
+    FadeInDown: {
+      duration: jest.fn((duration: number) => ({
+        easing: (easing: string) => ({
+          withInitialValues: (initialValues: object) => ({
+            type: 'fade-in-down',
+            duration,
+            easing,
+            initialValues,
+          }),
+        }),
+      })),
+    },
     useAnimatedStyle: (factory: () => object) => factory(),
     useSharedValue: (initial: number) => {
       const shared = react.useRef<{ get: () => number; set: (value: number) => void } | null>(null);
@@ -37,11 +53,11 @@ jest.mock('react-native-reanimated', () => {
       }
       return shared.current;
     },
-    withTiming: jest.fn((value: number) => value),
+    withTiming: (...args: [number, object?]) => mockWithTiming(...args),
   };
 });
 jest.mock('@/hooks/useResponsiveLayout', () => ({
-  useResponsiveLayout: () => ({ isWide: false }),
+  useResponsiveLayout: jest.fn(),
 }));
 jest.mock('@/components/ui', () => ({
   ...jest.requireActual('@/components/ui/Card'),
@@ -51,6 +67,22 @@ jest.mock('@/components/ui', () => ({
   ...jest.requireActual('@/components/ui/Stepper'),
   ...jest.requireActual('@/components/ui/Text'),
 }));
+
+const mockedUseResponsiveLayout = jest.mocked(useResponsiveLayout);
+
+function setResponsiveLayout(width: number, fontScale: number) {
+  const isCompact = width < 360 || fontScale >= 1.3;
+  mockedUseResponsiveLayout.mockReturnValue({
+    width,
+    height: 800,
+    fontScale,
+    mode: isCompact ? 'compact' : 'regular',
+    isCompact,
+    isWide: false,
+    horizontal: 16,
+    maxContentWidth: undefined,
+  });
+}
 jest.mock('@/theme', () => ({
   HIT_SLOP_MIN: 44,
   iconSize: { sm: 16, md: 20 },
@@ -124,6 +156,19 @@ function renderForm(
   return renderer;
 }
 
+function StatefulForm({ initialForm }: { initialForm: FormState }) {
+  const [form, setForm] = useState(initialForm);
+  return (
+    <CheckInForm
+      form={form}
+      setForm={setForm}
+      previous={null}
+      step="adherence"
+      errors={{}}
+    />
+  );
+}
+
 type RenderedNode = ReturnType<ReturnType<typeof create>['toJSON']>;
 
 function visibleStrings(node: RenderedNode): string[] {
@@ -159,10 +204,66 @@ function ratingOption(renderer: ReturnType<typeof create>, testID: string) {
   );
 }
 
+function hostView(renderer: ReturnType<typeof create>, testID: string) {
+  return renderer.root.find(
+    (node: { type: unknown; props: { testID?: string } }) =>
+      node.type === 'View' && node.props.testID === testID,
+  );
+}
+
+function closestAncestorStyle(
+  node: ReturnType<typeof hostView>,
+  matches: (style: Record<string, unknown>) => boolean,
+) {
+  let current = node.parent;
+  while (current) {
+    const style = StyleSheet.flatten(current.props.style) as Record<string, unknown> | undefined;
+    if (style && matches(style)) return style;
+    current = current.parent;
+  }
+  throw new Error('No matching styled ancestor');
+}
+
+function compactRatingGeometry(width: number, fontScale: number) {
+  setResponsiveLayout(width, fontScale);
+  const renderer = renderForm('readiness');
+  const field = hostView(renderer, 'checkin-field-energy');
+  const fieldStyle = StyleSheet.flatten(field.props.style);
+  const cardStyle = closestAncestorStyle(
+    field,
+    (style) => style.borderRadius === 20 && typeof style.padding === 'number',
+  );
+  const row = hostView(renderer, 'checkin-energy-rating-row-1');
+  const rowStyle = StyleSheet.flatten(row.props.style);
+  const options = ratingOptions(renderer, 'Energy out of 10').slice(0, 5);
+  const optionWidths = options.map((option: { props: { style: unknown } }) => (
+    StyleSheet.flatten(option.props.style as StyleProp<ViewStyle>).minWidth as number
+  ));
+  const horizontalPadding = (style: Record<string, number>) =>
+    style.paddingHorizontal ?? style.padding ?? 0;
+  const layout = mockedUseResponsiveLayout.mock.results.at(-1)?.value;
+
+  return {
+    availableWidth:
+      layout.width
+      - layout.horizontal * 2
+      - horizontalPadding(cardStyle as Record<string, number>) * 2
+      - horizontalPadding(fieldStyle as Record<string, number>) * 2,
+    requiredWidth:
+      optionWidths.reduce((total: number, optionWidth: number) => total + optionWidth, 0)
+      + (rowStyle.gap as number) * 4,
+    fieldHorizontalPadding: horizontalPadding(fieldStyle as Record<string, number>),
+    rowGap: rowStyle.gap as number,
+  };
+}
+
 describe('CheckInForm', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockMotion.enabled = true;
+    mockMotion.reduced = false;
+    mockMotion.duration.enter = 200;
+    setResponsiveLayout(390, 1);
   });
 
   it('serializes the complete questionnaire without changing its stored contract', () => {
@@ -236,6 +337,32 @@ describe('CheckInForm', () => {
     ]);
   });
 
+  it.each([
+    ['recovery', 'Digestion'],
+    ['adherence', 'Workout'],
+  ] as const)('renders the %s prompt %s visibly exactly once', (step, prompt) => {
+    const text = visibleStrings(renderForm(step).toJSON());
+
+    expect(text.filter((value) => value === prompt)).toHaveLength(1);
+  });
+
+  it('fits five 44pt rating targets inside the actual 320pt nested content width', () => {
+    const geometry = compactRatingGeometry(320, 1);
+
+    expect(geometry.requiredWidth).toBeLessThanOrEqual(geometry.availableWidth);
+  });
+
+  it('uses the compact rating spacing at elevated font scale', () => {
+    const narrow = compactRatingGeometry(320, 1);
+    const largeText = compactRatingGeometry(390, 1.3);
+
+    expect(largeText.fieldHorizontalPadding).toBe(4);
+    expect(largeText.rowGap).toBe(4);
+    expect(largeText.fieldHorizontalPadding).toBe(narrow.fieldHorizontalPadding);
+    expect(largeText.rowGap).toBe(narrow.rowGap);
+    expect(largeText.requiredWidth).toBeLessThanOrEqual(largeText.availableWidth);
+  });
+
   it('clears performance when a workout becomes a rest day and normalizes its payload', () => {
     let current = COMPLETE_FORM;
     const renderer = renderForm('adherence', current, (updater) => { current = updater(current); });
@@ -249,6 +376,52 @@ describe('CheckInForm', () => {
     expect(current.workoutPerformance).toBeNull();
     expect(toPayload({ ...COMPLETE_FORM, workoutStatus: 'rest_day', workoutPerformance: 8 }, '2026-08-30').workout_performance)
       .toBeNull();
+  });
+
+  it('reveals workout performance with a bounded fade/translation when motion is enabled', () => {
+    let animated!: ReturnType<typeof create>;
+    act(() => {
+      animated = create(
+        <StatefulForm initialForm={{ ...COMPLETE_FORM, workoutStatus: 'rest_day' }} />,
+      );
+    });
+    expect(animated.root.findAllByProps({ testID: 'checkin-workout-performance-reveal' }))
+      .toHaveLength(0);
+
+    act(() => animated.root.findByProps({
+      accessibilityRole: 'radio',
+      accessibilityLabel: 'Done',
+    }).props.onPress());
+
+    expect(animated.root.findByProps({
+      testID: 'checkin-workout-performance-reveal',
+    }).props.entering).toEqual({
+      type: 'fade-in-down',
+      duration: 200,
+      easing: 'standard-easing',
+      initialValues: { opacity: 0, transform: [{ translateY: 8 }] },
+    });
+  });
+
+  it('reveals workout performance without entry animation in reduced motion', () => {
+    mockMotion.enabled = false;
+    mockMotion.reduced = true;
+    mockMotion.duration.enter = 0;
+    let renderer!: ReturnType<typeof create>;
+    act(() => {
+      renderer = create(
+        <StatefulForm initialForm={{ ...COMPLETE_FORM, workoutStatus: 'rest_day' }} />,
+      );
+    });
+
+    act(() => renderer.root.findByProps({
+      accessibilityRole: 'radio',
+      accessibilityLabel: 'Done',
+    }).props.onPress());
+
+    expect(renderer.root.findByProps({
+      testID: 'checkin-workout-performance-reveal',
+    }).props.entering).toBeUndefined();
   });
 
   it('reveals optional macros with opacity entry only when motion is enabled', () => {
@@ -266,6 +439,66 @@ describe('CheckInForm', () => {
     act(() => reduced.root.findByProps({ accessibilityLabel: 'More detail: macros' }).props.onPress());
 
     expect(reduced.root.findByProps({ testID: 'checkin-macros-content' }).props.entering).toBeUndefined();
+  });
+
+  it('stacks optional macros on narrow screens', () => {
+    setResponsiveLayout(320, 1);
+    const renderer = renderForm('adherence');
+
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'More detail: macros' }).props.onPress());
+
+    expect(StyleSheet.flatten(
+      renderer.root.findByProps({ testID: 'checkin-macros-content' }).props.style,
+    ).flexDirection).toBe('column');
+  });
+
+  it('stacks optional macros at elevated font scale', () => {
+    setResponsiveLayout(390, 1.3);
+    const renderer = renderForm('adherence');
+
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'More detail: macros' }).props.onPress());
+
+    expect(StyleSheet.flatten(
+      renderer.root.findByProps({ testID: 'checkin-macros-content' }).props.style,
+    ).flexDirection).toBe('column');
+  });
+
+  it('keeps optional macros in a row outside compact mode', () => {
+    setResponsiveLayout(390, 1);
+    const renderer = renderForm('adherence');
+
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'More detail: macros' }).props.onPress());
+
+    expect(StyleSheet.flatten(
+      renderer.root.findByProps({ testID: 'checkin-macros-content' }).props.style,
+    ).flexDirection).toBe('row');
+  });
+
+  it('rotates the macro chevron with timing and changes instantly in reduced motion', () => {
+    const animated = renderForm('adherence');
+    mockWithTiming.mockClear();
+
+    act(() => animated.root.findByProps({ accessibilityLabel: 'More detail: macros' }).props.onPress());
+
+    expect(mockWithTiming).toHaveBeenCalledWith(180, {
+      duration: 200,
+      easing: 'standard-easing',
+    });
+    expect(StyleSheet.flatten(
+      animated.root.findByProps({ testID: 'checkin-macros-chevron' }).props.style,
+    ).transform).toEqual([{ rotate: '180deg' }]);
+
+    mockMotion.enabled = false;
+    mockMotion.reduced = true;
+    mockMotion.duration.enter = 0;
+    const reduced = renderForm('adherence');
+    mockWithTiming.mockClear();
+    act(() => reduced.root.findByProps({ accessibilityLabel: 'More detail: macros' }).props.onPress());
+
+    expect(mockWithTiming).not.toHaveBeenCalledWith(180, expect.anything());
+    expect(StyleSheet.flatten(
+      reduced.root.findByProps({ testID: 'checkin-macros-chevron' }).props.style,
+    ).transform).toEqual([{ rotate: '180deg' }]);
   });
 
   it('keeps notes editable and groups every exact persisted value into accessible summaries', () => {

@@ -14,7 +14,14 @@ import {
 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import {
   Card,
@@ -25,6 +32,7 @@ import {
   type Segment,
 } from '@/components/ui';
 import type { CheckInPayload } from '@/hooks/useCheckInMutation';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { parseLocalDate } from '@/lib/dates';
 import { requiresWorkoutPerformance } from '@/lib/checkin-validation';
 import { num, type DailyCheckIn, type Digestion, type WorkoutStatus } from '@/types/db';
@@ -162,7 +170,12 @@ export type CheckInStep = 'readiness' | 'recovery' | 'adherence' | 'finish';
 export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
   const { colors } = useTheme();
   const motion = useMotion();
+  const { isCompact } = useResponsiveLayout();
   const [showMore, setShowMore] = useState(false);
+  const macroChevronRotation = useSharedValue(0);
+  const macroChevronStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${macroChevronRotation.get()}deg` }],
+  }));
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -270,6 +283,7 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
         >
           <SegmentedControl
             label="Digestion"
+            showLabel={false}
             large
             segments={DIGESTION_SEGMENTS}
             value={form.digestion}
@@ -297,6 +311,7 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
         >
           <SegmentedControl
             label="Workout"
+            showLabel={false}
             large
             segments={WORKOUT_SEGMENTS}
             value={form.workoutStatus}
@@ -304,18 +319,30 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
           />
         </CheckInFieldBlock>
         {showPerformance ? (
-          <CheckInFieldBlock
-            label="How did it go?"
-            complete={form.workoutPerformance !== null}
-            error={errors.workoutPerformance}
-            testID="checkin-field-workout-performance"
+          <Animated.View
+            testID="checkin-workout-performance-reveal"
+            entering={
+              motion.enabled
+                ? FadeInDown
+                    .duration(motion.duration.enter)
+                    .easing(Easing.bezier(...motion.easing.standard))
+                    .withInitialValues({ opacity: 0, transform: [{ translateY: 8 }] })
+                : undefined
+            }
           >
-            <CheckInRatingScale
-              label="Workout performance out of 10"
-              value={form.workoutPerformance}
-              onChange={(v) => set('workoutPerformance', v)}
-            />
-          </CheckInFieldBlock>
+            <CheckInFieldBlock
+              label="How did it go?"
+              complete={form.workoutPerformance !== null}
+              error={errors.workoutPerformance}
+              testID="checkin-field-workout-performance"
+            >
+              <CheckInRatingScale
+                label="Workout performance out of 10"
+                value={form.workoutPerformance}
+                onChange={(v) => set('workoutPerformance', v)}
+              />
+            </CheckInFieldBlock>
+          </Animated.View>
         ) : null}
         <CheckInFieldBlock
           label="Nutrition score"
@@ -366,7 +393,18 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
         />
         <Pressable
           onPress={() => {
-            setShowMore((v) => !v);
+            const next = !showMore;
+            setShowMore(next);
+            macroChevronRotation.set(
+              motion.enabled
+                ? withTiming(next ? 180 : 0, {
+                    duration: motion.duration.enter,
+                    easing: Easing.bezier(...motion.easing.standard),
+                  })
+                : next
+                  ? 180
+                  : 0,
+            );
             void Haptics.selectionAsync();
           }}
           accessibilityRole="button"
@@ -377,19 +415,24 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
           <Text variant="label" tone="muted" style={{ flex: 1 }}>
             More detail (optional)
           </Text>
-          <ChevronDown
-            size={iconSize.md}
-            color={colors.mutedForeground}
-            strokeWidth={2}
-            style={{ transform: [{ rotate: showMore ? '180deg' : '0deg' }] }}
+          <Animated.View
+            testID="checkin-macros-chevron"
+            style={macroChevronStyle}
             accessible={false}
-          />
+          >
+            <ChevronDown
+              size={iconSize.md}
+              color={colors.mutedForeground}
+              strokeWidth={2}
+              accessible={false}
+            />
+          </Animated.View>
         </Pressable>
         {showMore ? (
           <Animated.View
             testID="checkin-macros-content"
             entering={motion.enabled ? FadeIn.duration(motion.duration.enter) : undefined}
-            style={{ flexDirection: 'row', gap: spacing.sm }}
+            style={{ flexDirection: isCompact ? 'column' : 'row', gap: spacing.sm }}
           >
             {(
               [
@@ -400,7 +443,7 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
             ).map(([label, key]) => (
               <Input
                 key={key}
-                containerStyle={{ flex: 1 }}
+                containerStyle={isCompact ? undefined : { flex: 1 }}
                 label={label}
                 value={form[key] === null ? '' : String(form[key])}
                 onChangeText={(t) => {
