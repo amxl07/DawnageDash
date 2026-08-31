@@ -1,5 +1,8 @@
 import type { Food } from '@/domain/models';
-import { getInitialFoodQuantity } from '@/features/food/food-selection';
+import {
+  getInitialFoodQuantity,
+  shouldClearFoodSelection,
+} from '@/features/food/food-selection';
 
 describe('getInitialFoodQuantity', () => {
   it('uses the selected food serving size in its serving unit', () => {
@@ -13,5 +16,11 @@ describe('getInitialFoodQuantity', () => {
     };
 
     expect(getInitialFoodQuantity(food)).toBe('170');
+  });
+
+  it('clears a selected food when the search term changes or is cleared', () => {
+    expect(shouldClearFoodSelection('oats', 'salmon')).toBe(true);
+    expect(shouldClearFoodSelection('oats', '')).toBe(true);
+    expect(shouldClearFoodSelection(' oats ', 'oats')).toBe(false);
   });
 });

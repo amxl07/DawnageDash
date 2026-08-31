@@ -62,6 +62,15 @@ export const mealTypesWireSchema = z.array(
   }),
 );
 
+export const signInWireSchema = z.object({
+  email: nonEmptyString.optional(),
+  token: nonEmptyString.optional(),
+  twoFactorRedirect: z.boolean().optional(),
+  user: z.object({
+    email: nonEmptyString.optional(),
+  }).nullable().optional(),
+});
+
 export const createdFoodEntryWireSchema = foodEntryWireSchema.extend({
   meal_type: nonEmptyString,
 });

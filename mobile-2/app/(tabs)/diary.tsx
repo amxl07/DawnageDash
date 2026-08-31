@@ -7,7 +7,9 @@ import { StatusBanner } from '@/components/ui/status-banner';
 import { formatDate } from '@/domain/date';
 import { MealSection } from '@/features/diary/meal-section';
 import { useDailySummary, useMealTypes } from '@/features/summary/summary-hooks';
+import { getOfflineColdStartState } from '@/features/summary/screen-data-state';
 import { useConnectionState } from '@/query/query-provider';
+import { useSession } from '@/session/session-context';
 import { useTheme } from '@/theme/theme';
 
 export default function DiaryScreen() {
@@ -15,9 +17,14 @@ export default function DiaryScreen() {
   const summaryQuery = useDailySummary(date);
   const mealTypesQuery = useMealTypes();
   const { isOnline } = useConnectionState();
+  const { session } = useSession();
   const { colors, spacing } = useTheme();
   const summary = summaryQuery.data;
   const mealTypes = mealTypesQuery.data;
+
+  if (getOfflineColdStartState({ hasData: Boolean(summary && mealTypes), isOnline, mode: session?.mode ?? 'connected' }) === 'unavailable') {
+    return <ScreenState actionLabel="Try again" detail="Connect to the internet to load your diary for the first time." onAction={() => { void summaryQuery.refetch(); void mealTypesQuery.refetch(); }} title="Diary unavailable offline" />;
+  }
 
   if ((summaryQuery.isLoading || mealTypesQuery.isLoading) && (!summary || !mealTypes)) {
     return <View accessibilityLabel="Loading your diary" accessibilityRole="progressbar" style={{ alignItems: 'center', backgroundColor: colors.background, flex: 1, justifyContent: 'center' }}><ActivityIndicator color={colors.accent} /></View>;

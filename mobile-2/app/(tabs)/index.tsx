@@ -9,16 +9,23 @@ import { StatusBanner } from '@/components/ui/status-banner';
 import { MetricStrip } from '@/features/summary/metric-strip';
 import { HeroSummary } from '@/features/summary/hero-summary';
 import { useDailySummary } from '@/features/summary/summary-hooks';
+import { getOfflineColdStartState } from '@/features/summary/screen-data-state';
 import { formatDate } from '@/domain/date';
 import { useConnectionState } from '@/query/query-provider';
+import { useSession } from '@/session/session-context';
 import { useTheme } from '@/theme/theme';
 
 export default function TodayScreen() {
   const date = formatDate(new Date());
   const summaryQuery = useDailySummary(date);
   const { isOnline } = useConnectionState();
+  const { session } = useSession();
   const { colors, spacing } = useTheme();
   const summary = summaryQuery.data;
+
+  if (getOfflineColdStartState({ hasData: Boolean(summary), isOnline, mode: session?.mode ?? 'connected' }) === 'unavailable') {
+    return <ScreenState actionLabel="Try again" detail="Connect to the internet to load today’s summary for the first time." onAction={() => void summaryQuery.refetch()} title="Today's summary is unavailable offline" />;
+  }
 
   if (summaryQuery.isLoading && !summary) {
     return <View accessibilityLabel="Loading today's summary" accessibilityRole="progressbar" style={{ alignItems: 'center', backgroundColor: colors.background, flex: 1, justifyContent: 'center' }}><ActivityIndicator color={colors.accent} /></View>;

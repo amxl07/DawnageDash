@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 import type { PropsWithChildren } from 'react';
 
 import { validateServerUrl } from '@/data/server-url';
+import { signInWireSchema } from '@/domain/schemas';
 import {
   clearStoredSession,
   readStoredServerUrl,
@@ -66,10 +67,6 @@ export function sessionReducer(state: SessionState, action: SessionAction): Sess
     case 'server-saved':
       return { ...state, restoreStatus: 'ready', savedServerUrl: action.serverUrl };
   }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function responseError(action: string, status: number): Error {
@@ -183,10 +180,12 @@ export function SessionProvider({ children }: PropsWithChildren) {
       throw new Error('Unable to reach the sign-in service. Check your connection and try again.');
     }
 
-    const body = await responseJson(response, 'Sign in');
-    if (!isRecord(body)) {
+    const result = signInWireSchema.safeParse(await responseJson(response, 'Sign in'));
+    if (!result.success) {
       throw new Error('Sign in returned an invalid response. Try again or check the server.');
     }
+
+    const body = result.data;
 
     if (body.twoFactorRedirect === true) {
       throw new MfaRequiredError();
@@ -197,8 +196,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
       throw new Error('Sign in did not return a session token. Try again or check the server.');
     }
 
-    const user = isRecord(body.user) ? body.user : null;
-    const responseEmail = user?.email ?? body.email;
+    const responseEmail = body.user?.email ?? body.email;
     const session: Extract<AppSession, { mode: 'connected' }> = {
       email: typeof responseEmail === 'string' && responseEmail.length > 0 ? responseEmail : email,
       mode: 'connected',

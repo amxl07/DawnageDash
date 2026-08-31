@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react';
 import { useFitnessRepository } from '@/data/repository-context';
 import type { AddFoodEntryInput } from '@/domain/models';
 import { useConnectionState } from '@/query/query-provider';
+import { getQueryNetworkMode } from '@/query/query-network-mode';
 import { useSession } from '@/session/session-context';
 
 export const foodSearchQueryKey = (term: string) => ['food-search', term] as const;
 
 export function useFoodSearch(term: string) {
   const repository = useFitnessRepository();
+  const { session } = useSession();
   const normalizedTerm = term.trim();
   const [debouncedTerm, setDebouncedTerm] = useState(normalizedTerm);
 
@@ -20,6 +22,7 @@ export function useFoodSearch(term: string) {
 
   const query = useQuery({
     enabled: debouncedTerm.length >= 2,
+    networkMode: getQueryNetworkMode(session?.mode ?? 'connected'),
     queryFn: () => repository.searchFoods(debouncedTerm),
     queryKey: foodSearchQueryKey(debouncedTerm),
   });

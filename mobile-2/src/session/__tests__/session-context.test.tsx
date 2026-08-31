@@ -138,6 +138,19 @@ describe('SessionProvider actions', () => {
     );
   });
 
+  it('rejects a malformed sign-in response before creating a session', async () => {
+    await saveStoredServerUrl('https://fitness.example');
+    fetchMock.mockResolvedValueOnce(jsonResponse({ token: 'token-123', user: 'not-an-object' }));
+    await renderSession();
+
+    await act(async () => {
+      await expect(
+        latestSession.signIn('member@example.com', 'not-persisted'),
+      ).rejects.toThrow('Sign in returned an invalid response');
+    });
+    expect(latestSession.session).toBeNull();
+  });
+
   it('reports MFA as a recognizable error without clearing the saved server', async () => {
     await saveStoredServerUrl('https://fitness.example');
     fetchMock.mockResolvedValueOnce(jsonResponse({ twoFactorRedirect: true }));

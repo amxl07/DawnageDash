@@ -7,7 +7,7 @@ import { AppText } from '@/components/ui/app-text';
 import { StatusBanner } from '@/components/ui/status-banner';
 import { formatDate } from '@/domain/date';
 import type { Food } from '@/domain/models';
-import { getInitialFoodQuantity } from '@/features/food/food-selection';
+import { getInitialFoodQuantity, shouldClearFoodSelection } from '@/features/food/food-selection';
 import { FoodSearchRow } from '@/features/food/food-search-row';
 import { useAddFoodEntry, useFoodSearch } from '@/features/food/use-food-search';
 import { useMealTypes } from '@/features/summary/summary-hooks';
@@ -65,6 +65,14 @@ export default function AddScreen() {
     });
   };
 
+  const updateSearchTerm = (nextTerm: string) => {
+    if (shouldClearFoodSelection(term, nextTerm)) {
+      setSelectedFood(null);
+      setQuantity('1');
+    }
+    setTerm(nextTerm);
+  };
+
   return (
     <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', default: undefined })} style={{ backgroundColor: colors.background, flex: 1 }}>
       <ScrollView contentContainerStyle={{ gap: spacing.md, padding: spacing.md, paddingBottom: spacing.xxl }} keyboardShouldPersistTaps="handled">
@@ -73,7 +81,7 @@ export default function AddScreen() {
         {formError ? <StatusBanner tone="danger">{formError}</StatusBanner> : null}
         <View style={{ gap: 8 }}>
           <AppText style={{ fontWeight: '700' }}>Search food</AppText>
-          <TextInput accessibilityLabel="Search foods" autoCapitalize="none" onChangeText={setTerm} placeholder="Try oats, yogurt, salmon…" placeholderTextColor={colors.muted} returnKeyType="search" style={{ backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radii.control, borderWidth: 1, color: colors.text, fontSize: 16, minHeight: 48, paddingHorizontal: 16 }} value={term} />
+          <TextInput accessibilityLabel="Search foods" autoCapitalize="none" onChangeText={updateSearchTerm} placeholder="Try oats, yogurt, salmon…" placeholderTextColor={colors.muted} returnKeyType="search" style={{ backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radii.control, borderWidth: 1, color: colors.text, fontSize: 16, minHeight: 48, paddingHorizontal: 16 }} value={term} />
           {term.trim().length > 0 && term.trim().length < 2 ? <AppText tone="muted" variant="caption">Enter at least two characters to search.</AppText> : null}
           {searchQuery.isFetching ? <AppText tone="muted">Searching…</AppText> : null}
           {searchQuery.isError ? <StatusBanner tone="danger">Food search failed. Try again when you’re connected.</StatusBanner> : null}
