@@ -17,8 +17,20 @@ export function CheckInSummarySection({ title, rows }: Props) {
           accessibilityLabel={`${label}: ${value}`}
           style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: spacing.sm }}
         >
-          <Text variant="bodySm" tone="muted">{label}</Text>
-          <Text variant="bodySm" numeric>{value}</Text>
+          <Text
+            variant="bodySm"
+            tone="muted"
+            style={{ flex: 1, flexShrink: 1, minWidth: 0, maxWidth: '48%' }}
+          >
+            {label}
+          </Text>
+          <Text
+            variant="bodySm"
+            numeric
+            style={{ flex: 1, flexShrink: 1, minWidth: 0, maxWidth: '48%', textAlign: 'right' }}
+          >
+            {value}
+          </Text>
         </View>
       ))}
     </View>

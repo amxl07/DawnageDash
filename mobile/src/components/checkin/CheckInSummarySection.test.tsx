@@ -1,4 +1,4 @@
-import { Text as NativeText } from 'react-native';
+import { StyleSheet, Text as NativeText } from 'react-native';
 // @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
@@ -22,4 +22,29 @@ it('renders every supplied label and exact formatted value', () => {
   expect(output).toContain('7/10');
   expect(renderer.root.findByProps({ accessibilityLabel: 'Weight: 74.2 kg' }).props.accessible).toBe(true);
   expect(renderer.root.findByProps({ accessibilityLabel: 'Weight: 74.2 kg' }).props.style).toMatchObject({ flexWrap: 'wrap' });
+});
+
+it('allows long summary labels and values to shrink and wrap without truncating', () => {
+  const label = 'Training readiness explanation';
+  const value = 'A longer note that must remain fully readable on compact screens.';
+  let renderer!: ReturnType<typeof create>;
+  act(() => { renderer = create(
+    <CheckInSummarySection title="Notes and confirmation" rows={[[label, value]]} />,
+  ); });
+
+  const labelCell = renderer.root.findByProps({ children: label });
+  const valueCell = renderer.root.findByProps({ children: value });
+
+  expect(StyleSheet.flatten(labelCell.props.style)).toMatchObject({
+    flexShrink: 1,
+    minWidth: 0,
+    maxWidth: '48%',
+  });
+  expect(StyleSheet.flatten(valueCell.props.style)).toMatchObject({
+    flexShrink: 1,
+    minWidth: 0,
+    maxWidth: '48%',
+  });
+  expect(labelCell.props.numberOfLines).toBeUndefined();
+  expect(valueCell.props.numberOfLines).toBeUndefined();
 });
