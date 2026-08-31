@@ -9,7 +9,7 @@ import { act, create } from 'react-test-renderer';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { flushOutbox, readOutbox } from '@/lib/outbox';
-import LogsScreen, { LogCard } from './logs';
+import LogsScreen, { LogCard } from '../../../../app/(app)/(tabs)/logs';
 
 jest.mock('@react-native-community/netinfo', () => ({ addEventListener: jest.fn(() => jest.fn()) }));
 jest.mock('@react-navigation/native', () => ({

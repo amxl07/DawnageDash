@@ -262,7 +262,7 @@ jest.mock('@/components/ui', () => {
   };
 });
 
-const WeeklyFeedbackScreen = require('./weekly-feedback').default;
+const WeeklyFeedbackScreen = require('../../../app/(app)/weekly-feedback').default;
 
 function deferred<T>() {
   let resolve!: (value: T) => void;

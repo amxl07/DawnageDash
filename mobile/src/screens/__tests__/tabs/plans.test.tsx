@@ -1,7 +1,7 @@
 // @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
-import PlansScreen from './plans';
+import PlansScreen from '../../../../app/(app)/(tabs)/plans';
 
 const mockMarkSeen = jest.fn();
 const mockMealRefetch = jest.fn();

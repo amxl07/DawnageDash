@@ -1,7 +1,7 @@
 // @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
-import MediaScreen from './media';
+import MediaScreen from '../../../app/(app)/media';
 
 const mockRows = [
   {

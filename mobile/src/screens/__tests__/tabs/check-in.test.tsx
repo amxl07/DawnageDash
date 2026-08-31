@@ -111,7 +111,7 @@ jest.mock('@/components/ui', () => {
 });
 
 // Load after the targeted React Native surface is registered.
-const CheckInScreen = require('./check-in').default;
+const CheckInScreen = require('../../../../app/(app)/(tabs)/check-in').default;
 
 describe('CheckInScreen restored Finish validation', () => {
   beforeEach(() => {

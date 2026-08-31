@@ -10,7 +10,7 @@ import {
 import { act, create } from 'react-test-renderer';
 
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
-import MeasurementsScreen from './measurements';
+import MeasurementsScreen from '../../../app/(app)/measurements';
 
 const MockNativeText = NativeText;
 const MockView = View;

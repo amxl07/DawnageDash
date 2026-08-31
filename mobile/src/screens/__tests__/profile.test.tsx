@@ -3,7 +3,7 @@ import { StyleSheet, Text as NativeText, View } from 'react-native';
 // @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
-import ProfileScreen from './profile';
+import ProfileScreen from '../../../app/(app)/profile';
 
 const MockNativeText = NativeText;
 const MockView = View;
