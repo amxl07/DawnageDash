@@ -162,14 +162,14 @@ export function createDemoFitnessRepository(): FitnessRepository {
       }
 
       const entry: FoodEntry = {
-        calories: roundNutrition(food.nutrition.calories * input.quantity),
-        carbohydrates: roundNutrition(food.nutrition.carbohydrates * input.quantity),
-        fat: roundNutrition(food.nutrition.fat * input.quantity),
+        calories: roundNutrition(food.nutrition.calories * (input.quantity / food.servingSize)),
+        carbohydrates: roundNutrition(food.nutrition.carbohydrates * (input.quantity / food.servingSize)),
+        fat: roundNutrition(food.nutrition.fat * (input.quantity / food.servingSize)),
         foodId: food.id,
         foodName: food.name,
         id: `demo-entry-${nextEntryId++}`,
         mealTypeId: input.mealTypeId,
-        protein: roundNutrition(food.nutrition.protein * input.quantity),
+        protein: roundNutrition(food.nutrition.protein * (input.quantity / food.servingSize)),
         quantity: input.quantity,
         unit: input.unit,
       };

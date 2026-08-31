@@ -18,11 +18,17 @@ export function useFoodSearch(term: string) {
     return () => clearTimeout(timeout);
   }, [normalizedTerm]);
 
-  return useQuery({
+  const query = useQuery({
     enabled: debouncedTerm.length >= 2,
     queryFn: () => repository.searchFoods(debouncedTerm),
     queryKey: foodSearchQueryKey(debouncedTerm),
   });
+
+  if (normalizedTerm !== debouncedTerm) {
+    return { ...query, data: undefined };
+  }
+
+  return query;
 }
 
 export function useAddFoodEntry() {
@@ -32,6 +38,7 @@ export function useAddFoodEntry() {
   const { session } = useSession();
 
   return useMutation({
+    networkMode: 'always',
     mutationFn: async (input: AddFoodEntryInput) => {
       if (session?.mode === 'connected' && !isOnline) {
         throw new Error('Reconnect to add food to your connected diary.');

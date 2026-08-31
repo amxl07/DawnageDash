@@ -7,6 +7,7 @@ import { AppText } from '@/components/ui/app-text';
 import { StatusBanner } from '@/components/ui/status-banner';
 import { formatDate } from '@/domain/date';
 import type { Food } from '@/domain/models';
+import { getInitialFoodQuantity } from '@/features/food/food-selection';
 import { FoodSearchRow } from '@/features/food/food-search-row';
 import { useAddFoodEntry, useFoodSearch } from '@/features/food/use-food-search';
 import { useMealTypes } from '@/features/summary/summary-hooks';
@@ -77,7 +78,7 @@ export default function AddScreen() {
           {searchQuery.isFetching ? <AppText tone="muted">Searching…</AppText> : null}
           {searchQuery.isError ? <StatusBanner tone="danger">Food search failed. Try again when you’re connected.</StatusBanner> : null}
           {term.trim().length >= 2 && !searchQuery.isFetching && searchQuery.data?.items.length === 0 ? <AppText tone="muted">No foods found. Try a broader search.</AppText> : null}
-          {searchQuery.data?.items.map((food) => <FoodSearchRow food={food} isSelected={selectedFood?.id === food.id} key={food.variantId} onPress={() => { setSelectedFood(food); setFormError(null); }} />)}
+          {searchQuery.data?.items.map((food) => <FoodSearchRow food={food} isSelected={selectedFood?.id === food.id} key={food.variantId} onPress={() => { setSelectedFood(food); setQuantity(getInitialFoodQuantity(food)); setFormError(null); }} />)}
         </View>
         <View style={{ gap: 8 }}>
           <AppText style={{ fontWeight: '700' }}>Meal</AppText>
