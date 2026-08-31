@@ -14,11 +14,11 @@ import {
 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 import {
   Card,
   Input,
-  RatingRow,
   SegmentedControl,
   Stepper,
   Text,
@@ -28,7 +28,10 @@ import type { CheckInPayload } from '@/hooks/useCheckInMutation';
 import { parseLocalDate } from '@/lib/dates';
 import { requiresWorkoutPerformance } from '@/lib/checkin-validation';
 import { num, type DailyCheckIn, type Digestion, type WorkoutStatus } from '@/types/db';
-import { iconSize, spacing, useTheme } from '@/theme';
+import { iconSize, spacing, useMotion, useTheme } from '@/theme';
+import { CheckInFieldBlock } from './CheckInFieldBlock';
+import { CheckInRatingScale } from './CheckInRatingScale';
+import { CheckInSummarySection } from './CheckInSummarySection';
 
 export type FormState = {
   morningWeight: number | null;
@@ -156,16 +159,9 @@ type Props = {
 
 export type CheckInStep = 'readiness' | 'recovery' | 'adherence' | 'finish';
 
-function FieldError({ message }: { message?: string }) {
-  return message ? (
-    <Text variant="bodySm" tone="primary" accessibilityLiveRegion="polite">
-      {message}
-    </Text>
-  ) : null;
-}
-
 export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
   const { colors } = useTheme();
+  const motion = useMotion();
   const [showMore, setShowMore] = useState(false);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
@@ -212,27 +208,25 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
         />
         {(
           [
-            ['Energy', 'energyLevel'],
-            ['Stress', 'stressLevel'],
+            ['Energy', 'energyLevel', 'checkin-energy-rating', 'checkin-field-energy'],
+            ['Stress', 'stressLevel', 'checkin-stress-rating', 'checkin-field-stress'],
           ] as const
-        ).map(([label, key]) => (
-          <View key={key} style={{ gap: spacing.sm }}>
-            <Text variant="label" tone="muted">
-              {label}
-            </Text>
-            <RatingRow
+        ).map(([label, key, optionTestIDPrefix, testID]) => (
+          <CheckInFieldBlock
+            key={key}
+            label={label}
+            complete={form[key] !== null}
+            error={errors[key]}
+            testID={testID}
+          >
+            <CheckInRatingScale
               label={`${label} out of 10`}
-              min={1}
-              max={10}
               value={form[key]}
               onChange={(v) => set(key, v)}
               accessibilityMode="options"
-              optionTestIDPrefix={
-                key === 'energyLevel' ? 'checkin-energy-rating' : 'checkin-stress-rating'
-              }
+              optionTestIDPrefix={optionTestIDPrefix}
             />
-            <FieldError message={errors[key]} />
-          </View>
+          </CheckInFieldBlock>
         ))}
       </Card>
     );
@@ -256,20 +250,24 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
           hint={prevHint.sleep}
           error={errors.sleepHours}
         />
-        <View style={{ gap: spacing.sm }}>
-          <Text variant="label" tone="muted">
-            Hunger
-          </Text>
-          <RatingRow
+        <CheckInFieldBlock
+          label="Hunger"
+          complete={form.hungerLevel !== null}
+          error={errors.hungerLevel}
+          testID="checkin-field-hunger"
+        >
+          <CheckInRatingScale
             label="Hunger out of 10"
-            min={1}
-            max={10}
             value={form.hungerLevel}
             onChange={(v) => set('hungerLevel', v)}
           />
-          <FieldError message={errors.hungerLevel} />
-        </View>
-        <View style={{ gap: spacing.sm }}>
+        </CheckInFieldBlock>
+        <CheckInFieldBlock
+          label="Digestion"
+          complete={form.digestion !== null}
+          error={errors.digestion}
+          testID="checkin-field-digestion"
+        >
           <SegmentedControl
             label="Digestion"
             large
@@ -277,8 +275,7 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
             value={form.digestion}
             onChange={(v) => set('digestion', v)}
           />
-          <FieldError message={errors.digestion} />
-        </View>
+        </CheckInFieldBlock>
         <Text variant="bodySm" tone="muted">
           A quick recovery snapshot helps us spot patterns.
         </Text>
@@ -292,7 +289,12 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
         <Text variant="label" tone="muted">
           Nutrition and adherence
         </Text>
-        <View style={{ gap: spacing.sm }}>
+        <CheckInFieldBlock
+          label="Workout"
+          complete={form.workoutStatus !== null}
+          error={errors.workoutStatus}
+          testID="checkin-field-workout"
+        >
           <SegmentedControl
             label="Workout"
             large
@@ -300,36 +302,33 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
             value={form.workoutStatus}
             onChange={setWorkoutStatus}
           />
-          <FieldError message={errors.workoutStatus} />
-        </View>
+        </CheckInFieldBlock>
         {showPerformance ? (
-          <View style={{ gap: spacing.sm }}>
-            <Text variant="label" tone="muted">
-              How did it go?
-            </Text>
-            <RatingRow
+          <CheckInFieldBlock
+            label="How did it go?"
+            complete={form.workoutPerformance !== null}
+            error={errors.workoutPerformance}
+            testID="checkin-field-workout-performance"
+          >
+            <CheckInRatingScale
               label="Workout performance out of 10"
-              min={1}
-              max={10}
               value={form.workoutPerformance}
               onChange={(v) => set('workoutPerformance', v)}
             />
-            <FieldError message={errors.workoutPerformance} />
-          </View>
+          </CheckInFieldBlock>
         ) : null}
-        <View style={{ gap: spacing.sm }}>
-          <Text variant="label" tone="muted">
-            Nutrition score
-          </Text>
-          <RatingRow
+        <CheckInFieldBlock
+          label="Nutrition score"
+          complete={form.nutritionScore !== null}
+          error={errors.nutritionScore}
+          testID="checkin-field-nutrition"
+        >
+          <CheckInRatingScale
             label="Nutrition score out of 10"
-            min={1}
-            max={10}
             value={form.nutritionScore}
             onChange={(v) => set('nutritionScore', v)}
           />
-          <FieldError message={errors.nutritionScore} />
-        </View>
+        </CheckInFieldBlock>
         <Stepper
           label="Calories"
           value={form.calorieIntake}
@@ -387,7 +386,11 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
           />
         </Pressable>
         {showMore ? (
-          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <Animated.View
+            testID="checkin-macros-content"
+            entering={motion.enabled ? FadeIn.duration(motion.duration.enter) : undefined}
+            style={{ flexDirection: 'row', gap: spacing.sm }}
+          >
             {(
               [
                 ['Protein', 'protein'],
@@ -408,7 +411,7 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
                 placeholder="g"
               />
             ))}
-          </View>
+          </Animated.View>
         ) : null}
       </Card>
     );
@@ -432,36 +435,50 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
         <Text variant="label" tone="muted">
           Ready to save
         </Text>
-        {[
-          ['Weight', form.morningWeight === null ? 'Not recorded' : `${form.morningWeight} kg`],
-          ['Energy', form.energyLevel === null ? 'Not recorded' : `${form.energyLevel}/10`],
-          ['Stress', form.stressLevel === null ? 'Not recorded' : `${form.stressLevel}/10`],
-          ['Sleep', form.sleepHours === null ? 'Not recorded' : `${form.sleepHours} h`],
-          ['Hunger', form.hungerLevel === null ? 'Not recorded' : `${form.hungerLevel}/10`],
-          ['Digestion', form.digestion ?? 'Not recorded'],
-          ['Workout', form.workoutStatus ?? 'Not recorded'],
-          ...(showPerformance
-            ? [['Workout performance', form.workoutPerformance === null ? 'Not recorded' : `${form.workoutPerformance}/10`]]
-            : []),
-          ['Nutrition', form.nutritionScore === null ? 'Not recorded' : `${form.nutritionScore}/10`],
-          ['Calories', form.calorieIntake === null ? 'Not recorded' : `${form.calorieIntake} kcal`],
-          ['Water', form.waterLiters === null ? 'Not recorded' : `${form.waterLiters} L`],
-          ['Steps', form.dailySteps === null ? 'Not recorded' : String(form.dailySteps)],
-          ['Protein', form.protein === null ? 'Not recorded' : `${form.protein} g`],
-          ['Carbs', form.carbs === null ? 'Not recorded' : `${form.carbs} g`],
-          ['Fats', form.fats === null ? 'Not recorded' : `${form.fats} g`],
-          ['Notes', form.notes.trim() || 'Not recorded'],
-        ].map(([label, value]) => (
-          <View
-            key={label}
-            accessible
-            accessibilityLabel={`${label}: ${value}`}
-            style={{ flexDirection: 'row', justifyContent: 'space-between' }}
-          >
-            <Text variant="bodySm" tone="muted">{label}</Text>
-            <Text variant="bodySm" numeric>{value}</Text>
-          </View>
-        ))}
+        <CheckInSummarySection
+          title="Readiness and energy"
+          rows={[
+            ['Weight', form.morningWeight === null ? 'Not recorded' : `${form.morningWeight} kg`],
+            ['Energy', form.energyLevel === null ? 'Not recorded' : `${form.energyLevel}/10`],
+            ['Stress', form.stressLevel === null ? 'Not recorded' : `${form.stressLevel}/10`],
+          ]}
+        />
+        <CheckInSummarySection
+          title="Sleep and recovery"
+          rows={[
+            ['Sleep', form.sleepHours === null ? 'Not recorded' : `${form.sleepHours} h`],
+            ['Hunger', form.hungerLevel === null ? 'Not recorded' : `${form.hungerLevel}/10`],
+            ['Digestion', form.digestion ?? 'Not recorded'],
+          ]}
+        />
+        <CheckInSummarySection
+          title="Nutrition and adherence"
+          rows={[
+            ['Workout', form.workoutStatus ?? 'Not recorded'],
+            ...(showPerformance
+              ? [[
+                  'Workout performance',
+                  form.workoutPerformance === null
+                    ? 'Not recorded'
+                    : `${form.workoutPerformance}/10`,
+                ] as const]
+              : []),
+            ['Nutrition', form.nutritionScore === null ? 'Not recorded' : `${form.nutritionScore}/10`],
+            ['Calories', form.calorieIntake === null ? 'Not recorded' : `${form.calorieIntake} kcal`],
+            ['Water', form.waterLiters === null ? 'Not recorded' : `${form.waterLiters} L`],
+            ['Steps', form.dailySteps === null ? 'Not recorded' : String(form.dailySteps)],
+            ['Protein', form.protein === null ? 'Not recorded' : `${form.protein} g`],
+            ['Carbs', form.carbs === null ? 'Not recorded' : `${form.carbs} g`],
+            ['Fats', form.fats === null ? 'Not recorded' : `${form.fats} g`],
+          ]}
+        />
+        <CheckInSummarySection
+          title="Coach note"
+          rows={[[
+            'Notes',
+            form.notes.trim() || 'Not recorded',
+          ]]}
+        />
       </View>
 
     </Card>
