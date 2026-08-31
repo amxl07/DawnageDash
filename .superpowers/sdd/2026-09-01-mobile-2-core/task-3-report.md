@@ -57,3 +57,14 @@ The reducer ignored a late `restored` action, but the callback still assigned it
 
 - RED: `npm test -- --runInBand src/session/__tests__/session-context.test.tsx` failed because the delayed-restore regression sent sign-in to `https://old.example/api/auth/sign-in/email` rather than the newly saved server.
 - GREEN: the same command passed 1 suite and 4 tests after a restoration generation is captured at mount, advanced synchronously at every user action entry point, and checked before the restore callback mutates the server ref or dispatches.
+
+## Fix round 3: restoration action gate
+
+### Root cause
+
+The restoration generation invalidated the in-flight restore even when an early user action failed. That left `restoreStatus` at `restoring` indefinitely and could not recover the stored server URL.
+
+### RED / GREEN evidence
+
+- RED: `npm test -- --runInBand src/session/__tests__/session-context.test.tsx` failed because an early delayed-restore `saveServer` reached the network path and threw `Cannot read properties of undefined (reading 'ok')` instead of a clear restoring-state error.
+- GREEN: the same command passed 1 suite and 4 tests after removing generation invalidation and gating all public session actions during restoration. The regression verifies early `saveServer` and `enterDemo` reject without a fetch, restoration reaches ready with its URL, and later save/sign-in uses the new server. It also verifies failed validation after ready preserves the existing valid URL.

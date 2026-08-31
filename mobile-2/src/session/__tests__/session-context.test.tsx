@@ -98,6 +98,11 @@ describe('SessionProvider actions', () => {
     await expect(SecureStore.getItemAsync(SERVER_URL_STORAGE_KEY)).resolves.toBe(
       'https://fitness.example',
     );
+
+    await expect(latestSession.saveServer('ftp://fitness.example')).rejects.toThrow(
+      'Enter a complete server URL.',
+    );
+    expect(latestSession.savedServerUrl).toBe('https://fitness.example');
   });
 
   it('creates a connected session from a token and falls back to the sign-in email', async () => {
@@ -146,7 +151,7 @@ describe('SessionProvider actions', () => {
     );
   });
 
-  it('keeps a newly saved server for sign-in when stale restoration resolves afterward', async () => {
+  it('gates actions until delayed restoration finishes, then uses the newly saved server', async () => {
     const restoredSession = deferred<string | null>();
     const restoredServerUrl = deferred<string | null>();
     restoreGetItemMock = jest
@@ -163,18 +168,29 @@ describe('SessionProvider actions', () => {
         return Promise.resolve(null);
       })
       .mockRestore;
-    fetchMock
-      .mockResolvedValueOnce(jsonResponse({ registrationEnabled: true }))
-      .mockResolvedValueOnce(jsonResponse({ token: 'token-123', user: {} }));
     await mountSession();
 
     await act(async () => {
-      await latestSession.saveServer('https://new.example');
+      await expect(latestSession.saveServer('https://new.example')).rejects.toThrow(
+        'Session is still restoring',
+      );
+      await expect(latestSession.enterDemo()).rejects.toThrow('Session is still restoring');
     });
+    expect(fetchMock).not.toHaveBeenCalled();
 
     await act(async () => {
       restoredSession.resolve(null);
       restoredServerUrl.resolve('https://old.example');
+    });
+    await waitFor(() => expect(latestSession.restoreStatus).toBe('ready'));
+    expect(latestSession.savedServerUrl).toBe('https://old.example');
+
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ registrationEnabled: true }))
+      .mockResolvedValueOnce(jsonResponse({ token: 'token-123', user: {} }));
+
+    await act(async () => {
+      await latestSession.saveServer('https://new.example');
     });
 
     await act(async () => {

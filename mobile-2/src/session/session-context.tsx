@@ -92,19 +92,14 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 
 export function SessionProvider({ children }: PropsWithChildren) {
   const [state, dispatch] = useReducer(sessionReducer, initialSessionState);
-  const restorationGenerationRef = useRef(0);
   const savedServerUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-    const restorationGeneration = restorationGenerationRef.current;
 
     void Promise.all([readStoredSession(), readStoredServerUrl()])
       .then(([session, savedServerUrl]) => {
-        if (
-          !isMounted ||
-          restorationGeneration !== restorationGenerationRef.current
-        ) {
+        if (!isMounted) {
           return;
         }
 
@@ -112,10 +107,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
         dispatch({ savedServerUrl, session, type: 'restored' });
       })
       .catch(() => {
-        if (
-          isMounted &&
-          restorationGeneration === restorationGenerationRef.current
-        ) {
+        if (isMounted) {
           dispatch({ savedServerUrl: null, session: null, type: 'restored' });
         }
       });
@@ -125,19 +117,21 @@ export function SessionProvider({ children }: PropsWithChildren) {
     };
   }, []);
 
-  const beginUserAction = useCallback(() => {
-    restorationGenerationRef.current += 1;
-  }, []);
+  const assertRestorationComplete = useCallback(() => {
+    if (state.restoreStatus === 'restoring') {
+      throw new Error('Session is still restoring. Please wait a moment and try again.');
+    }
+  }, [state.restoreStatus]);
 
   const enterDemo = useCallback(async () => {
-    beginUserAction();
+    assertRestorationComplete();
     const session: AppSession = { email: 'demo@dawnage.local', mode: 'demo' };
     await saveStoredSession(session);
     dispatch({ type: 'demo-entered' });
-  }, [beginUserAction]);
+  }, [assertRestorationComplete]);
 
   const saveServer = useCallback(async (input: string) => {
-    beginUserAction();
+    assertRestorationComplete();
     const serverUrl = validateServerUrl(input, isDevelopmentBuild());
     let response: Response;
 
@@ -154,10 +148,10 @@ export function SessionProvider({ children }: PropsWithChildren) {
     await saveStoredServerUrl(serverUrl);
     savedServerUrlRef.current = serverUrl;
     dispatch({ serverUrl, type: 'server-saved' });
-  }, [beginUserAction]);
+  }, [assertRestorationComplete]);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    beginUserAction();
+    assertRestorationComplete();
     const serverUrl = savedServerUrlRef.current;
     if (!serverUrl) {
       throw new Error('Choose and validate a server before signing in.');
@@ -203,13 +197,13 @@ export function SessionProvider({ children }: PropsWithChildren) {
 
     await saveStoredSession(session);
     dispatch({ session, type: 'connected' });
-  }, [beginUserAction]);
+  }, [assertRestorationComplete]);
 
   const signOut = useCallback(async () => {
-    beginUserAction();
+    assertRestorationComplete();
     await clearStoredSession();
     dispatch({ type: 'signed-out' });
-  }, [beginUserAction]);
+  }, [assertRestorationComplete]);
 
   const value = useMemo<SessionContextValue>(
     () => ({ ...state, enterDemo, saveServer, signIn, signOut }),
