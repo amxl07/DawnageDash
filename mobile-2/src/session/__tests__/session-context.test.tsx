@@ -10,6 +10,7 @@ import {
   clearStoredSession,
   saveStoredServerUrl,
   SERVER_URL_STORAGE_KEY,
+  SESSION_STORAGE_KEY,
 } from '@/session/session-storage';
 import { MfaRequiredError } from '@/session/session-types';
 
@@ -26,10 +27,20 @@ function SessionProbe({ onValue }: { onValue: (value: SessionContextValue) => vo
   return null;
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((nextResolve) => {
+    resolve = nextResolve;
+  });
+
+  return { promise, resolve };
+}
+
 describe('SessionProvider actions', () => {
   let latestSession: SessionContextValue;
   let fetchMock: jest.Mock;
   let originalFetch: typeof fetch;
+  let restoreGetItemMock: (() => void) | undefined;
 
   beforeAll(() => {
     (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean })
@@ -46,6 +57,8 @@ describe('SessionProvider actions', () => {
   });
 
   afterEach(() => {
+    restoreGetItemMock?.();
+    restoreGetItemMock = undefined;
     globalThis.fetch = originalFetch;
   });
 
@@ -54,7 +67,7 @@ describe('SessionProvider actions', () => {
       .IS_REACT_ACT_ENVIRONMENT = undefined;
   });
 
-  async function renderSession() {
+  async function mountSession() {
     await act(async () => {
       render(
         <SessionProvider>
@@ -62,7 +75,10 @@ describe('SessionProvider actions', () => {
         </SessionProvider>,
       );
     });
+  }
 
+  async function renderSession() {
+    await mountSession();
     await waitFor(() => expect(latestSession.restoreStatus).toBe('ready'));
   }
 
@@ -127,6 +143,47 @@ describe('SessionProvider actions', () => {
     expect(latestSession.savedServerUrl).toBe('https://fitness.example');
     await expect(SecureStore.getItemAsync(SERVER_URL_STORAGE_KEY)).resolves.toBe(
       'https://fitness.example',
+    );
+  });
+
+  it('keeps a newly saved server for sign-in when stale restoration resolves afterward', async () => {
+    const restoredSession = deferred<string | null>();
+    const restoredServerUrl = deferred<string | null>();
+    restoreGetItemMock = jest
+      .spyOn(SecureStore, 'getItemAsync')
+      .mockImplementation((key) => {
+        if (key === SESSION_STORAGE_KEY) {
+          return restoredSession.promise;
+        }
+
+        if (key === SERVER_URL_STORAGE_KEY) {
+          return restoredServerUrl.promise;
+        }
+
+        return Promise.resolve(null);
+      })
+      .mockRestore;
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ registrationEnabled: true }))
+      .mockResolvedValueOnce(jsonResponse({ token: 'token-123', user: {} }));
+    await mountSession();
+
+    await act(async () => {
+      await latestSession.saveServer('https://new.example');
+    });
+
+    await act(async () => {
+      restoredSession.resolve(null);
+      restoredServerUrl.resolve('https://old.example');
+    });
+
+    await act(async () => {
+      await latestSession.signIn('member@example.com', 'not-persisted');
+    });
+
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      'https://new.example/api/auth/sign-in/email',
+      expect.objectContaining({ method: 'POST' }),
     );
   });
 });

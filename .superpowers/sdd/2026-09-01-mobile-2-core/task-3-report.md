@@ -46,3 +46,14 @@ The export command needs one direct terminal run to record a definitive exit cod
 
 - RED: `npm test -- --runInBand src/session/__tests__/session-storage.test.ts src/session/__tests__/session-reducer.test.ts src/query/__tests__/query-provider.test.ts` failed with 4 expected regressions: production restoration returned both stored HTTP values, late `restored` replaced the demo transition, and `registerNetworkOnlineListener` was absent.
 - GREEN: the same command passed 3 suites and 13 tests after validating stored URLs with `validateServerUrl(value, isDevelopment)`, guarding late restore actions, and introducing the injectable NetInfo listener registration helper.
+
+## Fix round 2: stale restore ref guard
+
+### Root cause
+
+The reducer ignored a late `restored` action, but the callback still assigned its stale URL to `savedServerUrlRef`. `signIn` reads that ref, so it could make a credentialed request to the old server.
+
+### RED / GREEN evidence
+
+- RED: `npm test -- --runInBand src/session/__tests__/session-context.test.tsx` failed because the delayed-restore regression sent sign-in to `https://old.example/api/auth/sign-in/email` rather than the newly saved server.
+- GREEN: the same command passed 1 suite and 4 tests after a restoration generation is captured at mount, advanced synchronously at every user action entry point, and checked before the restore callback mutates the server ref or dispatches.
