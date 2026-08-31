@@ -24,6 +24,7 @@ function dailySummaryWire(overrides: Record<string, unknown> = {}) {
       {
         calories: 120,
         carbs: 12,
+        entry_date: '2026-09-01',
         fat: 3,
         food_id: 'food-1',
         food_name: 'Yogurt bowl',
@@ -108,6 +109,66 @@ describe('connected fitness repository', () => {
     });
   });
 
+  it('maps nullable daily entry fields to safe values and identity fallbacks', async () => {
+    const fetchImpl = jest.fn(async () =>
+      jsonResponse(
+        dailySummaryWire({
+          calorieBalance: {},
+          foodEntries: [
+            {
+              calories: null,
+              carbs: null,
+              entry_date: '2026-09-01',
+              fat: null,
+              food_id: null,
+              food_name: null,
+              id: 'entry-null-meal',
+              meal_id: 'meal-7',
+              meal_type: 'Breakfast',
+              meal_type_id: 'breakfast',
+              protein: null,
+              quantity: 1,
+              serving_size: null,
+              unit: null,
+              variant_id: null,
+            },
+            {
+              entry_date: '2026-09-01',
+              id: 'entry-null-id',
+              meal_type: 'Breakfast',
+              meal_type_id: 'breakfast',
+              quantity: 1,
+            },
+          ],
+        }),
+      ),
+    );
+    const repository = createConnectedFitnessRepository(session, fetchImpl);
+
+    await expect(repository.getDailySummary('2026-09-01')).resolves.toMatchObject({
+      calories: { consumed: 0, goal: 2150 },
+      macros: { carbohydrates: 0, fat: 0, protein: 0 },
+      meals: [
+        {
+          entries: [
+            expect.objectContaining({
+              foodId: 'meal-7',
+              foodName: 'Meal',
+              id: 'entry-null-meal',
+              unit: 'serving',
+            }),
+            expect.objectContaining({
+              foodId: 'entry-null-id',
+              foodName: 'Meal',
+              id: 'entry-null-id',
+              unit: 'serving',
+            }),
+          ],
+        },
+      ],
+    });
+  });
+
   it('searches with compatible pagination parameters and maps the default variant', async () => {
     const fetchImpl = jest.fn(async () =>
       jsonResponse({
@@ -152,6 +213,66 @@ describe('connected fitness repository', () => {
     );
   });
 
+  it('omits null and absent search-result brands from domain foods', async () => {
+    const fetchImpl = jest.fn(async () =>
+      jsonResponse({
+        foods: [
+          {
+            brand: null,
+            default_variant: {
+              calories: 90,
+              carbs: 12,
+              fat: 1,
+              id: 'variant-null-brand',
+              protein: 3,
+              serving_size: 100,
+              serving_unit: 'g',
+            },
+            id: 'food-null-brand',
+            name: 'Banana',
+          },
+          {
+            default_variant: {
+              calories: 50,
+              carbs: 6,
+              fat: 2,
+              id: 'variant-absent-brand',
+              protein: 4,
+              serving_size: 100,
+              serving_unit: 'g',
+            },
+            id: 'food-absent-brand',
+            name: 'Tofu',
+          },
+        ],
+        totalCount: 2,
+      }),
+    );
+    const repository = createConnectedFitnessRepository(session, fetchImpl);
+
+    await expect(repository.searchFoods('')).resolves.toEqual({
+      items: [
+        {
+          id: 'food-null-brand',
+          name: 'Banana',
+          nutrition: { calories: 90, carbohydrates: 12, fat: 1, protein: 3 },
+          servingSize: 100,
+          servingUnit: 'g',
+          variantId: 'variant-null-brand',
+        },
+        {
+          id: 'food-absent-brand',
+          name: 'Tofu',
+          nutrition: { calories: 50, carbohydrates: 6, fat: 2, protein: 4 },
+          servingSize: 100,
+          servingUnit: 'g',
+          variantId: 'variant-absent-brand',
+        },
+      ],
+      total: 2,
+    });
+  });
+
   it('loads meal types from the compatible meal-types endpoint', async () => {
     const fetchImpl = jest.fn(async () =>
       jsonResponse([{ extra_server_field: true, id: 'breakfast', name: 'Breakfast' }]),
@@ -174,10 +295,12 @@ describe('connected fitness repository', () => {
       jsonResponse({
         calories: 150,
         carbs: 5,
+        entry_date: '2026-09-01',
         fat: 4,
         food_id: 'food-1',
         food_name: 'Greek yogurt',
         id: 'entry-2',
+        meal_type: 'Breakfast',
         meal_type_id: 'breakfast',
         protein: 18,
         quantity: 1,
@@ -227,5 +350,50 @@ describe('connected fitness repository', () => {
         method: 'POST',
       }),
     );
+  });
+
+  it('maps nullable add-entry response fields to safe values', async () => {
+    const fetchImpl = jest.fn(async () =>
+      jsonResponse({
+        calories: null,
+        carbs: null,
+        entry_date: '2026-09-01',
+        fat: null,
+        food_id: null,
+        food_name: null,
+        id: 'entry-created-null',
+        meal_id: 'meal-created-4',
+        meal_type: 'Lunch',
+        meal_type_id: 'lunch',
+        protein: null,
+        quantity: 2,
+        serving_size: null,
+        unit: null,
+        variant_id: null,
+      }),
+    );
+    const repository = createConnectedFitnessRepository(session, fetchImpl);
+
+    await expect(
+      repository.addFoodEntry({
+        date: '2026-09-01',
+        foodId: 'food-1',
+        mealTypeId: 'lunch',
+        quantity: 2,
+        unit: 'serving',
+        variantId: 'variant-1',
+      }),
+    ).resolves.toEqual({
+      calories: 0,
+      carbohydrates: 0,
+      fat: 0,
+      foodId: 'meal-created-4',
+      foodName: 'Meal',
+      id: 'entry-created-null',
+      mealTypeId: 'lunch',
+      protein: 0,
+      quantity: 2,
+      unit: 'serving',
+    });
   });
 });

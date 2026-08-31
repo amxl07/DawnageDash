@@ -39,19 +39,22 @@ function apiErrorFromUnknown(error: unknown): ApiError {
 }
 
 function mapFoodEntry(entry: z.infer<typeof foodEntryWireSchema>): FoodEntry {
-  const scale = entry.quantity / entry.serving_size;
+  const scale =
+    typeof entry.serving_size === 'number' && entry.serving_size > 0
+      ? entry.quantity / entry.serving_size
+      : 0;
 
   return {
-    calories: entry.calories * scale,
-    carbohydrates: entry.carbs * scale,
-    fat: entry.fat * scale,
-    foodId: entry.food_id,
-    foodName: entry.food_name,
+    calories: (entry.calories ?? 0) * scale,
+    carbohydrates: (entry.carbs ?? 0) * scale,
+    fat: (entry.fat ?? 0) * scale,
+    foodId: entry.food_id ?? entry.meal_id ?? entry.id,
+    foodName: entry.food_name ?? 'Meal',
     id: entry.id,
     mealTypeId: entry.meal_type_id,
-    protein: entry.protein * scale,
+    protein: (entry.protein ?? 0) * scale,
     quantity: entry.quantity,
-    unit: entry.unit,
+    unit: entry.unit ?? 'serving',
   };
 }
 
@@ -106,7 +109,7 @@ function mapDailySummary(
 
 function mapFoodSearch(result: z.infer<typeof foodSearchWireSchema>): FoodSearchResult {
   const items: Food[] = result.foods.map((food) => ({
-    brand: food.brand,
+    ...(food.brand ? { brand: food.brand } : {}),
     id: food.id,
     name: food.name,
     nutrition: {

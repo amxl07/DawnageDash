@@ -4,17 +4,20 @@ const finiteNumber = z.number().finite();
 const nonEmptyString = z.string().min(1);
 
 export const foodEntryWireSchema = z.object({
-  calories: finiteNumber,
-  carbs: finiteNumber,
-  fat: finiteNumber,
-  food_id: nonEmptyString,
-  food_name: nonEmptyString,
+  calories: finiteNumber.nullish(),
+  carbs: finiteNumber.nullish(),
+  entry_date: z.string().date(),
+  fat: finiteNumber.nullish(),
+  food_id: nonEmptyString.nullish(),
+  food_name: nonEmptyString.nullish(),
   id: nonEmptyString,
+  meal_id: nonEmptyString.nullish(),
   meal_type_id: nonEmptyString,
-  protein: finiteNumber,
+  protein: finiteNumber.nullish(),
   quantity: finiteNumber.nonnegative(),
-  serving_size: finiteNumber.positive(),
-  unit: nonEmptyString,
+  serving_size: finiteNumber.nullish(),
+  unit: nonEmptyString.nullish(),
+  variant_id: nonEmptyString.nullish(),
 });
 
 export const dailySummaryWireSchema = z.object({
@@ -35,7 +38,7 @@ export const dailySummaryWireSchema = z.object({
 export const foodSearchWireSchema = z.object({
   foods: z.array(
     z.object({
-      brand: nonEmptyString.optional(),
+      brand: nonEmptyString.nullish(),
       default_variant: z.object({
         calories: finiteNumber,
         carbs: finiteNumber,
@@ -60,5 +63,5 @@ export const mealTypesWireSchema = z.array(
 );
 
 export const createdFoodEntryWireSchema = foodEntryWireSchema.extend({
-  variant_id: nonEmptyString,
+  meal_type: nonEmptyString,
 });
