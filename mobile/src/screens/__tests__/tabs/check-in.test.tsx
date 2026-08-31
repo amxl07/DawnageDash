@@ -101,6 +101,10 @@ jest.mock('@/theme', () => ({
   }),
 }));
 jest.mock('@/components/checkin/Celebration', () => ({ Celebration: () => null }));
+jest.mock('@/features/checkin/components/CheckInPanel', () => {
+  const { View: MockView } = require('react-native');
+  return { CheckInPanel: () => <MockView testID="checkin-single-scroll-panel" /> };
+});
 jest.mock('@/components/checkin/CheckInForm', () => {
   const React = require('react');
   const { Pressable: MockPressable, Text: MockText, View: MockView } = require('react-native');
@@ -161,6 +165,7 @@ const CheckInScreen = require('../../../../app/(app)/(tabs)/check-in').default;
 
 describe('CheckInScreen restored Finish validation', () => {
   beforeEach(() => {
+    process.env.EXPO_PUBLIC_CHECKIN_SINGLE_SCROLL = 'false';
     mockMotionEnabled = false;
     mockAccessibilityInfo.announceForAccessibility.mockClear();
     mockAccessibilityInfo.setAccessibilityFocus.mockClear();
@@ -230,5 +235,20 @@ describe('CheckInScreen restored Finish validation', () => {
     });
 
     expect(renderer.root.findByProps({ testID: 'checkin-stage-content' }).props.entering).toBeDefined();
+  });
+
+  it('shows the single-scroll panel and one submit action when the trial flag is enabled', async () => {
+    process.env.EXPO_PUBLIC_CHECKIN_SINGLE_SCROLL = 'true';
+    let renderer!: ReturnType<typeof create>;
+
+    await act(async () => {
+      renderer = create(<CheckInScreen />);
+      await Promise.resolve();
+    });
+
+    expect(renderer.root.findByProps({ testID: 'checkin-single-scroll-panel' })).toBeTruthy();
+    expect(renderer.root.findByProps({ testID: 'checkin-save' }).props.accessibilityLabel)
+      .toBe('Submit check-in');
+    expect(renderer.root.findAllByProps({ testID: 'checkin-next' })).toHaveLength(0);
   });
 });

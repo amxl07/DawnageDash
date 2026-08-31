@@ -29,6 +29,9 @@ import {
   Text,
 } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
+import { CheckInPanel } from '@/features/checkin/components/CheckInPanel';
+import { isSingleScrollCheckInEnabled } from '@/features/checkin/config/featureFlags';
+import { buildHistoryStats } from '@/features/checkin/history';
 import { useCheckInDraft } from '@/hooks/useCheckInDraft';
 import { findPreviousCheckIn, useCheckInMutation } from '@/hooks/useCheckInMutation';
 import { useDashboardData } from '@/hooks/useDashboardData';
@@ -44,6 +47,7 @@ export default function CheckInScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const motion = useMotion();
+  const singleScrollEnabled = isSingleScrollCheckInEnabled();
   const scrollRef = useRef<ScrollView>(null);
   const errorSummaryRef = useRef<View>(null);
   const params = useLocalSearchParams<{ date?: string }>();
@@ -62,6 +66,10 @@ export default function CheckInScreen() {
   );
   const previous = useMemo(
     () => findPreviousCheckIn(checkIns, targetDate),
+    [checkIns, targetDate],
+  );
+  const history = useMemo(
+    () => buildHistoryStats(checkIns, targetDate),
     [checkIns, targetDate],
   );
 
@@ -162,8 +170,9 @@ export default function CheckInScreen() {
       await mutation.mutateAsync(toPayload(form, targetDate));
       await clearDraft();
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setCelebrating(payoffLine);
-      AccessibilityInfo.announceForAccessibility(`Check-in saved. ${payoffLine}`);
+      const confirmation = singleScrollEnabled ? 'Logged. Your coach sees this.' : payoffLine;
+      setCelebrating(confirmation);
+      AccessibilityInfo.announceForAccessibility(`Check-in saved. ${confirmation}`);
       setTimeout(() => setCelebrating(null), 2200);
       setEditing(false);
       setStepIndex(0);
@@ -284,7 +293,7 @@ export default function CheckInScreen() {
     );
   }
 
-  // ── the fast flow ────────────────────────────────────────────────────────
+  // ── feature-flagged panel, with the established wizard retained ─────────
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Screen ref={scrollRef} archetype="root" bottomInset={ACTION_BAR_HEIGHT}>
@@ -292,21 +301,27 @@ export default function CheckInScreen() {
           <View style={{ gap: spacing.sm }}>
             <Text variant="h1">{isToday ? 'How was today?' : dateLabel}</Text>
             <Text variant="bodySm" tone="muted">
-              {streak > 0
-                ? `🔥 ${streak}-day streak — keep it going.`
-                : "Welcome back — today's a fresh start."}
+              {singleScrollEnabled
+                ? 'Your recent ranges appear after you answer.'
+                : streak > 0
+                  ? `🔥 ${streak}-day streak — keep it going.`
+                  : "Welcome back — today's a fresh start."}
             </Text>
-            <CheckInStageHeader
-              step={activeStep}
-              stepIndex={stepIndex}
-              totalSteps={CHECK_IN_STEPS.length}
-              date={targetDate}
-            />
-            {stepIndex === 0 && previous && !existing ? (
-              <SameAsYesterdayChip
-                previous={previous}
-                onApply={() => updateForm((p) => ({ ...p, ...prefillFrom(previous) }))}
-              />
+            {!singleScrollEnabled ? (
+              <>
+                <CheckInStageHeader
+                  step={activeStep}
+                  stepIndex={stepIndex}
+                  totalSteps={CHECK_IN_STEPS.length}
+                  date={targetDate}
+                />
+                {stepIndex === 0 && previous && !existing ? (
+                  <SameAsYesterdayChip
+                    previous={previous}
+                    onApply={() => updateForm((p) => ({ ...p, ...prefillFrom(previous) }))}
+                  />
+                ) : null}
+              </>
             ) : null}
             {Object.keys(errors).length > 0 ? (
               <View
@@ -323,19 +338,30 @@ export default function CheckInScreen() {
             ) : null}
           </View>
 
-          <Animated.View
-            key={activeStep}
-            testID="checkin-stage-content"
-            entering={motion.enabled ? FadeIn.duration(motion.duration.enter) : undefined}
-          >
-            <CheckInForm
+          {singleScrollEnabled ? (
+            <CheckInPanel
               form={form}
               setForm={updateForm}
               previous={previous}
-              step={activeStep}
               errors={errors}
+              history={history}
             />
-          </Animated.View>
+          ) : (
+            <Animated.View
+              key={activeStep}
+              testID="checkin-stage-content"
+              entering={motion.enabled ? FadeIn.duration(motion.duration.enter) : undefined}
+            >
+              <CheckInForm
+                form={form}
+                setForm={updateForm}
+                previous={previous}
+                step={activeStep}
+                errors={errors}
+                history={history}
+              />
+            </Animated.View>
+          )}
 
           {saveError ? (
             <View style={{ alignItems: 'flex-start', gap: spacing.sm }}>
@@ -359,18 +385,38 @@ export default function CheckInScreen() {
       </Screen>
 
       <StickyActionBar
-        primaryTestID={isLastStep ? 'checkin-save' : 'checkin-next'}
+        primaryTestID={singleScrollEnabled || isLastStep ? 'checkin-save' : 'checkin-next'}
         status={!existing && draftStatus ? <StatusPill status={draftStatus} /> : undefined}
-        secondaryLabel={stepIndex > 0 ? 'Back' : existing ? 'Cancel' : undefined}
+        secondaryLabel={
+          singleScrollEnabled
+            ? existing
+              ? 'Cancel'
+              : undefined
+            : stepIndex > 0
+              ? 'Back'
+              : existing
+                ? 'Cancel'
+                : undefined
+        }
         onSecondary={
-          stepIndex > 0
+          singleScrollEnabled
+            ? existing
+              ? () => setEditing(false)
+              : undefined
+            : stepIndex > 0
             ? () => moveToStep(stepIndex - 1)
             : existing
               ? () => setEditing(false)
               : undefined
         }
-        primaryLabel={isLastStep ? (existing ? 'Save changes' : 'Submit check-in') : 'Continue'}
-        onPrimary={isLastStep ? submit : () => moveToStep(stepIndex + 1)}
+        primaryLabel={
+          singleScrollEnabled || isLastStep
+            ? existing
+              ? 'Save changes'
+              : 'Submit check-in'
+            : 'Continue'
+        }
+        onPrimary={singleScrollEnabled || isLastStep ? submit : () => moveToStep(stepIndex + 1)}
         primaryLoading={mutation.isPending}
       />
     </KeyboardAvoidingView>
