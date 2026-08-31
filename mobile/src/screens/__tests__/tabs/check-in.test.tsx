@@ -15,6 +15,7 @@ const mockEmptyDraftForm = {
 const mockLoadDraft = jest.fn(async () => ({ form: mockEmptyDraftForm, step: 3 }));
 const mockSaveDraft = jest.fn();
 const mockClearDraft = jest.fn();
+let mockMotionEnabled = false;
 
 jest.mock('react-native', () => {
   const React = require('react');
@@ -38,8 +39,33 @@ jest.mock('react-native', () => {
     },
   };
 });
+jest.mock('react-native-reanimated', () => {
+  const React = require('react');
+  const { View: MockView } = require('react-native');
+
+  return {
+    __esModule: true,
+    default: {
+      View: ({ children, ...props }: { children: React.ReactNode }) => (
+        <MockView {...props}>{children}</MockView>
+      ),
+    },
+    Easing: { linear: jest.fn() },
+    FadeIn: { duration: jest.fn((duration: number) => ({ type: 'fade-in', duration })) },
+    useAnimatedStyle: (factory: () => object) => factory(),
+    useSharedValue: (initial: number) => {
+      let current = initial;
+      return {
+        get: () => current,
+        set: (value: number) => { current = value; },
+      };
+    },
+    withTiming: jest.fn((value: number) => value),
+  };
+});
 jest.mock('expo-router', () => ({ useLocalSearchParams: () => ({}), useRouter: () => ({ setParams: jest.fn() }) }));
 jest.mock('date-fns', () => ({ format: () => 'Today' }));
+jest.mock('lucide-react-native', () => new Proxy({}, { get: () => () => null }));
 jest.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'user-1' } }) }));
 jest.mock('@/hooks/useDashboardData', () => ({
   useDashboardData: () => ({ checkIns: [], processed: [], isLoading: false, isError: false, refetch: jest.fn() }),
@@ -54,7 +80,26 @@ jest.mock('@/hooks/useCheckInMutation', () => ({
 jest.mock('@/lib/dates', () => ({ localDateString: () => '2026-08-30', parseLocalDate: () => new Date('2026-08-30') }));
 jest.mock('@/lib/streak', () => ({ calculateStreak: () => 0 }));
 jest.mock('@/types/db', () => ({ num: () => 0, normalizeWorkoutStatus: () => 'no' }));
-jest.mock('@/theme', () => ({ ACTION_BAR_HEIGHT: 0, spacing: { xs: 4, sm: 8, base: 16, lg: 24 }, useMotion: () => ({ enabled: false }) }));
+jest.mock('@/theme', () => ({
+  ACTION_BAR_HEIGHT: 0,
+  iconSize: { md: 20 },
+  radius: { pill: 999 },
+  spacing: { xs: 4, sm: 8, base: 16, lg: 24 },
+  useMotion: () => ({
+    duration: { enter: 200 },
+    enabled: mockMotionEnabled,
+    reduced: !mockMotionEnabled,
+  }),
+  useTheme: () => ({
+    colors: {
+      border: '#444',
+      elevated: '#222',
+      primary: '#f04e45',
+      primaryFill: '#511b1b',
+    },
+    isDark: true,
+  }),
+}));
 jest.mock('@/components/checkin/Celebration', () => ({ Celebration: () => null }));
 jest.mock('@/components/checkin/CheckInForm', () => {
   const React = require('react');
@@ -83,11 +128,12 @@ jest.mock('@/components/checkin/CheckInForm', () => {
 });
 jest.mock('@/components/ui', () => {
   const { Pressable: MockPressable, Text: MockText, View: MockView } = require('react-native');
+  const { ProgressBar } = jest.requireActual('@/components/ui/ProgressBar');
   return {
     Button: () => null,
     Card: ({ children }: { children: React.ReactNode }) => <MockView>{children}</MockView>,
     ErrorState: () => null,
-    ProgressBar: () => null,
+    ProgressBar,
     Screen: ({ children }: { children: React.ReactNode }) => <MockView>{children}</MockView>,
     SkeletonCard: () => null,
     StickyActionBar: ({
@@ -115,6 +161,7 @@ const CheckInScreen = require('../../../../app/(app)/(tabs)/check-in').default;
 
 describe('CheckInScreen restored Finish validation', () => {
   beforeEach(() => {
+    mockMotionEnabled = false;
     mockAccessibilityInfo.announceForAccessibility.mockClear();
     mockAccessibilityInfo.setAccessibilityFocus.mockClear();
     mockFindNodeHandle.mockClear();
@@ -132,7 +179,16 @@ describe('CheckInScreen restored Finish validation', () => {
       renderer = create(<CheckInScreen />, { createNodeMock: () => ({ mounted: true }) });
       await Promise.resolve();
     });
+    const restoredOutput = JSON.stringify(renderer.toJSON());
     expect(renderer.root.findByProps({ testID: 'active-step' }).props.children).toBe('finish');
+    expect(restoredOutput).toContain('Notes and confirmation');
+    expect(restoredOutput).toContain('Review your check-in before saving it.');
+    expect(restoredOutput).toContain('Consistency matters more than a perfect day.');
+    expect(renderer.root.findByProps({ accessibilityRole: 'progressbar' }).props).toMatchObject({
+      accessibilityLabel: 'Check-in step 4 of 4',
+      accessibilityValue: { min: 0, max: 100, now: 100 },
+    });
+    expect(renderer.root.findByProps({ testID: 'checkin-stage-content' }).props.entering).toBeUndefined();
 
     await act(async () => {
       const saveAction = renderer.root.findByProps({ testID: 'checkin-save' });
@@ -141,6 +197,11 @@ describe('CheckInScreen restored Finish validation', () => {
     });
 
     expect(renderer.root.findByProps({ testID: 'active-step' }).props.children).toBe('readiness');
+    expect(JSON.stringify(renderer.toJSON())).toContain('Readiness and energy');
+    expect(renderer.root.findByProps({ accessibilityRole: 'progressbar' }).props).toMatchObject({
+      accessibilityLabel: 'Check-in step 1 of 4',
+      accessibilityValue: { min: 0, max: 100, now: 25 },
+    });
     expect(renderer.root.findByProps({ testID: 'checkin-next' }).props.accessibilityLabel).toBe(
       'Continue',
     );
@@ -157,5 +218,17 @@ describe('CheckInScreen restored Finish validation', () => {
     act(() => renderer.root.findByProps({ testID: 'fix-energy' }).props.onPress());
     expect(renderer.root.findByProps({ testID: 'error-energy' }).props.children).toBe('');
     expect(renderer.root.findByProps({ testID: 'error-stress' }).props.children).toBe('Choose your stress level.');
+  });
+
+  it('supplies a stage entrance only when shared motion is enabled', async () => {
+    mockMotionEnabled = true;
+    let renderer!: ReturnType<typeof create>;
+
+    await act(async () => {
+      renderer = create(<CheckInScreen />);
+      await Promise.resolve();
+    });
+
+    expect(renderer.root.findByProps({ testID: 'checkin-stage-content' }).props.entering).toBeDefined();
   });
 });

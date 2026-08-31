@@ -3,8 +3,10 @@ import { format } from 'date-fns';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, findNodeHandle, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { Celebration } from '@/components/checkin/Celebration';
+import { CheckInStageHeader } from '@/components/checkin/CheckInStageHeader';
 import {
   CheckInForm,
   EMPTY_FORM,
@@ -15,11 +17,11 @@ import {
   type CheckInStep,
   type FormState,
 } from '@/components/checkin/CheckInForm';
+import { CHECK_IN_STAGE_META } from '@/components/checkin/checkin-presentation';
 import {
   Button,
   Card,
   ErrorState,
-  ProgressBar,
   Screen,
   SkeletonCard,
   StatusPill,
@@ -36,28 +38,7 @@ import { calculateStreak } from '@/lib/streak';
 import { num, normalizeWorkoutStatus } from '@/types/db';
 import { ACTION_BAR_HEIGHT, spacing, useMotion } from '@/theme';
 
-const CHECK_IN_STEPS: { key: CheckInStep; title: string; description: string }[] = [
-  {
-    key: 'readiness',
-    title: 'Readiness and energy',
-    description: 'A quick picture of how you are starting today.',
-  },
-  {
-    key: 'recovery',
-    title: 'Sleep and recovery',
-    description: 'Capture sleep and the context that affects recovery.',
-  },
-  {
-    key: 'adherence',
-    title: 'Nutrition and adherence',
-    description: 'Record training and the useful nutrition numbers.',
-  },
-  {
-    key: 'finish',
-    title: 'Notes and confirmation',
-    description: 'Review your check-in before saving it.',
-  },
-];
+const CHECK_IN_STEPS: CheckInStep[] = ['readiness', 'recovery', 'adherence', 'finish'];
 
 export default function CheckInScreen() {
   const router = useRouter();
@@ -161,7 +142,7 @@ export default function CheckInScreen() {
     step?: Exclude<CheckInStep, 'finish'> | null,
   ) => {
     setErrors(nextErrors);
-    if (step) setStepIndex(CHECK_IN_STEPS.findIndex((candidate) => candidate.key === step));
+    if (step) setStepIndex(CHECK_IN_STEPS.findIndex((candidate) => candidate === step));
     AccessibilityInfo.announceForAccessibility('Please complete the highlighted fields.');
     requestAnimationFrame(() => {
       const node = findNodeHandle(errorSummaryRef.current);
@@ -228,7 +209,7 @@ export default function CheckInScreen() {
   const moveToStep = (next: number) => {
     const bounded = Math.min(CHECK_IN_STEPS.length - 1, Math.max(0, next));
     if (bounded > stepIndex) {
-      const nextErrors = validateCheckInStep(activeStep.key, form);
+      const nextErrors = validateCheckInStep(activeStep, form);
       if (Object.keys(nextErrors).length > 0) {
         showErrors(nextErrors);
         return;
@@ -239,7 +220,7 @@ export default function CheckInScreen() {
     setSaveError(null);
     scrollRef.current?.scrollTo({ y: 0, animated: motion.enabled });
     AccessibilityInfo.announceForAccessibility(
-      `Step ${bounded + 1} of ${CHECK_IN_STEPS.length}: ${CHECK_IN_STEPS[bounded].title}`,
+      `Step ${bounded + 1} of ${CHECK_IN_STEPS.length}: ${CHECK_IN_STAGE_META[CHECK_IN_STEPS[bounded]].title}`,
     );
   };
 
@@ -315,17 +296,12 @@ export default function CheckInScreen() {
                 ? `🔥 ${streak}-day streak — keep it going.`
                 : "Welcome back — today's a fresh start."}
             </Text>
-            <ProgressBar
-              value={(stepIndex + 1) / CHECK_IN_STEPS.length}
-              glow={false}
-              accessibilityLabel={`Check-in step ${stepIndex + 1} of ${CHECK_IN_STEPS.length}`}
+            <CheckInStageHeader
+              step={activeStep}
+              stepIndex={stepIndex}
+              totalSteps={CHECK_IN_STEPS.length}
+              date={targetDate}
             />
-            <View style={{ gap: spacing.xs }}>
-              <Text variant="h2">{activeStep.title}</Text>
-              <Text variant="bodySm" tone="muted">
-                {activeStep.description}
-              </Text>
-            </View>
             {stepIndex === 0 && previous && !existing ? (
               <SameAsYesterdayChip
                 previous={previous}
@@ -347,13 +323,19 @@ export default function CheckInScreen() {
             ) : null}
           </View>
 
-          <CheckInForm
-            form={form}
-            setForm={updateForm}
-            previous={previous}
-            step={activeStep.key}
-            errors={errors}
-          />
+          <Animated.View
+            key={activeStep}
+            testID="checkin-stage-content"
+            entering={motion.enabled ? FadeIn.duration(motion.duration.enter) : undefined}
+          >
+            <CheckInForm
+              form={form}
+              setForm={updateForm}
+              previous={previous}
+              step={activeStep}
+              errors={errors}
+            />
+          </Animated.View>
 
           {saveError ? (
             <View style={{ alignItems: 'flex-start', gap: spacing.sm }}>
@@ -378,21 +360,7 @@ export default function CheckInScreen() {
 
       <StickyActionBar
         primaryTestID={isLastStep ? 'checkin-save' : 'checkin-next'}
-        status={
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              gap: spacing.sm,
-            }}
-          >
-            <Text variant="bodySm" tone="muted">
-              Step {stepIndex + 1} of {CHECK_IN_STEPS.length}
-            </Text>
-            {!existing && draftStatus ? <StatusPill status={draftStatus} /> : null}
-          </View>
-        }
+        status={!existing && draftStatus ? <StatusPill status={draftStatus} /> : undefined}
         secondaryLabel={stepIndex > 0 ? 'Back' : existing ? 'Cancel' : undefined}
         onSecondary={
           stepIndex > 0
