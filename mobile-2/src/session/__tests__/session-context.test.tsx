@@ -13,6 +13,7 @@ import {
   SESSION_STORAGE_KEY,
 } from '@/session/session-storage';
 import { MfaRequiredError } from '@/session/session-types';
+import { queryClient } from '@/query/query-client';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return {
@@ -201,5 +202,19 @@ describe('SessionProvider actions', () => {
       'https://new.example/api/auth/sign-in/email',
       expect.objectContaining({ method: 'POST' }),
     );
+  });
+
+  it('clears cached private queries when signing out', async () => {
+    await renderSession();
+    await act(async () => {
+      await latestSession.enterDemo();
+    });
+    queryClient.setQueryData(['daily-summary', '2026-09-01'], { private: true });
+
+    await act(async () => {
+      await latestSession.signOut();
+    });
+
+    expect(queryClient.getQueryData(['daily-summary', '2026-09-01'])).toBeUndefined();
   });
 });

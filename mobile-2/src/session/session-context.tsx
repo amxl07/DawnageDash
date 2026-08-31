@@ -10,6 +10,7 @@ import {
   saveStoredSession,
 } from '@/session/session-storage';
 import { MfaRequiredError, type AppSession, type RestoreStatus } from '@/session/session-types';
+import { queryClient } from '@/query/query-client';
 
 export type SessionState = {
   restoreStatus: RestoreStatus;
@@ -212,6 +213,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
   const signOut = useCallback(async () => {
     assertRestorationComplete();
     await clearStoredSession();
+    queryClient.clear();
     dispatch({ type: 'signed-out' });
   }, [assertRestorationComplete]);
 
