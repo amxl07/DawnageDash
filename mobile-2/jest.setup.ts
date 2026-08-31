@@ -1,17 +1,17 @@
-type StoredValue = string | null;
+jest.mock('expo-secure-store', () => {
+  const mockSecureStore = new Map<string, string>();
 
-let secureStoreValue: StoredValue = null;
-
-jest.mock('expo-secure-store', () => ({
-  deleteItemAsync: jest.fn(async () => {
-    secureStoreValue = null;
-  }),
-  getItemAsync: jest.fn(async () => secureStoreValue),
-  isAvailableAsync: jest.fn(async () => true),
-  setItemAsync: jest.fn(async (_key: string, value: string) => {
-    secureStoreValue = value;
-  }),
-}));
+  return {
+    deleteItemAsync: jest.fn(async (key: string) => {
+      mockSecureStore.delete(key);
+    }),
+    getItemAsync: jest.fn(async (key: string) => mockSecureStore.get(key) ?? null),
+    isAvailableAsync: jest.fn(async () => true),
+    setItemAsync: jest.fn(async (key: string, value: string) => {
+      mockSecureStore.set(key, value);
+    }),
+  };
+});
 
 jest.mock('@react-native-community/netinfo', () => ({
   addEventListener: jest.fn(() => jest.fn()),

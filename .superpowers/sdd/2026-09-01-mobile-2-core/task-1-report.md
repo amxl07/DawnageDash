@@ -47,3 +47,27 @@
 
 - The correct Expo/TypeScript-aware ESLint configuration was retained. In this environment, `eslint .` and a direct `require('eslint-config-expo/flat')` each exceeded 60 seconds without output, so the processes were terminated rather than allowed to run indefinitely. This is a validation-environment concern, not a replacement with weaker lint semantics.
 - A second final Jest run after the initial successful harness verification also exceeded 60 seconds and was terminated. The required `npm test -- --runInBand` command had already passed before that retry. The likely common factor is package/tool initialization in this machine environment; the task should re-run lint and Jest in CI or a fresh local shell before proceeding to later tasks.
+
+## Fix round: Jest mock and smoke harness
+
+### What changed
+
+- Reworked the SecureStore Jest mock so its `Map<string, string>` lives inside the `jest.mock` factory. The factory no longer captures an outer mutable binding, making it safe for Jest's mock hoisting.
+- Implemented real per-key SecureStore semantics: setting or deleting one key does not change another key.
+- Added `__tests__/jest-setup.test.ts`, a real smoke test that stores two values, deletes one, and proves the other remains available.
+- Added empty `src/.gitkeep` and scoped Jest roots to `src` and `__tests__`, which are the two intended authored-code locations. Watchman is disabled for this small deterministic harness.
+- Scoped the existing Expo/TypeScript-aware lint command to all currently authored config, setup, and test paths; the `eslint-config-expo/flat` preset remains unchanged.
+- Removed the unexplained `example` ignore entry.
+
+### Fix-round verification
+
+| Command | Result |
+| --- | --- |
+| `npm run typecheck` (from `mobile-2/`) | Passed. |
+| `npm test -- --runInBand` | Reached the 60-second cap with no test result output after the smoke test was added; terminated. This occurred both before and after setting explicit Jest roots and disabling Watchman. |
+| `npm run lint` | Reached the 60-second cap with no lint result output even after the script was scoped to the five authored paths; terminated. |
+| `./node_modules/.bin/jest --showConfig --runInBand` | Completed and showed the Expo preset, setup file, aliases, and test configuration resolving correctly. |
+
+### Remaining validation limitation
+
+The requested smoke test and Expo-aware lint configuration are present, but this machine does not complete either Jest execution or ESLint execution within the required 60-second safety cap. No lint rules or Expo/TypeScript configuration were weakened to mask that issue. Re-run `npm test -- --runInBand` and `npm run lint` in CI or a fresh local shell before relying on the validation gate.
