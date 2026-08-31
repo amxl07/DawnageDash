@@ -33,3 +33,16 @@
 ## Concern
 
 The export command needs one direct terminal run to record a definitive exit code in this environment; no bundle error was logged.
+
+## Fix round 1: review findings
+
+### Root causes
+
+- Restore validation only normalized URLs, so a previously stored public HTTP URL remained usable in production.
+- User reducer transitions did not end restoration, allowing a late restore to overwrite a newer action.
+- NetInfo registration was an import-time closure with no injectable boundary for behavioral tests.
+
+### RED / GREEN evidence
+
+- RED: `npm test -- --runInBand src/session/__tests__/session-storage.test.ts src/session/__tests__/session-reducer.test.ts src/query/__tests__/query-provider.test.ts` failed with 4 expected regressions: production restoration returned both stored HTTP values, late `restored` replaced the demo transition, and `registerNetworkOnlineListener` was absent.
+- GREEN: the same command passed 3 suites and 13 tests after validating stored URLs with `validateServerUrl(value, isDevelopment)`, guarding late restore actions, and introducing the injectable NetInfo listener registration helper.

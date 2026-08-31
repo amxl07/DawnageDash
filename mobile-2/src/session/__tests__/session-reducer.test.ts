@@ -45,6 +45,27 @@ describe('sessionReducer', () => {
     });
   });
 
+  it('preserves a user transition when restoration finishes late', () => {
+    const afterEnteringDemo = sessionReducer(initialSessionState, { type: 'demo-entered' });
+
+    const nextState = sessionReducer(afterEnteringDemo, {
+      savedServerUrl: 'https://fitness.example',
+      session: {
+        email: 'member@example.com',
+        mode: 'connected',
+        serverUrl: 'https://fitness.example',
+        token: 'token-123',
+      },
+      type: 'restored',
+    });
+
+    expect(nextState).toEqual({
+      restoreStatus: 'ready',
+      savedServerUrl: null,
+      session: { email: 'demo@dawnage.local', mode: 'demo' },
+    });
+  });
+
   it('sets the authenticated connected session after sign-in', () => {
     const nextState = sessionReducer(
       {

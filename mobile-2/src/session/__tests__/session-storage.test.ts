@@ -2,8 +2,10 @@ import * as SecureStore from 'expo-secure-store';
 
 import {
   clearStoredSession,
+  readStoredServerUrl,
   readStoredSession,
   saveStoredSession,
+  SERVER_URL_STORAGE_KEY,
   SESSION_STORAGE_KEY,
 } from '@/session/session-storage';
 
@@ -41,5 +43,27 @@ describe('session storage', () => {
 
     await expect(readStoredSession()).resolves.toBeNull();
     await expect(SecureStore.getItemAsync(SESSION_STORAGE_KEY)).resolves.toBeNull();
+  });
+
+  it('deletes a connected session that used an HTTP URL when restored in production', async () => {
+    await SecureStore.setItemAsync(
+      SESSION_STORAGE_KEY,
+      JSON.stringify({
+        email: 'member@example.com',
+        mode: 'connected',
+        serverUrl: 'http://fitness.example',
+        token: 'token-123',
+      }),
+    );
+
+    await expect(readStoredSession(false)).resolves.toBeNull();
+    await expect(SecureStore.getItemAsync(SESSION_STORAGE_KEY)).resolves.toBeNull();
+  });
+
+  it('deletes a saved HTTP URL when restored in production', async () => {
+    await SecureStore.setItemAsync(SERVER_URL_STORAGE_KEY, 'http://fitness.example');
+
+    await expect(readStoredServerUrl(false)).resolves.toBeNull();
+    await expect(SecureStore.getItemAsync(SERVER_URL_STORAGE_KEY)).resolves.toBeNull();
   });
 });

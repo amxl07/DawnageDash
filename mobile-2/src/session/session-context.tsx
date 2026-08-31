@@ -33,6 +33,10 @@ export const initialSessionState: SessionState = {
 export function sessionReducer(state: SessionState, action: SessionAction): SessionState {
   switch (action.type) {
     case 'restored':
+      if (state.restoreStatus !== 'restoring') {
+        return state;
+      }
+
       return {
         restoreStatus: 'ready',
         savedServerUrl: action.savedServerUrl,
@@ -41,14 +45,15 @@ export function sessionReducer(state: SessionState, action: SessionAction): Sess
     case 'demo-entered':
       return {
         ...state,
+        restoreStatus: 'ready',
         session: { email: 'demo@dawnage.local', mode: 'demo' },
       };
     case 'connected':
-      return { ...state, session: action.session };
+      return { ...state, restoreStatus: 'ready', session: action.session };
     case 'signed-out':
-      return { ...state, session: null };
+      return { ...state, restoreStatus: 'ready', session: null };
     case 'server-saved':
-      return { ...state, savedServerUrl: action.serverUrl };
+      return { ...state, restoreStatus: 'ready', savedServerUrl: action.serverUrl };
   }
 }
 

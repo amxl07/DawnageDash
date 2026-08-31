@@ -11,10 +11,19 @@ export function isNetworkOnline(state: NetInfoState): boolean {
   return state.isConnected === true && state.isInternetReachable !== false;
 }
 
-onlineManager.setEventListener((setOnline) =>
-  NetInfo.addEventListener((state) => {
+type NetworkSubscriber = (listener: (state: NetInfoState) => void) => () => void;
+
+export function registerNetworkOnlineListener(
+  setOnline: (isOnline: boolean) => void,
+  subscribe: NetworkSubscriber = NetInfo.addEventListener,
+): () => void {
+  return subscribe((state) => {
     setOnline(isNetworkOnline(state));
-  }),
+  });
+}
+
+onlineManager.setEventListener((setOnline) =>
+  registerNetworkOnlineListener(setOnline),
 );
 
 export function useConnectionState(): { isOnline: boolean } {

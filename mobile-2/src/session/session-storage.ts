@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 
-import { normalizeServerUrl } from '@/data/server-url';
+import { validateServerUrl } from '@/data/server-url';
 import type { AppSession } from '@/session/session-types';
 
 export const SESSION_STORAGE_KEY = 'com.dawnage.mobile2.session';
@@ -15,7 +15,11 @@ function hasOnlyKeys(value: Record<string, unknown>, keys: string[]): boolean {
   return actualKeys.length === keys.length && actualKeys.every((key, index) => key === keys[index]);
 }
 
-function isStoredSession(value: unknown): value is AppSession {
+function defaultIsDevelopment(): boolean {
+  return typeof __DEV__ !== 'undefined' && __DEV__;
+}
+
+function isStoredSession(value: unknown, isDevelopment: boolean): value is AppSession {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return false;
   }
@@ -41,21 +45,23 @@ function isStoredSession(value: unknown): value is AppSession {
   }
 
   try {
-    return normalizeServerUrl(session.serverUrl) === session.serverUrl;
+    return validateServerUrl(session.serverUrl, isDevelopment) === session.serverUrl;
   } catch {
     return false;
   }
 }
 
-function isStoredServerUrl(value: string): boolean {
+function isStoredServerUrl(value: string, isDevelopment: boolean): boolean {
   try {
-    return normalizeServerUrl(value) === value;
+    return validateServerUrl(value, isDevelopment) === value;
   } catch {
     return false;
   }
 }
 
-export async function readStoredSession(): Promise<AppSession | null> {
+export async function readStoredSession(
+  isDevelopment: boolean = defaultIsDevelopment(),
+): Promise<AppSession | null> {
   const value = await SecureStore.getItemAsync(SESSION_STORAGE_KEY);
   if (value === null) {
     return null;
@@ -63,7 +69,7 @@ export async function readStoredSession(): Promise<AppSession | null> {
 
   try {
     const session: unknown = JSON.parse(value);
-    if (!isStoredSession(session)) {
+    if (!isStoredSession(session, isDevelopment)) {
       throw new Error('Invalid session');
     }
 
@@ -82,13 +88,15 @@ export function clearStoredSession(): Promise<void> {
   return SecureStore.deleteItemAsync(SESSION_STORAGE_KEY);
 }
 
-export async function readStoredServerUrl(): Promise<string | null> {
+export async function readStoredServerUrl(
+  isDevelopment: boolean = defaultIsDevelopment(),
+): Promise<string | null> {
   const value = await SecureStore.getItemAsync(SERVER_URL_STORAGE_KEY);
   if (value === null) {
     return null;
   }
 
-  if (!isStoredServerUrl(value)) {
+  if (!isStoredServerUrl(value, isDevelopment)) {
     await SecureStore.deleteItemAsync(SERVER_URL_STORAGE_KEY);
     return null;
   }
