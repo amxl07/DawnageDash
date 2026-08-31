@@ -148,12 +148,9 @@ export function TickRuler({
           accessibilityRole="adjustable"
           accessibilityLabel={label}
           accessibilityHint={value === null ? 'Type a value first, then drag to adjust.' : 'Swipe up or down to adjust, or drag the ruler.'}
-          accessibilityValue={{
-            min,
-            max,
-            now: value ?? undefined,
-            text: value === null ? 'Not set' : `${display} ${unit}`,
-          }}
+          // React Native converts numeric accessibility values to native integers.
+          // Decimal measurements (for example 89.2 kg) must remain text-only.
+          accessibilityValue={{ text: value === null ? 'Not set' : `${display} ${unit}` }}
           accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
           onAccessibilityAction={(event) => {
             if (event.nativeEvent.actionName === 'increment') bump(1);
