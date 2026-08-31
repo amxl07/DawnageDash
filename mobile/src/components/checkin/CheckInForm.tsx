@@ -27,13 +27,16 @@ import {
   Card,
   Input,
   SegmentedControl,
-  Stepper,
   Text,
   type Segment,
 } from '@/components/ui';
+import { HistoryCaption } from '@/features/checkin/components/HistoryCaption';
+import { NumericEntry } from '@/features/checkin/components/NumericEntry';
+import { PreviousValueButton } from '@/features/checkin/components/PreviousValueButton';
+import { TickRuler } from '@/features/checkin/components/TickRuler';
+import type { CheckInHistory } from '@/features/checkin/history';
 import type { CheckInPayload } from '@/hooks/useCheckInMutation';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
-import { TickRuler } from '@/features/checkin/components/TickRuler';
 import { parseLocalDate } from '@/lib/dates';
 import { requiresWorkoutPerformance } from '@/lib/checkin-validation';
 import { num, type DailyCheckIn, type Digestion, type WorkoutStatus } from '@/types/db';
@@ -164,11 +167,23 @@ type Props = {
   previous: DailyCheckIn | null;
   step: CheckInStep;
   errors: Partial<Record<keyof FormState, string>>;
+  history?: CheckInHistory;
+  showCarryForward?: boolean;
+  hideFinishSummary?: boolean;
 };
 
 export type CheckInStep = 'readiness' | 'recovery' | 'adherence' | 'finish';
 
-export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
+export function CheckInForm({
+  form,
+  setForm,
+  previous,
+  step,
+  errors,
+  history,
+  showCarryForward = false,
+  hideFinishSummary = false,
+}: Props) {
   const { colors } = useTheme();
   const motion = useMotion();
   const { isCompact } = useResponsiveLayout();
@@ -181,6 +196,7 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
+  const previousForm = useMemo(() => previous ? fromRow(previous) : null, [previous]);
   const prevHint = useMemo(() => {
     if (!previous) return {} as Record<string, string>;
     const p = fromRow(previous);
@@ -193,6 +209,27 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
       calories: h(p.calorieIntake, ' kcal'),
     };
   }, [previous]);
+
+  const feedback = (
+    field: keyof CheckInHistory,
+    label: string,
+    value: number | null,
+    unit?: string,
+    precision = 0,
+    previousValue?: number | null,
+  ) => (
+    <>
+      <HistoryCaption value={value} history={history?.[field]} unit={unit} precision={precision} />
+      {showCarryForward ? (
+        <PreviousValueButton
+          label={label}
+          value={previousValue ?? null}
+          unit={unit}
+          onApply={(next) => set(field as keyof FormState, next as FormState[keyof FormState])}
+        />
+      ) : null}
+    </>
+  );
 
   const showPerformance = requiresWorkoutPerformance(form.workoutStatus);
   const setWorkoutStatus = (value: WorkoutStatus) =>
@@ -218,10 +255,19 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
           max={400}
           unit="kg"
           pxPerStep={12}
-          hint={prevHint.weight}
+          hint={showCarryForward ? undefined : prevHint.weight}
           error={errors.morningWeight}
           testID="checkin-ruler-weight"
-        />
+        >
+          {feedback(
+            'morningWeight',
+            'Morning weight',
+            form.morningWeight,
+            'kg',
+            1,
+            previousForm?.morningWeight,
+          )}
+        </TickRuler>
         {(
           [
             ['Energy', 'energyLevel', 'checkin-energy-rating', 'checkin-field-energy'],
@@ -242,6 +288,7 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
               accessibilityMode="options"
               optionTestIDPrefix={optionTestIDPrefix}
             />
+            <HistoryCaption value={form[key]} history={history?.[key]} precision={0} />
           </CheckInFieldBlock>
         ))}
       </Card>
@@ -264,10 +311,12 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
           max={24}
           unit="h"
           pxPerStep={24}
-          hint={prevHint.sleep}
+          hint={showCarryForward ? undefined : prevHint.sleep}
           error={errors.sleepHours}
           testID="checkin-ruler-sleep"
-        />
+        >
+          {feedback('sleepHours', 'Sleep', form.sleepHours, 'h', 1, previousForm?.sleepHours)}
+        </TickRuler>
         <CheckInFieldBlock
           label="Hunger"
           complete={form.hungerLevel !== null}
@@ -279,6 +328,7 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
             value={form.hungerLevel}
             onChange={(v) => set('hungerLevel', v)}
           />
+          <HistoryCaption value={form.hungerLevel} history={history?.hungerLevel} precision={0} />
         </CheckInFieldBlock>
         <CheckInFieldBlock
           label="Digestion"
@@ -346,6 +396,11 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
                 value={form.workoutPerformance}
                 onChange={(v) => set('workoutPerformance', v)}
               />
+              <HistoryCaption
+                value={form.workoutPerformance}
+                history={history?.workoutPerformance}
+                precision={0}
+              />
             </CheckInFieldBlock>
           </Animated.View>
         ) : null}
@@ -360,19 +415,29 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
             value={form.nutritionScore}
             onChange={(v) => set('nutritionScore', v)}
           />
+          <HistoryCaption value={form.nutritionScore} history={history?.nutritionScore} precision={0} />
         </CheckInFieldBlock>
-        <Stepper
+        <NumericEntry
           label="Calories"
           value={form.calorieIntake}
-          onChange={(v) => set('calorieIntake', v === null ? null : Math.round(v))}
-          step={50}
+          onChange={(v) => set('calorieIntake', v)}
           precision={0}
           min={0}
           max={20000}
-          suffix="kcal"
-          hint={prevHint.calories}
+          unit="kcal"
+          hint={showCarryForward ? undefined : prevHint.calories}
           error={errors.calorieIntake}
-        />
+          history={history?.calorieIntake}
+        >
+          {showCarryForward ? (
+            <PreviousValueButton
+              label="Calories"
+              value={previousForm?.calorieIntake ?? null}
+              unit="kcal"
+              onApply={(value) => set('calorieIntake', value)}
+            />
+          ) : null}
+        </NumericEntry>
         <TickRuler
           label="Water"
           value={form.waterLiters}
@@ -383,21 +448,33 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
           max={20}
           unit="L"
           pxPerStep={20}
-          hint={prevHint.water}
+          hint={showCarryForward ? undefined : prevHint.water}
           error={errors.waterLiters}
           testID="checkin-ruler-water"
-        />
-        <Stepper
+        >
+          {feedback('waterLiters', 'Water', form.waterLiters, 'L', 2, previousForm?.waterLiters)}
+        </TickRuler>
+        <NumericEntry
           label="Steps"
           value={form.dailySteps}
-          onChange={(v) => set('dailySteps', v === null ? null : Math.round(v))}
-          step={500}
+          onChange={(v) => set('dailySteps', v)}
           precision={0}
           min={0}
           max={200000}
-          hint={prevHint.steps}
+          unit="steps"
+          hint={showCarryForward ? undefined : prevHint.steps}
           error={errors.dailySteps}
-        />
+          history={history?.dailySteps}
+        >
+          {showCarryForward ? (
+            <PreviousValueButton
+              label="Steps"
+              value={previousForm?.dailySteps ?? null}
+              unit="steps"
+              onApply={(value) => set('dailySteps', value)}
+            />
+          ) : null}
+        </NumericEntry>
         <Pressable
           onPress={() => {
             const next = !showMore;
@@ -448,18 +525,26 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
                 ['Fats', 'fats'],
               ] as const
             ).map(([label, key]) => (
-              <Input
+              <NumericEntry
                 key={key}
-                containerStyle={isCompact ? undefined : { flex: 1 }}
+                style={isCompact ? undefined : { flex: 1 }}
                 label={label}
-                value={form[key] === null ? '' : String(form[key])}
-                onChangeText={(t) => {
-                  const n = parseFloat(t);
-                  set(key, t.trim() === '' || !Number.isFinite(n) ? null : n);
-                }}
-                keyboardType="number-pad"
-                placeholder="g"
-              />
+                value={form[key]}
+                onChange={(value) => set(key, value)}
+                min={0}
+                precision={0}
+                unit="g"
+                history={history?.[key]}
+              >
+                {showCarryForward ? (
+                  <PreviousValueButton
+                    label={label}
+                    value={previousForm?.[key] ?? null}
+                    unit="g"
+                    onApply={(value) => set(key, value)}
+                  />
+                ) : null}
+              </NumericEntry>
             ))}
           </Animated.View>
         ) : null}
@@ -481,7 +566,7 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
         inputStyle={{ minHeight: 72, textAlignVertical: 'top' }}
         placeholder="Anything your coach should know?"
       />
-      <View style={{ gap: spacing.sm }}>
+      {!hideFinishSummary ? <View style={{ gap: spacing.sm }}>
         <Text variant="label" tone="muted">
           Ready to save
         </Text>
@@ -529,7 +614,7 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
             form.notes.trim() || 'Not recorded',
           ]]}
         />
-      </View>
+      </View> : null}
 
     </Card>
   );

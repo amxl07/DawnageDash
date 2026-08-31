@@ -11,6 +11,8 @@ import {
 import { act, create } from 'react-test-renderer';
 
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+import type { CheckInHistory } from '@/features/checkin/history';
+import type { DailyCheckIn } from '@/types/db';
 import { CheckInForm, EMPTY_FORM, toPayload, type CheckInStep, type FormState } from './CheckInForm';
 
 const mockMotion = {
@@ -67,9 +69,10 @@ jest.mock('@/hooks/useResponsiveLayout', () => ({
   useResponsiveLayout: jest.fn(),
 }));
 jest.mock('@/features/checkin/components/TickRuler', () => ({
-  TickRuler: ({ label, testID }: { label: string; testID?: string }) => (
+  TickRuler: ({ label, testID, children }: { label: string; testID?: string; children?: React.ReactNode }) => (
     <MockView testID={testID} accessibilityRole="adjustable" accessibilityLabel={label}>
       <MockNativeText>{label}</MockNativeText>
+      {children}
     </MockView>
   ),
 }));
@@ -154,6 +157,7 @@ function renderForm(
   step: CheckInStep,
   form: FormState = COMPLETE_FORM,
   setForm: (updater: (prev: FormState) => FormState) => void = () => {},
+  options: { previous?: DailyCheckIn | null; history?: CheckInHistory; showCarryForward?: boolean } = {},
 ) {
   let renderer!: ReturnType<typeof create>;
   act(() => {
@@ -161,9 +165,11 @@ function renderForm(
       <CheckInForm
         form={form}
         setForm={setForm}
-        previous={null}
+        previous={options.previous ?? null}
         step={step}
         errors={{}}
+        history={options.history}
+        showCarryForward={options.showCarryForward}
       />,
     );
   });
@@ -359,6 +365,42 @@ describe('CheckInForm', () => {
     expect(adherence.root.findByProps({ testID: 'checkin-ruler-water' })).toBeTruthy();
     expect(adherence.root.findAllByProps({ testID: 'checkin-ruler-calories' })).toHaveLength(0);
     expect(adherence.root.findAllByProps({ testID: 'checkin-ruler-steps' })).toHaveLength(0);
+  });
+
+  it('shows neutral history only after an answer and exposes per-field carry-forward', () => {
+    const previous = {
+      id: 'previous', user_id: 'user-1', date: '2026-08-29',
+      morning_weight: 72.6, sleep_hours: 7.5, workout_status: 'done',
+      workout_performance: 7, nutrition_score: 8, calorie_intake: 2100,
+      water_liters: 2.75, daily_steps: 8500, protein: 150, carbs: 200, fats: 60,
+      energy_level: 6, hunger_level: 5, stress_level: 4, digestion: 'none', notes: null,
+    } satisfies DailyCheckIn;
+    const history = {
+      morningWeight: {
+        points: [], min14: 71.9, max14: 73.4, lastValue: 72.6, count: 8,
+      },
+    } satisfies CheckInHistory;
+
+    const answered = renderForm('readiness', COMPLETE_FORM, () => {}, {
+      previous, history, showCarryForward: true,
+    });
+    expect(JSON.stringify(answered.toJSON())).toContain('Recent range 71.9');
+    expect(answered.root.findByProps({
+      accessibilityLabel: 'Use previous Morning weight value, 72.6 kg',
+    })).toBeTruthy();
+
+    const unanswered = renderForm('readiness', { ...COMPLETE_FORM, morningWeight: null }, () => {}, {
+      previous, history, showCarryForward: true,
+    });
+    expect(JSON.stringify(unanswered.toJSON())).not.toContain('Recent range');
+  });
+
+  it('uses direct keypad inputs for calories and steps', () => {
+    const renderer = renderForm('adherence');
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Calories' }).props.keyboardType)
+      .toBe('number-pad');
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Steps' }).props.keyboardType)
+      .toBe('number-pad');
   });
 
   it.each([
