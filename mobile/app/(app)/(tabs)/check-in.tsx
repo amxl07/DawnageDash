@@ -167,10 +167,14 @@ export default function CheckInScreen() {
     setErrors({});
     setSaveError(null);
     try {
-      await mutation.mutateAsync(toPayload(form, targetDate));
+      const saveResult = await mutation.mutateAsync(toPayload(form, targetDate));
       await clearDraft();
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      const confirmation = singleScrollEnabled ? 'Logged. Your coach sees this.' : payoffLine;
+      const confirmation = saveResult.status === 'offline'
+        ? 'Logged · saved on device'
+        : singleScrollEnabled
+          ? 'Logged. Your coach sees this.'
+          : payoffLine;
       setCelebrating(confirmation);
       AccessibilityInfo.announceForAccessibility(`Check-in saved. ${confirmation}`);
       setTimeout(() => setCelebrating(null), 2200);

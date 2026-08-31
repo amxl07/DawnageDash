@@ -1,28 +1,13 @@
+import NetInfo from '@react-native-community/netinfo';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect } from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { flushCheckInOutbox, saveCheckIn } from '@/features/checkin/checkInOutbox';
+import type { CheckInPayload } from '@/features/checkin/persistence';
 import type { DailyCheckIn } from '@/types/db';
 
-export type CheckInPayload = {
-  date: string; // local yyyy-MM-dd
-  morning_weight: number | null;
-  sleep_hours: number | null;
-  workout_status: string | null;
-  workout_performance: number | null;
-  nutrition_score: number | null;
-  calorie_intake: number | null;
-  water_liters: number | null;
-  daily_steps: number | null;
-  protein: number | null;
-  carbs: number | null;
-  fats: number | null;
-  energy_level: number | null;
-  hunger_level: number | null;
-  stress_level: number | null;
-  digestion: string | null;
-  notes: string | null;
-};
+export type { CheckInPayload } from '@/features/checkin/persistence';
 
 /**
  * Save a check-in.
@@ -34,50 +19,30 @@ export function useCheckInMutation() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
+  const invalidateCheckIns = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ['dailyCheckIns', user?.id] });
+    void queryClient.invalidateQueries({ queryKey: ['userProfile', user?.id] });
+  }, [queryClient, user?.id]);
+
+  useEffect(() => {
+    const userId = user?.id;
+    if (!userId) return;
+
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      if (!state.isConnected) return;
+      void flushCheckInOutbox(userId).then((synced) => {
+        if (synced > 0) invalidateCheckIns();
+      });
+    });
+    return unsubscribe;
+  }, [invalidateCheckIns, user?.id]);
+
   return useMutation({
     mutationFn: async (payload: CheckInPayload) => {
       if (!user?.id) throw new Error('Not signed in');
-
-      const { data: existing, error: fetchError } = await supabase
-        .from('daily_check_ins')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('date', payload.date)
-        .maybeSingle();
-      if (fetchError) throw fetchError;
-
-      const row = { ...payload, user_id: user.id };
-
-      if (existing) {
-        const { error } = await supabase
-          .from('daily_check_ins')
-          .update(row)
-          .eq('id', existing.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('daily_check_ins').insert(row);
-        if (error) throw error;
-      }
-
-      // Fallback for the DB trigger trg_auto_set_start_date (CheckInForm.tsx:131-150).
-      const { data: userRow, error: userErr } = await supabase
-        .from('users')
-        .select('package_start_date')
-        .eq('id', user.id)
-        .maybeSingle();
-      if (!userErr && userRow && !userRow.package_start_date) {
-        await supabase
-          .from('users')
-          .update({ package_start_date: payload.date })
-          .eq('id', user.id);
-      }
-
-      return { updated: Boolean(existing) };
+      return saveCheckIn(user.id, payload);
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['dailyCheckIns', user?.id] });
-      void queryClient.invalidateQueries({ queryKey: ['userProfile', user?.id] });
-    },
+    onSuccess: invalidateCheckIns,
   });
 }
 
