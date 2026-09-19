@@ -2,11 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { supabaseUrl } from '@/lib/env';
+import { photoReferencesForSave } from '../../../shared/progress-photos';
 
 export type PhotoRow = {
   id: string;
   user_id: string;
   date: string;
+  /** Historical column names; values are object paths, never signed display URLs. */
   front_url: string | null;
   back_url: string | null;
   side_left_url: string | null;
@@ -56,16 +59,15 @@ export function usePhotoMutation() {
         .maybeSingle();
       if (fetchError) throw fetchError;
 
-      const row = { ...payload, user_id: user.id };
-      if (existing) {
-        const { error } = await supabase
-          .from('weekly_progress_photos')
-          .update(row)
-          .eq('id', existing.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('weekly_progress_photos').insert(row);
-        if (error) throw error;
+      const row = { ...payload, ...photoReferencesForSave(payload, supabaseUrl, user.id), user_id: user.id };
+      const write = existing
+        ? supabase.from('weekly_progress_photos').update(row).eq('id', existing.id).eq('user_id', user.id)
+        : supabase.from('weekly_progress_photos').insert(row);
+      const { data: saved, error } = await write.select('id,user_id').single();
+      if (error) throw error;
+      if (!saved || typeof saved.id !== 'string' || !saved.id.trim() ||
+          saved.user_id !== user.id || (existing && saved.id !== existing.id)) {
+        throw new Error('Photo set was not acknowledged as saved. Try again.');
       }
     },
     onSuccess: () => {

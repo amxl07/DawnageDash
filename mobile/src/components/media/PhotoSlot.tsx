@@ -5,11 +5,13 @@ import { ActivityIndicator, Pressable, View } from 'react-native';
 import { Text } from '@/components/ui';
 import type { AngleKey } from '@/lib/photos';
 import { ANGLES } from '@/lib/photos';
-import { HIT_SLOP_MIN, iconSize, radius, spacing, useTheme } from '@/theme';
+import { HIT_SLOP_MIN, iconSize, radius, spacing, useMotion, useTheme } from '@/theme';
 
 import { PoseGuide } from './PoseGuide';
+import { PrivatePhoto } from './PrivatePhoto';
 
 export type SlotState = {
+  /** Canonical object reference, never a signed display URL. */
   url: string | null;
   uploading: boolean;
   error: string | null;
@@ -54,6 +56,7 @@ export function PhotoSlot({
   disabled = false,
 }: Props) {
   const { colors } = useTheme();
+  const motion = useMotion();
   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
   const previewUri = state.pendingUri ?? state.url;
   const status = slotStatus(state);
@@ -75,26 +78,33 @@ export function PhotoSlot({
         accessibilityLabel={`${label} photo, ${status}`}
         accessibilityHint={hasPhoto ? 'Choose a replacement photo' : 'Choose a photo'}
         accessibilityState={{ busy: state.uploading, disabled: slotDisabled }}
-        style={{
+        style={({ pressed }) => ({
           aspectRatio: 3 / 4,
           borderRadius: radius.md,
           borderWidth: 1,
-          borderColor: state.error ? colors.destructive : colors.borderStrong,
-          backgroundColor: colors.elevated,
+          borderColor: state.error
+            ? colors.destructive
+            : pressed
+              ? colors.primaryPressed
+              : colors.borderStrong,
+          backgroundColor: pressed ? colors.pressed : colors.elevated,
           overflow: 'hidden',
           alignItems: 'center',
           justifyContent: 'center',
-        }}
+        })}
       >
-        {previewUri ? (
+        {state.pendingUri ? (
           <Image
-            source={{ uri: previewUri }}
+            source={{ uri: state.pendingUri }}
             style={{ width: '100%', height: '100%' }}
             contentFit="cover"
-            cachePolicy="memory-disk"
+            cachePolicy="none"
             recyclingKey={`${angle}:${previewUri}`}
+            transition={motion.reduced ? 0 : Math.min(160, motion.duration.micro)}
             accessible={false}
           />
+        ) : state.url ? (
+          <PrivatePhoto reference={state.url} style={{ width: '100%', height: '100%' }} contentFit="cover" accessible={false} />
         ) : (
           <View style={{ alignItems: 'center', gap: spacing.xs }}>
             <Camera
@@ -151,12 +161,13 @@ export function PhotoSlot({
             accessibilityRole="button"
             accessibilityLabel={`Retry ${label} photo upload`}
             accessibilityState={{ disabled: retryInactive, busy: state.uploading }}
-            style={{
+            style={({ pressed }) => ({
               minHeight: HIT_SLOP_MIN,
               flexGrow: 1,
               justifyContent: 'center',
               opacity: retryInactive ? 0.45 : 1,
-            }}
+              backgroundColor: pressed && !retryInactive ? colors.pressed : 'transparent',
+            })}
           >
             <Text variant="bodySm" tone="primary">
               Retry upload
@@ -168,13 +179,14 @@ export function PhotoSlot({
             accessibilityRole="button"
             accessibilityLabel={`Remove ${label} photo`}
             accessibilityState={{ disabled }}
-            style={{
+            style={({ pressed }) => ({
               minHeight: HIT_SLOP_MIN,
               flexDirection: 'row',
               alignItems: 'center',
               gap: spacing.xs,
               opacity: disabled ? 0.45 : 1,
-            }}
+              backgroundColor: pressed && !disabled ? colors.pressed : 'transparent',
+            })}
           >
             <Trash2 size={14} color={colors.mutedForeground} strokeWidth={2} accessible={false} />
             <Text variant="bodySm" tone="muted">
@@ -189,13 +201,14 @@ export function PhotoSlot({
           accessibilityRole="button"
           accessibilityLabel={`Remove ${label} photo`}
           accessibilityState={{ disabled }}
-          style={{
+          style={({ pressed }) => ({
             minHeight: HIT_SLOP_MIN,
             flexDirection: 'row',
             alignItems: 'center',
             gap: spacing.xs,
             opacity: disabled ? 0.45 : 1,
-          }}
+            backgroundColor: pressed && !disabled ? colors.pressed : 'transparent',
+          })}
         >
           <Trash2 size={14} color={colors.mutedForeground} strokeWidth={2} accessible={false} />
           <Text variant="bodySm" tone="muted">
@@ -209,13 +222,14 @@ export function PhotoSlot({
           accessibilityRole="button"
           accessibilityLabel={`Choose ${label} photo from library`}
           accessibilityState={{ disabled }}
-          style={{
+          style={({ pressed }) => ({
             minHeight: HIT_SLOP_MIN,
             flexDirection: 'row',
             alignItems: 'center',
             gap: spacing.xs,
             opacity: disabled ? 0.45 : 1,
-          }}
+            backgroundColor: pressed && !disabled ? colors.pressed : 'transparent',
+          })}
         >
           <ImageIcon size={14} color={colors.mutedForeground} strokeWidth={2} accessible={false} />
           <Text variant="bodySm" tone="muted">

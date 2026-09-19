@@ -1,0 +1,9 @@
+
+/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/src/screens/__tests__/weekly-feedback.test.tsx
+  67:28  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+✖ 1 problem (0 errors, 1 warning)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+
+Verification directory cache: 62288 missing-path checks resolved; 459 directories read.
+Verification dependency cache: 5384 repeated reads; 2231 files; 24112594 bytes.

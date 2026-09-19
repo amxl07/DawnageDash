@@ -1,5 +1,4 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
 import { RatingRow } from './RatingRow';
@@ -77,7 +76,10 @@ describe('RatingRow', () => {
       accessibilityState: { selected: false, checked: false },
       accessibilityElementsHidden: false,
     });
-    expect(StyleSheet.flatten(option.props.style)).toMatchObject({ minWidth: 44, minHeight: 44 });
+    const optionStyle = typeof option.props.style === 'function'
+      ? option.props.style({ pressed: false })
+      : option.props.style;
+    expect(StyleSheet.flatten(optionStyle)).toMatchObject({ minWidth: 44, minHeight: 44 });
 
     act(() => option.props.onPress());
     expect(onChange).toHaveBeenCalledWith(5);

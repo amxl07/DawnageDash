@@ -89,8 +89,8 @@ export function SegmentedControl<T extends string>({
                 width: segmentWidth,
                 bottom: 0,
                 borderRadius: radius.md,
-                backgroundColor: colors.primaryFill,
-                borderWidth: 2,
+                backgroundColor: colors.primarySoft,
+                borderWidth: 1,
                 borderColor: colors.primary,
               },
               thumbStyle,
@@ -125,18 +125,18 @@ export function SegmentedControl<T extends string>({
                 borderRadius: radius.md,
                 borderWidth: large && active ? 2 : active ? 0 : 1,
                 borderColor: large && active ? colors.primary : colors.borderStrong,
-                backgroundColor: large && active ? colors.primaryFill : !active && pressed ? colors.elevated : 'transparent',
+                backgroundColor: large && active ? (pressed ? colors.primaryPressed : colors.primaryFill) : pressed ? colors.pressed : 'transparent',
               })}
             >
               {Icon ? (
                 <Icon
                   size={iconSize.md}
-                  color={active ? colors.onPrimary : colors.mutedForeground}
+                  color={active && large ? colors.onPrimary : active ? colors.primary : colors.mutedForeground}
                   strokeWidth={2}
                   accessible={false}
                 />
               ) : null}
-              <Text variant="bodySm" tone={active ? 'onPrimary' : 'default'}>
+              <Text variant="bodySm" tone={active && large ? 'onPrimary' : 'default'}>
                 {segment.label}
               </Text>
             </Pressable>

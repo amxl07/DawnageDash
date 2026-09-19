@@ -1,0 +1,32 @@
+Review your workout
+Check the completed and incomplete work before saving.
+Volume
+1,100
+kg × reps · completed strength sets
+Completed sets
+3
+sets
+Incomplete sets
+7
+sets
+7 sets are still incomplete. You can return to enter them or save this session as recorded.
+Return to editing
+Save workout
+Choose an exercise to view its sets. Your entries stay in place.
+Review workout
+01
+Bench press
+3 of 3 sets complete
+02
+Seated cable row
+0 of 3 sets complete
+03
+Dumbbell shoulder press
+0 of 3 sets complete
+04
+Cable curl
+0 of 1 sets complete
+Add exercise
+Add an exercise
+Add exercise
+Your session

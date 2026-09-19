@@ -1,9 +1,8 @@
 import { Text as RNText, type TextProps, type TextStyle } from 'react-native';
-import { tabularNums, type } from '@/theme';
-import { useTheme } from '@/theme';
+import { tabularNums, type, useTheme } from '@/theme';
 
 type Variant = keyof typeof type;
-type Tone = 'default' | 'muted' | 'primary' | 'success' | 'gold' | 'onPrimary';
+type Tone = 'default' | 'muted' | 'primary' | 'success' | 'gold' | 'destructive' | 'onPrimary';
 
 export type AppTextProps = TextProps & {
   variant?: Variant;
@@ -26,6 +25,7 @@ export function Text({
     primary: colors.primary,
     success: colors.success,
     gold: colors.gold,
+    destructive: colors.destructive,
     onPrimary: colors.onPrimary,
   };
   const base: TextStyle = { ...type[variant], color: toneColor[tone] };

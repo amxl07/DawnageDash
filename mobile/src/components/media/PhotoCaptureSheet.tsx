@@ -13,7 +13,7 @@ import {
 } from '@/hooks/useProgressPhotos';
 import { ANGLES, MAX_SOURCE_BYTES, uploadPhoto, type AngleKey } from '@/lib/photos';
 import { parseLocalDate } from '@/lib/dates';
-import { spacing } from '@/theme';
+import { spacing, useTheme } from '@/theme';
 import { PhotoSlot, type SlotState } from './PhotoSlot';
 
 const emptySlots = (): Record<AngleKey, SlotState> =>
@@ -36,6 +36,7 @@ type Props = {
 };
 
 export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: Props) {
+  const { colors } = useTheme();
   const { user } = useAuth();
   const mutation = usePhotoMutation();
 
@@ -52,6 +53,9 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
   const inFlightRef = useRef(false);
   const wasVisibleRef = useRef(false);
   const sessionDateRef = useRef<string | null>(null);
+  const sessionOwnerRef = useRef<string | null>(null);
+  const currentOwnerRef = useRef(user?.id);
+  currentOwnerRef.current = user?.id;
 
   useEffect(
     () => () => {
@@ -75,16 +79,17 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
       return;
     }
 
-    if (wasVisibleRef.current && sessionDateRef.current === date) return;
+    if (wasVisibleRef.current && sessionDateRef.current === date && sessionOwnerRef.current === user?.id) return;
     wasVisibleRef.current = true;
     sessionDateRef.current = date;
+    sessionOwnerRef.current = user?.id ?? null;
     sessionRef.current += 1;
     operationRef.current += 1;
     inFlightRef.current = false;
     setInteractionLocked(false);
 
     const next = emptySlots();
-    if (existing) {
+    if (existing && existing.user_id === user?.id) {
       next.front.url = existing.front_url;
       next.back.url = existing.back_url;
       next.side_left.url = existing.side_left_url;
@@ -96,7 +101,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
     setSaveError(null);
     failedPersistenceRef.current = null;
     setFailedPersistence(null);
-  }, [date, existing, visible]);
+  }, [date, existing, user?.id, visible]);
 
   const patch = (key: AngleKey, fields: Partial<SlotState>) => {
     const next = {
@@ -119,7 +124,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
   };
 
   const isCurrentOperation = (operation: Operation) =>
-    operation.id === operationRef.current && operation.session === sessionRef.current;
+    operation.id === operationRef.current && operation.session === sessionRef.current && user?.id === currentOwnerRef.current;
 
   const finishOperation = (operation: Operation) => {
     if (!isCurrentOperation(operation)) return;
@@ -226,7 +231,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
 
     patch(key, { uploading: true, error: null, errorKind: null });
     try {
-      const { publicUrl } = await uploadPhoto(
+      const { objectPath } = await uploadPhoto(
         pendingUri,
         user!.id,
         date,
@@ -241,7 +246,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
       }
 
       patch(key, {
-        url: publicUrl,
+        url: objectPath,
         uploading: false,
         pendingUri: null,
         pendingDims: undefined,
@@ -277,7 +282,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
     };
   };
 
-  const persistUploadedUrls = async (operation: Operation, payload: PhotoPayload) => {
+  const persistPhotoReferences = async (operation: Operation, payload: PhotoPayload) => {
     if (!isCurrentOperation(operation)) return false;
     await mutation.mutateAsync(payload);
     return isCurrentOperation(operation);
@@ -305,7 +310,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
       }
 
       persistencePayload = payloadForCurrentSlots();
-      if (!(await persistUploadedUrls(operation, persistencePayload))) return;
+      if (!(await persistPhotoReferences(operation, persistencePayload))) return;
 
       failedPersistenceRef.current = null;
       setFailedPersistence(null);
@@ -344,7 +349,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
       }
 
       persistencePayload = payloadForCurrentSlots();
-      if (!(await persistUploadedUrls(operation, persistencePayload))) return;
+      if (!(await persistPhotoReferences(operation, persistencePayload))) return;
 
       failedPersistenceRef.current = null;
       setFailedPersistence(null);
@@ -378,7 +383,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
     setSaveError(null);
 
     try {
-      if (!(await persistUploadedUrls(operation, payload))) return;
+      if (!(await persistPhotoReferences(operation, payload))) return;
 
       failedPersistenceRef.current = null;
       setFailedPersistence(null);
@@ -438,7 +443,13 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
             accessibilityLabel="Show alignment guide"
             accessibilityState={{ checked: showGuide }}
             hitSlop={8}
-            style={{ minHeight: 44, justifyContent: 'center' }}
+            style={({ pressed }) => ({
+              minHeight: 44,
+              justifyContent: 'center',
+              borderRadius: spacing.xs,
+              paddingHorizontal: spacing.xs,
+              backgroundColor: pressed ? colors.pressed : 'transparent',
+            })}
           >
             <Text variant="bodySm" tone="primary">
               {showGuide ? 'Hide guide' : 'Show guide'}

@@ -47,5 +47,6 @@ example
 .env.local
 
 # Local UI validation evidence may contain account data or device metadata.
+.browser-profile-*/
 docs/ui-release-evidence/*
 !docs/ui-release-evidence/.gitkeep

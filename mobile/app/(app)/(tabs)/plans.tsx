@@ -1,11 +1,12 @@
 import { useRouter } from 'expo-router';
 import { ClipboardList, Utensils } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
 import { CoachBadge } from '@/components/coach/CoachBadge';
 import { ExercisePrescriptionSheet } from '@/components/plans/ExercisePrescriptionSheet';
 import { PlanDayCard } from '@/components/plans/PlanDayCard';
+import { MotionReveal } from '@/components/ui/MotionReveal';
 import {
   Card,
   EmptyState,
@@ -25,7 +26,7 @@ import {
 import { usePlanProgress } from '@/hooks/usePlanProgress';
 import { relativeDays, usePlanProvenance } from '@/hooks/usePlanProvenance';
 import { formatTypeLabel } from '@/lib/workout-constants';
-import { HIT_SLOP_MIN, spacing, useTheme } from '@/theme';
+import { spacing, useTheme } from '@/theme';
 
 type Top = 'training' | 'nutrition';
 type ActivePlan = {
@@ -58,7 +59,7 @@ export default function PlansScreen() {
   const [selectedExercise, setSelectedExercise] = useState<PlanExercise | null>(null);
 
   const { data: profile, isLoading: profileLoading, isError, refetch } = useUserProfile();
-  const { data: plan, isLoading: planLoading } = useWorkoutPlan();
+  const { data: plan, isLoading: planLoading, isError: planIsError, refetch: refetchPlan } = useWorkoutPlan();
   const {
     data: meal,
     isLoading: mealLoading,
@@ -74,6 +75,8 @@ export default function PlansScreen() {
     !planLoading &&
     !progress.isLoading &&
     !isError &&
+    !planIsError &&
+    plan?.source === 'user' &&
     !progress.isError &&
     provenanceReady &&
     Boolean(pointer && plan?.days.length);
@@ -84,39 +87,13 @@ export default function PlansScreen() {
   }, [hasRenderedTrainingPlan, markSeen, updatedAt]);
 
   const supplements = parseSupplements(profile?.supplements_data ?? null);
-  const showNutritionExtras = !mealIsError && !mealLoading;
-
-  if (
-    profileLoading ||
-    (top === 'training' && (planLoading || progress.isLoading))
-  ) {
-    return (
-      <Screen archetype="root">
-        <SkeletonCard lines={2} />
-        <View style={{ height: spacing.base }} />
-        <SkeletonCard lines={4} />
-      </Screen>
-    );
-  }
-
-  if (isError || (top === 'training' && progress.isError)) {
-    return (
-      <Screen archetype="root">
-        <ErrorState
-          onRetry={() => {
-            void refetch();
-            if (progress.isError) void progress.refetch();
-          }}
-        />
-      </Screen>
-    );
-  }
+  const showNutritionExtras = Boolean(profile) && (!mealIsError || Boolean(meal)) && !mealLoading;
 
   const days = plan?.days ?? [];
-  const focusedDay = days.find((day) => {
+  const focusedDay = plan?.source === 'user' && !progress.isError ? days.find((day) => {
     const status = progress.statuses[day.day_number];
     return status === 'today' || status === 'active';
-  });
+  }) : undefined;
   const orderedDays = focusedDay
     ? [focusedDay, ...days.filter((day) => day.id !== focusedDay.id)]
     : days;
@@ -136,8 +113,20 @@ export default function PlansScreen() {
           ]}
         />
 
+        <MotionReveal revision={top} style={{ gap: spacing.md }} testID="plan-section-content">
+        {top === 'training' && isError ? (
+          <ErrorState title={profile ? "Profile couldn’t refresh" : "Profile didn’t load"} message="Retry to check your plan assignment." onRetry={() => void refetch()} retryLabel="Retry profile" />
+        ) : null}
+        {top === 'training' && planIsError ? (
+          <ErrorState title={plan ? "Training plan couldn’t refresh" : "Training plan didn’t load"} message={plan ? "Your saved plan is shown below." : "Retry to load your training plan."} onRetry={() => void refetchPlan()} retryLabel="Retry training plan" />
+        ) : null}
+        {top === 'training' && progress.isError ? (
+          <ErrorState title="Training history couldn’t load" message="Retry to check which sessions are logged." onRetry={() => void progress.refetch()} retryLabel="Retry training history" />
+        ) : null}
         {top === 'training' ? (
-          !pointer ? (
+          (profileLoading && !profile) || (planLoading && !plan) ? (
+            <SkeletonCard lines={4} />
+          ) : (!profile && isError) || (!plan && planIsError) ? null : !pointer ? (
             <Card>
               <EmptyState
                 icon={ClipboardList}
@@ -149,15 +138,18 @@ export default function PlansScreen() {
             <View style={{ gap: spacing.md }}>
               <Card style={{ gap: spacing.xs }}>
                 <Text variant="label" tone="muted">
-                  Assigned plan
+                  {plan?.source === 'template' ? 'Training template' : 'Assigned plan'}
                 </Text>
                 <Text variant="h2">
                   {pointer.level} · {formatTypeLabel(pointer.workoutType)}
                   {pointer.subCategory ? ` · ${formatTypeLabel(pointer.subCategory)}` : ''} ·{' '}
                   {pointer.daysPerWeek}-day
                 </Text>
-                <CoachBadge caption="Assigned by" />
-                {updatedAt ? (
+                {plan?.source === 'user' ? <CoachBadge caption="Assigned by" /> : null}
+                {plan?.source === 'template' ? (
+                  <Text variant="bodySm" tone="muted">Preview these exercises. Your coach can assign a plan tailored to you before you start.</Text>
+                ) : null}
+                {updatedAt && plan?.source === 'user' ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                     <Text variant="bodySm" tone={hasChanged ? 'primary' : 'muted'}>
                       {hasChanged ? 'Updated by your coach' : 'Last updated'}{' '}
@@ -188,45 +180,15 @@ export default function PlansScreen() {
                           : undefined
                       }
                       day={d}
-                      status={progress.statuses[d.day_number] ?? 'upcoming'}
-                      onStart={() =>
+                      status={plan?.source !== 'user' || progress.isError || progress.isLoading ? 'unknown' : progress.statuses[d.day_number] ?? 'upcoming'}
+                      onStart={plan?.source === 'user' ? () =>
                         router.push({
                           pathname: '/(app)/logger',
                           params: { day: String(d.day_number) },
-                        })
+                        }) : undefined
                       }
+                      onShowDetails={setSelectedExercise}
                     />
-                    {d.exercises.length ? (
-                      <Card style={{ gap: spacing.xs }}>
-                        <Text variant="label" tone="muted">
-                          Exercise details
-                        </Text>
-                        {d.exercises.map((exercise, exerciseIndex) => (
-                          <View
-                            key={exercise.id ?? exerciseIndex}
-                            style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
-                          >
-                            <Text variant="bodySm" style={{ flex: 1 }}>
-                              {exercise.name}
-                            </Text>
-                            <Pressable
-                              onPress={() => setSelectedExercise(exercise)}
-                              accessibilityRole="button"
-                              accessibilityLabel={`Show details for ${exercise.name}`}
-                              style={{
-                                minWidth: HIT_SLOP_MIN,
-                                minHeight: HIT_SLOP_MIN,
-                                justifyContent: 'center',
-                              }}
-                            >
-                              <Text variant="bodySm" tone="primary">
-                                Details
-                              </Text>
-                            </Pressable>
-                          </View>
-                        ))}
-                      </Card>
-                    ) : null}
                   </View>
                 ))
               ) : (
@@ -261,11 +223,11 @@ export default function PlansScreen() {
           )
         ) : (
           <View style={{ gap: spacing.md }}>
-            {mealIsError ? (
-              <ErrorState onRetry={() => void refetchMeal()} />
-            ) : mealLoading ? (
+            {mealIsError ? <ErrorState title={meal ? "Meal plan couldn’t refresh" : "Meal plan didn’t load"} onRetry={() => void refetchMeal()} retryLabel="Retry meal plan" /> : null}
+            {isError ? <ErrorState title="Nutrition notes couldn’t load" onRetry={() => void refetch()} retryLabel="Retry profile" /> : null}
+            {(mealLoading && !meal) || (profileLoading && !profile) ? (
               <SkeletonCard lines={4} />
-            ) : !meal?.pointer ? (
+            ) : (mealIsError && !meal) || (isError && !profile) ? null : !meal?.pointer ? (
               <Card>
                 <EmptyState
                   icon={Utensils}
@@ -366,6 +328,7 @@ export default function PlansScreen() {
             ) : null}
           </View>
         )}
+        </MotionReveal>
       </View>
 
       <ExercisePrescriptionSheet

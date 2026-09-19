@@ -1,5 +1,4 @@
-import { StyleSheet, Text as NativeText } from 'react-native';
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
+import { Platform, StyleSheet, Text as NativeText } from 'react-native';
 import { act, create } from 'react-test-renderer';
 
 import { CheckInFieldBlock } from './CheckInFieldBlock';
@@ -30,7 +29,7 @@ it('distinguishes unanswered, answered, and invalid without hiding children', ()
     </CheckInFieldBlock>,
   ); });
   const field = renderer.root.findAll(
-    (node: { type: string; props: { testID?: string } }) => (
+    (node: { type: unknown; props: { testID?: string } }) => (
       node.type === 'View' && node.props.testID === 'field-energy'
     ),
   )[0];
@@ -51,4 +50,20 @@ it('distinguishes unanswered, answered, and invalid without hiding children', ()
   ); });
   expect(JSON.stringify(renderer.toJSON())).toContain('Choose your energy level.');
   expect(renderer.root.findByProps({ children: 'Choose your energy level.' }).props.accessibilityLiveRegion).toBe('polite');
+});
+
+it('makes the field heading programmatically focusable on web', () => {
+  const platform = jest.replaceProperty(Platform, 'OS', 'web');
+  try {
+    let renderer!: ReturnType<typeof create>;
+    act(() => { renderer = create(
+      <CheckInFieldBlock label="Energy" complete={false} testID="field-energy">
+        <NativeText>scale</NativeText>
+      </CheckInFieldBlock>,
+    ); });
+
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Energy' }).props.tabIndex).toBe(-1);
+  } finally {
+    platform.restore();
+  }
 });

@@ -1,0 +1,10 @@
+file:///Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/scripts/capture-redesign.mjs:93
+  const timer = setTimeout(() => { waiting.delete(id); reject(new Error('Timed out: ' + method)); }, timeout);
+                                                              ^
+
+Error: Timed out: Runtime.evaluate
+    at Timeout._onTimeout (file:///Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/scripts/capture-redesign.mjs:93:63)
+    at listOnTimeout (node:internal/timers:588:17)
+    at process.processTimers (node:internal/timers:523:7)
+
+Node.js v22.16.0

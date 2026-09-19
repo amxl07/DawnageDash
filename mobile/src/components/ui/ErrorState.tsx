@@ -10,12 +10,15 @@ type Props = {
   /** Say what to do next, not the raw error code. */
   message?: string;
   onRetry?: () => void;
+  /** Distinguishes independent retry actions visually and to assistive technology. */
+  retryLabel?: string;
 };
 
 export function ErrorState({
   title = "That didn't load",
   message = 'Check your connection and try again.',
   onRetry,
+  retryLabel = 'Retry',
 }: Props) {
   const { colors } = useTheme();
   return (
@@ -29,7 +32,7 @@ export function ErrorState({
       </Text>
       {onRetry ? (
         <Button
-          label="Retry"
+          label={retryLabel}
           variant="secondary"
           onPress={onRetry}
           style={{ marginTop: spacing.sm }}

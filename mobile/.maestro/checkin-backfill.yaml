@@ -1,0 +1,26 @@
+appId: ${DAWNAGE_E2E_APP_ID}
+name: Past-day draft keeps its original reporting date
+---
+- runFlow: helpers/sign-in.yaml
+- evalScript: "${ output.appScheme = DAWNAGE_E2E_APP_ID === 'com.dawnage.app.dev' ? 'dawnage-dev' : DAWNAGE_E2E_APP_ID === 'com.dawnage.app.preview' ? 'dawnage-preview' : DAWNAGE_E2E_APP_ID === 'com.dawnage.app' ? 'dawnage' : ''; if (!output.appScheme) throw new Error('Unsupported DAWNAGE_E2E_APP_ID'); }"
+- evalScript: ${ const d = new Date(); d.setDate(d.getDate() - 2); output.recordDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+- openLink: ${output.appScheme}://check-in?date=${output.recordDate}
+- assertVisible: "Daily Record"
+- assertVisible: "Recording a past day. This date stays selected until you change it."
+- scrollUntilVisible:
+    element:
+      id: "checkin-energy-rating-5"
+    direction: DOWN
+- tapOn:
+    id: "checkin-energy-rating-5"
+- scrollUntilVisible:
+    element:
+      text: "Saved on this device"
+    direction: UP
+- assertVisible: "Saved on this device"
+- stopApp
+- launchApp
+- openLink: ${output.appScheme}://check-in?date=${output.recordDate}
+- assertVisible: "Daily Record"
+- assertVisible: "Recording a past day. This date stays selected until you change it."
+- assertVisible: "Saved on this device"

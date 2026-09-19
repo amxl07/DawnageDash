@@ -1,6 +1,5 @@
 import { StyleSheet, Text as NativeText } from 'react-native';
 
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
 import type { PlanExercise } from '@/hooks/usePlans';
@@ -130,7 +129,7 @@ describe('ExercisePrescriptionSheet', () => {
     const { renderer } = renderSheet(prescription, onSubstitute);
     const action = renderer.root.findByProps({ accessibilityLabel: 'Use Chest-supported row' });
 
-    expect(StyleSheet.flatten(action.props.style)).toMatchObject({ minHeight: 44 });
+    expect(StyleSheet.flatten(action.props.style({ pressed: false }))).toMatchObject({ minHeight: 44 });
     act(() => action.props.onPress());
     expect(onSubstitute).toHaveBeenCalledWith(prescription.substitutions[0]);
   });

@@ -1,10 +1,12 @@
 import { ArrowLeft, ChevronDown, Lock, Mail, Phone, User } from 'lucide-react-native';
-import { useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
 
-import { DawnGlow, Logo } from '@/components/brand';
+import { Logo } from '@/components/brand';
 import { CountryPicker, type Country } from '@/components/auth/CountryPicker';
-import { Button, Card, Input, Screen, Text } from '@/components/ui';
+import { Button, Input, Screen, Text } from '@/components/ui';
+import { MotionReveal } from '@/components/ui/MotionReveal';
+import { requestPasswordReset } from '@/lib/password-reset';
 import { supabase } from '@/lib/supabase';
 import { HIT_SLOP_MIN, iconSize, radius, spacing, type, useTheme } from '@/theme';
 
@@ -18,7 +20,7 @@ function friendlyError(message: string): string {
   if (m.includes('email not confirmed')) return 'Please confirm your email first — check your inbox.';
   if (m.includes('already registered')) return 'An account with this email already exists.';
   if (m.includes('network') || m.includes('fetch')) return 'Check your connection and try again.';
-  return message;
+  return 'We couldn’t complete that request. Please try again.';
 }
 
 export default function LoginScreen() {
@@ -42,6 +44,13 @@ export default function LoginScreen() {
   const passwordRef = useRef<TextInput>(null);
   const confirmRef = useRef<TextInput>(null);
   const phoneRef = useRef<TextInput>(null);
+  const emailRef = useRef<TextInput>(null);
+  const nameRef = useRef<TextInput>(null);
+  const submission = useRef(false);
+  useEffect(() => {
+    const message = formError || Object.values(fieldErrors).filter(Boolean).join(' ');
+    if (message) AccessibilityInfo.announceForAccessibility(message);
+  }, [fieldErrors, formError]);
 
   const reset = (next: Mode) => {
     setMode(next);
@@ -56,7 +65,6 @@ export default function LoginScreen() {
     const isVerification = sent === 'verification';
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <DawnGlow />
         <Screen>
           <View style={{ paddingTop: spacing['2xl'], gap: spacing.lg }}>
           <View style={{ alignItems: 'center', gap: spacing.md }}>
@@ -85,30 +93,45 @@ export default function LoginScreen() {
     if (!country) errs.country = 'Please select your country.';
     if (!phoneNumber.trim()) errs.phone = 'Please enter your phone number.';
     setFieldErrors(errs);
+    if (errs.fullName) nameRef.current?.focus();
+    else if (errs.phone && !errs.country) phoneRef.current?.focus();
     return Object.keys(errs).length === 0;
   };
 
   const handleSignIn = async () => {
+    if (submission.current) return;
+    const errors: Record<string, string> = {};
+    if (!email.trim()) errors.email = 'Enter your email address.';
+    if (!password) errors.password = 'Enter your password.';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) { if (errors.email) emailRef.current?.focus(); else passwordRef.current?.focus(); return; }
+    submission.current = true;
     setLoading(true);
     setFormError(null);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
       if (error) throw error;
       // The (auth) layout redirects on session; nothing to do here.
     } catch (e) {
       setFormError(friendlyError((e as Error).message));
     } finally {
+      submission.current = false;
       setLoading(false);
     }
   };
 
   const handleSignUp = async () => {
+    if (submission.current) return;
     const errs: Record<string, string> = {};
     if (password.length < 6) errs.password = 'Password must be at least 6 characters.';
     if (password !== confirmPassword) errs.confirmPassword = 'Passwords do not match.';
     setFieldErrors(errs);
-    if (Object.keys(errs).length) return;
-
+    if (Object.keys(errs).length) {
+      if (errs.password) passwordRef.current?.focus();
+      else confirmRef.current?.focus();
+      return;
+    }
+    submission.current = true;
     setLoading(true);
     setFormError(null);
     try {
@@ -130,26 +153,29 @@ export default function LoginScreen() {
     } catch (e) {
       setFormError(friendlyError((e as Error).message));
     } finally {
+      submission.current = false;
       setLoading(false);
     }
   };
 
   const handleForgot = async () => {
+    if (submission.current) return;
     if (!email.trim()) {
       setFieldErrors({ email: 'Please enter your email address.' });
+      emailRef.current?.focus();
       return;
     }
+    submission.current = true;
     setLoading(true);
     setFormError(null);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'dawnage://reset-password',
-      });
+      const { error } = await requestPasswordReset(supabase.auth, email);
       if (error) throw error;
       setSent('reset');
     } catch (e) {
       setFormError(friendlyError((e as Error).message));
     } finally {
+      submission.current = false;
       setLoading(false);
     }
   };
@@ -161,7 +187,7 @@ export default function LoginScreen() {
         ? step === 1
           ? "Let's get started"
           : 'Secure your account'
-        : 'Welcome back';
+        : 'Welcome\nback.';
 
   const subheading =
     mode === 'forgot'
@@ -170,7 +196,7 @@ export default function LoginScreen() {
         ? step === 1
           ? 'Tell us a bit about yourself'
           : 'Create your credentials'
-        : 'Enter your credentials to access your account';
+        : 'Your day, your training, your coach. All in one place.';
 
   return (
     <KeyboardAvoidingView
@@ -178,24 +204,25 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <DawnGlow />
       <Screen>
-        <View style={{ alignItems: 'center', paddingTop: spacing['2xl'] }}>
-          {/* The mark carries the brand; the heading below carries the task. */}
-          <Logo variant="lockup" size={196} />
+        <View style={{ alignItems: 'flex-start', paddingTop: spacing.base }}>
+          <Logo variant="wordmark" size={124} />
         </View>
 
-        <View style={{ alignItems: 'center', gap: spacing.xs, marginTop: spacing['2xl'] }}>
-          <Text variant="h1">{heading}</Text>
-          <Text variant="bodySm" tone="muted" style={{ textAlign: 'center' }}>
+        <MotionReveal revision={`${mode}:${step}`} style={{ gap: spacing.lg }}>
+        <View style={{ gap: spacing.md, marginTop: 48 }}>
+          <Text variant="display" accessibilityRole="header" style={{ letterSpacing: -1 }}>{heading}</Text>
+          <Text variant="body" tone="muted">
             {subheading}
           </Text>
         </View>
 
-        <Card style={{ marginTop: spacing.lg, gap: spacing.base }}>
+        <View style={{ marginTop: 36, gap: spacing.base }}>
+          {formError ? <Text variant="bodySm" tone="destructive" accessibilityLiveRegion="polite">{formError}</Text> : null}
           {mode === 'forgot' ? (
             <>
               <Input
+                ref={emailRef}
                 label="Email"
                 icon={Mail}
                 value={email}
@@ -214,6 +241,7 @@ export default function LoginScreen() {
           ) : mode === 'signUp' && step === 1 ? (
             <>
               <Input
+                ref={nameRef}
                 label="Full name"
                 icon={User}
                 value={fullName}
@@ -222,7 +250,7 @@ export default function LoginScreen() {
                 autoCapitalize="words"
                 autoComplete="name"
                 returnKeyType="next"
-                placeholder="John Doe"
+                placeholder="Your full name"
               />
 
               <View style={{ gap: spacing.xs }}>
@@ -234,7 +262,7 @@ export default function LoginScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Select country"
                   accessibilityValue={{ text: country?.country ?? 'None selected' }}
-                  style={{
+                  style={({ pressed }) => ({
                     flexDirection: 'row',
                     alignItems: 'center',
                     gap: spacing.sm,
@@ -243,8 +271,8 @@ export default function LoginScreen() {
                     borderRadius: radius.md,
                     borderWidth: 1,
                     borderColor: fieldErrors.country ? colors.destructive : colors.borderStrong,
-                    backgroundColor: colors.elevated,
-                  }}
+                    backgroundColor: pressed ? colors.pressed : colors.elevated,
+                  })}
                 >
                   {country ? (
                     <>
@@ -321,6 +349,7 @@ export default function LoginScreen() {
           ) : (
             <>
               <Input
+                ref={emailRef}
                 testID="login-email"
                 label="Email"
                 icon={Mail}
@@ -370,19 +399,20 @@ export default function LoginScreen() {
                   hitSlop={8}
                   accessibilityRole="button"
                   accessibilityLabel="Forgot your password?"
-                  style={{ alignSelf: 'flex-end', minHeight: 32, justifyContent: 'center' }}
+                  style={({ pressed }) => ({
+                    alignSelf: 'flex-end',
+                    minHeight: 48,
+                    justifyContent: 'center',
+                    borderRadius: radius.sm,
+                    paddingHorizontal: spacing.xs,
+                    backgroundColor: pressed ? colors.pressed : 'transparent',
+                  })}
                 >
                   <Text variant="bodySm" tone="primary">
-                    Forgot?
+                    Forgot password?
                   </Text>
                 </Pressable>
               )}
-
-              {formError ? (
-                <Text variant="bodySm" tone="primary" accessibilityLiveRegion="polite">
-                  {formError}
-                </Text>
-              ) : null}
 
               <View style={{ flexDirection: 'row', gap: spacing.sm }}>
                 {mode === 'signUp' ? (
@@ -403,7 +433,7 @@ export default function LoginScreen() {
               </View>
             </>
           )}
-        </Card>
+        </View>
 
         {mode !== 'forgot' ? (
           <Button
@@ -413,6 +443,7 @@ export default function LoginScreen() {
             style={{ marginTop: spacing.base }}
           />
         ) : null}
+        </MotionReveal>
       </Screen>
       </View>
 

@@ -30,12 +30,14 @@ export function PageHeader({
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel={backLabel}
-          style={{
+          style={({ pressed }) => ({
             minWidth: HIT_SLOP_MIN,
             minHeight: HIT_SLOP_MIN,
             alignItems: 'flex-start',
             justifyContent: 'center',
-          }}
+            borderRadius: 12,
+            backgroundColor: pressed ? colors.pressed : 'transparent',
+          })}
         >
           <ArrowLeft size={iconSize.lg} color={colors.foreground} strokeWidth={2} />
         </Pressable>

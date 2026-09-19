@@ -4,14 +4,16 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import {
   boundWeeklyStep,
   normalizeWeeklyDraft,
+  normalizeWeeklyReport,
   weeklyDraftKey,
   type WeeklyFeedbackDraft,
   type WeeklyFeedbackForm,
+  type WeeklyReportSnapshot,
 } from '@/lib/weekly-feedback';
 
 export type WeeklyDraftStatus = 'idle' | 'saving' | 'saved' | 'error';
 
-type SaveOptions = { immediate?: boolean };
+type SaveOptions = { immediate?: boolean; report?: WeeklyReportSnapshot };
 type PendingSave = {
   timer: ReturnType<typeof setTimeout>;
   resolve: (saved: boolean) => void;
@@ -54,6 +56,7 @@ export function useWeeklyFeedbackDraft(userId: string | undefined) {
       const draft: WeeklyFeedbackDraft = {
         form: { ...form },
         step: boundWeeklyStep(step),
+        ...(options.report ? { report: normalizeWeeklyReport(options.report) } : {}),
       };
       if (mountedRef.current && activeIdentityRef.current === identity) {
         setDraftStatus('saving');

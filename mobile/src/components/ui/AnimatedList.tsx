@@ -22,9 +22,9 @@ import { useMotion } from '@/theme';
 export function useListMotion() {
   const motion = useMotion();
   return {
-    itemLayoutAnimation: motion.enabled ? LinearTransition.duration(260) : undefined,
-    entering: motion.enabled ? FadeIn.duration(220) : undefined,
-    exiting: motion.enabled ? FadeOut.duration(160) : undefined,
+    itemLayoutAnimation: motion.enabled ? LinearTransition.duration(motion.duration.enter) : undefined,
+    entering: motion.enabled ? FadeIn.duration(motion.duration.enter) : undefined,
+    exiting: motion.enabled ? FadeOut.duration(motion.duration.exit) : undefined,
     enabled: motion.enabled,
   };
 }

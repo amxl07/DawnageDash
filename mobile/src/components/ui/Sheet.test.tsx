@@ -1,6 +1,5 @@
-import { AccessibilityInfo, findNodeHandle, StyleSheet, Text } from 'react-native';
+import { AccessibilityInfo, BackHandler, findNodeHandle, Platform, StyleSheet, Text, View } from 'react-native';
 
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +10,8 @@ let mockModalOnChange: ((index: number) => void) | undefined;
 let mockModalProps: Record<string, unknown> = {};
 const mockPresent = jest.fn();
 const mockDismiss = jest.fn();
+let mockHardwareBackHandler: (() => boolean) | undefined;
+const mockRemoveHardwareBackHandler = jest.fn();
 
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = jest.requireActual('react');
@@ -20,16 +21,22 @@ jest.mock('@gorhom/bottom-sheet', () => {
     (
       {
         children,
+        handleComponent: HandleComponent,
         onChange,
         ...props
-      }: { children: React.ReactNode; onChange?: (index: number) => void } & Record<string, unknown>,
+      }: { children: React.ReactNode; handleComponent?: React.ComponentType<Record<string, unknown>>; onChange?: (index: number) => void } & Record<string, unknown>,
       ref: React.ForwardedRef<{ present: () => void; dismiss: () => void }>,
     ) => {
       mockModalOnChange = onChange;
-      mockModalProps = props;
+      mockModalProps = { ...props, handleComponent: HandleComponent };
       React.useImperativeHandle(ref, () => ({ present: mockPresent, dismiss: mockDismiss }));
       // Rendering children must not synthesize a presentation state change.
-      return React.createElement(NativeView, null, children);
+      return React.createElement(
+        NativeView,
+        null,
+        HandleComponent ? React.createElement(HandleComponent, { animatedIndex: {}, animatedPosition: {} }) : null,
+        children,
+      );
     },
   );
   Modal.displayName = 'MockBottomSheetModal';
@@ -37,6 +44,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
   return {
     BottomSheetBackdrop: NativeView,
     BottomSheetFlatList: NativeView,
+    BottomSheetHandle: ({ children, style }: { children?: React.ReactNode; style?: unknown }) => React.createElement(NativeView, { style }, children),
     BottomSheetModal: Modal,
     BottomSheetScrollView: NativeView,
     BottomSheetView: NativeView,
@@ -60,6 +68,16 @@ jest.mock('react-native', () => {
       value: { ...actual.AccessibilityInfo, setAccessibilityFocus: jest.fn() },
     },
     findNodeHandle: { configurable: true, value: jest.fn(() => 42) },
+    BackHandler: {
+      configurable: true,
+      value: {
+        ...actual.BackHandler,
+        addEventListener: jest.fn((_event: string, handler: () => boolean) => {
+          mockHardwareBackHandler = handler;
+          return { remove: mockRemoveHardwareBackHandler };
+        }),
+      },
+    },
   });
   return mock;
 });
@@ -92,6 +110,7 @@ describe('Sheet', () => {
     jest.clearAllMocks();
     mockModalOnChange = undefined;
     mockModalProps = {};
+    mockHardwareBackHandler = undefined;
   });
 
   it('provides a named 44pt close action and bottom safe-area clearance', () => {
@@ -120,8 +139,10 @@ describe('Sheet', () => {
       return node;
     };
 
-    expect(StyleSheet.flatten(getByLabelText('Close Exercise details').props.style)).toMatchObject({ minWidth: 44, minHeight: 44 });
+    const closeStyle = getByLabelText('Close Exercise details').props.style;
+    expect(StyleSheet.flatten(typeof closeStyle === 'function' ? closeStyle({ pressed: false }) : closeStyle)).toMatchObject({ minWidth: 44, minHeight: 44 });
     expect(StyleSheet.flatten(getByTestId('sheet-content').props.style)).toMatchObject({ paddingBottom: 34 });
+    expect(mockModalProps).toMatchObject({ enableDynamicSizing: false, snapPoints: ['85%'] });
   });
 
   it('waits for presentation before moving accessibility focus to its title once', () => {
@@ -147,19 +168,77 @@ describe('Sheet', () => {
     expect(mockAccessibilityInfo.setAccessibilityFocus).toHaveBeenCalledTimes(1);
   });
 
+  it('focuses the title and restores its trigger directly on web', () => {
+    mockSafeAreaInsets.mockReturnValue({ top: 47, right: 0, bottom: 34, left: 0 });
+    const platform = jest.replaceProperty(Platform, 'OS', 'web');
+    const titleFocus = jest.fn();
+    const triggerFocus = jest.fn();
+    const trigger = { focus: triggerFocus } as unknown as View;
+    const returnFocusRef = { current: trigger };
+    const onClose = jest.fn();
+    let renderer: ReturnType<typeof create> | undefined;
+
+    mockFindNodeHandle.mockImplementation(() => {
+      throw new Error('react-native-web findNodeHandle is unavailable');
+    });
+
+    try {
+      act(() => {
+        renderer = create(
+          <Sheet visible={false} title="Exercise details" onClose={onClose} returnFocusRef={returnFocusRef}>
+            <Text>Prescription</Text>
+          </Sheet>,
+        );
+      });
+      const titleInstance: unknown = renderer!.root.findByProps({ accessibilityRole: 'header' }).instance;
+      if (typeof titleInstance !== 'object' || titleInstance === null) throw new Error('Expected a mounted title ref');
+      Object.defineProperty(titleInstance, 'focus', { configurable: true, value: titleFocus });
+      act(() => {
+        renderer!.update(
+          <Sheet visible title="Exercise details" onClose={onClose} returnFocusRef={returnFocusRef}>
+            <Text>Prescription</Text>
+          </Sheet>,
+        );
+      });
+
+      expect(renderer!.root.findByProps({ accessibilityRole: 'header' }).props.tabIndex).toBe(-1);
+      act(() => mockModalOnChange?.(1));
+      expect(titleFocus).toHaveBeenCalledTimes(1);
+
+      act(() => {
+        renderer!.update(
+          <Sheet visible={false} title="Exercise details" onClose={onClose} returnFocusRef={returnFocusRef}>
+            <Text>Prescription</Text>
+          </Sheet>,
+        );
+      });
+      act(() => (mockModalProps.onDismiss as (() => void) | undefined)?.());
+
+      expect(triggerFocus).toHaveBeenCalledTimes(1);
+      expect(mockFindNodeHandle).not.toHaveBeenCalled();
+    } finally {
+      mockFindNodeHandle.mockImplementation(() => 42);
+      platform.restore();
+      const mountedRenderer = renderer;
+      if (mountedRenderer) act(() => mountedRenderer.unmount());
+    }
+  });
+
   it('disables pan and backdrop dismissal while its owner is saving', () => {
     mockSafeAreaInsets.mockReturnValue({ top: 47, right: 0, bottom: 34, left: 0 });
     const NonDismissibleSheet = Sheet as React.ComponentType<
       React.ComponentProps<typeof Sheet> & { dismissible: boolean }
     >;
 
+    const onClose = jest.fn();
+    let renderer: ReturnType<typeof create>;
     act(() => {
-      create(
+      renderer = create(
         <NonDismissibleSheet
           visible
           dismissible={false}
           title="Progress photos"
-          onClose={jest.fn()}
+          onClose={onClose}
         >
           <Text>Saving</Text>
         </NonDismissibleSheet>,
@@ -171,6 +250,45 @@ describe('Sheet', () => {
       props: { pressBehavior?: string };
     };
     expect(renderBackdrop({}).props.pressBehavior).toBe('none');
+    const close = renderer!.root.findByProps({ accessibilityLabel: 'Close Progress photos' });
+    expect(close.props.accessibilityState).toEqual({ disabled: true });
+    act(() => close.props.onPress());
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('does not dismiss an initially hidden sheet before its first presentation', () => {
+    mockSafeAreaInsets.mockReturnValue({ top: 47, right: 0, bottom: 34, left: 0 });
+    const onClose = jest.fn();
+    let renderer: ReturnType<typeof create>;
+
+    act(() => {
+      renderer = create(
+        <Sheet visible={false} title="Exercise details" onClose={onClose}>
+          <Text>Prescription</Text>
+        </Sheet>,
+      );
+    });
+    expect(mockDismiss).not.toHaveBeenCalled();
+    expect(mockPresent).not.toHaveBeenCalled();
+
+    act(() => {
+      renderer!.update(
+        <Sheet visible title="Exercise details" onClose={onClose}>
+          <Text>Prescription</Text>
+        </Sheet>,
+      );
+    });
+    expect(mockPresent).toHaveBeenCalledTimes(1);
+    expect(mockDismiss).not.toHaveBeenCalled();
+
+    act(() => {
+      renderer!.update(
+        <Sheet visible={false} title="Exercise details" onClose={onClose}>
+          <Text>Prescription</Text>
+        </Sheet>,
+      );
+    });
+    expect(mockDismiss).toHaveBeenCalledTimes(1);
   });
 
   it('consumes the native onDismiss after a controlled clean close', () => {
@@ -295,5 +413,55 @@ describe('Sheet', () => {
     });
 
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('restores accessibility focus to the trigger after a controlled close', () => {
+    mockSafeAreaInsets.mockReturnValue({ top: 47, right: 0, bottom: 34, left: 0 });
+    const trigger = {} as View;
+    const returnFocusRef = { current: trigger };
+    mockFindNodeHandle.mockImplementation((node) => (node === trigger ? 84 : 42));
+    let renderer: ReturnType<typeof create>;
+
+    act(() => {
+      renderer = create(
+        <Sheet visible title="Exercise details" onClose={jest.fn()} returnFocusRef={returnFocusRef}>
+          <Text>Prescription</Text>
+        </Sheet>,
+      );
+    });
+    act(() => mockModalOnChange?.(0));
+    act(() => {
+      renderer!.update(
+        <Sheet visible={false} title="Exercise details" onClose={jest.fn()} returnFocusRef={returnFocusRef}>
+          <Text>Prescription</Text>
+        </Sheet>,
+      );
+    });
+
+    expect(mockAccessibilityInfo.setAccessibilityFocus).not.toHaveBeenCalledWith(84);
+    act(() => {
+      (mockModalProps.onDismiss as (() => void) | undefined)?.();
+    });
+    expect(mockAccessibilityInfo.setAccessibilityFocus).toHaveBeenLastCalledWith(84);
+  });
+
+  it('handles hardware back explicitly and respects non-dismissible work', () => {
+    mockSafeAreaInsets.mockReturnValue({ top: 47, right: 0, bottom: 34, left: 0 });
+    const onClose = jest.fn();
+
+    act(() => {
+      create(
+        <Sheet visible dismissible={false} title="Progress photos" onClose={onClose}>
+          <Text>Saving</Text>
+        </Sheet>,
+      );
+    });
+
+    expect(BackHandler.addEventListener).toHaveBeenCalledWith(
+      'hardwareBackPress',
+      expect.any(Function),
+    );
+    expect(mockHardwareBackHandler?.()).toBe(true);
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

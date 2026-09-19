@@ -1,18 +1,23 @@
 import {
   BottomSheetBackdrop,
   BottomSheetFlatList,
+  BottomSheetHandle,
   BottomSheetModal,
   BottomSheetScrollView,
-  BottomSheetView,
   type BottomSheetBackdropProps,
+  type BottomSheetHandleProps,
 } from '@gorhom/bottom-sheet';
 import { X } from 'lucide-react-native';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { AccessibilityInfo, findNodeHandle, Pressable, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
+import { AccessibilityInfo, BackHandler, findNodeHandle, Platform, Pressable, View, type TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HIT_SLOP_MIN, iconSize, radius, spacing, useTheme } from '@/theme';
 import { Text } from './Text';
+
+function isWebFocusable(node: unknown): node is { focus: () => void } {
+  return typeof node === 'object' && node !== null && 'focus' in node && typeof node.focus === 'function';
+}
 
 type Props = {
   visible: boolean;
@@ -23,6 +28,8 @@ type Props = {
   heightRatio?: number;
   /** Disables gesture/backdrop dismissal while an owned operation cannot be interrupted. */
   dismissible?: boolean;
+  /** Trigger that regains accessibility focus after the sheet closes. */
+  returnFocusRef?: RefObject<View | TextInput | null>;
 };
 
 /**
@@ -48,6 +55,7 @@ export function Sheet({
   children,
   heightRatio = 0.85,
   dismissible = true,
+  returnFocusRef,
 }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -55,27 +63,61 @@ export function Sheet({
   const titleRef = useRef<View>(null);
   const hasFocusedTitle = useRef(false);
   const controlledDismissPending = useRef(false);
+  const restoreFocusPending = useRef(false);
+  const wasVisible = useRef(false);
 
   const snapPoints = useMemo(() => [`${Math.round(heightRatio * 100)}%`], [heightRatio]);
 
   useEffect(() => {
     if (!visible) {
+      const shouldRestoreFocus = wasVisible.current;
+      if (!shouldRestoreFocus) return;
+      wasVisible.current = false;
       hasFocusedTitle.current = false;
       controlledDismissPending.current = true;
+      restoreFocusPending.current = shouldRestoreFocus;
       ref.current?.dismiss();
       return;
     }
 
+    wasVisible.current = true;
     hasFocusedTitle.current = false;
     controlledDismissPending.current = false;
+    restoreFocusPending.current = false;
     ref.current?.present();
-  }, [visible]);
+  }, [returnFocusRef, visible]);
+
+  const restoreTriggerFocus = useCallback(() => {
+    if (!restoreFocusPending.current) return;
+    restoreFocusPending.current = false;
+    const trigger = returnFocusRef?.current;
+    if (!trigger) return;
+    if (Platform.OS === 'web') {
+      if (isWebFocusable(trigger)) trigger.focus();
+      return;
+    }
+    const triggerHandle = findNodeHandle(trigger);
+    if (triggerHandle != null) AccessibilityInfo.setAccessibilityFocus(triggerHandle);
+  }, [returnFocusRef]);
+
+  useEffect(() => {
+    if (!visible) return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (dismissible) onClose();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [dismissible, onClose, visible]);
 
   const handleSheetChange = useCallback(
     (index: number) => {
-      if (!visible || index !== 0 || hasFocusedTitle.current) return;
+      if (!visible || index < 0 || hasFocusedTitle.current) return;
 
       hasFocusedTitle.current = true;
+      if (Platform.OS === 'web') {
+        if (isWebFocusable(titleRef.current)) titleRef.current.focus();
+        return;
+      }
       const titleHandle = findNodeHandle(titleRef.current);
       if (titleHandle != null) AccessibilityInfo.setAccessibilityFocus(titleHandle);
     },
@@ -88,44 +130,41 @@ export function Sheet({
         {...props}
         appearsOnIndex={0}
         disappearsOnIndex={-1}
-        opacity={0.6}
+        opacity={1}
+        style={[props.style, { backgroundColor: colors.scrim }]}
         pressBehavior={dismissible ? 'close' : 'none'}
       />
     ),
-    [dismissible],
+    [colors.scrim, dismissible],
   );
 
   const handleDismiss = useCallback(() => {
     if (controlledDismissPending.current) {
       controlledDismissPending.current = false;
+      restoreTriggerFocus();
       return;
     }
 
     if (!dismissible && visible) {
       ref.current?.present();
+      onClose();
+      return;
     }
+    restoreFocusPending.current = wasVisible.current;
+    wasVisible.current = false;
+    restoreTriggerFocus();
     onClose();
-  }, [dismissible, onClose, visible]);
+  }, [dismissible, onClose, restoreTriggerFocus, visible]);
 
-  return (
-    <BottomSheetModal
-      ref={ref}
-      snapPoints={snapPoints}
-      onChange={handleSheetChange}
-      onDismiss={handleDismiss}
-      backdropComponent={renderBackdrop}
-      enablePanDownToClose={dismissible}
-      backgroundStyle={{
-        backgroundColor: colors.card,
-        borderTopLeftRadius: radius.card,
-        borderTopRightRadius: radius.card,
-      }}
-      handleIndicatorStyle={{ backgroundColor: colors.borderStrong }}
-      keyboardBehavior="interactive"
-      keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
-    >
-      <BottomSheetView
+  const renderHandle = useCallback((props: BottomSheetHandleProps) => (
+    <View>
+      <BottomSheetHandle
+        {...props}
+        style={{ paddingHorizontal: 0, paddingBottom: 0 }}
+        indicatorStyle={{ backgroundColor: colors.borderStrong }}
+      />
+      <View
+        testID="sheet-header"
         style={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -136,27 +175,54 @@ export function Sheet({
           borderBottomColor: colors.border,
         }}
       >
-        <View ref={titleRef} accessibilityRole="header">
+        <View ref={titleRef} accessibilityRole="header" tabIndex={Platform.OS === 'web' ? -1 : undefined}>
           <Text variant="h2">{title}</Text>
         </View>
         {/* A visible close button is mandatory — dismissal is never
-            gesture-only, even though pan-down now works (§03.B.6). */}
+            gesture-only, even though pan-down still works (§03.B.6). */}
         <Pressable
-          onPress={onClose}
+          onPress={() => {
+            if (dismissible) onClose();
+          }}
+          disabled={!dismissible}
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel={`Close ${title}`}
-          style={{
+          accessibilityState={{ disabled: !dismissible }}
+          style={({ pressed }) => ({
             minWidth: HIT_SLOP_MIN,
             minHeight: HIT_SLOP_MIN,
             alignItems: 'flex-end',
             justifyContent: 'center',
-          }}
+            borderRadius: radius.md,
+            backgroundColor: pressed ? colors.pressed : 'transparent',
+          })}
         >
           <X size={iconSize.lg} color={colors.mutedForeground} strokeWidth={2} />
         </Pressable>
-      </BottomSheetView>
+      </View>
+    </View>
+  ), [colors.border, colors.borderStrong, colors.mutedForeground, colors.pressed, dismissible, onClose, title]);
 
+  return (
+    <BottomSheetModal
+      ref={ref}
+      snapPoints={snapPoints}
+      onChange={handleSheetChange}
+      onDismiss={handleDismiss}
+      backdropComponent={renderBackdrop}
+      handleComponent={renderHandle}
+      enableDynamicSizing={false}
+      enablePanDownToClose={dismissible}
+      backgroundStyle={{
+        backgroundColor: colors.card,
+        borderTopLeftRadius: radius.sheet,
+        borderTopRightRadius: radius.sheet,
+      }}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
+    >
       <View testID="sheet-content" style={{ flex: 1, paddingBottom: insets.bottom }}>{children}</View>
     </BottomSheetModal>
   );

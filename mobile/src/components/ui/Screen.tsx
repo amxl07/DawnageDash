@@ -1,6 +1,6 @@
 import { ScrollView, StyleSheet, View, type RefreshControlProps, type ViewStyle } from 'react-native';
 import { forwardRef, useImperativeHandle, useRef } from 'react';
-import { useScrollToTop } from '@react-navigation/native';
+import { useScrollToTop } from 'expo-router/react-navigation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
@@ -20,6 +20,8 @@ type Props = {
   includeTopSafeArea?: boolean;
   /** Extra bottom padding on top of the archetype's, for unusual cases. */
   bottomInset?: number;
+  /** Measured height of an overlay footer/action bar owned by this screen. */
+  footerHeight?: number;
   refreshControl?: React.ReactElement<RefreshControlProps>;
   style?: ViewStyle;
   contentStyle?: ViewStyle;
@@ -33,6 +35,7 @@ export const Screen = forwardRef<ScrollView, Props>(function Screen(
     archetype = 'child',
     includeTopSafeArea = true,
     bottomInset = 0,
+    footerHeight = 0,
     refreshControl,
     style,
     contentStyle,
@@ -51,12 +54,13 @@ export const Screen = forwardRef<ScrollView, Props>(function Screen(
   useImperativeHandle(ref, () => scrollRef.current as ScrollView, []);
 
   const archetypePadding = screenContentPadding(archetype, insets);
+  const footerPadding = archetype === 'editor' && footerHeight > 0
+    ? spacing.lg + footerHeight
+    : archetypePadding.paddingBottom + footerHeight;
 
   const container: ViewStyle = {
     flex: 1,
     backgroundColor: colors.background,
-    paddingLeft: insets.left + horizontal,
-    paddingRight: insets.right + horizontal,
   };
 
   const content = {
@@ -65,12 +69,15 @@ export const Screen = forwardRef<ScrollView, Props>(function Screen(
     alignSelf: 'center' as const,
     flexGrow: scroll ? undefined : 1,
     paddingTop: includeTopSafeArea ? archetypePadding.paddingTop : spacing.base,
-    paddingBottom: archetypePadding.paddingBottom + bottomInset,
+    paddingBottom: footerPadding + bottomInset,
   };
 
   const body = (
-    <View testID={testID} style={[content, contentStyle]}>
-      {children}
+    // Web RefreshControl clones outer scroll styles; content owns the inset once.
+    <View style={{ paddingLeft: insets.left + horizontal, paddingRight: insets.right + horizontal, flexGrow: scroll ? undefined : 1 }}>
+      <View testID={testID} style={[content, contentStyle]}>
+        {children}
+      </View>
     </View>
   );
 

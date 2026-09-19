@@ -1,0 +1,12 @@
+PASS src/screens/__tests__/tabs/index.test.tsx (109.816 s)
+PASS src/screens/__tests__/weekly-feedback.test.tsx (19.996 s)
+PASS src/features/weekly/selectors.test.ts
+PASS src/features/weekly/readWeeklyDraft.test.ts
+
+Test Suites: 4 passed, 4 total
+Tests:       64 passed, 64 total
+Snapshots:   0 total
+Time:        139.29 s
+Ran all test suites within paths "src/features/weekly/selectors.test.ts", "src/features/weekly/readWeeklyDraft.test.ts", "src/screens/__tests__/weekly-feedback.test.tsx", "src/screens/__tests__/tabs/index.test.tsx".
+Verification directory cache: 31366 missing-path checks resolved; 710 directories read.
+Verification dependency cache: 3462 repeated reads; 2649 files; 16620894 bytes.

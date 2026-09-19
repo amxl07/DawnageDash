@@ -1,0 +1,4 @@
+
+> dawnage-mobile@1.0.0 lint
+> node scripts/lint.mjs
+

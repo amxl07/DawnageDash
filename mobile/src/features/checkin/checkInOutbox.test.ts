@@ -2,13 +2,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type { CheckInPayload } from './persistence';
 import { persistCheckIn } from './persistence';
-import { flushCheckInOutbox, readCheckInOutbox, saveCheckIn } from './checkInOutbox';
+import { flushCheckInOutbox, readCheckInOutbox, saveCheckIn, subscribeCheckInDelivery } from './checkInOutbox';
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn(),
   setItem: jest.fn(),
 }));
 jest.mock('./persistence', () => ({ persistCheckIn: jest.fn() }));
+jest.mock('@/lib/supabase', () => ({
+  supabase: { auth: { refreshSession: jest.fn() } },
+}));
 
 const mockStorage = jest.mocked(AsyncStorage);
 const mockPersist = jest.mocked(persistCheckIn);
@@ -35,19 +38,25 @@ const payload = (energy: number): CheckInPayload => ({
 
 describe('check-in AsyncStorage outbox', () => {
   let stored: string | null;
+  let revisions: string | null;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockPersist.mockReset();
     stored = null;
-    mockStorage.getItem.mockImplementation(async () => stored);
-    mockStorage.setItem.mockImplementation(async (_key, value) => {
-      stored = value;
+    revisions = null;
+    mockStorage.getItem.mockImplementation(async (key) =>
+      key === 'checkin-outbox' ? stored : revisions,
+    );
+    mockStorage.setItem.mockImplementation(async (key, value) => {
+      if (key === 'checkin-outbox') stored = value;
+      else revisions = value;
     });
     mockPersist.mockResolvedValue({ updated: false });
   });
 
   it('durably queues the exact payload when persistence fails', async () => {
-    mockPersist.mockRejectedValueOnce(new Error('offline'));
+    mockPersist.mockRejectedValueOnce(new TypeError('Network request failed'));
 
     await expect(saveCheckIn('user-1', payload(7))).resolves.toEqual({
       status: 'offline',
@@ -57,12 +66,14 @@ describe('check-in AsyncStorage outbox', () => {
       expect.objectContaining({
         id: 'user-1:2026-08-31',
         payload: payload(7),
+        revision: 1,
+        failure: { kind: 'transport', retryable: true, code: 'network-request-failed' },
       }),
     ]);
   });
 
   it('lets a newer same-day check-in replace the queued payload', async () => {
-    mockPersist.mockRejectedValue(new Error('offline'));
+    mockPersist.mockRejectedValue(new TypeError('Network request failed'));
     await saveCheckIn('user-1', payload(5));
     await saveCheckIn('user-1', payload(9));
 
@@ -72,16 +83,62 @@ describe('check-in AsyncStorage outbox', () => {
   });
 
   it('flushes only the signed-in account and retains failed work', async () => {
-    mockPersist.mockRejectedValue(new Error('offline'));
+    mockPersist.mockRejectedValue(new TypeError('Network request failed'));
     await saveCheckIn('user-1', payload(5));
     await saveCheckIn('user-2', payload(8));
 
     mockPersist
       .mockResolvedValueOnce({ updated: true })
-      .mockRejectedValueOnce(new Error('still offline'));
+      .mockRejectedValueOnce(new TypeError('Network request failed'));
 
     await expect(flushCheckInOutbox('user-1')).resolves.toBe(1);
     await expect(readCheckInOutbox('user-1')).resolves.toEqual([]);
     await expect(readCheckInOutbox('user-2')).resolves.toHaveLength(1);
+  });
+
+  it('returns blocked for a validation error and retains the correctable payload', async () => {
+    mockPersist.mockRejectedValueOnce({
+      message: 'invalid input syntax for type numeric: private value',
+      details: null,
+      hint: null,
+      code: '22P02',
+    });
+
+    await expect(saveCheckIn('user-1', payload(7))).resolves.toEqual({
+      status: 'blocked',
+      updated: null,
+      failure: { kind: 'validation', retryable: false, code: '22p02' },
+    });
+    await expect(readCheckInOutbox('user-1')).resolves.toEqual([
+      expect.objectContaining({
+        payload: payload(7),
+        failure: { kind: 'validation', retryable: false, code: '22p02' },
+      }),
+    ]);
+  });
+
+  it('never sends local delivery metadata in the check-in payload', async () => {
+    await saveCheckIn('user-1', payload(7));
+
+    expect(mockPersist).toHaveBeenCalledWith('user-1', payload(7));
+  });
+
+  it('publishes a permanent reconnect failure even when the flush confirms zero rows', async () => {
+    const events: unknown[] = [];
+    const unsubscribe = subscribeCheckInDelivery((event) => events.push(event));
+    mockPersist.mockRejectedValueOnce(new TypeError('Network request failed'));
+    await saveCheckIn('user-1', payload(7));
+    mockPersist.mockRejectedValueOnce({ message: 'forbidden', code: '42501' });
+
+    await expect(flushCheckInOutbox('user-1')).resolves.toBe(0);
+    expect(events).toEqual([
+      expect.objectContaining({ userId: 'user-1', date: '2026-08-31', revision: 1, status: 'queued' }),
+      expect.objectContaining({ userId: 'user-1', date: '2026-08-31', revision: 1, status: 'blocked', failure: { kind: 'permission', retryable: false, code: '42501' } }),
+    ]);
+
+    unsubscribe();
+    mockPersist.mockResolvedValueOnce({ updated: false });
+    await flushCheckInOutbox('user-1');
+    expect(events).toHaveLength(2);
   });
 });

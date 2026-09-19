@@ -68,13 +68,15 @@ export function ExercisePrescriptionSheet({
             onPress={() => void WebBrowser.openBrowserAsync(exercise.videoLink!)}
             accessibilityRole="button"
             accessibilityLabel={`Watch demo for ${exercise.name}`}
-            style={{
+            style={({ pressed }) => ({
               minHeight: HIT_SLOP_MIN,
               flexDirection: 'row',
               alignItems: 'center',
               gap: spacing.sm,
               borderRadius: radius.sm,
-            }}
+              paddingHorizontal: spacing.sm,
+              backgroundColor: pressed ? colors.pressed : 'transparent',
+            })}
           >
             <Play size={iconSize.md} color={colors.primary} strokeWidth={2} accessible={false} />
             <Text variant="bodySm" tone="primary">
@@ -109,11 +111,14 @@ export function ExercisePrescriptionSheet({
                       onPress={() => onSubstitute(substitution)}
                       accessibilityRole="button"
                       accessibilityLabel={`Use ${substitution.name}`}
-                      style={{
+                      style={({ pressed }) => ({
                         minHeight: HIT_SLOP_MIN,
                         justifyContent: 'center',
                         alignSelf: 'stretch',
-                      }}
+                        borderRadius: radius.sm,
+                        paddingHorizontal: spacing.sm,
+                        backgroundColor: pressed ? colors.pressed : 'transparent',
+                      })}
                     >
                       <Text variant="bodySm" tone="primary">
                         Use {substitution.name}

@@ -1,0 +1,14 @@
+PASS src/components/measurements/MeasurementSheet.test.tsx (228.811 s)
+  ✓ preserves an open draft and its comparison when measurement data refetches (53 ms)
+  ✓ keeps newer edits unsaved and open when an older snapshot finishes saving (19 ms)
+  ✓ ignores repeated keyboard and button submits synchronously while saving (11 ms)
+  ✓ blocks overlapping writes after reopening and keeps the new session draft (20 ms)
+  MeasurementSheet
+    ✓ persists the validated normalized values and uses them for the payoff (729 ms)
+    ✓ retains entered values and retries only the failed save operation (32 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        254.269 s
+Ran all test suites within paths "src/components/measurements/MeasurementSheet.test.tsx".

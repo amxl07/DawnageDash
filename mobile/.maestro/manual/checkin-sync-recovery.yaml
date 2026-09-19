@@ -1,0 +1,14 @@
+appId: ${DAWNAGE_E2E_APP_ID}
+name: A preserved queued record syncs after connection returns
+---
+# Run after checkin-offline-retention.yaml, with networking restored.
+# Keep the same test account, app data, and DAWNAGE_E2E_QUEUED_DATE.
+- evalScript: "${ output.appScheme = DAWNAGE_E2E_APP_ID === 'com.dawnage.app.dev' ? 'dawnage-dev' : DAWNAGE_E2E_APP_ID === 'com.dawnage.app.preview' ? 'dawnage-preview' : DAWNAGE_E2E_APP_ID === 'com.dawnage.app' ? 'dawnage' : ''; if (!output.appScheme) throw new Error('Unsupported DAWNAGE_E2E_APP_ID'); }"
+- launchApp:
+    stopApp: false
+- openLink: ${output.appScheme}://check-in?date=${DAWNAGE_E2E_QUEUED_DATE}
+- extendedWaitUntil:
+    visible: "Saved and synced"
+    timeout: 30000
+- assertVisible:
+    id: "checkin-receipt"

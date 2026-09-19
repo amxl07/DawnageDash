@@ -1,8 +1,7 @@
 import { StyleSheet, Text } from 'react-native';
-import { useScrollToTop } from '@react-navigation/native';
+import { useScrollToTop } from 'expo-router/react-navigation';
 
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
-import { act, create } from 'react-test-renderer';
+import { act, create, type ReactTestInstance } from 'react-test-renderer';
 
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { Screen } from './Screen';
@@ -15,7 +14,7 @@ jest.mock('@/hooks/useResponsiveLayout', () => ({
   useResponsiveLayout: jest.fn(),
 }));
 
-jest.mock('@react-navigation/native', () => ({
+jest.mock('expo-router/react-navigation', () => ({
   useScrollToTop: jest.fn(),
 }));
 
@@ -50,7 +49,7 @@ function render(ui: React.ReactElement) {
   };
 }
 
-function expectToHaveStyle(node: { props: { style: unknown } }, style: object) {
+function expectToHaveStyle(node: ReactTestInstance, style: object) {
   expect(StyleSheet.flatten(node.props.style)).toMatchObject(style);
 }
 
@@ -126,5 +125,15 @@ describe('Screen', () => {
       maxWidth: 720,
       alignSelf: 'center',
     });
+  });
+
+  it('adds a measured wrapping footer height to its scroll clearance', () => {
+    const { getByTestId } = render(
+      <Screen archetype="editor" footerHeight={148} testID="screen-content">
+        <Text>Large-text editor</Text>
+      </Screen>,
+    );
+
+    expectToHaveStyle(getByTestId('screen-content'), { paddingBottom: 172 });
   });
 });

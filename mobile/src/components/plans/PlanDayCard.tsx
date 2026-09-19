@@ -1,48 +1,43 @@
 import * as WebBrowser from 'expo-web-browser';
-import { ChevronDown, Play } from 'lucide-react-native';
+import { Play } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
-import Animated, {
-  Easing,
-  FadeIn,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { DisclosureChevron } from '@/components/ui/DisclosureChevron';
+import { MotionReveal } from '@/components/ui/MotionReveal';
 import { Text } from '@/components/ui/Text';
-import type { PlanDay } from '@/hooks/usePlans';
+import type { PlanDay, PlanExercise } from '@/hooks/usePlans';
 import type { PlanDayStatus } from '@/hooks/usePlanProgress';
-import { HIT_SLOP_MIN, iconSize, radius, spacing, useMotion, useTheme } from '@/theme';
+import { HIT_SLOP_MIN, iconSize, radius, spacing, useTheme } from '@/theme';
 
 type Props = {
   day: PlanDay;
-  status: PlanDayStatus;
-  onStart: () => void;
+  status: PlanDayStatus | 'unknown';
+  onStart?: () => void;
+  onShowDetails: (exercise: PlanExercise) => void;
   testID?: string;
 };
 
-const STATUS_LABEL: Record<PlanDayStatus, string> = {
+const STATUS_LABEL: Record<PlanDayStatus | 'unknown', string> = {
+  unknown: 'Status unavailable',
   today: 'Today',
   active: 'Active',
   complete: 'Complete',
   upcoming: 'Upcoming',
 };
 
-const actionLabel = (status: PlanDayStatus, dayNumber: number): string => {
+const actionLabel = (status: PlanDayStatus | 'unknown', dayNumber: number): string => {
   if (status === 'active') return `Continue Day ${dayNumber}`;
   if (status === 'complete') return `Repeat Day ${dayNumber}`;
   return `Start Day ${dayNumber}`;
 };
 
-export function PlanDayCard({ day, status, onStart, testID }: Props) {
+export function PlanDayCard({ day, status, onStart, onShowDetails, testID }: Props) {
   const { colors } = useTheme();
-  const motion = useMotion();
   const [open, setOpen] = useState(false);
-  const rotation = useSharedValue(0);
-  const statusLabel = STATUS_LABEL[status];
+  const statusLabel = onStart ? STATUS_LABEL[status] : 'Preview';
   const exerciseCount = `${day.exercises.length} ${
     day.exercises.length === 1 ? 'exercise' : 'exercises'
   }`;
@@ -50,32 +45,21 @@ export function PlanDayCard({ day, status, onStart, testID }: Props) {
   const disclosureLabel = `Day ${day.day_number}${
     day.focus ? `, ${day.focus}` : ''
   }, ${exerciseCount}, status: ${statusLabel}`;
-  const chevronStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${rotation.value}deg` }],
-  }));
-
-  const toggleExpanded = () => {
-    const next = !open;
-    setOpen(next);
-    rotation.value = motion.enabled
-      ? withTiming(next ? 180 : 0, {
-          duration: 160,
-          easing: Easing.bezier(...motion.easing.standard),
-        })
-      : next
-        ? 180
-        : 0;
-  };
-
   return (
     <Card style={{ gap: spacing.md }}>
       <Pressable
         testID={testID}
-        onPress={toggleExpanded}
+        onPress={() => setOpen((value) => !value)}
         accessibilityRole="button"
         accessibilityLabel={disclosureLabel}
         accessibilityState={{ expanded: open }}
-        style={{ flexDirection: 'row', alignItems: 'center', minHeight: HIT_SLOP_MIN }}
+        style={({ pressed }) => ({
+          flexDirection: 'row',
+          alignItems: 'center',
+          minHeight: HIT_SLOP_MIN,
+          borderRadius: radius.md,
+          backgroundColor: pressed ? colors.pressed : 'transparent',
+        })}
       >
         <View style={{ flex: 1, gap: spacing.xs }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
@@ -110,24 +94,16 @@ export function PlanDayCard({ day, status, onStart, testID }: Props) {
             {summary}
           </Text>
         </View>
-        <Animated.View style={chevronStyle}>
-          <ChevronDown
-            size={iconSize.md}
-            color={colors.mutedForeground}
-            strokeWidth={2}
-            accessible={false}
-          />
-        </Animated.View>
+        <DisclosureChevron expanded={open} size={iconSize.md} color={colors.mutedForeground} />
       </Pressable>
 
-      {open ? (
-        <Animated.View
-          testID="plan-day-expanded-content"
-          entering={
-            motion.enabled ? FadeIn.duration(Math.min(200, motion.duration.enter)) : undefined
-          }
-          style={{ gap: spacing.md }}
-        >
+      <MotionReveal
+        testID="plan-day-expanded-content"
+        revision={open ? 'open' : 'closed'}
+        style={{ gap: spacing.md }}
+      >
+        {open ? (
+          <View style={{ gap: spacing.md }}>
           {day.notes ? (
             <Text variant="bodySm" tone="muted">
               {day.notes}
@@ -152,12 +128,14 @@ export function PlanDayCard({ day, status, onStart, testID }: Props) {
                     hitSlop={10}
                     accessibilityRole="button"
                     accessibilityLabel={`Watch demo for ${exercise.name}`}
-                    style={{
+                    style={({ pressed }) => ({
                       minWidth: HIT_SLOP_MIN,
                       minHeight: HIT_SLOP_MIN,
                       alignItems: 'flex-end',
                       justifyContent: 'center',
-                    }}
+                      borderRadius: radius.sm,
+                      backgroundColor: pressed ? colors.pressed : 'transparent',
+                    })}
                   >
                     <Play size={iconSize.md} color={colors.primary} strokeWidth={2} />
                   </Pressable>
@@ -171,17 +149,34 @@ export function PlanDayCard({ day, status, onStart, testID }: Props) {
                   {exercise.notes}
                 </Text>
               ) : null}
+              <Pressable
+                onPress={() => onShowDetails(exercise)}
+                accessibilityRole="button"
+                accessibilityLabel={`Show details for ${exercise.name}`}
+                style={({ pressed }) => ({
+                  minWidth: HIT_SLOP_MIN,
+                  minHeight: HIT_SLOP_MIN,
+                  alignSelf: 'flex-start',
+                  justifyContent: 'center',
+                  paddingHorizontal: spacing.sm,
+                  borderRadius: radius.sm,
+                  backgroundColor: pressed ? colors.pressed : 'transparent',
+                })}
+              >
+                <Text variant="bodySm" tone="primary">Details</Text>
+              </Pressable>
             </View>
           ))}
 
-          <Button
+          {onStart ? <Button
             label={actionLabel(status, day.day_number)}
             variant="secondary"
             onPress={onStart}
             style={{ minHeight: HIT_SLOP_MIN }}
-          />
-        </Animated.View>
-      ) : null}
+          /> : null}
+          </View>
+        ) : null}
+      </MotionReveal>
     </Card>
   );
 }

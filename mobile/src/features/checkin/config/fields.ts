@@ -1,4 +1,4 @@
-import type { FormState } from '@/components/checkin/CheckInForm';
+import type { FormState } from '@/features/checkin/model';
 import type { CheckInPayload } from '@/hooks/useCheckInMutation';
 
 export type CheckInFieldId = keyof FormState;

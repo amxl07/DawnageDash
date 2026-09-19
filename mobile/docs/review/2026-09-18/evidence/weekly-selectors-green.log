@@ -1,0 +1,1 @@
+PASS: 12 assertions against production weekly selectors (calendar boundaries, sparse/null/zero values, sample counts, reporting labels and submitted-week detection).

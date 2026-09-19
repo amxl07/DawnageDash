@@ -1,10 +1,9 @@
 import NetInfo from '@react-native-community/netinfo';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router/react-navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { AppState, Text as NativeText } from 'react-native';
 
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,7 +11,7 @@ import { flushOutbox, readOutbox } from '@/lib/outbox';
 import LogsScreen, { LogCard } from '../../../../app/(app)/(tabs)/logs';
 
 jest.mock('@react-native-community/netinfo', () => ({ addEventListener: jest.fn(() => jest.fn()) }));
-jest.mock('@react-navigation/native', () => ({
+jest.mock('expo-router/react-navigation', () => ({
   useFocusEffect: jest.fn(),
   useScrollToTop: jest.fn(),
 }));
@@ -34,19 +33,39 @@ jest.mock('react-native-reanimated', () => {
     LinearTransition: { duration: jest.fn() },
   };
 });
+jest.mock('@/components/ui/DisclosureChevron', () => {
+  const native = jest.requireActual('react-native');
+  return {
+    DisclosureChevron: ({ expanded }: { expanded: boolean }) => (
+      <native.View testID="log-disclosure-chevron" accessibilityState={{ expanded }} />
+    ),
+  };
+});
+jest.mock('@/components/ui/MotionReveal', () => {
+  const native = jest.requireActual('react-native');
+  return {
+    MotionReveal: ({ children, ...props }: React.ComponentProps<typeof native.View>) => (
+      <native.View {...props}>{children}</native.View>
+    ),
+  };
+});
 jest.mock('@/components/dashboard/MetricCard', () => ({ MetricCard: () => null }));
 jest.mock('@/components/ui', () => {
   const native = jest.requireActual('react-native');
   return {
     AdaptiveGrid: native.View,
     AnimatedFlatList: native.FlatList,
-    Button: () => null,
+    Button: ({ label, onPress }: { label: string; onPress: () => void }) => (
+      <native.Pressable accessibilityLabel={label} onPress={onPress}>
+        <native.Text>{label}</native.Text>
+      </native.Pressable>
+    ),
     Card: native.View,
     EmptyState: () => null,
     ErrorState: () => null,
     Screen: native.View,
     SkeletonCard: () => null,
-    StatusPill: () => null,
+    StatusPill: ({ label }: { label: string }) => <native.Text>{label}</native.Text>,
     Text: native.Text,
     useListMotion: () => ({ enabled: false }),
   };
@@ -57,7 +76,7 @@ jest.mock('@/lib/supabase', () => ({ supabase: {} }));
 jest.mock('@/theme', () => ({
   iconSize: { md: 20 },
   spacing: { xs: 4, sm: 8, md: 12, base: 16 },
-  useTheme: () => ({ colors: { border: '#ddd', mutedForeground: '#666' } }),
+  useTheme: () => ({ colors: { border: '#ddd', mutedForeground: '#666', pressed: '#eee' } }),
 }));
 
 function expandedText(content: string) {
@@ -189,6 +208,7 @@ describe('LogCard set history', () => {
 });
 
 describe('LogsScreen outbox ownership', () => {
+  const mounted = new Set<ReturnType<typeof create>>();
   beforeEach(() => {
     jest.clearAllMocks();
     jest.mocked(useAuth).mockReturnValue({ user: { id: 'user-1' } } as never);
@@ -202,13 +222,11 @@ describe('LogsScreen outbox ownership', () => {
     } as never);
     jest.mocked(readOutbox).mockResolvedValue([]);
     jest.mocked(flushOutbox).mockResolvedValue(0);
-    jest.mocked(useFocusEffect).mockImplementation((callback) => {
-      callback();
-    });
+    jest.mocked(useFocusEffect).mockImplementation((callback) => { jest.requireActual<typeof import('react')>('react').useEffect(callback, [callback]); });
     jest.spyOn(AppState, 'addEventListener').mockReturnValue({ remove: jest.fn() });
   });
 
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => { for (const renderer of mounted) act(() => renderer.unmount()); mounted.clear(); jest.restoreAllMocks(); });
 
   it('reads and flushes pending workouts for only the authenticated user', async () => {
     let connectivityListener: ((state: { isConnected: boolean }) => void) | undefined;
@@ -219,7 +237,7 @@ describe('LogsScreen outbox ownership', () => {
 
     let renderer!: ReturnType<typeof create>;
     await act(async () => {
-      renderer = create(<LogsScreen />);
+      renderer = create(<LogsScreen />); mounted.add(renderer);
       await Promise.resolve();
     });
 
@@ -235,4 +253,93 @@ describe('LogsScreen outbox ownership', () => {
     expect(readOutbox).not.toHaveBeenCalledWith('user-2');
     act(() => renderer.unmount());
   });
+
+  it('shows queued and blocked workouts separately and routes each preserved record', async () => {
+    const push = jest.fn();
+    jest.mocked(useRouter).mockReturnValue({ push } as never);
+    jest.mocked(readOutbox).mockResolvedValue([
+      {
+        id: 'user-1:2026-09-10', user_id: 'user-1', date: '2026-09-10',
+        title: 'Queued legs', content: '{}', existingLogId: 'log-7', queuedAt: 1, revision: 3,
+        failure: { kind: 'transport', retryable: true, code: 'network-request-failed' },
+      },
+      {
+        id: 'user-1:2026-09-11', user_id: 'user-1', date: '2026-09-11',
+        title: 'Blocked push', content: '{}', existingLogId: null, queuedAt: 2, revision: 2,
+        failure: { kind: 'validation', retryable: false, code: '22p02' },
+      },
+    ]);
+
+    let renderer!: ReturnType<typeof create>;
+    await act(async () => {
+      renderer = create(<LogsScreen />); mounted.add(renderer);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const text = renderer.root.findAllByType(NativeText)
+      .map((node: { props: { children?: unknown } }) => String(node.props.children))
+      .join(' ');
+    expect(text).toContain('Queued legs');
+    expect(text).toContain('Waiting to sync');
+    expect(text).toContain('Blocked push');
+    expect(text).toContain('Needs attention');
+
+    act(() => renderer.root.findByProps({
+      accessibilityLabel: 'Open saved workout Queued legs from 2026-09-10',
+    }).props.onPress());
+    expect(push).toHaveBeenCalledWith({
+      pathname: '/(app)/logger',
+      params: { date: '2026-09-10', logId: 'log-7', outboxId: 'user-1:2026-09-10' },
+    });
+
+    act(() => renderer.root.findByProps({
+      accessibilityLabel: 'Review blocked workout Blocked push from 2026-09-11',
+    }).props.onPress());
+    expect(push).toHaveBeenCalledWith({
+      pathname: '/(app)/logger',
+      params: { date: '2026-09-11', logId: '', outboxId: 'user-1:2026-09-11' },
+    });
+  });
+
+  it('shows a recoverable local-record error when outbox storage cannot be read', async () => {
+    jest.mocked(readOutbox).mockRejectedValue(new Error('corrupt local queue'));
+
+    let renderer!: ReturnType<typeof create>;
+    await act(async () => {
+      renderer = create(<LogsScreen />); mounted.add(renderer);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(renderer.root.findByProps({ children: "Couldn't read workouts saved on this device." })).toBeTruthy();
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Reload saved workouts' })).toBeTruthy();
+  });
+  it('keeps local records visible while remote history is unavailable', async () => {
+    jest.mocked(useQuery).mockReturnValue({ data: undefined, isLoading: false, isError: true, refetch: jest.fn() } as never);
+    jest.mocked(readOutbox).mockResolvedValue([{ id: 'q', user_id: 'user-1', date: '2026-09-10', title: 'Offline workout', content: '{}', existingLogId: null, queuedAt: 1 }]);
+    let renderer!: ReturnType<typeof create>;
+    await act(async () => { renderer = create(<LogsScreen />); mounted.add(renderer); await Promise.resolve(); });
+    expect(renderer.root.findByProps({ children: 'Offline workout' })).toBeTruthy();
+  });
+  it('keeps local read-error recovery visible while remote history also fails', async () => {
+    jest.mocked(useQuery).mockReturnValue({ data: undefined, isLoading: false, isError: true, refetch: jest.fn() } as never);
+    jest.mocked(readOutbox).mockRejectedValue(new Error('unreadable'));
+    let renderer!: ReturnType<typeof create>;
+    await act(async () => { renderer = create(<LogsScreen />); mounted.add(renderer); await Promise.resolve(); });
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Reload saved workouts' })).toBeTruthy();
+  });
+  it('hides previous-account local details while the next account read is pending', async () => {
+    jest.mocked(readOutbox).mockResolvedValue([{ id: 'q', user_id: 'user-1', date: '2026-09-10', title: 'Private workout', content: '{}', existingLogId: null, queuedAt: 1 }]);
+    let renderer!: ReturnType<typeof create>;
+    await act(async () => { renderer = create(<LogsScreen />); mounted.add(renderer); await Promise.resolve(); });
+    jest.mocked(useAuth).mockReturnValue({ user: { id: 'user-2' } } as never);
+    jest.mocked(readOutbox).mockImplementation(() => new Promise(() => {}));
+    await act(async () => { renderer.update(<LogsScreen />); });
+    expect(renderer.root.findAllByProps({ children: 'Private workout' })).toHaveLength(0);
+    jest.mocked(useAuth).mockReturnValue({ user: null } as never);
+    await act(async () => { renderer.update(<LogsScreen />); });
+    expect(renderer.root.findAllByProps({ children: 'Private workout' })).toHaveLength(0);
+  });
+
 });

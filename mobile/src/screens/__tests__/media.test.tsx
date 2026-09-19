@@ -1,7 +1,9 @@
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
 import MediaScreen from '../../../app/(app)/media';
+
+jest.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'user-1' } }) }));
+jest.mock('@/hooks/usePrivatePhotoUrl', () => ({ usePrivatePhotoUrl: (reference: string) => ({ url: reference, loading: false, refresh: jest.fn() }) }));
 
 const mockRows = [
   {
@@ -177,8 +179,8 @@ describe('MediaScreen', () => {
     act(() => backThumbnail.props.onPress());
 
     const viewerImage = renderer.root.find(
-      (node: { type: unknown; props: { recyclingKey?: string } }) =>
-        node.type === 'ExpoImage' && node.props.recyclingKey?.startsWith('viewer:'),
+      (node: { type: unknown; props: { contentFit?: string } }) =>
+        node.type === 'ExpoImage' && node.props.contentFit === 'contain',
     );
     expect(viewerImage.props.source).toEqual({ uri: 'https://example.com/back.jpg' });
     expect(

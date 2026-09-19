@@ -38,7 +38,9 @@ export default function ResetPasswordScreen() {
   const [complete, setComplete] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
 
+  const passwordRef = useRef<TextInput>(null);
   const confirmRef = useRef<TextInput>(null);
+  const submission = useRef(false);
   const initialUrl = Linking.useURL();
 
   useEffect(() => {
@@ -55,23 +57,29 @@ export default function ResetPasswordScreen() {
   }, [initialUrl, setPasswordRecoveryPending]);
 
   const handleReset = async () => {
+    if (submission.current || !passwordRecoveryPending || linkError) return;
     const errs: Record<string, string> = {};
     if (password.length < 6) errs.password = 'Password must be at least 6 characters.';
     if (password !== confirmPassword) errs.confirmPassword = 'Passwords do not match.';
     setErrors(errs);
-    if (Object.keys(errs).length) return;
+    if (Object.keys(errs).length) {
+      if (errs.password) passwordRef.current?.focus();
+      else confirmRef.current?.focus();
+      return;
+    }
 
+    submission.current = true;
     setLoading(true);
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
-      setPasswordRecoveryPending(false);
       // Web parity: sign out after a reset so the new password is used to log in.
       await signOut();
       setComplete(true);
-    } catch (e) {
-      setErrors({ password: (e as Error).message });
+    } catch {
+      setErrors({ password: 'We couldn’t update your password. Try again, or request a new reset link.' });
     } finally {
+      submission.current = false;
       setLoading(false);
     }
   };
@@ -113,6 +121,7 @@ export default function ResetPasswordScreen() {
           ) : null}
 
           <Input
+            ref={passwordRef}
             label="New password"
             icon={Lock}
             password
@@ -138,9 +147,9 @@ export default function ResetPasswordScreen() {
             label="Update password"
             onPress={handleReset}
             loading={loading}
-            disabled={!passwordRecoveryPending && !linkError ? false : Boolean(linkError)}
+            disabled={!passwordRecoveryPending || Boolean(linkError)}
           />
-          <Button label="Cancel" variant="ghost" onPress={() => router.replace('/(auth)/login')} />
+          <Button label="Back to sign in" variant="ghost" onPress={() => { void signOut().then(() => router.replace('/(auth)/login')); }} />
         </Card>
       </Screen>
     </KeyboardAvoidingView>

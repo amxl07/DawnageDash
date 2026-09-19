@@ -1,0 +1,2481 @@
+PASS src/features/workout/useWorkoutSession.test.tsx (200.218 s)
+PASS src/lib/outbox.test.ts (66.781 s)
+FAIL src/screens/__tests__/weekly-feedback.test.tsx (256.405 s)
+  ● WeeklyFeedbackScreen › blocks an invalid active step and gives its focused alert sole ownership of the summary announcement
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: 78
+
+    Number of calls: 0
+
+      382 |     expect(summary.props).toMatchObject({ accessible: true, focusable: true });
+      383 |     expect(summary.findByProps({ children: 'Please correct the highlighted fields before continuing.' })).toBeTruthy();
+    > 384 |     expect(AccessibilityInfo.setAccessibilityFocus).toHaveBeenCalledWith(78);
+          |                                                     ^
+      385 |     expect(AccessibilityInfo.announceForAccessibility).not.toHaveBeenCalledWith(
+      386 |       'Please correct the highlighted fields before continuing.',
+      387 |     );
+
+      at Object.toHaveBeenCalledWith (src/screens/__tests__/weekly-feedback.test.tsx:384:53)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● WeeklyFeedbackScreen › resets scroll before focusing a newly opened step heading
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: 77
+
+    Number of calls: 0
+
+      416 |       focusable: true,
+      417 |     });
+    > 418 |     expect(AccessibilityInfo.setAccessibilityFocus).toHaveBeenCalledWith(77);
+          |                                                     ^
+      419 |   });
+      420 |
+      421 |   it('disables animated step and validation scrolling when Reduced Motion is enabled', async () => {
+
+      at Object.toHaveBeenCalledWith (src/screens/__tests__/weekly-feedback.test.tsx:418:53)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+PASS src/components/checkin/CheckInForm.test.tsx (143.873 s)
+FAIL src/components/media/PhotoCaptureSheet.test.tsx (28.969 s)
+  ● PhotoCaptureSheet › states the exact upload and coaching-team context before the photo slots
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:190:26)
+
+  ● PhotoCaptureSheet › retains a failed local image and retries upload from the visible slot action
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:205:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › retains uploaded slots and retries only database persistence after a save failure
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:243:42)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › retries a failed persistence snapshot without re-uploading unrelated failed slots
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:293:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › preserves a valid pending selection when a replacement is oversized
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:338:42)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › retries only the requested angle and persists successes without sending other failures
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:388:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › uses a synchronous guard to ignore same-tick duplicate saves
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:425:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › locks slot mutations while the database save is pending
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:454:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › ignores a stale upload completion after the slot is replaced externally
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:492:50)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › ignores a stale upload completion after the pending selection is discarded
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:518:40)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › does not persist an upload that completes after the sheet unmounts
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:542:42)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › allows explicit discard when no save operation is in flight
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:564:42)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › keeps a dirty sheet native-locked through Keep editing, then allows explicit Discard
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:582:42)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › allows an idle clean sheet to dismiss without confirmation
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:614:26)
+
+  ● PhotoCaptureSheet › blocks every dismissal path while database persistence is in flight
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:633:42)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › offers cancellation and Settings after permission denial
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:673:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+PASS src/features/checkin/CheckInJourney.integration.test.tsx (15.685 s)
+PASS src/components/logger/useRestTimer.test.tsx
+PASS src/features/checkin/useCheckInEditor.test.tsx
+FAIL src/components/ui/Sheet.test.tsx
+  ● Sheet › provides a named 44pt close action and bottom safe-area clearance
+
+    expect(received).toMatchObject(expected)
+
+    Matcher error: received value must be a non-null object
+
+    Received has value: undefined
+
+      140 |     };
+      141 |
+    > 142 |     expect(StyleSheet.flatten(getByLabelText('Close Exercise details').props.style)).toMatchObject({ minWidth: 44, minHeight: 44 });
+          |                                                                                      ^
+      143 |     expect(StyleSheet.flatten(getByTestId('sheet-content').props.style)).toMatchObject({ paddingBottom: 34 });
+      144 |     expect(mockModalProps).toMatchObject({ enableDynamicSizing: false, snapPoints: ['85%'] });
+      145 |   });
+
+      at Object.toMatchObject (src/components/ui/Sheet.test.tsx:142:86)
+
+PASS src/lib/asyncOutbox.test.ts
+PASS src/hooks/useWeeklyFeedbackDraft.test.ts
+FAIL src/components/logger/SetEditor.test.tsx (127.323 s)
+  ● ExerciseSlide set completion › exposes a visible 44 point Details action for a plan prescription
+
+    TypeError: Cannot read properties of undefined (reading 'minHeight')
+
+      377 |       accessibilityLabel: 'Show details for Squat',
+      378 |     });
+    > 379 |     expect(StyleSheet.flatten(details.props.style).minHeight).toBeGreaterThanOrEqual(44);
+          |                                                   ^
+      380 |   });
+      381 |
+      382 |   it('marks the first incomplete stable set current and forwards its toggle', () => {
+
+      at Object.<anonymous> (src/components/logger/SetEditor.test.tsx:379:51)
+
+  ● ExerciseSlide set completion › marks the first incomplete stable set current and forwards its toggle
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: 1
+    Received: "squat-set-2"
+
+    Number of calls: 1
+
+      420 |     expect(complete).toBeTruthy();
+      421 |     act(() => complete.props.onPress());
+    > 422 |     expect(onToggleSet).toHaveBeenCalledWith(1);
+          |                         ^
+      423 |   });
+      424 | });
+      425 |
+
+      at Object.toHaveBeenCalledWith (src/components/logger/SetEditor.test.tsx:422:25)
+
+PASS src/screens/__tests__/measurements.test.tsx
+  ● Console
+
+    console.warn
+      InteractionManager has been deprecated and will be removed in a future release. Please refactor long tasks into smaller ones, and  use 'requestIdleCallback' instead.
+
+      227 |       maxContentWidth: undefined,
+      228 |     });
+    > 229 |     jest.spyOn(InteractionManager, 'runAfterInteractions').mockImplementation(((callback: () => void) => {
+          |                ^
+      230 |       interactionCallbacks.push(callback);
+      231 |       return { cancel: jest.fn(), done: jest.fn(), then: jest.fn() };
+      232 |     }) as typeof InteractionManager.runAfterInteractions);
+
+      at warn (node_modules/react-native/Libraries/Utilities/warnOnce.js:27:11)
+      at Object.warnOnce [as InteractionManager] (node_modules/react-native/index.js:264:5)
+      at Object.InteractionManager (src/screens/__tests__/measurements.test.tsx:229:16)
+
+PASS src/screens/__tests__/tabs/check-in.test.tsx
+PASS src/screens/__tests__/logger.test.tsx
+PASS src/screens/__tests__/tabs/logs.test.tsx
+PASS src/hooks/useWorkoutDraft.test.ts
+PASS src/components/questionnaire/QuestionnaireWizard.test.tsx
+PASS src/features/workout/workoutReducer.test.ts
+PASS src/screens/__tests__/media.test.tsx
+FAIL src/screens/__tests__/tabs/plans.test.tsx
+  ● PlansScreen plan provenance › keeps prescription access inside the day card without a duplicate exercise list
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 1
+    Received length: 3
+    Received array:  [{"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}]
+
+      217 |
+      218 |     expect(renderer.root.findAllByProps({ children: 'Exercise details' })).toHaveLength(0);
+    > 219 |     expect(renderer.root.findAllByProps({ accessibilityLabel: 'Show details for Squat' })).toHaveLength(1);
+          |                                                                                            ^
+      220 |
+      221 |     act(() => {
+      222 |       renderer.root.findByProps({ accessibilityLabel: 'Show details for Squat' }).props.onPress();
+
+      at Object.toHaveLength (src/screens/__tests__/tabs/plans.test.tsx:219:92)
+
+PASS src/hooks/usePlanProgress.test.ts
+PASS src/lib/workout-content.test.ts
+PASS src/__tests__/ui-contract-script.test.ts (12.917 s)
+PASS src/components/media/PhotoSlot.test.tsx
+PASS src/components/logger/CircularTimer.test.tsx
+PASS src/components/media/PhotoViewer.test.tsx
+PASS src/screens/__tests__/settings.test.tsx
+FAIL src/components/logger/ExerciseSlide.test.tsx
+  ● Console
+
+    console.error
+      You called act(async () => ...) without await. This could lead to unexpected testing behaviour, interleaving multiple act calls and mixing their scopes. You should - await act(async () => ...);
+
+      at node_modules/react/cjs/react.development.js:835:21
+
+  ● ignores a repeated completion callback from the disappearing set control
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      79 |
+      80 |   const state = JSON.parse(view.getByTestId('state').props.children) as WorkoutExercise;
+    > 81 |   expect(state.sets.find((set) => set.id === 's1')?.completed).toBe(true);
+         |                                                                ^
+      82 |   expect(state.sets.find((set) => set.id === 's2')?.completed).toBe(false);
+      83 |   expect(view.getByLabelText('Warm-up 2 duration in seconds')).toBeTruthy();
+      84 | });
+
+      at Object.toBe (src/components/logger/ExerciseSlide.test.tsx:81:64)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● ignores a repeated completion callback from the disappearing set control
+
+    TypeError: completion.props.onPress is not a function
+
+      74 |
+      75 |   act(() => {
+    > 76 |     completion.props.onPress();
+         |                      ^
+      77 |     completion.props.onPress();
+      78 |   });
+      79 |
+
+      at onPress (src/components/logger/ExerciseSlide.test.tsx:76:22)
+      at callback (node_modules/@testing-library/react-native/src/act.ts:72:33)
+      at callback (node_modules/@testing-library/react-native/src/act.ts:30:24)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:814:22)
+      at actImplementation (node_modules/@testing-library/react-native/src/act.ts:29:25)
+      at _act (node_modules/@testing-library/react-native/src/act.ts:72:10)
+      at Object.<anonymous> (src/components/logger/ExerciseSlide.test.tsx:75:6)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● restores the full set at its original position with Undo
+
+    Unable to find an element with role: button, name: Effort and set options
+
+      85 | it('restores the full set at its original position with Undo', async () => {
+      86 |   const view = await render(<Probe />);
+    > 87 |   await fireEvent.press(view.getByRole('button', { name: 'Effort and set options' }));
+         |                              ^
+      88 |   await fireEvent.press(view.getByRole('button', { name: 'Remove warm-up 1' }));
+      89 |   await fireEvent.press(view.getByRole('button', { name: 'Undo removed set' }));
+      90 |   expect(JSON.parse(view.getByTestId('state').props.children)).toEqual(exercise);
+
+      at Object.getByRole (src/components/logger/ExerciseSlide.test.tsx:87:30)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● withholds removal if no restoration callback exists
+
+    Unable to find an element with role: button, name: Effort and set options
+
+      92 | it('withholds removal if no restoration callback exists', async () => {
+      93 |   const view = await render(<Probe restore={false} />);
+    > 94 |   await fireEvent.press(view.getByRole('button', { name: 'Effort and set options' }));
+         |                              ^
+      95 |   expect(view.queryByRole('button', { name: 'Remove warm-up 1' })).toBeNull();
+      96 | });
+      97 |
+
+      at Object.getByRole (src/components/logger/ExerciseSlide.test.tsx:94:30)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+PASS src/features/checkin/components/NumericEntry.test.tsx
+PASS src/screens/__tests__/tabs/index.test.tsx (19.412 s)
+PASS src/features/workout/workoutRecovery.integration.test.tsx (5.215 s)
+PASS src/features/workout/workoutSave.test.ts
+PASS src/__tests__/maestro-contract.test.ts (7.682 s)
+PASS src/__tests__/ui-validation-matrix.test.ts
+PASS src/components/coach/CoachBadge.test.tsx
+FAIL src/components/checkin/CheckInRatingScale.test.tsx
+  ● starts press feedback on touch down and restores it on release without selecting
+
+    expect(jest.fn()).toHaveBeenLastCalledWith(...expected)
+
+    Expected: 0.97, ObjectContaining {"duration": 120}
+    Received: 0.97
+
+    Number of calls: 1
+
+      86 |
+      87 |   await fireEvent(screen.getByTestId('energy-7'), 'pressIn');
+    > 88 |   expect(mockTiming).toHaveBeenLastCalledWith(0.97, expect.objectContaining({ duration: 120 }));
+         |                      ^
+      89 |   expect(changed).not.toHaveBeenCalled();
+      90 |
+      91 |   await fireEvent(screen.getByTestId('energy-7'), 'pressOut');
+
+      at Object.toHaveBeenLastCalledWith (src/components/checkin/CheckInRatingScale.test.tsx:88:22)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+PASS src/contexts/AuthContext.test.tsx
+PASS src/components/dashboard/ConsistencyGrid.test.tsx (26.514 s)
+FAIL src/components/plans/PlanDayCard.test.tsx
+  ● PlanDayCard › shows today status with the exact action label
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      34 | }: Props) {
+      35 |   const { colors } = useTheme();
+    > 36 |   const motion = useMotion();
+         |                           ^
+      37 |   const scale = useSharedValue(1);
+      38 |   const [pressed, setPressed] = useState(false);
+      39 |
+
+      at Button (src/components/ui/Button.tsx:36:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at pressByLabel (src/components/plans/PlanDayCard.test.tsx:100:6)
+      at pressByLabel (src/components/plans/PlanDayCard.test.tsx:118:5)
+
+  ● PlanDayCard › shows active status with the exact action label
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      34 | }: Props) {
+      35 |   const { colors } = useTheme();
+    > 36 |   const motion = useMotion();
+         |                           ^
+      37 |   const scale = useSharedValue(1);
+      38 |   const [pressed, setPressed] = useState(false);
+      39 |
+
+      at Button (src/components/ui/Button.tsx:36:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at pressByLabel (src/components/plans/PlanDayCard.test.tsx:100:6)
+      at pressByLabel (src/components/plans/PlanDayCard.test.tsx:118:5)
+
+  ● PlanDayCard › shows complete status with the exact action label
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      34 | }: Props) {
+      35 |   const { colors } = useTheme();
+    > 36 |   const motion = useMotion();
+         |                           ^
+      37 |   const scale = useSharedValue(1);
+      38 |   const [pressed, setPressed] = useState(false);
+      39 |
+
+      at Button (src/components/ui/Button.tsx:36:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at pressByLabel (src/components/plans/PlanDayCard.test.tsx:100:6)
+      at pressByLabel (src/components/plans/PlanDayCard.test.tsx:118:5)
+
+  ● PlanDayCard › shows upcoming status with the exact action label
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      34 | }: Props) {
+      35 |   const { colors } = useTheme();
+    > 36 |   const motion = useMotion();
+         |                           ^
+      37 |   const scale = useSharedValue(1);
+      38 |   const [pressed, setPressed] = useState(false);
+      39 |
+
+      at Button (src/components/ui/Button.tsx:36:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at pressByLabel (src/components/plans/PlanDayCard.test.tsx:100:6)
+      at pressByLabel (src/components/plans/PlanDayCard.test.tsx:118:5)
+
+  ● PlanDayCard › preserves count, notes, video alternative, expansion state, and 44pt actions
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      34 | }: Props) {
+      35 |   const { colors } = useTheme();
+    > 36 |   const motion = useMotion();
+         |                           ^
+      37 |   const scale = useSharedValue(1);
+      38 |   const [pressed, setPressed] = useState(false);
+      39 |
+
+      at Button (src/components/ui/Button.tsx:36:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at Object.<anonymous> (src/components/plans/PlanDayCard.test.tsx:134:8)
+
+  ● PlanDayCard › opens the full prescription from the exercise inside its day disclosure
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      34 | }: Props) {
+      35 |   const { colors } = useTheme();
+    > 36 |   const motion = useMotion();
+         |                           ^
+      37 |   const scale = useSharedValue(1);
+      38 |   const [pressed, setPressed] = useState(false);
+      39 |
+
+      at Button (src/components/ui/Button.tsx:36:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at pressByLabel (src/components/plans/PlanDayCard.test.tsx:100:6)
+      at Object.pressByLabel (src/components/plans/PlanDayCard.test.tsx:154:5)
+
+  ● PlanDayCard › delegates disclosure state and local content reveal to shared motion primitives
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      34 | }: Props) {
+      35 |   const { colors } = useTheme();
+    > 36 |   const motion = useMotion();
+         |                           ^
+      37 |   const scale = useSharedValue(1);
+      38 |   const [pressed, setPressed] = useState(false);
+      39 |
+
+      at Button (src/components/ui/Button.tsx:36:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at pressByLabel (src/components/plans/PlanDayCard.test.tsx:100:6)
+      at Object.pressByLabel (src/components/plans/PlanDayCard.test.tsx:168:5)
+
+PASS src/components/ui/SegmentedControl.test.tsx
+PASS src/hooks/useCheckInDraft.test.ts
+PASS src/components/measurements/MeasurementSheet.test.tsx
+PASS src/components/ui/StatusPill.test.tsx (21.101 s)
+PASS src/features/checkin/checkInOutbox.test.ts
+PASS src/hooks/usePlans.test.ts
+PASS src/components/logger/PlateCalculatorSheet.test.tsx
+PASS src/lib/reminders.test.ts
+PASS src/components/logger/CurrentSetEditor.test.tsx
+PASS src/components/coach/CoachStatusCard.test.tsx
+PASS src/components/plans/ExercisePrescriptionSheet.test.tsx
+PASS src/components/ui/Screen.test.tsx
+PASS src/lib/checkin-validation.test.ts
+PASS src/components/ui/Input.test.tsx
+PASS src/lib/today-action.test.ts
+PASS src/screens/__tests__/tabs/more.test.tsx
+PASS src/features/profile/profileSaveRecovery.test.ts
+PASS src/hooks/useReducedTransparency.test.ts
+PASS src/features/onboarding/useSetupController.test.ts
+PASS src/components/ui/Button.test.tsx
+PASS src/components/logger/WorkoutSummary.test.tsx
+PASS src/components/dashboard/WeekStrip.test.tsx (113.679 s)
+PASS src/hooks/useCheckInMutation.test.tsx (140.153 s)
+PASS src/theme/ThemeProvider.motion.test.tsx (83.223 s)
+FAIL src/features/home/RecentRecord.test.tsx (249.564 s)
+  ● exposes every dated value and missing gap without requiring chart inspection
+
+    Unable to find an element with text: /13 Sep 2026 · No weight reported/
+
+    [36m<View>[39m
+      [36m<View>[39m
+        [36m<Text>[39m
+          [0mLatest weight[0m
+        [36m</Text>[39m
+        [36m<View>[39m
+          [36m<Text>[39m
+            [0m72.4[0m
+          [36m</Text>[39m
+          [36m<Text>[39m
+            [0mkg[0m
+          [36m</Text>[39m
+        [36m</View>[39m
+        [36m<Text>[39m
+          [0mSep 15, 2026[0m
+        [36m</Text>[39m
+        [36m<View[39m
+          [33maccessibilityHint[39m=[32m"Tap or swipe horizontally to inspect. You can also adjust to the previous or next entry."[39m
+          [33maccessibilityLabel[39m=[32m"Weight history"[39m
+          [33maccessibilityRole[39m=[32m"adjustable"[39m
+          [33maccessibilityValue[39m=[32m{
+            {
+              "max": 2,
+              "min": 1,
+              "now": 2,
+              "text": "Sep 15, 2026, 72.4 kilograms",
+            }
+          }[39m
+          [33maccessible[39m=[32m{true}[39m
+        [36m>[39m
+          [36m<RNSVGSvgView[39m
+            [33maccessible[39m=[32m{false}[39m
+          [36m>[39m
+            [36m<RNSVGGroup>[39m
+              [36m<RNSVGLine />[39m
+              [36m<RNSVGCircle />[39m
+              [36m<RNSVGCircle />[39m
+              [36m<RNSVGLine />[39m
+              [36m<RNSVGCircle />[39m
+            [36m</RNSVGGroup>[39m
+          [36m</RNSVGSvgView>[39m
+        [36m</View>[39m
+        [36m<Text>[39m
+          [0mSep 15, 2026[0m
+          [0m · [0m
+          [0m72.4[0m
+          [0m kg[0m
+        [36m</Text>[39m
+        [36m<View[39m
+          [33maccessibilityLabel[39m=[32m"Hide weight values"[39m
+          [33maccessibilityRole[39m=[32m"button"[39m
+          [33maccessibilityState[39m=[32m{
+            {
+              "expanded": true,
+            }
+          }[39m
+          [33maccessible[39m=[32m{true}[39m
+        [36m>[39m
+          [36m<Text>[39m
+            [0mHide values[0m
+          [36m</Text>[39m
+        [36m</View>[39m
+        [36m<View[39m
+          [33maccessibilityRole[39m=[32m"list"[39m
+        [36m>[39m
+          [36m<Text>[39m
+            [0mSep 12, 2026[0m
+            [0m · [0m
+            [0m73.0 kg[0m
+          [36m</Text>[39m
+          [36m<Text>[39m
+            [0mSep 13, 2026[0m
+            [0m · [0m
+            [0mNo weight reported[0m
+          [36m</Text>[39m
+          [36m<Text>[39m
+            [0mSep 15, 2026[0m
+            [0m · [0m
+            [0m72.4 kg[0m
+          [36m</Text>[39m
+        [36m</View>[39m
+      [36m</View>[39m
+      [36m<View>[39m
+        [36m<Text>[39m
+          [0m7-day sleep average[0m
+        [36m</Text>[39m
+        [36m<View>[39m
+          [36m<Text>[39m
+            [0m—[0m
+          [36m</Text>[39m
+          [36m<Text>[39m
+            [0mhours[0m
+          [36m</Text>[39m
+        [36m</View>[39m
+        [36m<Text>[39m
+          [0mNo reported sleep[0m
+        [36m</Text>[39m
+        [36m<Text>[39m
+          [0mSep 9, 2026[0m
+          [0m–[0m
+          [0mSep 15, 2026[0m
+        [36m</Text>[39m
+      [36m</View>[39m
+    [36m</View>[39m
+
+      43 |
+      44 |   await fireEvent.press(view.getByRole('button', { name: 'View weight values' }));
+    > 45 |   expect(view.getByText(/13 Sep 2026 · No weight reported/)).toBeTruthy();
+         |               ^
+      46 |   expect(view.getByText(/15 Sep 2026 · 72.4 kg/)).toBeTruthy();
+      47 | });
+      48 |
+
+      at Object.getByText (src/features/home/RecentRecord.test.tsx:45:15)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+PASS src/lib/workoutPersistence.test.ts (264.294 s)
+PASS src/components/logger/swipeDecision.test.ts (213.095 s)
+FAIL src/components/ui/RatingRow.test.tsx (77.903 s)
+  ● RatingRow › exposes each option as the only accessible interactive node in option mode
+
+    expect(received).toMatchObject(expected)
+
+    Matcher error: received value must be a non-null object
+
+    Received has value: undefined
+
+      77 |       accessibilityElementsHidden: false,
+      78 |     });
+    > 79 |     expect(StyleSheet.flatten(option.props.style)).toMatchObject({ minWidth: 44, minHeight: 44 });
+         |                                                    ^
+      80 |
+      81 |     act(() => option.props.onPress());
+      82 |     expect(onChange).toHaveBeenCalledWith(5);
+
+      at Object.toMatchObject (src/components/ui/RatingRow.test.tsx:79:52)
+
+FAIL src/components/ui/AnimatedNumber.test.tsx (194.53 s)
+  ● AnimatedNumber › exposes one formatted value while hiding the rolling digit stacks
+
+    TypeError: Cannot read properties of undefined (reading 'props')
+
+      77 |     const { root } = render(<AnimatedNumber value={-12.5} precision={1} suffix="kg" />);
+      78 |     const [metric] = root.findAll((node) => node.props.accessibilityRole === 'text');
+    > 79 |     expect(metric.props.accessibilityLabel).toBe('-12.5 kg');
+         |                   ^
+      80 |     expect(metric.props.accessible).toBe(true);
+      81 |     expect(root.findAll((node) => node.props.importantForAccessibility === 'no-hide-descendants').length).toBeGreaterThan(0);
+      82 |   });
+
+      at Object.props (src/components/ui/AnimatedNumber.test.tsx:79:19)
+
+PASS src/components/checkin/CheckInFieldBlock.test.tsx (174.62 s)
+PASS src/features/measurements/observations.test.ts (160.545 s)
+PASS src/components/dashboard/TodayActionCard.test.tsx (206.75 s)
+PASS src/hooks/useNotificationRouting.test.tsx (167.214 s)
+PASS src/components/charts/timeSeries.test.ts (121.527 s)
+PASS src/lib/weekly-feedback.test.ts (112.323 s)
+PASS src/hooks/workoutDraftStorage.test.ts (126.714 s)
+PASS src/features/home/home-state.test.ts (104.992 s)
+FAIL src/components/charts/LineChart.test.tsx (283.505 s)
+  ● provides the authored summary and truthful latest values for sparse series
+
+    Unable to find an element with text: 1 Jul
+
+    [36m<View[39m
+      [33maccessibilityLabel[39m=[32m"Body measurements by recorded date. Missing values appear as gaps."[39m
+      [33maccessibilityRole[39m=[32m"image"[39m
+      [33maccessible[39m=[32m{true}[39m
+    [36m>[39m
+      [36m<RNSVGSvgView[39m
+        [33maccessible[39m=[32m{false}[39m
+      [36m>[39m
+        [36m<RNSVGGroup>[39m
+          [36m<RNSVGLine />[39m
+          [36m<RNSVGLine />[39m
+          [36m<RNSVGLine />[39m
+          [36m<RNSVGCircle />[39m
+          [36m<RNSVGCircle />[39m
+          [36m<RNSVGCircle />[39m
+        [36m</RNSVGGroup>[39m
+      [36m</RNSVGSvgView>[39m
+      [36m<View>[39m
+        [36m<Text>[39m
+          [0mJul 1[0m
+        [36m</Text>[39m
+        [36m<Text>[39m
+          [0mAug 29[0m
+        [36m</Text>[39m
+      [36m</View>[39m
+      [36m<View>[39m
+        [36m<View>[39m
+          [36m<View>[39m
+            [36m<View />[39m
+            [36m<View />[39m
+          [36m</View>[39m
+          [36m<Text>[39m
+            [0mWaist[0m
+          [36m</Text>[39m
+          [36m<Text>[39m
+            [0m82.5[0m
+            [0m cm[0m
+          [36m</Text>[39m
+        [36m</View>[39m
+        [36m<View>[39m
+          [36m<View>[39m
+            [36m<View />[39m
+          [36m</View>[39m
+          [36m<Text>[39m
+            [0mHips[0m
+          [36m</Text>[39m
+          [36m<Text>[39m
+            [0m98[0m
+            [0m cm[0m
+          [36m</Text>[39m
+        [36m</View>[39m
+      [36m</View>[39m
+    [36m</View>[39m
+
+      44 |   expect(view.getByText('82.5 cm')).toBeTruthy();
+      45 |   expect(view.getByText('98 cm')).toBeTruthy();
+    > 46 |   expect(view.getByText('1 Jul')).toBeTruthy();
+         |               ^
+      47 |   expect(view.getByText('29 Aug')).toBeTruthy();
+      48 | });
+      49 |
+
+      at Object.getByText (src/components/charts/LineChart.test.tsx:46:15)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+PASS src/lib/delivery-errors.test.ts (84.498 s)
+PASS src/components/ui/AdaptiveGrid.test.tsx
+PASS src/features/checkin/components/PreviousValueButton.test.tsx
+PASS src/features/checkin/history.test.ts
+PASS src/features/checkin/components/TickRuler.accessibility.test.tsx
+PASS src/features/checkin/components/TickRuler.test.ts
+PASS src/features/checkin/dateHistory.test.ts (31.331 s)
+PASS src/components/dashboard/MetricCard.test.tsx
+PASS src/features/checkin/checkInExitGuard.test.ts
+PASS src/features/checkin/checkInIntent.test.ts
+PASS src/features/home/WeekRecordStrip.test.tsx
+PASS src/components/checkin/CheckInSummarySection.test.tsx
+PASS src/lib/streak.test.ts
+PASS src/features/checkin/model.test.ts
+PASS src/lib/measurement-validation.test.ts
+PASS src/lib/consistency.test.ts
+FAIL src/features/home/selectors.test.ts
+  ● Today Brief selectors › uses calendar coverage rather than the last seven records
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+    @@ -3,11 +3,11 @@
+          "date": "2026-09-13",
+          "value": null,
+        },
+        Object {
+          "date": "2026-09-14",
+    -     "value": 72,
+    +     "value": 72.8,
+        },
+        Object {
+          "date": "2026-09-15",
+          "value": null,
+        },
+
+      32 |     expect(summary.to).toBe('2026-09-15');
+      33 |     expect(summary.latestWeight?.date).toBe('2026-09-14');
+    > 34 |     expect(summary.weightPoints.slice(-3)).toEqual([
+         |                                            ^
+      35 |       { date: '2026-09-13', value: null },
+      36 |       { date: '2026-09-14', value: 72 },
+      37 |       { date: '2026-09-15', value: null },
+
+      at Object.toEqual (src/features/home/selectors.test.ts:34:44)
+
+PASS src/components/measurements/MeasurementHistoryRow.test.tsx
+PASS src/features/workout/workout-entry.test.ts
+PASS src/features/checkin/components/CheckInPanel.test.tsx
+PASS src/components/ui/RecordStatus.test.tsx
+PASS src/components/ui/StickyActionBar.test.tsx
+PASS src/lib/dates.test.ts
+PASS src/components/checkin/CheckInStageHeader.test.tsx (62.357 s)
+PASS src/components/dashboard/StreakHero.test.tsx (125.598 s)
+PASS src/components/ui/ProgressBar.test.tsx (173.22 s)
+PASS src/features/checkin/config/fields.test.ts (706.928 s)
+PASS src/hooks/useOnboarding.test.tsx (188.031 s)
+PASS src/theme/layout.test.ts (32.882 s)
+PASS src/components/logger/RestDock.test.tsx
+PASS src/features/checkin/components/HistoryCaption.test.tsx
+PASS src/lib/plate-calculator.test.ts
+PASS src/components/ui/Card.test.tsx
+PASS src/components/logger/PlanDayButton.test.tsx
+PASS src/lib/profile-data.test.ts
+PASS src/features/onboarding/routing.test.ts
+PASS src/hooks/useCoach.test.ts
+PASS src/components/checkin/checkin-presentation.test.ts (13.913 s)
+PASS src/features/workout/workout-review.test.ts
+PASS src/__tests__/oss-ledger.test.ts
+PASS src/hooks/useResponsiveLayout.test.ts
+PASS src/test/router-boundary.test.ts
+PASS src/features/onboarding/setup-model.test.ts
+PASS src/screens/__tests__/profile.test.tsx (81.438 s)
+
+Summary of all failing tests
+FAIL src/screens/__tests__/weekly-feedback.test.tsx (256.405 s)
+  ● WeeklyFeedbackScreen › blocks an invalid active step and gives its focused alert sole ownership of the summary announcement
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: 78
+
+    Number of calls: 0
+
+      382 |     expect(summary.props).toMatchObject({ accessible: true, focusable: true });
+      383 |     expect(summary.findByProps({ children: 'Please correct the highlighted fields before continuing.' })).toBeTruthy();
+    > 384 |     expect(AccessibilityInfo.setAccessibilityFocus).toHaveBeenCalledWith(78);
+          |                                                     ^
+      385 |     expect(AccessibilityInfo.announceForAccessibility).not.toHaveBeenCalledWith(
+      386 |       'Please correct the highlighted fields before continuing.',
+      387 |     );
+
+      at Object.toHaveBeenCalledWith (src/screens/__tests__/weekly-feedback.test.tsx:384:53)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● WeeklyFeedbackScreen › resets scroll before focusing a newly opened step heading
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: 77
+
+    Number of calls: 0
+
+      416 |       focusable: true,
+      417 |     });
+    > 418 |     expect(AccessibilityInfo.setAccessibilityFocus).toHaveBeenCalledWith(77);
+          |                                                     ^
+      419 |   });
+      420 |
+      421 |   it('disables animated step and validation scrolling when Reduced Motion is enabled', async () => {
+
+      at Object.toHaveBeenCalledWith (src/screens/__tests__/weekly-feedback.test.tsx:418:53)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL src/components/media/PhotoCaptureSheet.test.tsx (28.969 s)
+  ● PhotoCaptureSheet › states the exact upload and coaching-team context before the photo slots
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:190:26)
+
+  ● PhotoCaptureSheet › retains a failed local image and retries upload from the visible slot action
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:205:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › retains uploaded slots and retries only database persistence after a save failure
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:243:42)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › retries a failed persistence snapshot without re-uploading unrelated failed slots
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:293:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › preserves a valid pending selection when a replacement is oversized
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:338:42)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › retries only the requested angle and persists successes without sending other failures
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:388:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › uses a synchronous guard to ignore same-tick duplicate saves
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:425:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › locks slot mutations while the database save is pending
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:454:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › ignores a stale upload completion after the slot is replaced externally
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:492:50)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › ignores a stale upload completion after the pending selection is discarded
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:518:40)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › does not persist an upload that completes after the sheet unmounts
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:542:42)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › allows explicit discard when no save operation is in flight
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:564:42)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › keeps a dirty sheet native-locked through Keep editing, then allows explicit Discard
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:582:42)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › allows an idle clean sheet to dismiss without confirmation
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:614:26)
+
+  ● PhotoCaptureSheet › blocks every dismissal path while database persistence is in flight
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:633:42)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● PhotoCaptureSheet › offers cancellation and Settings after permission denial
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      55 | }: Props) {
+      56 |   const { colors } = useTheme();
+    > 57 |   const motion = useMotion();
+         |                           ^
+      58 |   const label = ANGLES.find((candidate) => candidate.key === angle)?.label ?? angle;
+      59 |   const previewUri = state.pendingUri ?? state.url;
+      60 |   const status = slotStatus(state);
+
+      at PhotoSlot (src/components/media/PhotoSlot.tsx:57:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:152:6)
+      at Object.renderSheet (src/components/media/PhotoCaptureSheet.test.tsx:673:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+FAIL src/components/ui/Sheet.test.tsx
+  ● Sheet › provides a named 44pt close action and bottom safe-area clearance
+
+    expect(received).toMatchObject(expected)
+
+    Matcher error: received value must be a non-null object
+
+    Received has value: undefined
+
+      140 |     };
+      141 |
+    > 142 |     expect(StyleSheet.flatten(getByLabelText('Close Exercise details').props.style)).toMatchObject({ minWidth: 44, minHeight: 44 });
+          |                                                                                      ^
+      143 |     expect(StyleSheet.flatten(getByTestId('sheet-content').props.style)).toMatchObject({ paddingBottom: 34 });
+      144 |     expect(mockModalProps).toMatchObject({ enableDynamicSizing: false, snapPoints: ['85%'] });
+      145 |   });
+
+      at Object.toMatchObject (src/components/ui/Sheet.test.tsx:142:86)
+
+FAIL src/components/logger/SetEditor.test.tsx (127.323 s)
+  ● ExerciseSlide set completion › exposes a visible 44 point Details action for a plan prescription
+
+    TypeError: Cannot read properties of undefined (reading 'minHeight')
+
+      377 |       accessibilityLabel: 'Show details for Squat',
+      378 |     });
+    > 379 |     expect(StyleSheet.flatten(details.props.style).minHeight).toBeGreaterThanOrEqual(44);
+          |                                                   ^
+      380 |   });
+      381 |
+      382 |   it('marks the first incomplete stable set current and forwards its toggle', () => {
+
+      at Object.<anonymous> (src/components/logger/SetEditor.test.tsx:379:51)
+
+  ● ExerciseSlide set completion › marks the first incomplete stable set current and forwards its toggle
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: 1
+    Received: "squat-set-2"
+
+    Number of calls: 1
+
+      420 |     expect(complete).toBeTruthy();
+      421 |     act(() => complete.props.onPress());
+    > 422 |     expect(onToggleSet).toHaveBeenCalledWith(1);
+          |                         ^
+      423 |   });
+      424 | });
+      425 |
+
+      at Object.toHaveBeenCalledWith (src/components/logger/SetEditor.test.tsx:422:25)
+
+FAIL src/screens/__tests__/tabs/plans.test.tsx
+  ● PlansScreen plan provenance › keeps prescription access inside the day card without a duplicate exercise list
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 1
+    Received length: 3
+    Received array:  [{"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}]
+
+      217 |
+      218 |     expect(renderer.root.findAllByProps({ children: 'Exercise details' })).toHaveLength(0);
+    > 219 |     expect(renderer.root.findAllByProps({ accessibilityLabel: 'Show details for Squat' })).toHaveLength(1);
+          |                                                                                            ^
+      220 |
+      221 |     act(() => {
+      222 |       renderer.root.findByProps({ accessibilityLabel: 'Show details for Squat' }).props.onPress();
+
+      at Object.toHaveLength (src/screens/__tests__/tabs/plans.test.tsx:219:92)
+
+FAIL src/components/logger/ExerciseSlide.test.tsx
+  ● ignores a repeated completion callback from the disappearing set control
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      79 |
+      80 |   const state = JSON.parse(view.getByTestId('state').props.children) as WorkoutExercise;
+    > 81 |   expect(state.sets.find((set) => set.id === 's1')?.completed).toBe(true);
+         |                                                                ^
+      82 |   expect(state.sets.find((set) => set.id === 's2')?.completed).toBe(false);
+      83 |   expect(view.getByLabelText('Warm-up 2 duration in seconds')).toBeTruthy();
+      84 | });
+
+      at Object.toBe (src/components/logger/ExerciseSlide.test.tsx:81:64)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● ignores a repeated completion callback from the disappearing set control
+
+    TypeError: completion.props.onPress is not a function
+
+      74 |
+      75 |   act(() => {
+    > 76 |     completion.props.onPress();
+         |                      ^
+      77 |     completion.props.onPress();
+      78 |   });
+      79 |
+
+      at onPress (src/components/logger/ExerciseSlide.test.tsx:76:22)
+      at callback (node_modules/@testing-library/react-native/src/act.ts:72:33)
+      at callback (node_modules/@testing-library/react-native/src/act.ts:30:24)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:814:22)
+      at actImplementation (node_modules/@testing-library/react-native/src/act.ts:29:25)
+      at _act (node_modules/@testing-library/react-native/src/act.ts:72:10)
+      at Object.<anonymous> (src/components/logger/ExerciseSlide.test.tsx:75:6)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● restores the full set at its original position with Undo
+
+    Unable to find an element with role: button, name: Effort and set options
+
+      85 | it('restores the full set at its original position with Undo', async () => {
+      86 |   const view = await render(<Probe />);
+    > 87 |   await fireEvent.press(view.getByRole('button', { name: 'Effort and set options' }));
+         |                              ^
+      88 |   await fireEvent.press(view.getByRole('button', { name: 'Remove warm-up 1' }));
+      89 |   await fireEvent.press(view.getByRole('button', { name: 'Undo removed set' }));
+      90 |   expect(JSON.parse(view.getByTestId('state').props.children)).toEqual(exercise);
+
+      at Object.getByRole (src/components/logger/ExerciseSlide.test.tsx:87:30)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● withholds removal if no restoration callback exists
+
+    Unable to find an element with role: button, name: Effort and set options
+
+      92 | it('withholds removal if no restoration callback exists', async () => {
+      93 |   const view = await render(<Probe restore={false} />);
+    > 94 |   await fireEvent.press(view.getByRole('button', { name: 'Effort and set options' }));
+         |                              ^
+      95 |   expect(view.queryByRole('button', { name: 'Remove warm-up 1' })).toBeNull();
+      96 | });
+      97 |
+
+      at Object.getByRole (src/components/logger/ExerciseSlide.test.tsx:94:30)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL src/components/checkin/CheckInRatingScale.test.tsx
+  ● starts press feedback on touch down and restores it on release without selecting
+
+    expect(jest.fn()).toHaveBeenLastCalledWith(...expected)
+
+    Expected: 0.97, ObjectContaining {"duration": 120}
+    Received: 0.97
+
+    Number of calls: 1
+
+      86 |
+      87 |   await fireEvent(screen.getByTestId('energy-7'), 'pressIn');
+    > 88 |   expect(mockTiming).toHaveBeenLastCalledWith(0.97, expect.objectContaining({ duration: 120 }));
+         |                      ^
+      89 |   expect(changed).not.toHaveBeenCalled();
+      90 |
+      91 |   await fireEvent(screen.getByTestId('energy-7'), 'pressOut');
+
+      at Object.toHaveBeenLastCalledWith (src/components/checkin/CheckInRatingScale.test.tsx:88:22)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL src/components/plans/PlanDayCard.test.tsx
+  ● PlanDayCard › shows today status with the exact action label
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      34 | }: Props) {
+      35 |   const { colors } = useTheme();
+    > 36 |   const motion = useMotion();
+         |                           ^
+      37 |   const scale = useSharedValue(1);
+      38 |   const [pressed, setPressed] = useState(false);
+      39 |
+
+      at Button (src/components/ui/Button.tsx:36:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at pressByLabel (src/components/plans/PlanDayCard.test.tsx:100:6)
+      at pressByLabel (src/components/plans/PlanDayCard.test.tsx:118:5)
+
+  ● PlanDayCard › shows active status with the exact action label
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      34 | }: Props) {
+      35 |   const { colors } = useTheme();
+    > 36 |   const motion = useMotion();
+         |                           ^
+      37 |   const scale = useSharedValue(1);
+      38 |   const [pressed, setPressed] = useState(false);
+      39 |
+
+      at Button (src/components/ui/Button.tsx:36:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at pressByLabel (src/components/plans/PlanDayCard.test.tsx:100:6)
+      at pressByLabel (src/components/plans/PlanDayCard.test.tsx:118:5)
+
+  ● PlanDayCard › shows complete status with the exact action label
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      34 | }: Props) {
+      35 |   const { colors } = useTheme();
+    > 36 |   const motion = useMotion();
+         |                           ^
+      37 |   const scale = useSharedValue(1);
+      38 |   const [pressed, setPressed] = useState(false);
+      39 |
+
+      at Button (src/components/ui/Button.tsx:36:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at pressByLabel (src/components/plans/PlanDayCard.test.tsx:100:6)
+      at pressByLabel (src/components/plans/PlanDayCard.test.tsx:118:5)
+
+  ● PlanDayCard › shows upcoming status with the exact action label
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      34 | }: Props) {
+      35 |   const { colors } = useTheme();
+    > 36 |   const motion = useMotion();
+         |                           ^
+      37 |   const scale = useSharedValue(1);
+      38 |   const [pressed, setPressed] = useState(false);
+      39 |
+
+      at Button (src/components/ui/Button.tsx:36:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at pressByLabel (src/components/plans/PlanDayCard.test.tsx:100:6)
+      at pressByLabel (src/components/plans/PlanDayCard.test.tsx:118:5)
+
+  ● PlanDayCard › preserves count, notes, video alternative, expansion state, and 44pt actions
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      34 | }: Props) {
+      35 |   const { colors } = useTheme();
+    > 36 |   const motion = useMotion();
+         |                           ^
+      37 |   const scale = useSharedValue(1);
+      38 |   const [pressed, setPressed] = useState(false);
+      39 |
+
+      at Button (src/components/ui/Button.tsx:36:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at Object.<anonymous> (src/components/plans/PlanDayCard.test.tsx:134:8)
+
+  ● PlanDayCard › opens the full prescription from the exercise inside its day disclosure
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      34 | }: Props) {
+      35 |   const { colors } = useTheme();
+    > 36 |   const motion = useMotion();
+         |                           ^
+      37 |   const scale = useSharedValue(1);
+      38 |   const [pressed, setPressed] = useState(false);
+      39 |
+
+      at Button (src/components/ui/Button.tsx:36:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at pressByLabel (src/components/plans/PlanDayCard.test.tsx:100:6)
+      at Object.pressByLabel (src/components/plans/PlanDayCard.test.tsx:154:5)
+
+  ● PlanDayCard › delegates disclosure state and local content reveal to shared motion primitives
+
+    TypeError: (0 , _theme.useMotion) is not a function
+
+      34 | }: Props) {
+      35 |   const { colors } = useTheme();
+    > 36 |   const motion = useMotion();
+         |                           ^
+      37 |   const scale = useSharedValue(1);
+      38 |   const [pressed, setPressed] = useState(false);
+      39 |
+
+      at Button (src/components/ui/Button.tsx:36:27)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12253:39)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:884:10)
+      at pressByLabel (src/components/plans/PlanDayCard.test.tsx:100:6)
+      at Object.pressByLabel (src/components/plans/PlanDayCard.test.tsx:168:5)
+
+FAIL src/features/home/RecentRecord.test.tsx (249.564 s)
+  ● exposes every dated value and missing gap without requiring chart inspection
+
+    Unable to find an element with text: /13 Sep 2026 · No weight reported/
+
+    [36m<View>[39m
+      [36m<View>[39m
+        [36m<Text>[39m
+          [0mLatest weight[0m
+        [36m</Text>[39m
+        [36m<View>[39m
+          [36m<Text>[39m
+            [0m72.4[0m
+          [36m</Text>[39m
+          [36m<Text>[39m
+            [0mkg[0m
+          [36m</Text>[39m
+        [36m</View>[39m
+        [36m<Text>[39m
+          [0mSep 15, 2026[0m
+        [36m</Text>[39m
+        [36m<View[39m
+          [33maccessibilityHint[39m=[32m"Tap or swipe horizontally to inspect. You can also adjust to the previous or next entry."[39m
+          [33maccessibilityLabel[39m=[32m"Weight history"[39m
+          [33maccessibilityRole[39m=[32m"adjustable"[39m
+          [33maccessibilityValue[39m=[32m{
+            {
+              "max": 2,
+              "min": 1,
+              "now": 2,
+              "text": "Sep 15, 2026, 72.4 kilograms",
+            }
+          }[39m
+          [33maccessible[39m=[32m{true}[39m
+        [36m>[39m
+          [36m<RNSVGSvgView[39m
+            [33maccessible[39m=[32m{false}[39m
+          [36m>[39m
+            [36m<RNSVGGroup>[39m
+              [36m<RNSVGLine />[39m
+              [36m<RNSVGCircle />[39m
+              [36m<RNSVGCircle />[39m
+              [36m<RNSVGLine />[39m
+              [36m<RNSVGCircle />[39m
+            [36m</RNSVGGroup>[39m
+          [36m</RNSVGSvgView>[39m
+        [36m</View>[39m
+        [36m<Text>[39m
+          [0mSep 15, 2026[0m
+          [0m · [0m
+          [0m72.4[0m
+          [0m kg[0m
+        [36m</Text>[39m
+        [36m<View[39m
+          [33maccessibilityLabel[39m=[32m"Hide weight values"[39m
+          [33maccessibilityRole[39m=[32m"button"[39m
+          [33maccessibilityState[39m=[32m{
+            {
+              "expanded": true,
+            }
+          }[39m
+          [33maccessible[39m=[32m{true}[39m
+        [36m>[39m
+          [36m<Text>[39m
+            [0mHide values[0m
+          [36m</Text>[39m
+        [36m</View>[39m
+        [36m<View[39m
+          [33maccessibilityRole[39m=[32m"list"[39m
+        [36m>[39m
+          [36m<Text>[39m
+            [0mSep 12, 2026[0m
+            [0m · [0m
+            [0m73.0 kg[0m
+          [36m</Text>[39m
+          [36m<Text>[39m
+            [0mSep 13, 2026[0m
+            [0m · [0m
+            [0mNo weight reported[0m
+          [36m</Text>[39m
+          [36m<Text>[39m
+            [0mSep 15, 2026[0m
+            [0m · [0m
+            [0m72.4 kg[0m
+          [36m</Text>[39m
+        [36m</View>[39m
+      [36m</View>[39m
+      [36m<View>[39m
+        [36m<Text>[39m
+          [0m7-day sleep average[0m
+        [36m</Text>[39m
+        [36m<View>[39m
+          [36m<Text>[39m
+            [0m—[0m
+          [36m</Text>[39m
+          [36m<Text>[39m
+            [0mhours[0m
+          [36m</Text>[39m
+        [36m</View>[39m
+        [36m<Text>[39m
+          [0mNo reported sleep[0m
+        [36m</Text>[39m
+        [36m<Text>[39m
+          [0mSep 9, 2026[0m
+          [0m–[0m
+          [0mSep 15, 2026[0m
+        [36m</Text>[39m
+      [36m</View>[39m
+    [36m</View>[39m
+
+      43 |
+      44 |   await fireEvent.press(view.getByRole('button', { name: 'View weight values' }));
+    > 45 |   expect(view.getByText(/13 Sep 2026 · No weight reported/)).toBeTruthy();
+         |               ^
+      46 |   expect(view.getByText(/15 Sep 2026 · 72.4 kg/)).toBeTruthy();
+      47 | });
+      48 |
+
+      at Object.getByText (src/features/home/RecentRecord.test.tsx:45:15)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL src/components/ui/RatingRow.test.tsx (77.903 s)
+  ● RatingRow › exposes each option as the only accessible interactive node in option mode
+
+    expect(received).toMatchObject(expected)
+
+    Matcher error: received value must be a non-null object
+
+    Received has value: undefined
+
+      77 |       accessibilityElementsHidden: false,
+      78 |     });
+    > 79 |     expect(StyleSheet.flatten(option.props.style)).toMatchObject({ minWidth: 44, minHeight: 44 });
+         |                                                    ^
+      80 |
+      81 |     act(() => option.props.onPress());
+      82 |     expect(onChange).toHaveBeenCalledWith(5);
+
+      at Object.toMatchObject (src/components/ui/RatingRow.test.tsx:79:52)
+
+FAIL src/components/ui/AnimatedNumber.test.tsx (194.53 s)
+  ● AnimatedNumber › exposes one formatted value while hiding the rolling digit stacks
+
+    TypeError: Cannot read properties of undefined (reading 'props')
+
+      77 |     const { root } = render(<AnimatedNumber value={-12.5} precision={1} suffix="kg" />);
+      78 |     const [metric] = root.findAll((node) => node.props.accessibilityRole === 'text');
+    > 79 |     expect(metric.props.accessibilityLabel).toBe('-12.5 kg');
+         |                   ^
+      80 |     expect(metric.props.accessible).toBe(true);
+      81 |     expect(root.findAll((node) => node.props.importantForAccessibility === 'no-hide-descendants').length).toBeGreaterThan(0);
+      82 |   });
+
+      at Object.props (src/components/ui/AnimatedNumber.test.tsx:79:19)
+
+FAIL src/components/charts/LineChart.test.tsx (283.505 s)
+  ● provides the authored summary and truthful latest values for sparse series
+
+    Unable to find an element with text: 1 Jul
+
+    [36m<View[39m
+      [33maccessibilityLabel[39m=[32m"Body measurements by recorded date. Missing values appear as gaps."[39m
+      [33maccessibilityRole[39m=[32m"image"[39m
+      [33maccessible[39m=[32m{true}[39m
+    [36m>[39m
+      [36m<RNSVGSvgView[39m
+        [33maccessible[39m=[32m{false}[39m
+      [36m>[39m
+        [36m<RNSVGGroup>[39m
+          [36m<RNSVGLine />[39m
+          [36m<RNSVGLine />[39m
+          [36m<RNSVGLine />[39m
+          [36m<RNSVGCircle />[39m
+          [36m<RNSVGCircle />[39m
+          [36m<RNSVGCircle />[39m
+        [36m</RNSVGGroup>[39m
+      [36m</RNSVGSvgView>[39m
+      [36m<View>[39m
+        [36m<Text>[39m
+          [0mJul 1[0m
+        [36m</Text>[39m
+        [36m<Text>[39m
+          [0mAug 29[0m
+        [36m</Text>[39m
+      [36m</View>[39m
+      [36m<View>[39m
+        [36m<View>[39m
+          [36m<View>[39m
+            [36m<View />[39m
+            [36m<View />[39m
+          [36m</View>[39m
+          [36m<Text>[39m
+            [0mWaist[0m
+          [36m</Text>[39m
+          [36m<Text>[39m
+            [0m82.5[0m
+            [0m cm[0m
+          [36m</Text>[39m
+        [36m</View>[39m
+        [36m<View>[39m
+          [36m<View>[39m
+            [36m<View />[39m
+          [36m</View>[39m
+          [36m<Text>[39m
+            [0mHips[0m
+          [36m</Text>[39m
+          [36m<Text>[39m
+            [0m98[0m
+            [0m cm[0m
+          [36m</Text>[39m
+        [36m</View>[39m
+      [36m</View>[39m
+    [36m</View>[39m
+
+      44 |   expect(view.getByText('82.5 cm')).toBeTruthy();
+      45 |   expect(view.getByText('98 cm')).toBeTruthy();
+    > 46 |   expect(view.getByText('1 Jul')).toBeTruthy();
+         |               ^
+      47 |   expect(view.getByText('29 Aug')).toBeTruthy();
+      48 | });
+      49 |
+
+      at Object.getByText (src/components/charts/LineChart.test.tsx:46:15)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL src/features/home/selectors.test.ts
+  ● Today Brief selectors › uses calendar coverage rather than the last seven records
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+    @@ -3,11 +3,11 @@
+          "date": "2026-09-13",
+          "value": null,
+        },
+        Object {
+          "date": "2026-09-14",
+    -     "value": 72,
+    +     "value": 72.8,
+        },
+        Object {
+          "date": "2026-09-15",
+          "value": null,
+        },
+
+      32 |     expect(summary.to).toBe('2026-09-15');
+      33 |     expect(summary.latestWeight?.date).toBe('2026-09-14');
+    > 34 |     expect(summary.weightPoints.slice(-3)).toEqual([
+         |                                            ^
+      35 |       { date: '2026-09-13', value: null },
+      36 |       { date: '2026-09-14', value: 72 },
+      37 |       { date: '2026-09-15', value: null },
+
+      at Object.toEqual (src/features/home/selectors.test.ts:34:44)
+
+
+Test Suites: 13 failed, 109 passed, 122 total
+Tests:       38 failed, 866 passed, 904 total
+Snapshots:   0 total
+Time:        5702.353 s
+Ran all test suites.
+Test results written to: ../../../../../../tmp/dawnage-premium-20260917/jest-verified-results.json
+Verification directory cache: 77879 missing-path checks resolved; 933 directories read.

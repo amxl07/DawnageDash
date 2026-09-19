@@ -1,0 +1,6 @@
+PASS: divergent current week wins over older exact inferred metadata: false
+PASS: exact current week wins over older exact inferred metadata: false
+PASS: older exact alone cannot establish current submission inferred metadata: false
+PASS: divergent current week wins over older exact inferred metadata: true
+PASS: exact current week wins over older exact inferred metadata: true
+PASS: older exact alone cannot establish current submission inferred metadata: true

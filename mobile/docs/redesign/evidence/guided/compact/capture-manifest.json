@@ -1,0 +1,153 @@
+{
+  "platform": "Expo web / headless Chrome",
+  "source": "fictional intercepted data",
+  "sourceRevision": "8ec16a7ca5fdc560a5f7858cb1722329ba2c4df2",
+  "sourceDirty": true,
+  "nativeValidation": false,
+  "capturedAt": "2026-09-16T21:49:25.656Z",
+  "baseUrl": "http://localhost:8089",
+  "records": [
+    {
+      "screen": "checkin",
+      "theme": "dark",
+      "width": 320,
+      "height": 568,
+      "file": "checkin-dark-320.png",
+      "errors": [],
+      "warnings": [],
+      "renderedTextLength": 259,
+      "journeyChecks": [
+        "Continue keeps an incomplete section open without submitting.",
+        "Optional weight commits before collapse and survives reopening.",
+        "Sleep quick choice replaces partially typed input.",
+        "Invalid numeric text blocks collapse; corrected values reach concise, readable review.",
+        "Review editing preserves the other sections and final submission sends the expected date and values."
+      ],
+      "checkpoints": [
+        "checkin-recovery-dark-320.png",
+        "checkin-adherence-dark-320.png",
+        "checkin-review-dark-320.png",
+        "checkin-saved-dark-320.png"
+      ],
+      "fixtureWrites": [
+        {
+          "table": "daily_check_ins",
+          "method": "POST",
+          "payload": {
+            "date": "2026-09-15",
+            "morning_weight": 72.6,
+            "sleep_hours": 8,
+            "workout_status": "rest_day",
+            "workout_performance": null,
+            "nutrition_score": 8,
+            "calorie_intake": null,
+            "water_liters": 2.25,
+            "daily_steps": 8200,
+            "protein": null,
+            "carbs": null,
+            "fats": null,
+            "energy_level": 7,
+            "hunger_level": 6,
+            "stress_level": 4,
+            "digestion": "none",
+            "notes": null,
+            "user_id": "00000000-0000-4000-8000-000000000001"
+          }
+        }
+      ]
+    },
+    {
+      "screen": "checkin",
+      "theme": "light",
+      "width": 320,
+      "height": 568,
+      "file": "checkin-light-320.png",
+      "errors": [],
+      "warnings": [],
+      "renderedTextLength": 259,
+      "journeyChecks": [
+        "Continue keeps an incomplete section open without submitting.",
+        "Optional weight commits before collapse and survives reopening.",
+        "Sleep quick choice replaces partially typed input.",
+        "Invalid numeric text blocks collapse; corrected values reach concise, readable review.",
+        "Review editing preserves the other sections and final submission sends the expected date and values."
+      ],
+      "checkpoints": [
+        "checkin-recovery-light-320.png",
+        "checkin-adherence-light-320.png",
+        "checkin-review-light-320.png",
+        "checkin-saved-light-320.png"
+      ],
+      "fixtureWrites": [
+        {
+          "table": "daily_check_ins",
+          "method": "POST",
+          "payload": {
+            "date": "2026-09-15",
+            "morning_weight": 72.6,
+            "sleep_hours": 8,
+            "workout_status": "rest_day",
+            "workout_performance": null,
+            "nutrition_score": 8,
+            "calorie_intake": null,
+            "water_liters": 2.25,
+            "daily_steps": 8200,
+            "protein": null,
+            "carbs": null,
+            "fats": null,
+            "energy_level": 7,
+            "hunger_level": 6,
+            "stress_level": 4,
+            "digestion": "none",
+            "notes": null,
+            "user_id": "00000000-0000-4000-8000-000000000001"
+          }
+        }
+      ]
+    },
+    {
+      "screen": "workout",
+      "theme": "dark",
+      "width": 320,
+      "height": 568,
+      "file": "workout-dark-320.png",
+      "errors": [],
+      "warnings": [],
+      "renderedTextLength": 338,
+      "journeyChecks": [
+        "3 sets advance to exercise completion without submitting the session.",
+        "A completed set remains editable; Continue selects the next unfinished exercise.",
+        "Overview adds an exercise and opens partial-workout review without saving or losing entries."
+      ],
+      "checkpoints": [
+        "workout-exercise-complete-dark-320.png",
+        "workout-next-exercise-dark-320.png",
+        "workout-overview-dark-320.png",
+        "workout-review-dark-320.png"
+      ],
+      "fixtureWrites": []
+    },
+    {
+      "screen": "workout",
+      "theme": "light",
+      "width": 320,
+      "height": 568,
+      "file": "workout-light-320.png",
+      "errors": [],
+      "warnings": [],
+      "renderedTextLength": 338,
+      "journeyChecks": [
+        "3 sets advance to exercise completion without submitting the session.",
+        "A completed set remains editable; Continue selects the next unfinished exercise.",
+        "Overview adds an exercise and opens partial-workout review without saving or losing entries."
+      ],
+      "checkpoints": [
+        "workout-exercise-complete-light-320.png",
+        "workout-next-exercise-light-320.png",
+        "workout-overview-light-320.png",
+        "workout-review-light-320.png"
+      ],
+      "fixtureWrites": []
+    }
+  ]
+}

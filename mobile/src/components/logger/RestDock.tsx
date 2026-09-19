@@ -1,0 +1,97 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BottomTabBarHeightContext } from 'expo-router/js-tabs';
+import { useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Pressable, View, type LayoutChangeEvent } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Button, Text } from '@/components/ui';
+import { DisclosureChevron } from '@/components/ui/DisclosureChevron';
+import { radius, spacing, useTheme } from '@/theme';
+import { REST_PRESETS, useRestTimer } from './useRestTimer';
+
+type Preference = { autoStart: boolean; seconds: number | null };
+const defaults: Preference = { autoStart: false, seconds: null };
+export function useRestPreference(userId: string) {
+  const owner = useRef(userId); owner.current = userId;
+  const [value, setValue] = useState<{ owner: string; preference: Preference }>({ owner: userId, preference: defaults });
+  const [error, setError] = useState<string | null>(null);
+  const version = useRef(0);
+  useEffect(() => {
+    const currentVersion = ++version.current;
+    setError(null); setValue({ owner: userId, preference: defaults });
+    void AsyncStorage.getItem(`workout-rest-preference:${userId}`).then((raw) => {
+      if (!raw || owner.current !== userId || version.current !== currentVersion) return;
+      const parsed = JSON.parse(raw) as Preference;
+      if (typeof parsed.autoStart !== 'boolean' || (parsed.seconds !== null && (!Number.isFinite(parsed.seconds) || parsed.seconds <= 0))) throw new Error('Invalid rest preference');
+      setValue({ owner: userId, preference: parsed });
+    }).catch(() => { if (owner.current === userId) setError('Couldn’t read your rest preference. Auto-start is off.'); });
+    return () => { version.current += 1; };
+  }, [userId]);
+  const change = useCallback(async (preference: Preference) => {
+    const currentVersion = ++version.current;
+    try {
+      await AsyncStorage.setItem(`workout-rest-preference:${userId}`, JSON.stringify(preference));
+      if (owner.current === userId && version.current === currentVersion) { setValue({ owner: userId, preference }); setError(null); }
+    } catch { if (owner.current === userId) setError('Couldn’t save your rest preference. Try again.'); }
+  }, [userId]);
+  return { preference: value.owner === userId ? value.preference : defaults, change, error: value.owner === userId ? error : null };
+}
+
+export function WorkoutRestFooter({ children, onHeightChange }: { children: ReactNode; onHeightChange?: (height: number) => void }) {
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = useContext(BottomTabBarHeightContext) ?? 0;
+  const clearsOverlayTabBar = process.env.EXPO_OS === 'ios' && tabBarHeight > 0;
+  const lastHeight = useRef(0);
+  const heightChangeRef = useRef(onHeightChange);
+  heightChangeRef.current = onHeightChange;
+  useEffect(() => () => heightChangeRef.current?.(0), []);
+  const handleLayout = (event: LayoutChangeEvent) => {
+    const height = event.nativeEvent.layout.height;
+    if (height === lastHeight.current) return;
+    lastHeight.current = height;
+    onHeightChange?.(height);
+  };
+  return <View testID="workout-rest-footer" onLayout={handleLayout} style={{ position: 'absolute', left: 0, right: 0, bottom: clearsOverlayTabBar ? tabBarHeight : 0, paddingHorizontal: spacing.base, paddingTop: spacing.sm, paddingBottom: (clearsOverlayTabBar ? 0 : insets.bottom) + spacing.sm, backgroundColor: colors.card, borderTopWidth: 1, borderTopColor: colors.border }}>
+    {children}
+  </View>;
+}
+
+/** The only ticking subscriber in the workout route. Expanded controls are deliberate. */
+export function RestDock({ prescribedSeconds, preference, onPreferenceChange, preferenceError }: {
+  prescribedSeconds?: number;
+  preference: Preference;
+  onPreferenceChange: (preference: Preference) => void;
+  preferenceError?: string | null;
+}) {
+  const timer = useRestTimer();
+  const [expanded, setExpanded] = useState(false);
+  const prescribed = prescribedSeconds && Number.isFinite(prescribedSeconds) && prescribedSeconds > 0 ? prescribedSeconds : null;
+  const seconds = prescribed ?? preference.seconds;
+  const active = timer.running || timer.paused;
+  const mmss = `${Math.floor(timer.remaining / 60)}:${String(timer.remaining % 60).padStart(2, '0')}`;
+  return <View testID="rest-dock" style={{ gap: spacing.xs }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm }}>
+      <Text variant="bodySm" numeric accessibilityLabel={active ? `Rest ${timer.paused ? 'paused' : 'running'}, ${timer.remaining} seconds remaining` : timer.complete ? 'Rest finished' : 'Rest timer ready'} style={{ flex: 1 }}>
+        {active ? `Rest · ${mmss}${timer.paused ? ' · paused' : ''}` : timer.complete ? 'Rest finished' : 'Rest'}
+      </Text>
+      {active ? <>
+        <RestAction label={timer.paused ? 'Resume' : 'Pause'} accessibilityLabel={timer.paused ? 'Resume rest timer' : 'Pause rest timer'} onPress={timer.toggle} />
+        <RestAction label="+15s" accessibilityLabel="Extend rest by 15 seconds" onPress={() => timer.extend(15)} />
+        <RestAction label="Skip" accessibilityLabel="Skip rest" onPress={timer.skip} />
+      </> : seconds ? <RestAction label={`Start ${seconds}s`} accessibilityLabel={`Start ${seconds} second rest`} onPress={() => timer.start(seconds)} /> : null}
+      <Button label={expanded ? 'Less' : 'Rest options'} variant="ghost" icon={<DisclosureChevron expanded={expanded} />} onPress={() => setExpanded((open) => !open)} />
+    </View>
+    {expanded ? <View style={{ gap: spacing.sm }}>
+      <Text variant="bodySm" tone="muted">{prescribed ? `Prescribed rest · ${prescribed} seconds` : preference.seconds ? `Your rest choice · ${preference.seconds} seconds` : 'Choose your rest duration.'}</Text>
+      {!prescribed ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>{REST_PRESETS.map((duration) => <Button key={duration} label={`${duration}s`} variant="secondary" onPress={() => onPreferenceChange({ ...preference, seconds: duration })} />)}</View> : null}
+      <Button label={preference.autoStart ? 'Auto-start after a set: on' : 'Auto-start after a set: off'} variant="secondary" onPress={() => onPreferenceChange({ ...preference, autoStart: !preference.autoStart })} />
+      <Text variant="bodySm" tone="muted">Rest uses your device clock, including time in the background. Changing that clock changes the countdown.</Text>
+    </View> : null}
+    {preferenceError ? <Text variant="bodySm" tone="destructive">{preferenceError}</Text> : null}
+  </View>;
+}
+
+function RestAction({ label, accessibilityLabel, onPress }: { label: string; accessibilityLabel: string; onPress: () => void }) {
+  const { colors } = useTheme();
+  return <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress} style={({ pressed }) => ({ minHeight: 44, minWidth: 44, paddingHorizontal: spacing.xs, justifyContent: 'center', borderRadius: radius.sm, backgroundColor: pressed ? colors.primarySoft : 'transparent' })}><Text variant="bodySm" tone="primary">{label}</Text></Pressable>;
+}

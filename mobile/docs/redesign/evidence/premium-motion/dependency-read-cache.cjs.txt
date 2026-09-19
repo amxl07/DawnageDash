@@ -1,0 +1,30 @@
+// Verification-only: memoize immutable installed dependency bytes. Source reads,
+// writes, file descriptors, and non-default file flags retain real OS behavior.
+require('./directory-resolution.cjs');
+const fs = require('node:fs');
+const path = require('node:path');
+const readFile = fs.readFileSync.bind(fs);
+const dependencyRoot = '/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/node_modules/';
+const cache = new Map();
+let hits = 0;
+let bytes = 0;
+fs.readFileSync = function (file, options) {
+  const flag = options && typeof options === 'object' ? options.flag : undefined;
+  if (typeof file !== 'string' || !path.resolve(file).startsWith(dependencyRoot) || (flag && flag !== 'r')) {
+    return readFile(file, options);
+  }
+  const encoding = typeof options === 'string' ? options : options?.encoding;
+  if (encoding && !Buffer.isEncoding(encoding)) return readFile(file, options);
+  const key = path.resolve(file);
+  let data = cache.get(key);
+  if (!data) {
+    data = readFile(file);
+    // Bound this optional verification cache to 96 MiB.
+    if (bytes + data.length <= 96 * 1024 * 1024) {
+      cache.set(key, data);
+      bytes += data.length;
+    }
+  } else hits++;
+  return encoding ? data.toString(encoding) : Buffer.from(data);
+};
+process.on('exit', () => process.stderr.write('Verification dependency cache: ' + hits + ' repeated reads; ' + cache.size + ' files; ' + bytes + ' bytes.\n'));

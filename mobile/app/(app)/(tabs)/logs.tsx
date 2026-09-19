@@ -2,13 +2,15 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import NetInfo from '@react-native-community/netinfo';
 import { format, startOfWeek } from 'date-fns';
 import { useRouter } from 'expo-router';
-import { CalendarDays, ChevronDown, Dumbbell, Plus } from 'lucide-react-native';
-import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
+import { CalendarDays, Dumbbell, Plus } from 'lucide-react-native';
+import { useFocusEffect, useScrollToTop } from 'expo-router/react-navigation';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, FlatList, Pressable, View } from 'react-native';
 import Animated, { FadeInDown, FadeOutUp, LinearTransition } from 'react-native-reanimated';
 
 import { MetricCard } from '@/components/dashboard/MetricCard';
+import { DisclosureChevron } from '@/components/ui/DisclosureChevron';
+import { MotionReveal } from '@/components/ui/MotionReveal';
 import {
   AdaptiveGrid,
   AnimatedFlatList,
@@ -24,7 +26,7 @@ import {
 } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { localDateString, parseLocalDate } from '@/lib/dates';
-import { flushOutbox, readOutbox } from '@/lib/outbox';
+import { flushOutbox, readOutbox, type OutboxItem } from '@/lib/outbox';
 import { supabase } from '@/lib/supabase';
 import { parseWorkoutContent } from '@/lib/workout-content';
 import { iconSize, spacing, useTheme } from '@/theme';
@@ -87,7 +89,8 @@ export const LogCard = memo(function LogCard({ log, onEdit }: { log: LogRow; onE
             alignItems: 'center',
             gap: spacing.md,
             minHeight: 44,
-            opacity: pressed ? 0.75 : 1,
+            borderRadius: spacing.sm,
+            backgroundColor: pressed ? colors.pressed : 'transparent',
           })}
         >
           <View style={{ alignItems: 'center', width: 44 }}>
@@ -100,27 +103,29 @@ export const LogCard = memo(function LogCard({ log, onEdit }: { log: LogRow; onE
               {exerciseCount ? `${exerciseCount} exercises` : 'View details'}
             </Text>
           </View>
-          <ChevronDown
-            size={iconSize.md}
-            color={colors.mutedForeground}
-            strokeWidth={2}
-            style={{ transform: [{ rotate: open ? '180deg' : '0deg' }] }}
-            accessible={false}
-          />
+          <DisclosureChevron expanded={open} size={iconSize.md} color={colors.mutedForeground} />
         </Pressable>
         <Pressable
           onPress={onEdit}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={`Edit ${log.title ?? 'workout'}`}
-          style={{ minWidth: 44, minHeight: 44, alignItems: 'flex-end', justifyContent: 'center' }}
+          style={({ pressed }) => ({
+            minWidth: 44,
+            minHeight: 44,
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+            borderRadius: spacing.sm,
+            backgroundColor: pressed ? colors.pressed : 'transparent',
+          })}
         >
           <Text variant="bodySm" tone="primary">Edit</Text>
         </Pressable>
       </View>
 
-      {open ? (
-        <View style={{ gap: spacing.md }}>
+      <MotionReveal revision={open ? 'open' : 'closed'}>
+        {open ? (
+          <View style={{ gap: spacing.md }}>
           {parsed.kind === 'text' ? (
             <Text variant="bodySm" tone="muted">
               {parsed.text}
@@ -168,11 +173,46 @@ export const LogCard = memo(function LogCard({ log, onEdit }: { log: LogRow; onE
               </View>
             ))
           )}
-        </View>
-      ) : null}
+          </View>
+        ) : null}
+      </MotionReveal>
     </Card>
   );
 });
+
+export function LocalWorkoutCard({ item, onOpen }: { item: OutboxItem; onOpen: () => void }) {
+  const { colors } = useTheme();
+  const blocked = item.failure?.retryable === false;
+  const action = blocked ? 'Review and retry' : 'Open saved workout';
+
+  return (
+    <Card style={{ gap: spacing.sm }}>
+      <View style={{ gap: spacing.xs }}>
+        <Text>{item.title || 'Workout'}</Text>
+        <Text variant="bodySm" tone="muted">
+          {format(parseLocalDate(item.date), 'd MMMM yyyy')}
+        </Text>
+        <StatusPill
+          status={blocked ? 'error' : 'offline'}
+          label={blocked ? 'Needs attention before syncing' : 'Waiting to sync'}
+        />
+      </View>
+      <Pressable
+        onPress={onOpen}
+        accessibilityRole="button"
+        accessibilityLabel={`${blocked ? 'Review blocked workout' : 'Open saved workout'} ${item.title || 'Workout'} from ${item.date}`}
+        style={({ pressed }) => ({
+          minHeight: 44,
+          justifyContent: 'center',
+          borderRadius: spacing.sm,
+          backgroundColor: pressed ? colors.pressed : 'transparent',
+        })}
+      >
+        <Text variant="bodySm" tone="primary">{action}</Text>
+      </Pressable>
+    </Card>
+  );
+}
 
 export default function LogsScreen() {
   const { colors } = useTheme();
@@ -183,7 +223,9 @@ export default function LogsScreen() {
   const activeUserIdRef = useRef(user?.id);
   activeUserIdRef.current = user?.id;
   const queryClient = useQueryClient();
-  const [pending, setPending] = useState(0);
+  const [localRecords, setLocalRecords] = useState<OutboxItem[]>([]);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const localOwnerIdRef = useRef<string | undefined>(undefined);
 
   useScrollToTop(listRef);
 
@@ -207,11 +249,25 @@ export default function LogsScreen() {
     () => {
       const userId = user?.id;
       if (!userId) {
-        setPending(0);
+        localOwnerIdRef.current = undefined;
+        setLocalRecords([]);
+        setLocalError(null);
         return;
       }
+      if (localOwnerIdRef.current !== userId) {
+        localOwnerIdRef.current = userId;
+        setLocalRecords([]);
+        setLocalError(null);
+      }
       void readOutbox(userId).then((items) => {
-        if (activeUserIdRef.current === userId) setPending(items.length);
+        if (activeUserIdRef.current === userId) {
+          setLocalRecords(items);
+          setLocalError(null);
+        }
+      }).catch(() => {
+        if (activeUserIdRef.current === userId) {
+          setLocalError("Couldn't read workouts saved on this device.");
+        }
       });
     },
     [user?.id],
@@ -250,46 +306,62 @@ export default function LogsScreen() {
       thisWeek,
     };
   }, [logs]);
+  const visibleRecords = localOwnerIdRef.current === user?.id ? localRecords : [];
+  const visibleError = localOwnerIdRef.current === user?.id ? localError : null;
+  const queuedCount = visibleRecords.filter((item) => item.failure?.retryable !== false).length;
+  const blockedCount = visibleRecords.length - queuedCount;
 
-  if (isLoading) {
-    return (
-      <Screen archetype="root">
-        <SkeletonCard lines={2} />
-        <View style={{ height: spacing.base }} />
-        <SkeletonCard lines={3} />
-      </Screen>
-    );
-  }
-
-  if (isError) {
-    return (
-      <Screen archetype="root">
-        <ErrorState onRetry={refetch} />
-      </Screen>
-    );
-  }
+  const openLocalRecord = (item: OutboxItem) => {
+    router.push({
+      pathname: '/(app)/logger',
+      params: {
+        date: item.date,
+        logId: item.existingLogId ?? '',
+        outboxId: item.id,
+      },
+    });
+  };
 
   const header = (
     <View style={{ gap: spacing.base, marginBottom: spacing.base }}>
       <Text variant="h1">Workout logs</Text>
 
-      {pending > 0 ? (
+      {visibleRecords.length > 0 ? (
         <Animated.View
           entering={listMotion.enabled ? FadeInDown.duration(240) : undefined}
           exiting={listMotion.enabled ? FadeOutUp.duration(200) : undefined}
           layout={listMotion.enabled ? LinearTransition.duration(240) : undefined}
         >
           <StatusPill
-            status="offline"
-            label={`${pending} workouts saved here · waiting to sync`}
+            status={blockedCount > 0 ? 'error' : 'offline'}
+            label={[
+              queuedCount > 0 ? `${queuedCount} waiting to sync` : null,
+              blockedCount > 0 ? `${blockedCount} need attention` : null,
+            ].filter(Boolean).join(' · ')}
           />
         </Animated.View>
       ) : null}
 
-      <AdaptiveGrid>
+      {visibleError ? (
+        <Card style={{ gap: spacing.sm }}>
+          <Text variant="bodySm" tone="destructive">{visibleError}</Text>
+          <Button label="Reload saved workouts" variant="secondary" onPress={refreshPending} />
+        </Card>
+      ) : null}
+
+      {visibleRecords.length > 0 ? (
+        <View style={{ gap: spacing.sm }}>
+          <Text variant="h2">Saved on this device</Text>
+          {visibleRecords.map((item) => (
+            <LocalWorkoutCard key={item.id} item={item} onOpen={() => openLocalRecord(item)} />
+          ))}
+        </View>
+      ) : null}
+
+      {!isLoading && !isError ? <AdaptiveGrid>
         <MetricCard icon={Dumbbell} label="All workouts" value={String(metrics.total)} trend={{ value: 0, goodDirection: 'up', caption: 'logged' }} />
         <MetricCard icon={CalendarDays} label="This week" value={String(metrics.thisWeek)} trend={{ value: 0, goodDirection: 'up', caption: 'workouts' }} />
-      </AdaptiveGrid>
+      </AdaptiveGrid> : null}
 
       <Button
         label="Log a workout"
@@ -303,18 +375,18 @@ export default function LogsScreen() {
     <Screen archetype="root" scroll={false}>
       <AnimatedFlatList
         ref={listRef}
-        data={logs ?? []}
+        data={isError || isLoading ? [] : logs ?? []}
         keyExtractor={(l) => l.id}
         ListHeaderComponent={header}
         renderItem={({ item }) => (
           <LogCard
             log={item}
             onEdit={() =>
-              router.push({ pathname: '/(app)/logger', params: { date: item.date } })
+              router.push({ pathname: '/(app)/logger', params: { date: item.date, logId: item.id } })
             }
           />
         )}
-        ListEmptyComponent={
+        ListEmptyComponent={isLoading ? <SkeletonCard lines={3} /> : isError ? <ErrorState onRetry={refetch} /> :
           <EmptyState
             icon={null}
             title="No workouts logged yet"

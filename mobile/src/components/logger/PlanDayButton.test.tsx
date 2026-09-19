@@ -1,4 +1,3 @@
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
 import { PlanDayButton } from './PlanDayButton';

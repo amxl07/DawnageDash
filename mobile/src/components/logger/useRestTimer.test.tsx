@@ -3,7 +3,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { PropsWithChildren } from 'react';
 import { AppState } from 'react-native';
 
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
 import {
@@ -103,7 +102,7 @@ describe('rest timer absolute-time lifecycle', () => {
     }
 
     expect(() => {
-      act(() => create(<OutsideConsumer />));
+      act(() => { create(<OutsideConsumer />); });
     }).toThrow('useRestTimer must be used inside <RestTimerProvider>');
   });
 
@@ -132,6 +131,17 @@ describe('rest timer absolute-time lifecycle', () => {
     expect(current?.running).toBe(true);
     expect(current?.remaining).toBe(90);
     act(() => renderer.unmount());
+  });
+
+  it('starts automatically without adding a second completion haptic', () => {
+    const impact = jest.mocked(Haptics.impactAsync);
+    const timer = renderTimer();
+
+    act(() => timer.result.current.start(90, { haptic: false }));
+
+    expect(timer.result.current).toMatchObject({ duration: 90, remaining: 90, running: true });
+    expect(impact).not.toHaveBeenCalled();
+    timer.unmount();
   });
 
   it('restores a running timer from its absolute timestamp after a provider remount', async () => {
@@ -471,4 +481,18 @@ describe('rest timer absolute-time lifecycle', () => {
     expect(mockNotificationAsync).not.toHaveBeenCalled();
     timer.unmount();
   });
+});
+
+it('does not rerender action-only set-entry consumers on clock ticks', async () => {
+  jest.useFakeTimers(); jest.setSystemTime(0);
+  let actions: ReturnType<typeof import('./useRestTimer').useRestTimerActions>;
+  let renders = 0;
+  function SetEntry() { actions = jest.requireActual('./useRestTimer').useRestTimerActions(); renders += 1; return null; }
+  let renderer!: ReturnType<typeof create>;
+  await act(async () => { renderer = create(<Provider><SetEntry /></Provider>); });
+  await act(async () => { actions!.start(90); });
+  const baseline = renders;
+  await act(async () => { jest.advanceTimersByTime(3000); });
+  expect(renders).toBe(baseline);
+  act(() => renderer.unmount()); jest.useRealTimers();
 });

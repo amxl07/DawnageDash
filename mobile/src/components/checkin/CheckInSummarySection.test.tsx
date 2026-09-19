@@ -1,5 +1,4 @@
-import { StyleSheet, Text as NativeText } from 'react-native';
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
+import { StyleSheet } from 'react-native';
 import { act, create } from 'react-test-renderer';
 
 import { CheckInSummarySection } from './CheckInSummarySection';

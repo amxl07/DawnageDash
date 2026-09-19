@@ -24,6 +24,10 @@ export function useCheckInMutation() {
     void queryClient.invalidateQueries({ queryKey: ['userProfile', user?.id] });
   }, [queryClient, user?.id]);
 
+  const invalidateLocalRecords = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ['homeLocalRecords', user?.id] });
+  }, [queryClient, user?.id]);
+
   useEffect(() => {
     const userId = user?.id;
     if (!userId) return;
@@ -31,19 +35,32 @@ export function useCheckInMutation() {
     const unsubscribe = NetInfo.addEventListener((state) => {
       if (!state.isConnected) return;
       void flushCheckInOutbox(userId).then((synced) => {
-        if (synced > 0) invalidateCheckIns();
-      });
+        invalidateLocalRecords();
+        if (synced > 0) {
+          invalidateCheckIns();
+        }
+      }, () => { invalidateLocalRecords(); });
     });
     return unsubscribe;
-  }, [invalidateCheckIns, user?.id]);
+  }, [invalidateCheckIns, invalidateLocalRecords, user?.id]);
 
-  return useMutation({
-    mutationFn: async (payload: CheckInPayload) => {
-      if (!user?.id) throw new Error('Not signed in');
-      return saveCheckIn(user.id, payload);
+  const mutation = useMutation({
+    mutationFn: async ({ userId, payload }: { userId: string; payload: CheckInPayload }) => saveCheckIn(userId, payload),
+    onSuccess: (result, { userId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['homeLocalRecords', userId] });
+      if (result.status === 'synced') {
+        void queryClient.invalidateQueries({ queryKey: ['dailyCheckIns', userId] });
+        void queryClient.invalidateQueries({ queryKey: ['userProfile', userId] });
+      }
     },
-    onSuccess: invalidateCheckIns,
   });
+  const { mutateAsync: saveForAccount } = mutation;
+  // Capture account identity in mutation variables, not mutable observer options.
+  const mutateAsync = useCallback((payload: CheckInPayload) => {
+    if (!user?.id) return Promise.reject(new Error('Not signed in'));
+    return saveForAccount({ userId: user.id, payload });
+  }, [saveForAccount, user?.id]);
+  return { ...mutation, mutateAsync };
 }
 
 /** Most recent check-in strictly before `date`, for prefill. */

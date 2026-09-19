@@ -14,7 +14,7 @@ type Props = {
 
 export function HistoryCaption({ value, history, unit, precision }: Props) {
   const motion = useMotion();
-  if (value === null) return null;
+  if (value === null || !history || history.count < 3) return null;
 
   const caption = historyCaption(history, { unit, precision });
   return (
@@ -22,10 +22,9 @@ export function HistoryCaption({ value, history, unit, precision }: Props) {
       entering={motion.enabled ? FadeIn.duration(motion.duration.feedback) : undefined}
       style={{ marginTop: spacing.xs }}
     >
-      <Text variant="bodySm" tone="muted" accessibilityLiveRegion="polite">
+      <Text variant="bodySm" tone="muted" accessibilityLabel={caption + ', from ' + history.points.slice(-14)[0]?.date + ' to ' + history.points.at(-1)?.date + ', ' + Math.min(14, history.count) + ' earlier entries'}>
         {caption}
       </Text>
     </Animated.View>
   );
 }
-

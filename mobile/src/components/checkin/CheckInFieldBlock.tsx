@@ -1,6 +1,6 @@
 import { CheckCircle2 } from 'lucide-react-native';
 import { type ReactNode } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 
 import { Text } from '@/components/ui';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
@@ -12,9 +12,10 @@ type Props = {
   error?: string;
   children: ReactNode;
   testID?: string;
+  focusTarget?: (node: View | null) => void;
 };
 
-export function CheckInFieldBlock({ label, complete, error, children, testID }: Props) {
+export function CheckInFieldBlock({ label, complete, error, children, testID, focusTarget }: Props) {
   const { colors } = useTheme();
   const { isCompact } = useResponsiveLayout();
 
@@ -31,7 +32,13 @@ export function CheckInFieldBlock({ label, complete, error, children, testID }: 
         backgroundColor: complete ? colors.elevated : colors.card,
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+      <View
+        ref={focusTarget}
+        accessible
+        accessibilityLabel={error ? `${label}. ${error}` : label}
+        tabIndex={Platform.OS === 'web' ? -1 : undefined}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
+      >
         <Text variant="label" tone="muted" style={{ flex: 1 }}>{label}</Text>
         {complete && !error ? (
           <View testID={testID ? `${testID}-complete` : undefined} accessible={false}>

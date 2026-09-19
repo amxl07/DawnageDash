@@ -1,10 +1,11 @@
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
-import { HIT_SLOP_MIN, radius, spacing, useMotion, useTheme } from '@/theme';
+import { radius, spacing, useMotion, useTheme } from '@/theme';
 import { Text } from './Text';
 
-type Variant = 'primary' | 'secondary' | 'ghost';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'text' | 'destructive';
 
 type Props = {
   label: string;
@@ -34,18 +35,40 @@ export function Button({
   const { colors } = useTheme();
   const motion = useMotion();
   const scale = useSharedValue(1);
+  const [pressed, setPressed] = useState(false);
 
   const inactive = disabled || loading;
 
-  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  useEffect(() => {
+    cancelAnimation(scale);
+    if (inactive || !motion.enabled) scale.set(1);
+    if (inactive) setPressed(false);
+    return () => cancelAnimation(scale);
+  }, [inactive, motion.enabled, scale]);
+
+  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
+  const neutralSurface = pressed && !inactive ? colors.pressed : 'transparent';
 
   const surface: Record<Variant, ViewStyle> = {
-    primary: { backgroundColor: colors.primaryFill },
-    secondary: { borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: 'transparent' },
-    ghost: { backgroundColor: 'transparent' },
+    primary: { backgroundColor: inactive ? colors.borderStrong : pressed ? colors.primaryPressed : colors.primaryFill },
+    secondary: { borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: neutralSurface },
+    ghost: { backgroundColor: neutralSurface },
+    text: { backgroundColor: neutralSurface },
+    destructive: {
+      borderWidth: 1,
+      borderColor: colors.destructive,
+      backgroundColor: neutralSurface,
+    },
   };
 
-  const labelTone = variant === 'primary' ? 'onPrimary' : 'primary';
+  const labelTone =
+    variant === 'primary'
+      ? 'onPrimary'
+      : inactive
+        ? 'muted'
+        : variant === 'destructive'
+          ? 'destructive'
+          : 'primary';
 
   return (
     <AnimatedPressable
@@ -53,41 +76,50 @@ export function Button({
       onPress={inactive ? undefined : onPress}
       pressRetentionOffset={16}
       onPressIn={() => {
-        if (!inactive) scale.value = withSpring(motion.pressScale, motion.spring.press);
+        if (inactive) return;
+        setPressed(true);
+        scale.set(motion.enabled ? withSpring(motion.pressScale, motion.spring.press) : 1);
       }}
       onPressOut={() => {
-        scale.value = withSpring(1, motion.spring.press);
+        setPressed(false);
+        scale.set(motion.enabled ? withSpring(1, motion.spring.press) : 1);
       }}
       disabled={inactive}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: inactive, busy: loading }}
-      style={[styles.base, surface[variant], inactive && styles.inactive, animatedStyle, style]}
+      style={[styles.base, surface[variant], animatedStyle, style]}
     >
-      {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? colors.onPrimary : colors.primary} />
-      ) : (
-        <View style={styles.content}>
-          {icon}
-          <Text variant="h2" tone={labelTone}>
-            {label}
-          </Text>
-        </View>
-      )}
+      <View style={styles.content}>
+        {loading ? (
+          <ActivityIndicator color={variant === 'primary' ? colors.onPrimary : colors.primary} />
+        ) : (
+          icon
+        )}
+        <Text variant="label" tone={labelTone} style={styles.label}>
+          {label}
+        </Text>
+      </View>
     </AnimatedPressable>
   );
 }
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: HIT_SLOP_MIN + 4,
-    borderRadius: radius.md + 2,
+    minHeight: 52,
+    borderRadius: radius.button,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
   },
-  // Reduced emphasis, and non-interactive via accessibilityState + disabled.
-  inactive: { opacity: 0.45 },
-  content: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  content: {
+    maxWidth: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  label: { flexShrink: 1, textAlign: 'center' },
 });

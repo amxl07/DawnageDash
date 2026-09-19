@@ -1,4 +1,4 @@
-appId: com.dawnage.app
+appId: ${DAWNAGE_E2E_APP_ID}
 name: Measurements and photo permission entry points
 ---
 - runFlow: helpers/sign-in.yaml

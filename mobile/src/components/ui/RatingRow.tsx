@@ -73,7 +73,7 @@ export function RatingRow({
             accessibilityState={
               exposesOptions ? { selected: active, checked: active } : undefined
             }
-            style={{
+            style={({ pressed }) => ({
               minWidth: HIT_SLOP_MIN,
               minHeight: HIT_SLOP_MIN,
               alignItems: 'center',
@@ -81,8 +81,8 @@ export function RatingRow({
               borderRadius: radius.md,
               borderWidth: active ? 2 : 1,
               borderColor: active ? colors.primary : colors.borderStrong,
-              backgroundColor: active ? colors.primaryFill : 'transparent',
-            }}
+              backgroundColor: active ? (pressed ? colors.primaryPressed : colors.primaryFill) : pressed ? colors.pressed : 'transparent',
+            })}
           >
             <Text
               style={[type.body, tabularNums]}

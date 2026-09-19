@@ -1,0 +1,33 @@
+FAIL src/components/measurements/MeasurementSheet.test.tsx (141.62 s)
+  ✓ preserves an open draft and its comparison when measurement data refetches (40 ms)
+  ✓ keeps newer edits unsaved and open when an older snapshot finishes saving (20 ms)
+  ✓ ignores repeated keyboard and button submits synchronously while saving (8 ms)
+  ✕ blocks overlapping writes after reopening and keeps the new session draft (21 ms)
+  MeasurementSheet
+    ✓ persists the validated normalized values and uses them for the payoff (544 ms)
+    ✓ retains entered values and retries only the failed save operation (22 ms)
+
+  ● blocks overlapping writes after reopening and keeps the new session draft
+
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+
+    Expected number of calls: 1
+    Received number of calls: 2
+
+      262 |     await renderer.root.findByProps({ accessibilityLabel: 'Save' }).props.onPress();
+      263 |   });
+    > 264 |   expect(mockMutateAsync).toHaveBeenCalledTimes(1);
+          |                           ^
+      265 |   expect(onClose).not.toHaveBeenCalled();
+      266 |   await act(async () => { pending.resolve(); await save; });
+      267 |   expect(waist().props.value).toBe('84');
+
+      at Object.toHaveBeenCalledTimes (src/components/measurements/MeasurementSheet.test.tsx:264:27)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 5 passed, 6 total
+Snapshots:   0 total
+Time:        150.245 s
+Ran all test suites within paths "src/components/measurements/MeasurementSheet.test.tsx".

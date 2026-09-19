@@ -1,209 +1,163 @@
-import { StyleSheet, Text as NativeText, View } from 'react-native';
+/* eslint-disable @typescript-eslint/no-require-imports */
+import { fireEvent, render } from '@testing-library/react-native';
+import HomeScreen from '../../../../app/(app)/(tabs)/index';
+import { fixtureDailyCheckIn, fixturePlanDays, fixtureProfile } from '@/testing/redesignFixtures';
+import { emptyWeekly } from '@/components/weekly/steps';
+import { serializeWorkoutContent } from '@/lib/workout-content';
 
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
-import { act, create } from 'react-test-renderer';
-
-import DashboardScreen from '../../../../app/(app)/(tabs)/index';
-
-const MockView = View;
-const MockNativeText = NativeText;
-const mockUseDashboardData = jest.fn();
-const mockUseCoach = jest.fn();
-
-jest.mock('@tanstack/react-query', () => ({
-  useQuery: () => ({ data: { full_name: 'Ada Lovelace' } }),
-}));
-
-jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: jest.fn() }),
-}));
-
-jest.mock('lucide-react-native', () => ({
-  ChevronDown: () => null,
-  Flame: () => null,
-  Trophy: () => null,
-  Weight: () => null,
-  Zap: () => null,
-}));
-jest.mock('expo-image', () => ({ Image: 'ExpoImage' }));
-
-jest.mock('react-native-reanimated', () => ({
-  __esModule: true,
-  default: { View: ({ children }: { children: React.ReactNode }) => <>{children}</> },
-  Easing: { bezier: () => undefined },
-  FadeIn: { duration: () => undefined },
-  useAnimatedStyle: () => ({}),
-  useSharedValue: (value: number) => ({ value }),
-  withTiming: (value: number) => value,
-}));
-
-jest.mock('@/components/brand', () => ({ DawnGlow: () => null, Logo: () => null }));
-jest.mock('@/components/charts', () => ({ BarChart: () => null, DonutChart: () => null, LineChart: () => null }));
-jest.mock('@/components/dashboard/CheckInHistorySheet', () => ({ CheckInHistorySheet: () => null }));
-jest.mock('@/components/dashboard/ConsistencyGrid', () => ({ ConsistencyGrid: () => null }));
-jest.mock('@/components/dashboard/MetricCard', () => ({
-  MetricCard: ({ label }: { label: string }) => <MockView testID={`metric-${label}`} />,
-}));
-jest.mock('@/components/dashboard/StreakHero', () => ({ StreakHero: () => null }));
-jest.mock('@/components/dashboard/TodayActionCard', () => ({
-  TodayActionCard: () => <MockView testID="today-action" />,
-}));
-jest.mock('@/components/dashboard/WeekStrip', () => ({ WeekStrip: () => null }));
-
+const mockPush = jest.fn();
+const mockData = jest.fn();
+const mockLocal = jest.fn();
+jest.mock('lucide-react-native', () => Object.fromEntries(['ArrowUpRight', 'ClipboardList', 'ChevronRight', 'RefreshCw', 'UserRound', 'Dumbbell', 'Check', 'Clock3', 'Pencil', 'TriangleAlert'].map((name) => [name, () => null])));
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
+jest.mock('@/features/home/useHomeData', () => ({ useHomeData: () => mockData() }));
+jest.mock('@/features/home/useHomeLocal', () => ({ useHomeLocal: () => mockLocal() }));
+jest.mock('@/features/home/useHomeDate', () => ({ useHomeDate: () => '2026-09-15' }));
+jest.mock('@/hooks/usePlanProvenance', () => ({ usePlanProvenance: () => ({ hasChanged: false }) }));
 jest.mock('@/components/ui', () => {
-  const { AdaptiveGrid } = jest.requireActual('@/components/ui/AdaptiveGrid');
+  const { View, Text, Pressable } = require('react-native');
   return {
-    AdaptiveGrid,
-    Card: ({ children, ...props }: React.ComponentProps<typeof MockView>) => <MockView {...props}>{children}</MockView>,
-    EmptyState: () => null,
-    ErrorState: () => null,
-    ProgressBar: () => null,
-    Screen: ({ children }: { children: React.ReactNode }) => <MockView>{children}</MockView>,
-    SkeletonCard: () => null,
-    Stagger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-    Text: ({ children, ...props }: React.ComponentProps<typeof NativeText>) => (
-      <MockNativeText {...props}>{children}</MockNativeText>
-    ),
+    Screen: ({ children }: { children: React.ReactNode }) => <View>{children}</View>,
+    Card: ({ children, ...props }: React.ComponentProps<typeof View>) => <View {...props}>{children}</View>,
+    Text,
+    Button: ({ label, onPress, ...props }: { label: string; onPress: () => void }) => <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} {...props}><Text>{label}</Text></Pressable>,
+    SkeletonCard: () => <Text>Loading</Text>,
   };
 });
-
-jest.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'user-1' } }) }));
-jest.mock('@/hooks/useDashboardData', () => ({
-  useDashboardData: () => mockUseDashboardData(),
-}));
-jest.mock('@/hooks/useCoach', () => ({
-  useCoach: () => mockUseCoach(),
-  coachInitials: (name: string | null | undefined) =>
-    name
-      ? name
-          .trim()
-          .split(/\s+/)
-          .map((part) => part[0])
-          .slice(0, 2)
-          .join('')
-          .toUpperCase()
-      : '—',
+jest.mock('@/theme', () => ({
+  ...jest.requireActual('@/theme/tokens'),
+  useMotion: () => ({ ...jest.requireActual('@/theme/tokens').motion, enabled: false, reduced: true }),
+  useTheme: () => ({ colors: jest.requireActual('@/theme/colors').dark }),
 }));
 
-function dashboardData(overrides: Record<string, unknown> = {}) {
+const ready = <T,>(data: T) => ({ state: 'ready', data, stale: false, retry: jest.fn() });
+function homeData() {
   return {
-    checkIns: [{ workout_status: 'done', daily_steps: 9000, nutrition_score: 8, sleep_hours: 7 }],
-    metrics: { currentWeight: 75.2, totalWorkouts: 8, avgNutritionScore: '8.1', avgEnergyLevel: 7 },
-    processed: [{ dateString: '2026-08-30', status: 'done', dayNumber: 1 }],
-    weightTrend: -0.4,
-    weightChartData: [],
-    performanceChartData: [],
-    nutritionBreakdown: { protein: 0, carbs: 0, fats: 0 },
-    isLoading: false,
-    isError: false,
-    refetch: jest.fn(),
-    isRefetching: false,
-    ...overrides,
+    profile: ready(fixtureProfile), checkIns: ready([]), weeklyFeedback: ready([]),
+    plan: ready({ days: fixturePlanDays, source: 'user' }), coach: ready({ kind: 'unassigned' }),
+    assessment: ready({ completed: 2, total: 10 }), loggedPlanDays: ready([1]),
+    refresh: jest.fn(), refreshing: false,
   };
 }
-jest.mock('@/hooks/usePlans', () => ({ useWorkoutPlan: () => ({ data: { days: [] } }) }));
-jest.mock('@/hooks/usePlanProvenance', () => ({ usePlanProvenance: () => ({ hasChanged: false }) }));
-jest.mock('@/hooks/useResponsiveLayout', () => ({
-  useResponsiveLayout: () => ({ isCompact: true }),
-}));
-jest.mock('@/lib/today-action', () => ({ resolveTodayAction: () => ({ route: '/(app)/(tabs)/check-in' }) }));
-jest.mock('@/lib/supabase', () => ({ supabase: {} }));
-jest.mock('@/lib/streak', () => ({ buildWeekStrip: () => [], calculateStreak: () => 1 }));
-jest.mock('@/lib/dates', () => ({ localDateString: () => '2026-08-30' }));
-jest.mock('@/types/db', () => ({ num: (value: number | null) => value ?? 0 }));
-jest.mock('@/theme', () => ({
-  iconSize: { md: 20 },
-  radius: { card: 20, pill: 999 },
-  spacing: { xs: 4, sm: 8, md: 16, base: 20, lg: 24 },
-  useMotion: () => ({
-    duration: { feedback: 160, enter: 200 },
-    easing: { standard: [0.16, 1, 0.3, 1] },
-    enabled: false,
-  }),
-  useTheme: () => ({
-    colors: {
-      background: '#fff',
-      border: '#ddd',
-      borderStrong: '#bbb',
-      card: '#fff',
-      elevated: '#eee',
-      mutedForeground: '#666',
-      primary: '#00f',
-      success: '#080',
-      gold: '#fc0',
-    },
-  }),
-}));
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockData.mockReturnValue(homeData());
+  mockLocal.mockReturnValue({ data: { workoutDraft: null, checkInDraft: null, checkIns: [], workouts: [] }, refetch: jest.fn(), isError: false });
+});
 
-function render(ui: React.ReactElement) {
-  let renderer: ReturnType<typeof create>;
-  act(() => {
-    renderer = create(ui);
-  });
-  return renderer!;
-}
+it('keeps the daily action available when weekly history fails', async () => {
+  mockData.mockReturnValue({ ...homeData(), weeklyFeedback: { state: 'error', retry: jest.fn() } });
+  const view = await render(<HomeScreen />);
+  await fireEvent.press(view.getByTestId('home-today-action'));
+  expect(mockPush).toHaveBeenCalledWith({ pathname: '/(app)/(tabs)/check-in', params: { date: '2026-09-15' } });
+});
 
-describe('DashboardScreen', () => {
-  beforeEach(() => {
-    mockUseDashboardData.mockReset();
-    mockUseDashboardData.mockReturnValue(dashboardData());
-    mockUseCoach.mockReset();
-    mockUseCoach.mockReturnValue({
-      data: {
-        kind: 'assigned',
-        coach: {
-          id: 'coach-1',
-          full_name: 'Alexandria Catherine Montgomery-Wellington',
-          avatar_url: null,
-        },
-      },
-    });
-  });
+it('resumes an overnight workout with its original record identity', async () => {
+  mockLocal.mockReturnValue({ data: { workoutDraft: { date: '2026-09-14', logId: 'owned-log' }, checkInDraft: null, checkIns: [], workouts: [] }, refetch: jest.fn(), isError: false });
+  const view = await render(<HomeScreen />);
+  await fireEvent.press(view.getByRole('button', { name: 'Resume workout' }));
+  expect(mockPush).toHaveBeenCalledWith({ pathname: '/(app)/logger', params: { date: '2026-09-14', logId: 'owned-log' } });
+});
 
-  it('places Weight and Workouts in separate compact AdaptiveGrid item wrappers', () => {
-    const renderer = render(<DashboardScreen />);
+it('does not invite a new check-in while its records are unavailable', async () => {
+  mockData.mockReturnValue({ ...homeData(), checkIns: { state: 'error', retry: jest.fn() } });
+  const view = await render(<HomeScreen />);
+  expect(view.queryByTestId('home-today-action')).toBeNull();
+  expect(view.getByRole('button', { name: 'Retry: Your day is still here' })).toBeTruthy();
+});
 
-    const [grid] = renderer.root.findAll(
-      (candidate: { type?: unknown; props: { testID?: string; style?: unknown } }) =>
-        candidate.type === 'View' && candidate.props.testID === 'home-primary-metrics',
-    );
-    if (!grid) throw new Error('Home primary metrics grid was not rendered');
-    expect(StyleSheet.flatten(grid.props.style)).toMatchObject({ flexDirection: 'column' });
+it('opens the actual next assigned session, not a scheduled-day guess', async () => {
+  const view = await render(<HomeScreen />);
+  await fireEvent.press(view.getByRole('button', { name: /View next session:.*day 2/ }));
+  expect(mockPush).toHaveBeenCalledWith({ pathname: '/(app)/logger', params: { day: '2' } });
+});
 
-    const wrappers = grid.children;
-    expect(wrappers).toHaveLength(2);
-    expect(wrappers[0].findByProps({ testID: 'metric-Weight' })).toBeTruthy();
-    expect(wrappers[1].findByProps({ testID: 'metric-Workouts' })).toBeTruthy();
-  });
+it('labels a rejected queued record and opens its original date for correction', async () => {
+  mockLocal.mockReturnValue({ data: { workoutDraft: null, checkInDraft: null, checkIns: [{ payload: { date: '2026-09-14' }, failure: { retryable: false } }], workouts: [] }, refetch: jest.fn(), isError: false });
+  const view = await render(<HomeScreen />);
+  expect(view.getByText('A saved record needs attention')).toBeTruthy();
+  await fireEvent.press(view.getByRole('button', { name: 'Review check-in' }));
+  expect(mockPush).toHaveBeenCalledWith({ pathname: '/(app)/(tabs)/check-in', params: { date: '2026-09-14' } });
+});
 
-  it('keeps a compact coach status in the populated greeting without displacing the primary action', () => {
-    const renderer = render(<DashboardScreen />);
-    const badge = renderer.root.findByProps({
-      accessibilityLabel: 'Your coach: Alexandria Catherine Montgomery-Wellington',
-    });
-    const avatar = badge.findAllByType(View).find((node: { props: { style?: unknown } }) => {
-      const style = StyleSheet.flatten(node.props.style) as
-        | { width?: number; height?: number }
-        | undefined;
-      return style?.width === 28 && style?.height === 28;
-    });
+it('keeps stale absence out of the primary action but accepts known presence', async () => {
+  mockData.mockReturnValue({ ...homeData(), checkIns: { ...ready([]), stale: true } });
+  const view = await render(<HomeScreen />);
+  expect(view.queryByTestId('home-today-action')).toBeNull();
+  mockData.mockReturnValue({ ...homeData(), checkIns: { ...ready([{ ...fixtureDailyCheckIn, date: '2026-09-15' }]), stale: true } });
+  await view.rerender(<HomeScreen />);
+  expect(view.getByTestId('home-today-action')).toBeTruthy();
+  expect(view.queryByText('Your daily check-in')).toBeNull();
+});
 
-    expect(avatar).toBeTruthy();
-    expect(renderer.root.findByProps({ testID: 'today-action' })).toBeTruthy();
-  });
+it('opens the blocked workout itself and does not advertise its day as new', async () => {
+  mockLocal.mockReturnValue({ data: { workoutDraft: null, checkInDraft: null, checkIns: [], workouts: [
+    { id: 'queued', date: '2026-09-15', queuedAt: 1, content: serializeWorkoutContent({ exercises: [], planDayNumber: 1 }) },
+    { id: 'blocked', date: '2026-09-14', existingLogId: 'owned-log', queuedAt: 2, content: serializeWorkoutContent({ exercises: [], planDayNumber: 2 }), failure: { retryable: false } },
+  ] }, refetch: jest.fn(), isError: false });
+  const view = await render(<HomeScreen />);
+  await fireEvent.press(view.getByTestId('home-today-action'));
+  expect(mockPush).toHaveBeenLastCalledWith({ pathname: '/(app)/logger', params: { date: '2026-09-14', logId: 'owned-log', outboxId: 'blocked' } });
+  await fireEvent.press(view.getByRole('button', { name: 'Review workout' }));
+  expect(mockPush).toHaveBeenLastCalledWith({ pathname: '/(app)/logger', params: { date: '2026-09-14', logId: 'owned-log', outboxId: 'blocked' } });
+  expect(view.queryByRole('button', { name: /View next session:.*day 2/ })).toBeNull();
+});
 
-  it('keeps the compact coach status in the empty-data greeting branch', () => {
-    mockUseDashboardData.mockReturnValue(
-      dashboardData({ checkIns: [], processed: [], weightChartData: [], performanceChartData: [] }),
-    );
+it('makes unavailable coach and training progress explicit', async () => {
+  mockData.mockReturnValue({ ...homeData(), coach: ready({ kind: 'unavailable' }), loggedPlanDays: { state: 'error', retry: jest.fn() } });
+  const view = await render(<HomeScreen />);
+  expect(view.getByText('Coach details are unavailable')).toBeTruthy();
+  expect(view.getByRole('button', { name: "Retry: Training history couldn't load" })).toBeTruthy();
+  expect(view.queryByText('A little context for your coach. A clear record for you.')).toBeNull();
+});
 
-    const renderer = render(<DashboardScreen />);
+it('offers this week’s reflection when account history confirms none was submitted', async () => {
+  const view = await render(<HomeScreen />);
+  await fireEvent.press(view.getByRole('button', { name: 'Start weekly check-in' }));
+  expect(mockPush).toHaveBeenCalledWith('/(app)/weekly-feedback');
+});
 
-    expect(
-      renderer.root.findByProps({
-        accessibilityLabel: 'Your coach: Alexandria Catherine Montgomery-Wellington',
-      }),
-    ).toBeTruthy();
-    expect(renderer.root.findByProps({ testID: 'today-action' })).toBeTruthy();
-  });
+it('resumes a saved weekly draft even when weekly history is unavailable', async () => {
+  mockData.mockReturnValue({ ...homeData(), weeklyFeedback: { state: 'error', retry: jest.fn() } });
+  mockLocal.mockReturnValue({ data: { weeklyDraft: { form: { overall_feeling: 'A good week' }, step: 2 }, workoutDraft: null, checkInDraft: null, checkIns: [], workouts: [] }, refetch: jest.fn(), isError: false });
+  const view = await render(<HomeScreen />);
+  await fireEvent.press(view.getByRole('button', { name: 'Resume weekly check-in' }));
+  expect(mockPush).toHaveBeenCalledWith('/(app)/weekly-feedback');
+});
+
+it('does not invent weekly completion or invite a duplicate from stale absence', async () => {
+  mockData.mockReturnValue({ ...homeData(), weeklyFeedback: { ...ready([]), stale: true } });
+  const view = await render(<HomeScreen />);
+  expect(view.queryByRole('button', { name: 'Start weekly check-in' })).toBeNull();
+  expect(view.queryByText('Weekly check-in complete')).toBeNull();
+  mockData.mockReturnValue({ ...homeData(), weeklyFeedback: ready([{ user_id: 'user-1', created_at: '2026-09-15T10:00:00Z', week_start_date: '2026-09-14' }]) });
+  await view.rerender(<HomeScreen />);
+  expect(view.queryByRole('button', { name: 'Start weekly check-in' })).toBeNull();
+});
+
+it('drops weekly resume when the account-scoped local query resets', async () => {
+  mockLocal.mockReturnValue({ data: { weeklyDraft: { form: {}, step: 1 }, checkIns: [], workouts: [] }, refetch: jest.fn(), isError: false });
+  const view = await render(<HomeScreen />);
+  expect(view.getByRole('button', { name: 'Resume weekly check-in' })).toBeTruthy();
+  mockLocal.mockReturnValue({ data: undefined, refetch: jest.fn(), isError: false });
+  await view.rerender(<HomeScreen />);
+  expect(view.queryByRole('button', { name: 'Resume weekly check-in' })).toBeNull();
+  expect(view.queryByRole('button', { name: 'Start weekly check-in' })).toBeNull();
+});
+
+it('offers cleanup rather than Resume for a draft already confirmed in weekly history', async () => {
+  const form = { ...emptyWeekly(), overall_feeling: 'Already sent' };
+  mockData.mockReturnValue({ ...homeData(), weeklyFeedback: ready([{ ...form, id: 'sent', user_id: 'user-1', week_start_date: '2026-09-14', created_at: '2026-09-15T12:00:00Z' }]) });
+  mockLocal.mockReturnValue({ data: { weeklyDraft: { form, step: 4 }, checkIns: [], workouts: [] }, refetch: jest.fn(), isError: false });
+  const view = await render(<HomeScreen />);
+  expect(view.getByRole('button', { name: 'Finish weekly cleanup' })).toBeTruthy();
+  expect(view.queryByRole('button', { name: 'Resume weekly check-in' })).toBeNull();
+});
+
+it('preserves a divergent same-week draft behind a review action', async () => {
+  mockData.mockReturnValue({ ...homeData(), weeklyFeedback: ready([{ ...emptyWeekly(), overall_feeling: 'Previously sent', id: 'sent', user_id: 'user-1', week_start_date: '2026-09-14', created_at: '2026-09-15T12:00:00Z' }]) });
+  mockLocal.mockReturnValue({ data: { weeklyDraft: { form: { ...emptyWeekly(), overall_feeling: 'Newer answer' }, step: 4 }, checkIns: [], workouts: [] }, refetch: jest.fn(), isError: false });
+  const view = await render(<HomeScreen />);
+  expect(view.getByRole('button', { name: 'Review saved weekly draft' })).toBeTruthy();
+  expect(view.queryByRole('button', { name: 'Resume weekly check-in' })).toBeNull();
 });

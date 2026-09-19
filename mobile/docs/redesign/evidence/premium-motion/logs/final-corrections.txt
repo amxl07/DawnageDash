@@ -1,0 +1,22 @@
+PASS src/components/logger/ExerciseSlide.test.tsx (355.076 s)
+PASS src/screens/__tests__/tabs/plans.test.tsx
+PASS src/features/home/RecentRecord.test.tsx (70.713 s)
+PASS src/components/ui/AnimatedNumber.test.tsx
+PASS src/components/ui/RatingRow.test.tsx
+PASS src/components/charts/LineChart.test.tsx
+PASS src/features/home/selectors.test.ts
+PASS src/components/logger/SetEditor.test.tsx (133.351 s)
+PASS src/components/media/PhotoCaptureSheet.test.tsx (36.414 s)
+PASS src/screens/__tests__/weekly-feedback.test.tsx
+PASS src/components/checkin/CheckInRatingScale.test.tsx
+PASS src/components/ui/Sheet.test.tsx
+PASS src/components/plans/PlanDayCard.test.tsx
+
+Test Suites: 13 passed, 13 total
+Tests:       104 passed, 104 total
+Snapshots:   0 total
+Time:        701.108 s, estimated 1680 s
+Ran all test suites within paths "src/screens/__tests__/weekly-feedback.test.tsx", "src/components/media/PhotoCaptureSheet.test.tsx", "src/components/ui/Sheet.test.tsx", "src/components/logger/SetEditor.test.tsx", "src/screens/__tests__/tabs/plans.test.tsx", "src/components/logger/ExerciseSlide.test.tsx", "src/components/checkin/CheckInRatingScale.test.tsx", "src/components/plans/PlanDayCard.test.tsx", "src/features/home/RecentRecord.test.tsx", "src/components/ui/RatingRow.test.tsx", "src/components/ui/AnimatedNumber.test.tsx", "src/components/charts/LineChart.test.tsx", "src/features/home/selectors.test.ts".
+Test results written to: ../../../../../../tmp/dawnage-premium-20260917/jest-final-corrections-results.json
+Verification directory cache: 49799 missing-path checks resolved; 879 directories read.
+Verification dependency cache: 13763 repeated reads; 3262 files; 18351447 bytes.

@@ -1,4 +1,5 @@
-import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
+import { CircleAlert, CircleCheck, CloudOff, LoaderCircle } from 'lucide-react-native';
+import { BottomTabBarHeightContext } from 'expo-router/js-tabs';
 import {
   Pressable as MockPressable,
   StyleSheet,
@@ -7,7 +8,6 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
 import { StatusPill } from './StatusPill';
@@ -63,10 +63,10 @@ function render(status: React.ComponentProps<typeof StatusPill>['status'], label
 
 describe('StatusPill', () => {
   it.each([
-    ['saving', 'Saving…', 'LoaderCircle'],
-    ['saved', 'Saved on this device', 'CircleCheck'],
-    ['offline', 'Saved here · waiting to sync', 'CloudOff'],
-    ['error', 'Couldn’t save draft', 'CircleAlert'],
+    ['saving', 'Saving…', LoaderCircle],
+    ['saved', 'Saved on this device', CircleCheck],
+    ['offline', 'Saved here · waiting to sync', CloudOff],
+    ['error', 'Couldn’t save draft', CircleAlert],
   ] as const)('renders %s as an icon-and-text polite status', (status, label, icon) => {
     const renderer = render(status);
     const statusNode = renderer.root.findByProps({ role: 'status' });

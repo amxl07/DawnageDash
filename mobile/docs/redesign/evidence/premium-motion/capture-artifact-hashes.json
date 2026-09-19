@@ -1,0 +1,525 @@
+{
+  "updatedAt": "2026-09-17T15:58:58.538489+00:00",
+  "artifacts": [
+    {
+      "path": "phone-final/capture-manifest.json",
+      "sha256": "3fc5051adc902204dd72ff95e26602869611b8bf44f828c41d58741965bbcca7"
+    },
+    {
+      "path": "phone-final/checkin-adherence-dark-390.png",
+      "sha256": "9fedb552b5982d128e710b822ff74ff671d5de6d41d678803206a73743b0e2b7"
+    },
+    {
+      "path": "phone-final/checkin-adherence-dark-390.txt",
+      "sha256": "3a81cbec891771182495e519d9e5789cd583a0557af246729dbc9510de82354c"
+    },
+    {
+      "path": "phone-final/checkin-adherence-light-390.png",
+      "sha256": "d4f1c95aa6e34e97b679ace3e024f402a9679dbc1d03f7702a6c7d8ea3ed5e27"
+    },
+    {
+      "path": "phone-final/checkin-adherence-light-390.txt",
+      "sha256": "3a81cbec891771182495e519d9e5789cd583a0557af246729dbc9510de82354c"
+    },
+    {
+      "path": "phone-final/checkin-dark-390.layout.json",
+      "sha256": "dc3de6bea0f5a7040ebdd3b7262eb52e315bf3fe78d2a1ba8b42408b2a735372"
+    },
+    {
+      "path": "phone-final/checkin-dark-390.png",
+      "sha256": "22aa3adc3af75d731a8567b8df8bc51fd1640905ed69e220c297a20eb594d454"
+    },
+    {
+      "path": "phone-final/checkin-dark-390.txt",
+      "sha256": "2846caaef9ed5f3618df9252f14ce5399b79a44a1fab75308d1c5169beffefcd"
+    },
+    {
+      "path": "phone-final/checkin-light-390.layout.json",
+      "sha256": "dc3de6bea0f5a7040ebdd3b7262eb52e315bf3fe78d2a1ba8b42408b2a735372"
+    },
+    {
+      "path": "phone-final/checkin-light-390.png",
+      "sha256": "d2879cf92dc34e54286a69790058981f7931fb522826fe4bff427302be1baacc"
+    },
+    {
+      "path": "phone-final/checkin-light-390.txt",
+      "sha256": "2846caaef9ed5f3618df9252f14ce5399b79a44a1fab75308d1c5169beffefcd"
+    },
+    {
+      "path": "phone-final/checkin-recovery-dark-390.png",
+      "sha256": "d2a534de4a439afb6a22b30d7f3075ff7d3c99b7a4a98410ea3573d76ba5ecac"
+    },
+    {
+      "path": "phone-final/checkin-recovery-dark-390.txt",
+      "sha256": "0a24e037f107bf053d6e0a496a45369bbfb94ea61538df9ba95cff3840a8d645"
+    },
+    {
+      "path": "phone-final/checkin-recovery-light-390.png",
+      "sha256": "8f68392380509bf3bebd31203f54a99f86b9ebba779920f2362486f7d3317405"
+    },
+    {
+      "path": "phone-final/checkin-recovery-light-390.txt",
+      "sha256": "0a24e037f107bf053d6e0a496a45369bbfb94ea61538df9ba95cff3840a8d645"
+    },
+    {
+      "path": "phone-final/checkin-review-dark-390.png",
+      "sha256": "68eda27202c65fc122db17745ecb18a2de108d9fbc2c209086ae645be3fcd9f7"
+    },
+    {
+      "path": "phone-final/checkin-review-dark-390.txt",
+      "sha256": "faf13d7e7100a4c9ca3f5b62c51a56c3ff3c80f9e823e2ee2f41e9306b116eb0"
+    },
+    {
+      "path": "phone-final/checkin-review-light-390.png",
+      "sha256": "377d01c4f8addb62e010b9ed4ee03c35133830563678842bc9e304307915460e"
+    },
+    {
+      "path": "phone-final/checkin-review-light-390.txt",
+      "sha256": "faf13d7e7100a4c9ca3f5b62c51a56c3ff3c80f9e823e2ee2f41e9306b116eb0"
+    },
+    {
+      "path": "phone-final/checkin-saved-dark-390.png",
+      "sha256": "edb792388ae950c5e8aff39205487a2dda404f9f7fa328edfec7b80511e0c894"
+    },
+    {
+      "path": "phone-final/checkin-saved-dark-390.txt",
+      "sha256": "a2f57eaa0789c80eb0e73874718a7ea6b5a4a541296c0ed685d51f7af0c18ec8"
+    },
+    {
+      "path": "phone-final/checkin-saved-light-390.png",
+      "sha256": "3cb8084e577e9530820342cdc9080434104ce7f6fdad5a9a2dddad88f340af58"
+    },
+    {
+      "path": "phone-final/checkin-saved-light-390.txt",
+      "sha256": "a2f57eaa0789c80eb0e73874718a7ea6b5a4a541296c0ed685d51f7af0c18ec8"
+    },
+    {
+      "path": "phone-final/home-dark-390.layout.json",
+      "sha256": "8f2f6fb9ac5e857c36f1a48d081b894b0468b84fa996da500af0df6e1bd50abc"
+    },
+    {
+      "path": "phone-final/home-dark-390.png",
+      "sha256": "2807fddb7f69ad8d43c3d7fc214406cc0b2e05815d01695186981be33669b9a3"
+    },
+    {
+      "path": "phone-final/home-dark-390.txt",
+      "sha256": "c2d06e38d0f5f9f465d96b1e362bef1765d1e3b053151fdc23cdc4cb1a99aa03"
+    },
+    {
+      "path": "phone-final/home-light-390.layout.json",
+      "sha256": "8f2f6fb9ac5e857c36f1a48d081b894b0468b84fa996da500af0df6e1bd50abc"
+    },
+    {
+      "path": "phone-final/home-light-390.png",
+      "sha256": "546a671cd1d46f47a6534bf05b14854a0c4d96e341e31991568975f1d1270477"
+    },
+    {
+      "path": "phone-final/home-light-390.txt",
+      "sha256": "c2d06e38d0f5f9f465d96b1e362bef1765d1e3b053151fdc23cdc4cb1a99aa03"
+    },
+    {
+      "path": "phone-final/onboarding-dark-390.layout.json",
+      "sha256": "1d3519a63d84a37ac68e5e52e6d63a25cddedb6a88180106ba3f29773281fddc"
+    },
+    {
+      "path": "phone-final/onboarding-dark-390.png",
+      "sha256": "05600f9a5f0da3ba191dba1706b1e977fe15154248132f8549e67ab7c1238ab1"
+    },
+    {
+      "path": "phone-final/onboarding-dark-390.txt",
+      "sha256": "22d7f03886e47cb03e92856c95b90553a1bb71efa48d35199bf4be3fa30dd005"
+    },
+    {
+      "path": "phone-final/onboarding-light-390.layout.json",
+      "sha256": "1d3519a63d84a37ac68e5e52e6d63a25cddedb6a88180106ba3f29773281fddc"
+    },
+    {
+      "path": "phone-final/onboarding-light-390.png",
+      "sha256": "48a23ac241f91b6e303d7d22926c1919bf5f842ffc0234018857e2a7cdcd8489"
+    },
+    {
+      "path": "phone-final/onboarding-light-390.txt",
+      "sha256": "22d7f03886e47cb03e92856c95b90553a1bb71efa48d35199bf4be3fa30dd005"
+    },
+    {
+      "path": "phone-final/onboarding-ready-dark-390.layout.json",
+      "sha256": "65af867c3ccc22b7ef98cbcb7f08b5ccb28b8256d6bc348a4fd037e1ece172f3"
+    },
+    {
+      "path": "phone-final/onboarding-ready-dark-390.png",
+      "sha256": "6fa5dd0ec655db2ac884ed95ad6f478ca112cd794a05b2befb7dc24c60f5da80"
+    },
+    {
+      "path": "phone-final/onboarding-ready-dark-390.txt",
+      "sha256": "2b07a5d6bbb54b5d014466d20c57f193f1201ea5ea532378117b1f68de25905e"
+    },
+    {
+      "path": "phone-final/onboarding-ready-light-390.layout.json",
+      "sha256": "9d81a383bfe970d55579743943cd47f57924d19e4b03bba4f0260d406e4e529d"
+    },
+    {
+      "path": "phone-final/onboarding-ready-light-390.png",
+      "sha256": "b56c8a3296d73104c00a92f56d7901dcf784c6787e837f66ea433d3a66b96d0d"
+    },
+    {
+      "path": "phone-final/onboarding-ready-light-390.txt",
+      "sha256": "2b07a5d6bbb54b5d014466d20c57f193f1201ea5ea532378117b1f68de25905e"
+    },
+    {
+      "path": "phone-final/onboarding-rhythm-dark-390.layout.json",
+      "sha256": "03a5c3443d11965653addd254a1729ad989b956cff08bae8994abe3147abc4e5"
+    },
+    {
+      "path": "phone-final/onboarding-rhythm-dark-390.png",
+      "sha256": "0b64fccbb7d5f76c86c9df6beb6f86efb8afe3449e63bed877196e82948a22cc"
+    },
+    {
+      "path": "phone-final/onboarding-rhythm-dark-390.txt",
+      "sha256": "250a7f0de87262c1ba74b174f871e32405eff1f78f4131cddfb9c5addabd8998"
+    },
+    {
+      "path": "phone-final/onboarding-rhythm-light-390.layout.json",
+      "sha256": "03a5c3443d11965653addd254a1729ad989b956cff08bae8994abe3147abc4e5"
+    },
+    {
+      "path": "phone-final/onboarding-rhythm-light-390.png",
+      "sha256": "78e488e8e762a139f2cb0e66cff17e4c27557d2aa42802a22bc7f439b9682d81"
+    },
+    {
+      "path": "phone-final/onboarding-rhythm-light-390.txt",
+      "sha256": "250a7f0de87262c1ba74b174f871e32405eff1f78f4131cddfb9c5addabd8998"
+    },
+    {
+      "path": "phone-final/signin-dark-390.layout.json",
+      "sha256": "3a4f04c9a5c9ffa0eca04b1b0076997be0c49c76ca764e7ac2bf257d239b0441"
+    },
+    {
+      "path": "phone-final/signin-dark-390.png",
+      "sha256": "0c3fbd2bd505da03ae642cbdb7ff7a79b29ace3731c0d66717bb115f7e835589"
+    },
+    {
+      "path": "phone-final/signin-dark-390.txt",
+      "sha256": "6d9b46a97eb1e89931a69ec99cba51443bcafbb5e47f2a8dcea8d0404f18851b"
+    },
+    {
+      "path": "phone-final/signin-light-390.layout.json",
+      "sha256": "3a4f04c9a5c9ffa0eca04b1b0076997be0c49c76ca764e7ac2bf257d239b0441"
+    },
+    {
+      "path": "phone-final/signin-light-390.png",
+      "sha256": "516a48400036543405fa3acfb3da2717da520e02fa7bced38fa4b865b5d84c77"
+    },
+    {
+      "path": "phone-final/signin-light-390.txt",
+      "sha256": "6d9b46a97eb1e89931a69ec99cba51443bcafbb5e47f2a8dcea8d0404f18851b"
+    },
+    {
+      "path": "phone-final/workout-dark-390.layout.json",
+      "sha256": "d71b2e17a3d6e575329ef890ffe06dff6dc26a05c853f438a821a38d463b20ca"
+    },
+    {
+      "path": "phone-final/workout-dark-390.png",
+      "sha256": "b353c1d5165cf64fea7a3a2ebcadf38afcb47fd435cfc51cdf46af1bce1a62c9"
+    },
+    {
+      "path": "phone-final/workout-dark-390.txt",
+      "sha256": "16fde1c9ca905987536942fe241285aeeb0f2c8c0fd00c1d83bb75621cf93150"
+    },
+    {
+      "path": "phone-final/workout-exercise-complete-dark-390.png",
+      "sha256": "cf2f131a0e43a182122ff228990b723c1c2af93e6d05e4a720762efc64d91c6b"
+    },
+    {
+      "path": "phone-final/workout-exercise-complete-dark-390.txt",
+      "sha256": "4e73a1a85e523202db8f637a284b8d044dca0609c08d45dc0a75bf96e900e1c8"
+    },
+    {
+      "path": "phone-final/workout-exercise-complete-light-390.png",
+      "sha256": "5a3233752352b6b3e451b0eba28a757f792f1d106730f3fa41c4e877631955ec"
+    },
+    {
+      "path": "phone-final/workout-exercise-complete-light-390.txt",
+      "sha256": "4e73a1a85e523202db8f637a284b8d044dca0609c08d45dc0a75bf96e900e1c8"
+    },
+    {
+      "path": "phone-final/workout-light-390.layout.json",
+      "sha256": "d71b2e17a3d6e575329ef890ffe06dff6dc26a05c853f438a821a38d463b20ca"
+    },
+    {
+      "path": "phone-final/workout-light-390.png",
+      "sha256": "8539b3008ebaffda77336cf0062146ea386badb1e229c1a25d92ff17f0206995"
+    },
+    {
+      "path": "phone-final/workout-light-390.txt",
+      "sha256": "16fde1c9ca905987536942fe241285aeeb0f2c8c0fd00c1d83bb75621cf93150"
+    },
+    {
+      "path": "phone-final/workout-next-exercise-dark-390.png",
+      "sha256": "e6a290b61dea99fcc190095ba47cce0edbe5d388a78f9542e367257cda207ea1"
+    },
+    {
+      "path": "phone-final/workout-next-exercise-dark-390.txt",
+      "sha256": "c0df383fa70a6d3d7889455ba54acc0c183ad4e767cdaab726f630c334ea10b8"
+    },
+    {
+      "path": "phone-final/workout-next-exercise-light-390.png",
+      "sha256": "12e4599016b928290d74f7fd1d691e86269f5c07f664f66fb4d8c210b188d025"
+    },
+    {
+      "path": "phone-final/workout-next-exercise-light-390.txt",
+      "sha256": "c0df383fa70a6d3d7889455ba54acc0c183ad4e767cdaab726f630c334ea10b8"
+    },
+    {
+      "path": "phone-final/workout-overview-dark-390.layout.json",
+      "sha256": "abbb54b1bbdc1632a3f4fcb887593f55520a8503ecacde1e282dc68ad5b26a4a"
+    },
+    {
+      "path": "phone-final/workout-overview-dark-390.png",
+      "sha256": "25837ff976bf6ea73de46dbc8c13866a5c8eab2e75c3a6f4bfc21d3ef61c2328"
+    },
+    {
+      "path": "phone-final/workout-overview-dark-390.txt",
+      "sha256": "5457b4e7c3c532c2124065ebfc25951da339ce61d91dbcb4d39de1089f6d45b6"
+    },
+    {
+      "path": "phone-final/workout-overview-light-390.layout.json",
+      "sha256": "df7302e4666a48356aadcad29d72a086e4ba6b582eb07321d6c01d37514017f5"
+    },
+    {
+      "path": "phone-final/workout-overview-light-390.png",
+      "sha256": "b6ac02adcb1163f0eda398bee6ef3cc0af60ae423bedf74ad4960e2d2fb516cb"
+    },
+    {
+      "path": "phone-final/workout-overview-light-390.txt",
+      "sha256": "5457b4e7c3c532c2124065ebfc25951da339ce61d91dbcb4d39de1089f6d45b6"
+    },
+    {
+      "path": "phone-final/workout-review-dark-390.png",
+      "sha256": "e53e2b080288b6d796a6c04310742dba96de209ec8ef90373120c6fdc0aeb8e3"
+    },
+    {
+      "path": "phone-final/workout-review-dark-390.txt",
+      "sha256": "319c182216ced433fbc043a0656cb65dc20f731faa179e22801f1a6903d99f51"
+    },
+    {
+      "path": "phone-final/workout-review-light-390.png",
+      "sha256": "abd94ec9b95600c0dccbf847286d5592cda07494f4230030b06fe99873fe8129"
+    },
+    {
+      "path": "phone-final/workout-review-light-390.txt",
+      "sha256": "dfa904aeb72928de00e6260fef0f122eac0852b54c12bf4074b8729d679e36e7"
+    },
+    {
+      "path": "compact/capture-manifest.json",
+      "sha256": "4d81c95c88366d92cc8135a48f55457a858c22a8f1dee4bd1132ea6338af0805"
+    },
+    {
+      "path": "compact/checkin-adherence-dark-320.png",
+      "sha256": "b826572b8f77aa7b8d19b44d411f42d9d6e28131063a3088a15ecbebf8e9299e"
+    },
+    {
+      "path": "compact/checkin-adherence-dark-320.txt",
+      "sha256": "bb7ac9ef078bb2957fa5416b56dc1c3defc01ec6ca15c838b0ca93adafb22bda"
+    },
+    {
+      "path": "compact/checkin-adherence-light-320.png",
+      "sha256": "7cf297171a117c08a83318e323929e0a6bf75787033f1b462bb5184923ca6c7d"
+    },
+    {
+      "path": "compact/checkin-adherence-light-320.txt",
+      "sha256": "bb7ac9ef078bb2957fa5416b56dc1c3defc01ec6ca15c838b0ca93adafb22bda"
+    },
+    {
+      "path": "compact/checkin-dark-320.layout.json",
+      "sha256": "bdff950962006dcf70f01ef5f2ef5144dc76a91cab21c7b05e4300c36a8c1583"
+    },
+    {
+      "path": "compact/checkin-dark-320.png",
+      "sha256": "0326fe3ebbc403d07297f67ef2fa04e79ee09a04cfe41fea3c5c2898cfe8a124"
+    },
+    {
+      "path": "compact/checkin-dark-320.txt",
+      "sha256": "cc296a4bcadb5556f011d4689923ac455177b41bb99bc0f451eaa6ee3b420eff"
+    },
+    {
+      "path": "compact/checkin-light-320.layout.json",
+      "sha256": "bdff950962006dcf70f01ef5f2ef5144dc76a91cab21c7b05e4300c36a8c1583"
+    },
+    {
+      "path": "compact/checkin-light-320.png",
+      "sha256": "6a489b84fc5a0b7e73c8210e0275962f005c691cd7d0ed4b095b3daab7b987c6"
+    },
+    {
+      "path": "compact/checkin-light-320.txt",
+      "sha256": "cc296a4bcadb5556f011d4689923ac455177b41bb99bc0f451eaa6ee3b420eff"
+    },
+    {
+      "path": "compact/checkin-recovery-dark-320.png",
+      "sha256": "fcd01eb4b242ad8082db2e8ca9d133b4f78bdaf1982f31389f4de039179ac65a"
+    },
+    {
+      "path": "compact/checkin-recovery-dark-320.txt",
+      "sha256": "f885ec3c31d3a1aa9f1ecdcbad441901ad56cf5869a0bdd975bd93059557a608"
+    },
+    {
+      "path": "compact/checkin-recovery-light-320.png",
+      "sha256": "a47deb973c29cfba07d98b2368b6b9e38f97d304fae00a2999eec8ef80d041ae"
+    },
+    {
+      "path": "compact/checkin-recovery-light-320.txt",
+      "sha256": "f885ec3c31d3a1aa9f1ecdcbad441901ad56cf5869a0bdd975bd93059557a608"
+    },
+    {
+      "path": "compact/checkin-review-dark-320.png",
+      "sha256": "2f30fa96c81082318f8c3c629ead7ad800d63a0883d74cc4617c9f368e5615c8"
+    },
+    {
+      "path": "compact/checkin-review-dark-320.txt",
+      "sha256": "a3f23c70997d9b80f8d423dd8e542fc8ae91a6d8003ff3f45720d75b22d19a0e"
+    },
+    {
+      "path": "compact/checkin-review-light-320.png",
+      "sha256": "00aa56bc26ec43a7a1967b53721af5114d9585e4c444c82b256a35ed1c092575"
+    },
+    {
+      "path": "compact/checkin-review-light-320.txt",
+      "sha256": "a3f23c70997d9b80f8d423dd8e542fc8ae91a6d8003ff3f45720d75b22d19a0e"
+    },
+    {
+      "path": "compact/checkin-saved-dark-320.png",
+      "sha256": "2b9dcc37332f940a556a3bfc342842e2f407f16cd60ef6b603dde0f33bee5bbe"
+    },
+    {
+      "path": "compact/checkin-saved-dark-320.txt",
+      "sha256": "a2f57eaa0789c80eb0e73874718a7ea6b5a4a541296c0ed685d51f7af0c18ec8"
+    },
+    {
+      "path": "compact/checkin-saved-light-320.png",
+      "sha256": "793a05b59f882654f7949fae79a6d84c45ee5d956074409961fae4b5d882fcce"
+    },
+    {
+      "path": "compact/checkin-saved-light-320.txt",
+      "sha256": "a2f57eaa0789c80eb0e73874718a7ea6b5a4a541296c0ed685d51f7af0c18ec8"
+    },
+    {
+      "path": "compact/home-dark-320.layout.json",
+      "sha256": "072e539bb3aaa34489d398fc3b650c5c3fa787dc507cb0f9edaaac910d32c444"
+    },
+    {
+      "path": "compact/home-dark-320.png",
+      "sha256": "41d2082dad444874d4c8f860f1aa8851f086165c1683f198b0907d703ffee39d"
+    },
+    {
+      "path": "compact/home-dark-320.txt",
+      "sha256": "c2d06e38d0f5f9f465d96b1e362bef1765d1e3b053151fdc23cdc4cb1a99aa03"
+    },
+    {
+      "path": "compact/home-light-320.layout.json",
+      "sha256": "072e539bb3aaa34489d398fc3b650c5c3fa787dc507cb0f9edaaac910d32c444"
+    },
+    {
+      "path": "compact/home-light-320.png",
+      "sha256": "99b17908b07fcea641555f9c34e02cd029b80284253dae9410af09fb7074721c"
+    },
+    {
+      "path": "compact/home-light-320.txt",
+      "sha256": "c2d06e38d0f5f9f465d96b1e362bef1765d1e3b053151fdc23cdc4cb1a99aa03"
+    },
+    {
+      "path": "compact/workout-dark-320.layout.json",
+      "sha256": "5b61a7cd140fc2ecf4f2e7f5bd007fc157767a78b508f29327c6e20c296e7210"
+    },
+    {
+      "path": "compact/workout-dark-320.png",
+      "sha256": "c53a256cf0a424adb539b111b601db2defe9139d7129bebb04a8e7c171bf188a"
+    },
+    {
+      "path": "compact/workout-dark-320.txt",
+      "sha256": "16fde1c9ca905987536942fe241285aeeb0f2c8c0fd00c1d83bb75621cf93150"
+    },
+    {
+      "path": "compact/workout-exercise-complete-dark-320.png",
+      "sha256": "253aa84ea31efb7191aa6d485293620ecb41658cac4f161cf5dc702501e6625e"
+    },
+    {
+      "path": "compact/workout-exercise-complete-dark-320.txt",
+      "sha256": "4e73a1a85e523202db8f637a284b8d044dca0609c08d45dc0a75bf96e900e1c8"
+    },
+    {
+      "path": "compact/workout-exercise-complete-light-320.png",
+      "sha256": "275a2c28c4002c2b257d98a59fd33f37da1f2955c22b8824e6b154af670a8915"
+    },
+    {
+      "path": "compact/workout-exercise-complete-light-320.txt",
+      "sha256": "4e73a1a85e523202db8f637a284b8d044dca0609c08d45dc0a75bf96e900e1c8"
+    },
+    {
+      "path": "compact/workout-light-320.layout.json",
+      "sha256": "5b61a7cd140fc2ecf4f2e7f5bd007fc157767a78b508f29327c6e20c296e7210"
+    },
+    {
+      "path": "compact/workout-light-320.png",
+      "sha256": "818d7d95a6e69fcf875f40e2838de24ff6eeb5b36622db5f1edd4c63f8ddb1ac"
+    },
+    {
+      "path": "compact/workout-light-320.txt",
+      "sha256": "16fde1c9ca905987536942fe241285aeeb0f2c8c0fd00c1d83bb75621cf93150"
+    },
+    {
+      "path": "compact/workout-next-exercise-dark-320.png",
+      "sha256": "e74b8f5de7d5db5d00309965a2d6c9a7f708726e0f2a58bc1910d7eba220c1c5"
+    },
+    {
+      "path": "compact/workout-next-exercise-dark-320.txt",
+      "sha256": "c0df383fa70a6d3d7889455ba54acc0c183ad4e767cdaab726f630c334ea10b8"
+    },
+    {
+      "path": "compact/workout-next-exercise-light-320.png",
+      "sha256": "329a0ae40ad1c91453f020abc6835fdec5318769e0c5332635e26994ebc62f01"
+    },
+    {
+      "path": "compact/workout-next-exercise-light-320.txt",
+      "sha256": "c0df383fa70a6d3d7889455ba54acc0c183ad4e767cdaab726f630c334ea10b8"
+    },
+    {
+      "path": "compact/workout-overview-dark-320.layout.json",
+      "sha256": "9f0b2881ff1b919e6cd3b919480491f6a63317d9d8749f306c1627fc45fb6725"
+    },
+    {
+      "path": "compact/workout-overview-dark-320.png",
+      "sha256": "c89c69cbf7294f4eccf83aa7e33cdf3513c9ebca0146ff23c44452239622c9f2"
+    },
+    {
+      "path": "compact/workout-overview-dark-320.txt",
+      "sha256": "5457b4e7c3c532c2124065ebfc25951da339ce61d91dbcb4d39de1089f6d45b6"
+    },
+    {
+      "path": "compact/workout-overview-light-320.layout.json",
+      "sha256": "9f0b2881ff1b919e6cd3b919480491f6a63317d9d8749f306c1627fc45fb6725"
+    },
+    {
+      "path": "compact/workout-overview-light-320.png",
+      "sha256": "8902036b6f3e4608f60d3e40d5bc8556cefe4f60e631bfecfa75ae0f9c3d982d"
+    },
+    {
+      "path": "compact/workout-overview-light-320.txt",
+      "sha256": "5457b4e7c3c532c2124065ebfc25951da339ce61d91dbcb4d39de1089f6d45b6"
+    },
+    {
+      "path": "compact/workout-review-dark-320.png",
+      "sha256": "44f8ebd37a507b95a06ac3c267cbce0f875f965a2eaf11f8dadc12150b33c04d"
+    },
+    {
+      "path": "compact/workout-review-dark-320.txt",
+      "sha256": "dfa904aeb72928de00e6260fef0f122eac0852b54c12bf4074b8729d679e36e7"
+    },
+    {
+      "path": "compact/workout-review-light-320.png",
+      "sha256": "8e630ca89d6bf1cf142042ba8c9e8704ab87e92f2dc2f92113cfca1238176920"
+    },
+    {
+      "path": "compact/workout-review-light-320.txt",
+      "sha256": "dfa904aeb72928de00e6260fef0f122eac0852b54c12bf4074b8729d679e36e7"
+    }
+  ]
+}

@@ -1,191 +1,90 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as React from 'react';
+import { act, renderHook } from '@testing-library/react-native';
 
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
-import { act, create } from 'react-test-renderer';
+import { EMPTY_FORM } from '@/features/checkin/model';
+import { clearCheckInDraftIfUnchanged, findLatestCheckInDraft, readCheckInDraft, useCheckInDraft } from './useCheckInDraft';
 
-import type { FormState } from '@/components/checkin/CheckInForm';
-import { useCheckInDraft } from './useCheckInDraft';
+jest.mock('@react-native-async-storage/async-storage', () => ({ getItem: jest.fn(), setItem: jest.fn(), removeItem: jest.fn(), getAllKeys: jest.fn() }));
+const storage = jest.mocked(AsyncStorage);
+function deferred() { let resolve!: () => void; const promise = new Promise<void>((done) => { resolve = done; }); return { promise, resolve }; }
+const key = (user = 'u', date = '2026-09-14') => `check-in-draft:${user}:${date}`;
+const form = (notes: string) => ({ ...EMPTY_FORM, notes });
+let disk: Map<string, string>;
 
-jest.mock('react', () => {
-  const actual = jest.requireActual('react');
-  return { ...actual, useState: jest.fn(actual.useState) };
+beforeEach(() => {
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date('2026-09-15T12:00:00Z'));
+  jest.clearAllMocks();
+  disk = new Map();
+  storage.getItem.mockImplementation(async (name) => disk.get(name) ?? null);
+  storage.setItem.mockImplementation(async (name, value) => { disk.set(name, value); });
+  storage.removeItem.mockImplementation(async (name) => { disk.delete(name); });
+  storage.getAllKeys.mockImplementation(async () => [...disk.keys()]);
+});
+afterEach(() => { jest.useRealTimers(); });
+
+it('serializes a write, clear, then newer edit without resurrecting the old value', async () => {
+  const first = deferred();
+  storage.setItem.mockImplementationOnce(async (name, value) => { await first.promise; disk.set(name, value); });
+  const { result } = await renderHook(() => useCheckInDraft('u', '2026-09-14'));
+  let save!: Promise<boolean>, clear!: Promise<boolean>, latest!: Promise<boolean>;
+  await act(async () => { save = result.current.saveDraftNow(form('first'), 1); clear = result.current.clearDraft(); latest = result.current.saveDraftNow(form('latest'), 3); });
+  expect(storage.removeItem).not.toHaveBeenCalled();
+  await act(async () => { first.resolve(); await Promise.all([save, clear, latest]); });
+  expect(JSON.parse(disk.get(key())!).form.notes).toBe('latest');
+  expect(result.current.draftStatus).toBe('saved');
 });
 
-jest.mock('@react-native-async-storage/async-storage', () => ({
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-}));
+it('flushes the latest edit inside debounce and on unmount', async () => {
+  const { result, unmount } = await renderHook(() => useCheckInDraft('u', '2026-09-14'));
+  await act(async () => { result.current.saveDraft(form('first'), 0); result.current.saveDraft(form('latest'), 2); });
+  await unmount();
+  await act(async () => { await Promise.resolve(); });
+  expect(JSON.parse(disk.get(key())!).form.notes).toBe('latest');
+});
 
-const mockStorage = jest.mocked(AsyncStorage);
+it('finishes an old scope write without applying its saved status to a new account', async () => {
+  const first = deferred();
+  storage.setItem.mockImplementationOnce(async (name, value) => { await first.promise; disk.set(name, value); });
+  const { result, rerender } = await renderHook<ReturnType<typeof useCheckInDraft>, { user: string }>(({ user }) => useCheckInDraft(user, '2026-09-14'), { initialProps: { user: 'u' } });
+  await act(async () => { result.current.saveDraft(form('private'), 1); });
+  await rerender({ user: 'other' });
+  await act(async () => { first.resolve(); await Promise.resolve(); });
+  expect(result.current.draftStatus).toBe('idle');
+  expect(disk.has(key('other'))).toBe(false);
+  expect(JSON.parse(disk.get(key())!).form.notes).toBe('private');
+});
 
-const EMPTY_FORM: FormState = {
-  morningWeight: null,
-  sleepHours: null,
-  workoutStatus: null,
-  workoutPerformance: null,
-  nutritionScore: null,
-  calorieIntake: null,
-  waterLiters: null,
-  dailySteps: null,
-  protein: null,
-  carbs: null,
-  fats: null,
-  energyLevel: null,
-  hungerLevel: null,
-  stressLevel: null,
-  digestion: null,
-  notes: '',
-};
+it('loads the legacy shape and step, expires drafts only, and discovers a backfill by savedAt', async () => {
+  disk.set(key(), JSON.stringify({ form: form('legacy'), step: 3, savedAt: Date.now() - 10 }));
+  disk.set(key('u', '2026-08-20'), JSON.stringify({ form: form('backfill'), step: 2, savedAt: Date.now() }));
+  disk.set(key('other'), JSON.stringify({ form: form('private'), step: 0, savedAt: Date.now() + 1 }));
+  disk.set(key('u', '2026-09-10'), JSON.stringify({ form: form('expired'), step: 1, savedAt: Date.now() - 259200001 }));
+  disk.set('checkin-outbox', 'queued payload');
+  await expect(readCheckInDraft('u', '2026-09-14')).resolves.toMatchObject({ step: 3, form: form('legacy') });
+  await expect(findLatestCheckInDraft('u')).resolves.toEqual({ date: '2026-08-20', savedAt: Date.now() });
+  expect(disk.has(key('u', '2026-09-10'))).toBe(false);
+  expect(disk.get('checkin-outbox')).toBe('queued payload');
+});
 
-function deferred() {
-  let resolve!: () => void;
-  let reject!: (reason?: unknown) => void;
-  const promise = new Promise<void>((resolvePromise, rejectPromise) => {
-    resolve = resolvePromise;
-    reject = rejectPromise;
-  });
+it('surfaces storage and corruption errors and allows a failed write to retry', async () => {
+  disk.set(key(), '{broken');
+  await expect(readCheckInDraft('u', '2026-09-14')).rejects.toThrow();
+  storage.getItem.mockRejectedValueOnce(new Error('unavailable'));
+  await expect(readCheckInDraft('u', '2026-09-14')).rejects.toThrow('unavailable');
+  const { result } = await renderHook(() => useCheckInDraft('u', '2026-09-14'));
+  storage.setItem.mockRejectedValueOnce(new Error('full'));
+  await act(async () => { expect(await result.current.saveDraftNow(form('keep'), 0)).toBe(false); });
+  expect(result.current.draftStatus).toBe('error');
+  await act(async () => { expect(await result.current.saveDraftNow(form('keep'), 0)).toBe(true); });
+  expect(result.current.draftStatus).toBe('saved');
+});
 
-  return { promise, resolve, reject };
-}
 
-function renderHook<T>(hook: () => T) {
-  let current: T | undefined;
-  let renderer!: ReturnType<typeof create>;
-
-  function HookProbe() {
-    current = hook();
-    return null;
-  }
-
-  act(() => {
-    renderer = create(React.createElement(HookProbe));
-  });
-
-  return {
-    result: {
-      get current() {
-        return current as T;
-      },
-    },
-    unmount: () => act(() => renderer.unmount()),
-  };
-}
-
-describe('useCheckInDraft save status', () => {
-  beforeEach(() => {
-    jest.useFakeTimers();
-    jest.setSystemTime(new Date('2026-08-30T06:00:00.000Z'));
-    jest.clearAllMocks();
-    mockStorage.getItem.mockResolvedValue(null);
-    mockStorage.setItem.mockResolvedValue(undefined);
-    mockStorage.removeItem.mockResolvedValue(undefined);
-  });
-
-  afterEach(() => {
-    jest.runOnlyPendingTimers();
-    jest.useRealTimers();
-  });
-
-  it('moves from saving to saved after the debounced write', async () => {
-    const { result, unmount } = renderHook(() => useCheckInDraft('user-1', '2026-08-30'));
-
-    act(() => result.current.saveDraft(EMPTY_FORM, 1));
-    expect(result.current.draftStatus).toBe('saving');
-
-    await act(async () => jest.advanceTimersByTimeAsync(500));
-
-    expect(result.current.draftStatus).toBe('saved');
-    expect(mockStorage.setItem).toHaveBeenCalledWith(
-      'check-in-draft:user-1:2026-08-30',
-      JSON.stringify({ form: EMPTY_FORM, step: 1, savedAt: Date.now() }),
-    );
-    unmount();
-  });
-
-  it('reports a rejected write without changing the caller-owned form', async () => {
-    mockStorage.setItem.mockRejectedValueOnce(new Error('disk unavailable'));
-    const callerForm = { ...EMPTY_FORM, notes: 'Keep this note' };
-    const { result, unmount } = renderHook(() => useCheckInDraft('user-1', '2026-08-30'));
-
-    act(() => result.current.saveDraft(callerForm, 2));
-    await act(async () => jest.advanceTimersByTimeAsync(500));
-
-    expect(result.current.draftStatus).toBe('error');
-    expect(callerForm).toEqual({ ...EMPTY_FORM, notes: 'Keep this note' });
-    unmount();
-  });
-
-  it('does not let an older rejected write regress a newer saved status', async () => {
-    const firstWrite = deferred();
-    const secondWrite = deferred();
-    mockStorage.setItem
-      .mockReturnValueOnce(firstWrite.promise)
-      .mockReturnValueOnce(secondWrite.promise);
-    const { result, unmount } = renderHook(() => useCheckInDraft('user-1', '2026-08-30'));
-
-    act(() => result.current.saveDraft({ ...EMPTY_FORM, notes: 'First' }, 1));
-    await act(async () => jest.advanceTimersByTimeAsync(500));
-    act(() => result.current.saveDraft({ ...EMPTY_FORM, notes: 'Second' }, 2));
-    await act(async () => jest.advanceTimersByTimeAsync(500));
-
-    await act(async () => secondWrite.resolve());
-    expect(result.current.draftStatus).toBe('saved');
-
-    await act(async () => firstWrite.reject(new Error('late failure')));
-    expect(result.current.draftStatus).toBe('saved');
-    unmount();
-  });
-
-  it('cancels a pending debounce when unmounted', async () => {
-    const { result, unmount } = renderHook(() => useCheckInDraft('user-1', '2026-08-30'));
-
-    act(() => result.current.saveDraft(EMPTY_FORM, 1));
-    unmount();
-    await act(async () => jest.advanceTimersByTimeAsync(500));
-
-    expect(mockStorage.setItem).not.toHaveBeenCalled();
-  });
-
-  it('does not update status when an in-flight write resolves after unmount', async () => {
-    const write = deferred();
-    const setStatus = jest.fn();
-    (React.useState as jest.Mock).mockImplementationOnce(() => ['idle', setStatus]);
-    mockStorage.setItem.mockReturnValueOnce(write.promise);
-    const { result, unmount } = renderHook(() => useCheckInDraft('user-1', '2026-08-30'));
-
-    act(() => result.current.saveDraft(EMPTY_FORM, 1));
-    await act(async () => jest.advanceTimersByTimeAsync(500));
-    unmount();
-    await act(async () => write.resolve());
-
-    expect(setStatus).toHaveBeenCalledWith('saving');
-    expect(setStatus).not.toHaveBeenCalledWith('saved');
-    expect(setStatus).not.toHaveBeenCalledWith('error');
-  });
-
-  it('restores an unexpired draft from the user-and-date key', async () => {
-    const persisted = { form: { ...EMPTY_FORM, notes: 'Resume me' }, step: 3, savedAt: Date.now() };
-    mockStorage.getItem.mockResolvedValueOnce(JSON.stringify(persisted));
-    const { result, unmount } = renderHook(() => useCheckInDraft('user-1', '2026-08-30'));
-
-    await expect(result.current.loadDraft()).resolves.toEqual(persisted);
-    expect(mockStorage.getItem).toHaveBeenCalledWith('check-in-draft:user-1:2026-08-30');
-    unmount();
-  });
-
-  it('removes and ignores a draft older than three days', async () => {
-    const expired = {
-      form: EMPTY_FORM,
-      step: 2,
-      savedAt: Date.now() - 3 * 24 * 60 * 60 * 1000 - 1,
-    };
-    mockStorage.getItem.mockResolvedValueOnce(JSON.stringify(expired));
-    const { result, unmount } = renderHook(() => useCheckInDraft('user-1', '2026-08-30'));
-
-    await expect(result.current.loadDraft()).resolves.toBeNull();
-    expect(mockStorage.removeItem).toHaveBeenCalledWith('check-in-draft:user-1:2026-08-30');
-    unmount();
-  });
+it('clears an acknowledged inactive draft only if that account/date still contains its snapshot', async () => {
+  disk.set(key(), JSON.stringify({ form: form('newer'), step: 1, savedAt: Date.now() }));
+  await expect(clearCheckInDraftIfUnchanged('u', '2026-09-14', form('submitted'))).resolves.toBe(false);
+  expect(JSON.parse(disk.get(key())!).form.notes).toBe('newer');
+  await expect(clearCheckInDraftIfUnchanged('u', '2026-09-14', form('newer'))).resolves.toBe(true);
+  expect(disk.has(key())).toBe(false);
 });

@@ -1,6 +1,6 @@
+import { UserRound } from 'lucide-react-native';
 import { StyleSheet, Text as NativeText, View } from 'react-native';
 
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
 import type { CoachLookup } from '@/hooks/useCoach';
@@ -61,7 +61,7 @@ describe('CoachStatusCard', () => {
 
     expect(textContent(renderer)).toContain('Coach status');
     expect(textContent(renderer)).toContain(copy);
-    expect(renderer.root.findByType('UserRound').props).toMatchObject({
+    expect(renderer.root.findByType(UserRound).props).toMatchObject({
       color: '#666',
       accessible: false,
     });

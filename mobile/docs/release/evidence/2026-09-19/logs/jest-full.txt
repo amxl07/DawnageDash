@@ -1,0 +1,149 @@
+PASS src/screens/__tests__/tabs/index.test.tsx (175.381 s)
+PASS src/components/ui/StatusPill.test.tsx (113.923 s)
+PASS src/screens/__tests__/weekly-feedback.test.tsx (16.026 s)
+PASS src/features/checkin/checkInOutbox.test.ts
+PASS src/components/logger/ExerciseSlide.contract.test.tsx (18.984 s)
+PASS src/hooks/usePrivatePhotoUrl.test.tsx
+PASS src/__tests__/ui-contract-script.test.ts (6.608 s)
+PASS src/features/home/RecentRecord.test.tsx (14.501 s)
+PASS src/components/checkin/CheckInStageHeader.test.tsx (7.32 s)
+PASS src/components/media/PhotoCaptureSheet.test.tsx (27.621 s)
+PASS src/screens/__tests__/profile.test.tsx (127.916 s)
+PASS src/components/charts/LineChart.test.tsx (18.296 s)
+PASS src/__tests__/maestro-contract.test.ts (5.246 s)
+PASS src/features/checkin/dateHistory.test.ts
+PASS src/screens/__tests__/settings.test.tsx
+PASS src/screens/__tests__/media.test.tsx
+PASS src/components/logger/ExerciseSlide.test.tsx
+PASS src/components/measurements/MeasurementSheet.test.tsx
+PASS src/features/workout/workoutRecovery.integration.test.tsx (5.153 s)
+PASS src/components/checkin/CheckInForm.test.tsx
+PASS src/components/logger/CurrentSetEditor.test.tsx
+PASS src/features/checkin/CheckInJourney.integration.test.tsx
+PASS src/components/ui/Sheet.test.tsx
+PASS src/lib/consistency.test.ts
+PASS src/features/home/WeekRecordStrip.test.tsx
+PASS src/hooks/useNotificationRouting.test.tsx
+PASS src/__tests__/ui-validation-matrix.test.ts
+PASS src/hooks/measurement-cache.test.tsx
+PASS src/hooks/useCheckInDraft.test.ts
+PASS src/components/checkin/CheckInFieldBlock.test.tsx
+PASS src/hooks/useOnboarding.test.tsx
+PASS src/features/checkin/checkInExitGuard.test.ts
+PASS src/screens/__tests__/measurements.test.tsx
+  ● Console
+
+    console.warn
+      InteractionManager has been deprecated and will be removed in a future release. Please refactor long tasks into smaller ones, and  use 'requestIdleCallback' instead.
+
+      231 |       maxContentWidth: undefined,
+      232 |     });
+    > 233 |     jest.spyOn(InteractionManager, 'runAfterInteractions').mockImplementation(((callback: () => void) => {
+          |                ^
+      234 |       interactionCallbacks.push(callback);
+      235 |       return { cancel: jest.fn(), done: jest.fn(), then: jest.fn() };
+      236 |     }) as typeof InteractionManager.runAfterInteractions);
+
+      at warn (node_modules/react-native/Libraries/Utilities/warnOnce.js:27:11)
+      at Object.warnOnce [as InteractionManager] (node_modules/react-native/index.js:264:5)
+      at Object.InteractionManager (src/screens/__tests__/measurements.test.tsx:233:16)
+
+PASS src/__tests__/app-config.test.ts
+PASS src/components/ui/RatingRow.test.tsx
+PASS src/hooks/usePlans.test.ts
+PASS src/screens/__tests__/logger.test.tsx
+PASS src/features/workout/useWorkoutSession.test.tsx
+PASS src/components/questionnaire/QuestionnaireWizard.test.tsx
+PASS src/components/AppErrorBoundary.test.tsx
+PASS src/components/plans/PlanDayCard.test.tsx
+PASS src/features/checkin/persistence.test.ts
+PASS src/lib/asyncOutbox.test.ts
+PASS src/lib/photos.test.ts
+PASS src/lib/delivery-errors.test.ts
+PASS src/lib/workout-content.test.ts
+PASS src/hooks/useWeeklyFeedbackDraft.test.ts
+PASS src/features/weekly/readWeeklyDraft.test.ts (10.757 s)
+PASS src/components/media/PhotoViewer.test.tsx
+PASS src/hooks/usePlanProgress.test.ts
+PASS src/components/checkin/CheckInRatingScale.test.tsx
+PASS src/lib/outbox.test.ts
+PASS src/screens/__tests__/tabs/check-in.test.tsx
+PASS src/components/media/PhotoSlot.test.tsx
+PASS src/screens/__tests__/tabs/logs.test.tsx
+PASS src/components/logger/useRestTimer.test.tsx
+PASS src/features/profile/profileSaveRecovery.test.ts
+PASS src/lib/workoutPersistence.test.ts
+PASS src/components/logger/RestDock.test.tsx
+PASS src/components/ui/AnimatedNumber.test.tsx
+PASS src/features/measurements/observations.test.ts
+PASS src/features/checkin/components/PreviousValueButton.test.tsx
+PASS src/components/measurements/MeasurementHistoryRow.test.tsx
+PASS src/components/ui/SegmentedControl.test.tsx
+PASS src/features/weekly/selectors.test.ts
+PASS src/hooks/useCheckInMutation.test.tsx
+PASS src/components/coach/CoachBadge.test.tsx
+PASS src/lib/password-reset.test.ts
+PASS src/theme/ThemeProvider.motion.test.tsx
+PASS src/lib/weekly-feedback.test.ts
+PASS src/features/workout/workoutSave.test.ts
+PASS src/features/checkin/components/HistoryCaption.test.tsx
+PASS src/features/workout/workoutReducer.test.ts
+PASS src/screens/__tests__/tabs/more.test.tsx
+PASS src/lib/reminders.test.ts
+PASS src/components/logger/swipeDecision.test.ts
+PASS src/components/logger/PlateCalculatorSheet.test.tsx
+PASS src/components/ui/Button.test.tsx
+PASS src/lib/dates.test.ts
+PASS src/screens/__tests__/tabs/plans.test.tsx
+PASS src/features/checkin/useCheckInEditor.test.tsx
+PASS src/components/ui/RecordStatus.test.tsx
+PASS src/lib/asyncOutbox.diagnostics.test.ts
+PASS src/components/coach/CoachStatusCard.test.tsx
+PASS src/components/logger/PlanDayButton.test.tsx
+PASS src/hooks/workoutDraftStorage.test.ts
+PASS src/components/ui/Card.test.tsx
+PASS src/components/charts/timeSeries.test.ts
+PASS src/hooks/useReducedTransparency.test.ts
+PASS src/features/home/home-state.test.ts
+PASS src/lib/telemetry-event.test.ts
+PASS src/hooks/useCoach.test.ts
+PASS src/components/dashboard/MetricCard.test.tsx
+PASS src/lib/diagnostics.test.ts
+PASS src/contexts/AuthContext.test.tsx
+PASS src/components/logger/WorkoutSummary.test.tsx
+PASS src/components/ui/AdaptiveGrid.test.tsx
+PASS src/lib/checkin-validation.test.ts
+PASS src/components/checkin/CheckInSummarySection.test.tsx
+PASS src/features/checkin/config/fields.test.ts
+PASS src/features/onboarding/useSetupController.test.ts
+PASS src/lib/plate-calculator.test.ts
+PASS src/features/onboarding/routing.test.ts
+PASS src/features/home/selectors.test.ts
+PASS src/components/ui/ProgressBar.test.tsx
+PASS src/features/checkin/components/NumericEntry.test.tsx
+PASS src/components/ui/Screen.test.tsx
+PASS src/hooks/useWorkoutDraft.test.ts
+PASS src/theme/layout.test.ts
+PASS src/test/router-boundary.test.ts
+PASS src/lib/profile-data.test.ts
+PASS src/components/ui/Input.test.tsx
+PASS src/lib/measurement-validation.test.ts
+PASS src/features/checkin/model.test.ts
+PASS src/components/ui/StickyActionBar.test.tsx
+PASS src/features/workout/workout-entry.test.ts
+PASS src/components/checkin/checkin-presentation.test.ts
+PASS src/components/plans/ExercisePrescriptionSheet.test.tsx
+PASS src/features/onboarding/setup-model.test.ts
+PASS src/lib/today-action.test.ts
+PASS src/__tests__/oss-ledger.test.ts
+PASS src/hooks/useResponsiveLayout.test.ts
+PASS src/features/checkin/history.test.ts
+PASS src/features/checkin/checkInIntent.test.ts
+PASS src/features/workout/workout-review.test.ts
+
+Test Suites: 125 passed, 125 total
+Tests:       945 passed, 945 total
+Snapshots:   0 total
+Time:        657.657 s
+Ran all test suites.
+Test results written to: docs/release/evidence/2026-09-19/jest.json

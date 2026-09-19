@@ -90,3 +90,35 @@ The earlier 60-second cap was cutting off tool initialization, not exposing a Je
 | `npm run typecheck` | Exit 0. |
 
 The focused lint run initially exited 2 because the only `src` entry was the ignored `.gitkeep` placeholder. The unmatched-pattern flag is the smallest principled adjustment: it does not suppress any lint rules or exclude future TypeScript/TSX files under `src`.
+
+## Fix round 3: verbatim validation evidence
+
+### `npm test -- --runInBand`
+
+Exit code: `0`
+
+```text
+
+> mobile-2@1.0.0 test
+> jest --runInBand
+
+PASS __tests__/jest-setup.test.ts (33.12 s)
+  Jest harness
+    ✓ keeps SecureStore values isolated by key (4 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        52.333 s
+Ran all test suites.
+```
+
+### `npm run lint`
+
+Exit code: `0`
+
+```text
+
+> mobile-2@1.0.0 lint
+> eslint --no-error-on-unmatched-pattern app.config.ts eslint.config.js jest.config.js jest.setup.ts src __tests__
+```

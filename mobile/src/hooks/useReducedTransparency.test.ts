@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { AccessibilityInfo } from 'react-native';
+import * as TestRenderer from 'react-test-renderer';
 
 import { useReducedTransparency } from './useReducedTransparency';
 
@@ -12,24 +13,12 @@ jest.mock('react', () => {
   };
 });
 
-jest.mock('react-native', () => {
-  return {
-    AccessibilityInfo: {
-      isReduceTransparencyEnabled: jest.fn(),
-      addEventListener: jest.fn(),
-    },
-  };
-});
+jest.spyOn(AccessibilityInfo, 'isReduceTransparencyEnabled');
+jest.spyOn(AccessibilityInfo, 'addEventListener');
 
 const mockAccessibilityInfo = jest.mocked(AccessibilityInfo);
 const mockRemove = jest.fn();
 let reduceTransparencyListener: ((enabled: boolean) => void) | undefined;
-// The installed renderer has no declaration file in this project.
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const TestRenderer = require('react-test-renderer') as {
-  act: (callback: () => void | Promise<void>) => void | Promise<void>;
-  create: (element: React.ReactElement) => { unmount: () => void };
-};
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void;
@@ -88,7 +77,7 @@ describe('useReducedTransparency', () => {
 
     await TestRenderer.act(async () => undefined);
     expect(result.current).toBe(true);
-    TestRenderer.act(() => reduceTransparencyListener?.(false));
+    TestRenderer.act(() => { reduceTransparencyListener?.(false); });
     expect(result.current).toBe(false);
   });
 
@@ -107,7 +96,7 @@ describe('useReducedTransparency', () => {
     );
     const { result } = renderHook(() => useReducedTransparency());
 
-    TestRenderer.act(() => reduceTransparencyListener?.(true));
+    TestRenderer.act(() => { reduceTransparencyListener?.(true); });
     expect(result.current).toBe(true);
 
     await TestRenderer.act(async () => initialPreference.resolve(false));

@@ -5,7 +5,7 @@ import { ProgressBar, Text } from '@/components/ui';
 import { iconSize, radius, spacing, useTheme } from '@/theme';
 
 import type { CheckInStep } from './CheckInForm';
-import { CHECK_IN_STAGE_META, getCheckInDailyPrompt } from './checkin-presentation';
+import { CHECK_IN_STAGE_META } from './checkin-presentation';
 
 type Props = {
   step: CheckInStep;
@@ -21,7 +21,7 @@ const STAGE_ICONS = {
   finish: ClipboardCheck,
 };
 
-export function CheckInStageHeader({ step, stepIndex, totalSteps, date }: Props) {
+export function CheckInStageHeader({ step, stepIndex, totalSteps }: Props) {
   const { colors } = useTheme();
   const Icon = STAGE_ICONS[step];
   const meta = CHECK_IN_STAGE_META[step];
@@ -34,14 +34,14 @@ export function CheckInStageHeader({ step, stepIndex, totalSteps, date }: Props)
           style={{
             padding: spacing.sm,
             borderRadius: radius.pill,
-            backgroundColor: colors.primaryFill,
+            backgroundColor: colors.primarySoft,
           }}
         >
           <Icon size={iconSize.md} color={colors.primary} strokeWidth={2} accessible={false} />
         </View>
         <View style={{ flex: 1, gap: spacing.xs }}>
           <Text variant="label" tone="primary">{`Step ${stepIndex + 1} of ${totalSteps}`}</Text>
-          <Text variant="h2">{meta.title}</Text>
+          <Text variant="h1">{meta.title}</Text>
         </View>
       </View>
       <ProgressBar
@@ -49,8 +49,6 @@ export function CheckInStageHeader({ step, stepIndex, totalSteps, date }: Props)
         glow={false}
         accessibilityLabel={`Check-in step ${stepIndex + 1} of ${totalSteps}`}
       />
-      <Text variant="bodySm" tone="muted">{meta.description}</Text>
-      <Text variant="bodySm" tone="muted">{getCheckInDailyPrompt(date)}</Text>
     </View>
   );
 }

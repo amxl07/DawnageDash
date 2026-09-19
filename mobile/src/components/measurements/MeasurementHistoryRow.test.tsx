@@ -1,6 +1,5 @@
 import { Text as NativeText, View } from 'react-native';
 
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
 import type { BodyMeasurement } from '@/types/db';

@@ -34,44 +34,68 @@ export function MeasurementSheet({ visible, onClose, editing, previous, onSaved 
   const [errors, setErrors] = useState<MeasurementErrors>({});
   const [saveError, setSaveError] = useState<string | null>(null);
   const refs = useRef<Record<string, TextInput | null>>({});
+  const draftRef = useRef(draft);
+  const inFlightRef = useRef(false);
 
-  const date = editing?.date ?? localDateString();
+  const [date, setDate] = useState(localDateString);
+  const [comparison, setComparison] = useState<BodyMeasurement | null>(null);
+  const openSession = useRef<{ key: string; revision: number; saving: boolean } | null>(null);
+
+  useEffect(() => () => { openSession.current = null; }, []);
 
   useEffect(() => {
-    if (!visible) return;
-    const source = editing ?? previous;
-    if (!source) {
-      setDraft(EMPTY_MEASUREMENT_DRAFT);
-    } else {
-      setDraft({
-        chest: source.chest ? String(num(source.chest)) : '',
-        waist: source.waist ? String(num(source.waist)) : '',
-        hips: source.hips ? String(num(source.hips)) : '',
-        thighs: source.thighs ? String(num(source.thighs)) : '',
-        arms: source.arms ? String(num(source.arms)) : '',
-      });
+    if (!visible) {
+      openSession.current = null;
+      return;
     }
+    const key = editing?.id ?? 'new';
+    // Background refetches may replace either row object while this form is open.
+    // Initialize once per opened entry, including its date and comparison value.
+    if (openSession.current?.key === key) return;
+    openSession.current = { key, revision: 0, saving: false };
+    setDate(editing?.date ?? localDateString());
+    setComparison(previous);
+    const source = editing ?? previous;
+    const initialDraft = source ? {
+      chest: source.chest ? String(num(source.chest)) : '',
+      waist: source.waist ? String(num(source.waist)) : '',
+      hips: source.hips ? String(num(source.hips)) : '',
+      thighs: source.thighs ? String(num(source.thighs)) : '',
+      arms: source.arms ? String(num(source.arms)) : '',
+    } : EMPTY_MEASUREMENT_DRAFT;
+    draftRef.current = initialDraft;
+    setDraft(initialDraft);
     setErrors({});
     setSaveError(null);
   }, [visible, editing, previous]);
 
   const save = async () => {
-    const { values, errors: next } = parseMeasurementDraft(draft);
+    const savingSession = openSession.current;
+    if (!visible || !savingSession || savingSession.saving || inFlightRef.current) return;
+    const { values, errors: next } = parseMeasurementDraft(draftRef.current);
     setErrors(next);
     if (Object.keys(next).length) return;
 
     setSaveError(null);
+    savingSession.saving = true;
+    inFlightRef.current = true;
+    const savedRevision = savingSession.revision;
     try {
       await mutation.mutateAsync({
         date,
         ...values,
       });
+      if (openSession.current !== savingSession) return;
+      if (savingSession.revision !== savedRevision) {
+        setSaveError('Earlier values saved. Your latest changes still need saving.');
+        return;
+      }
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       // Delta payoff against the previous entry.
       let payoff = 'Measurements saved.';
-      if (previous && values.waist !== null) {
-        const delta = num(previous.waist) - values.waist;
+      if (comparison && num(comparison.waist) > 0 && values.waist !== null) {
+        const delta = num(comparison.waist) - values.waist;
         if (Math.abs(delta) >= 0.1) {
           payoff = `Waist ${delta > 0 ? '−' : '+'}${Math.abs(delta).toFixed(1)} cm since last time`;
         }
@@ -80,18 +104,22 @@ export function MeasurementSheet({ visible, onClose, editing, previous, onSaved 
       onSaved(payoff);
       onClose();
     } catch {
+      if (openSession.current !== savingSession) return;
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setSaveError("Couldn't save. Check your connection and try again.");
+    } finally {
+      savingSession.saving = false;
+      inFlightRef.current = false;
     }
   };
 
   const hintFor = useMemo(
     () => (key: MeasurementField) => {
-      if (!previous || editing) return undefined;
-      const v = num(previous[key]);
+      if (!comparison || editing) return undefined;
+      const v = num(comparison[key]);
       return v > 0 ? `last: ${v} cm` : undefined;
     },
-    [previous, editing],
+    [comparison, editing],
   );
 
   return (
@@ -122,7 +150,11 @@ export function MeasurementSheet({ visible, onClose, editing, previous, onSaved 
               error={errors[f.key]}
               value={draft[f.key]}
               onChangeText={(t) => {
-                setDraft((p) => ({ ...p, [f.key]: t }));
+                const session = openSession.current;
+                if (!session) return;
+                session.revision += 1;
+                draftRef.current = { ...draftRef.current, [f.key]: t };
+                setDraft(draftRef.current);
                 setErrors((p) => ({ ...p, [f.key]: undefined }));
                 setSaveError(null);
               }}

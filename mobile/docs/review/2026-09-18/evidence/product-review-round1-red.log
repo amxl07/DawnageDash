@@ -1,0 +1,851 @@
+FAIL src/screens/__tests__/tabs/index.test.tsx (46.46 s)
+  ● offers cleanup rather than Resume for a draft already confirmed in weekly history
+
+    Unable to find an element with role: button, name: Finish weekly cleanup
+
+    <View>
+      <View>
+        <View>
+          <View>
+            <Text>
+              Tuesday, September 15
+            </Text>
+            <Text
+              accessibilityRole="header"
+            >
+              Good morning
+              ,
+              
+    
+              Alex
+              .
+            </Text>
+            <Text>
+              No coach assigned yet
+            </Text>
+          </View>
+          <View
+            accessibilityLabel="Open your profile"
+            accessibilityRole="button"
+            accessible={true}
+          />
+        </View>
+        <View
+          testID="home-next-action"
+        >
+          <View>
+            <Text>
+              Your next step
+            </Text>
+            <View
+              accessible={false}
+            />
+          </View>
+          <View>
+            <Text
+              accessibilityRole="header"
+            >
+              Your daily check-in
+            </Text>
+            <Text>
+              Take a moment to reflect. Build a clear record of your day.
+            </Text>
+          </View>
+          <View
+            accessibilityLabel="Check in"
+            accessibilityRole="button"
+            accessible={true}
+            testID="home-today-action"
+          >
+            <Text>
+              Check in
+            </Text>
+          </View>
+        </View>
+        <View>
+          <View>
+            <Text
+              accessibilityRole="header"
+            >
+              This week
+            </Text>
+            <View
+              accessibilityLabel="History"
+              accessibilityRole="button"
+              accessible={true}
+            >
+              <Text>
+                History
+              </Text>
+            </View>
+          </View>
+          <View>
+            <View>
+              <Text>
+                Check-ins this week
+              </Text>
+              <Text>
+                0
+                 of 
+                7
+                 saved
+              </Text>
+            </View>
+            <RCTScrollView>
+              <View>
+                <View
+                  accessibilityLabel="Monday, September 14, No record"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": false,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Mon
+                  </Text>
+                  <Text>
+                    14
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Tuesday, September 15, No record"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": false,
+                      "selected": true,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Tue
+                  </Text>
+                  <Text>
+                    15
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Wednesday, September 16, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Wed
+                  </Text>
+                  <Text>
+                    16
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Thursday, September 17, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Thu
+                  </Text>
+                  <Text>
+                    17
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Friday, September 18, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Fri
+                  </Text>
+                  <Text>
+                    18
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Saturday, September 19, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Sat
+                  </Text>
+                  <Text>
+                    19
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Sunday, September 20, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Sun
+                  </Text>
+                  <Text>
+                    20
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+              </View>
+            </RCTScrollView>
+          </View>
+        </View>
+        <View>
+          <View>
+            <Text
+              accessibilityRole="header"
+            >
+              Weekly check-in
+            </Text>
+            <View
+              accessibilityLabel="Resume weekly check-in"
+              accessibilityRole="button"
+              accessible={true}
+            >
+              <Text>
+                Resume weekly check-in
+              </Text>
+            </View>
+          </View>
+          <Text>
+            Your saved answers are ready to continue.
+          </Text>
+        </View>
+        <View>
+          <View>
+            <Text
+              accessibilityRole="header"
+            >
+              Your training
+            </Text>
+            <View
+              accessibilityLabel="Your plan"
+              accessibilityRole="button"
+              accessible={true}
+            >
+              <Text>
+                Your plan
+              </Text>
+            </View>
+          </View>
+          <View
+            accessibilityLabel="View next session: Lower body, day 2, 1 exercises"
+            accessibilityRole="button"
+            accessible={true}
+          >
+            <View />
+            <View>
+              <Text>
+                From your training plan
+              </Text>
+              <Text>
+                Lower body
+              </Text>
+              <Text>
+                Day 2 · 1 exercises
+              </Text>
+            </View>
+          </View>
+        </View>
+        <View>
+          <Text>
+            Start with today.
+          </Text>
+          <Text>
+            Each check-in adds context. Your observations will appear here as you build your record.
+          </Text>
+        </View>
+        <View
+          accessibilityLabel="Continue your coaching assessment"
+          accessibilityRole="button"
+          accessible={true}
+        >
+          <View>
+            <Text>
+              A fuller picture of you
+            </Text>
+            <Text>
+              Coaching assessment · 
+              2
+               of 
+              10
+               sections
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+
+      151 |   mockLocal.mockReturnValue({ data: { weeklyDraft: { form, step: 4 }, checkIns: [], workouts: [] }, refetch: jest.fn(), isError: false });
+      152 |   const view = await render(<HomeScreen />);
+    > 153 |   expect(view.getByRole('button', { name: 'Finish weekly cleanup' })).toBeTruthy();
+          |               ^
+      154 |   expect(view.queryByRole('button', { name: 'Resume weekly check-in' })).toBeNull();
+      155 | });
+      156 |
+
+      at Object.getByRole (src/screens/__tests__/tabs/index.test.tsx:153:15)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● preserves a divergent same-week draft behind a review action
+
+    Unable to find an element with role: button, name: Review saved weekly draft
+
+    <View>
+      <View>
+        <View>
+          <View>
+            <Text>
+              Tuesday, September 15
+            </Text>
+            <Text
+              accessibilityRole="header"
+            >
+              Good morning
+              ,
+              
+    
+              Alex
+              .
+            </Text>
+            <Text>
+              No coach assigned yet
+            </Text>
+          </View>
+          <View
+            accessibilityLabel="Open your profile"
+            accessibilityRole="button"
+            accessible={true}
+          />
+        </View>
+        <View
+          testID="home-next-action"
+        >
+          <View>
+            <Text>
+              Your next step
+            </Text>
+            <View
+              accessible={false}
+            />
+          </View>
+          <View>
+            <Text
+              accessibilityRole="header"
+            >
+              Your daily check-in
+            </Text>
+            <Text>
+              Take a moment to reflect. Build a clear record of your day.
+            </Text>
+          </View>
+          <View
+            accessibilityLabel="Check in"
+            accessibilityRole="button"
+            accessible={true}
+            testID="home-today-action"
+          >
+            <Text>
+              Check in
+            </Text>
+          </View>
+        </View>
+        <View>
+          <View>
+            <Text
+              accessibilityRole="header"
+            >
+              This week
+            </Text>
+            <View
+              accessibilityLabel="History"
+              accessibilityRole="button"
+              accessible={true}
+            >
+              <Text>
+                History
+              </Text>
+            </View>
+          </View>
+          <View>
+            <View>
+              <Text>
+                Check-ins this week
+              </Text>
+              <Text>
+                0
+                 of 
+                7
+                 saved
+              </Text>
+            </View>
+            <RCTScrollView>
+              <View>
+                <View
+                  accessibilityLabel="Monday, September 14, No record"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": false,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Mon
+                  </Text>
+                  <Text>
+                    14
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Tuesday, September 15, No record"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": false,
+                      "selected": true,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Tue
+                  </Text>
+                  <Text>
+                    15
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Wednesday, September 16, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Wed
+                  </Text>
+                  <Text>
+                    16
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Thursday, September 17, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Thu
+                  </Text>
+                  <Text>
+                    17
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Friday, September 18, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Fri
+                  </Text>
+                  <Text>
+                    18
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Saturday, September 19, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Sat
+                  </Text>
+                  <Text>
+                    19
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Sunday, September 20, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Sun
+                  </Text>
+                  <Text>
+                    20
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+              </View>
+            </RCTScrollView>
+          </View>
+        </View>
+        <View>
+          <View>
+            <Text
+              accessibilityRole="header"
+            >
+              Weekly check-in
+            </Text>
+            <View
+              accessibilityLabel="Resume weekly check-in"
+              accessibilityRole="button"
+              accessible={true}
+            >
+              <Text>
+                Resume weekly check-in
+              </Text>
+            </View>
+          </View>
+          <Text>
+            Your saved answers are ready to continue.
+          </Text>
+        </View>
+        <View>
+          <View>
+            <Text
+              accessibilityRole="header"
+            >
+              Your training
+            </Text>
+            <View
+              accessibilityLabel="Your plan"
+              accessibilityRole="button"
+              accessible={true}
+            >
+              <Text>
+                Your plan
+              </Text>
+            </View>
+          </View>
+          <View
+            accessibilityLabel="View next session: Lower body, day 2, 1 exercises"
+            accessibilityRole="button"
+            accessible={true}
+          >
+            <View />
+            <View>
+              <Text>
+                From your training plan
+              </Text>
+              <Text>
+                Lower body
+              </Text>
+              <Text>
+                Day 2 · 1 exercises
+              </Text>
+            </View>
+          </View>
+        </View>
+        <View>
+          <Text>
+            Start with today.
+          </Text>
+          <Text>
+            Each check-in adds context. Your observations will appear here as you build your record.
+          </Text>
+        </View>
+        <View
+          accessibilityLabel="Continue your coaching assessment"
+          accessibilityRole="button"
+          accessible={true}
+        >
+          <View>
+            <Text>
+              A fuller picture of you
+            </Text>
+            <Text>
+              Coaching assessment · 
+              2
+               of 
+              10
+               sections
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+
+      159 |   mockLocal.mockReturnValue({ data: { weeklyDraft: { form: { ...emptyWeekly(), overall_feeling: 'Newer answer' }, step: 4 }, checkIns: [], workouts: [] }, refetch: jest.fn(), isError: false });
+      160 |   const view = await render(<HomeScreen />);
+    > 161 |   expect(view.getByRole('button', { name: 'Review saved weekly draft' })).toBeTruthy();
+          |               ^
+      162 |   expect(view.queryByRole('button', { name: 'Resume weekly check-in' })).toBeNull();
+      163 | });
+      164 |
+
+      at Object.getByRole (src/screens/__tests__/tabs/index.test.tsx:161:15)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL src/screens/__tests__/weekly-feedback.test.tsx (16.129 s)
+  ● WeeklyFeedbackScreen › keeps a Sunday report and its hints frozen through Monday and submits its captured week
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected substring: "14 Sep–20 Sep 2026"
+    Received string:    "{\"type\":\"View\",\"props\":{\"style\":[{\"flex\":1},{\"paddingBottom\":0}]},\"children\":[{\"type\":\"View\",\"props\":{},\"children\":[{\"type\":\"View\",\"props\":{\"style\":{\"gap\":24}},\"children\":[{\"type\":\"View\",\"props\":{},\"children\":[{\"type\":\"Text\",\"props\":{},\"children\":[\"Weekly check-in\"]},{\"type\":\"View\",\"props\":{\"accessibilityLabel\":\"Go back\",\"accessible\":true,\"accessibilityState\":{},\"focusable\":true,\"accessibilityValue\":{},\"collapsable\":false},\"children\":null}]},{\"type\":\"View\",\"props\":{\"revision\":2,\"style\":{\"gap\":24},\"testID\":\"weekly-step-content\"},\"children\":[{\"type\":\"View\",\"props\":{\"style\":{\"gap\":4}},\"children\":[{\"type\":\"View\",\"props\":{\"testID\":\"weekly-step-title\",\"accessible\":true,\"focusable\":true,\"accessibilityRole\":\"header\"},\"children\":[{\"type\":\"Text\",\"props\":{\"variant\":\"h1\",\"accessibilityElementsHidden\":true},\"children\":[\"Training\"]}]},{\"type\":\"Text\",\"props\":{\"variant\":\"bodySm\",\"tone\":\"muted\"},\"children\":[\"How did training go?\"]}]},{\"type\":\"Text\",\"props\":{\"variant\":\"bodySm\",\"tone\":\"muted\"},\"children\":[\"Daily-record window: 21 Sep 2026 · device local dates. Only recorded values are averaged.\"]},{\"type\":\"View\",\"props\":{\"style\":{\"gap\":24}},\"children\":[{\"type\":\"View\",\"props\":{\"style\":{\"gap\":8}},\"children\":[{\"type\":\"Text\",\"props\":{\"variant\":\"label\",\"tone\":\"muted\"},\"children\":[\"Are you progressing in your training?\"]},{\"type\":\"View\",\"props\":{\"accessibilityLabel\":\"Yes\",\"accessible\":true,\"accessibilityState\":{},\"focusable\":true,\"accessibilityValue\":{},\"collapsable\":false},\"children\":null},{\"type\":\"View\",\"props\":{\"accessibilityLabel\":\"No\",\"accessible\":true,\"accessibilityState\":{},\"focusable\":true,\"accessibilityValue\":{},\"collapsable\":false},\"children\":null},{\"type\":\"View\",\"props\":{\"accessibilityLabel\":\"Stalled\",\"accessible\":true,\"accessibilityState\":{},\"focusable\":true,\"accessibilityValue\":{},\"collapsable\":false},\"children\":null}]},{\"type\":\"View\",\"props\":{\"style\":{\"gap\":8}},\"children\":[{\"type\":\"Text\",\"props\":{\"variant\":\"label\",\"tone\":\"muted\"},\"children\":[\"Are you enjoying your training?\"]},{\"type\":\"View\",\"props\":{\"accessibilityLabel\":\"Yes\",\"accessible\":true,\"accessibilityState\":{},\"focusable\":true,\"accessibilityValue\":{},\"collapsable\":false},\"children\":null},{\"type\":\"View\",\"props\":{\"accessibilityLabel\":\"No\",\"accessible\":true,\"accessibilityState\":{},\"focusable\":true,\"accessibilityValue\":{},\"collapsable\":false},\"children\":null}]},{\"type\":\"View\",\"props\":{\"style\":{\"gap\":8}},\"children\":[{\"type\":\"Text\",\"props\":{\"variant\":\"label\",\"tone\":\"muted\"},\"children\":[\"Did you miss any sessions?\"]},{\"type\":\"View\",\"props\":{\"accessibilityLabel\":\"Yes\",\"accessible\":true,\"accessibilityState\":{},\"focusable\":true,\"accessibilityValue\":{},\"collapsable\":false},\"children\":null},{\"type\":\"View\",\"props\":{\"accessibilityLabel\":\"No\",\"accessible\":true,\"accessibilityState\":{},\"focusable\":true,\"accessibilityValue\":{},\"collapsable\":false},\"children\":null}]},{\"type\":\"View\",\"props\":{\"style\":{\"gap\":8}},\"children\":[{\"type\":\"Text\",\"props\":{\"variant\":\"label\",\"tone\":\"muted\"},\"children\":[\"Any joint pain?\"]},{\"type\":\"View\",\"props\":{\"accessibilityLabel\":\"Yes\",\"accessible\":true,\"accessibilityState\":{},\"focusable\":true,\"accessibilityValue\":{},\"collapsable\":false},\"children\":null},{\"type\":\"View\",\"props\":{\"accessibilityLabel\":\"No\",\"accessible\":true,\"accessibilityState\":{},\"focusable\":true,\"accessibilityValue\":{},\"collapsable\":false},\"children\":null}]},{\"type\":\"View\",\"props\":{},\"children\":[{\"type\":\"TextInput\",\"props\":{\"accessibilityLabel\":\"What's your average step count this week?\",\"value\":\"8000\"},\"children\":null},{\"type\":\"Text\",\"props\":{},\"children\":[\"Daily records: 1 observation, recorded 21 Sep 2026. Edit if needed.\"]}]},{\"type\":\"View\",\"props\":{},\"children\":[{\"type\":\"TextInput\",\"props\":{\"accessibilityLabel\":\"Any training questions?\",\"value\":\"\"},\"children\":null}]}]}]}]}]},{\"type\":\"View\",\"props\":{},\"children\":[{\"type\":\"View\",\"props\":{\"style\":{\"flexDirection\":\"row\",\"flexWrap\":\"wrap\",\"alignItems\":\"center\",\"gap\":8}},\"children\":[{\"type\":\"Text\",\"props\":{\"variant\":\"bodySm\",\"tone\":\"muted\"},\"children\":[\"Step 3 of 5\"]},{\"type\":\"Text\",\"props\":{\"testID\":\"draft-status\"},\"children\":[\"saved\"]}]},{\"type\":\"View\",\"props\":{\"testID\":\"primary-action\",\"accessibilityLabel\":\"Next\",\"accessible\":true,\"accessibilityState\":{},\"focusable\":true,\"accessibilityValue\":{},\"collapsable\":false},\"children\":null},{\"type\":\"View\",\"props\":{\"accessibilityLabel\":\"Back\",\"accessible\":true,\"accessibilityState\":{},\"focusable\":true,\"accessibilityValue\":{},\"collapsable\":false},\"children\":null}]}]}"
+
+      379 |     mockCheckIns = [{ date: '2026-09-21', daily_steps: 1000, water_liters: 1, stress_level: 1 }];
+      380 |     await act(async () => renderer.update(<WeeklyFeedbackScreen />));
+    > 381 |     expect(JSON.stringify(renderer.toJSON())).toContain('14 Sep–20 Sep 2026');
+          |                                               ^
+      382 |     expect(JSON.stringify(renderer.toJSON())).toContain('recorded 20 Sep 2026');
+      383 |     expect(renderer.root.findByProps({ accessibilityLabel: "What's your average step count this week?" }).props.value).toBe('8000');
+      384 |     await press(renderer, 'Next');
+
+      at Object.toContain (src/screens/__tests__/weekly-feedback.test.tsx:381:47)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● WeeklyFeedbackScreen › restores the persisted reporting date without relabeling an older draft after restart
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected substring: "14 Sep–20 Sep 2026"
+    Received string:    "{\"type\":\"View\",\"props\":{\"style\":[{\"flex\":1},{\"paddingBottom\":0}]},\"children\":[{\"type\":\"View\",\"props\":{},\"children\":[{\"type\":\"View\",\"props\":{\"style\":{\"gap\":24}},\"children\":[{\"type\":\"View\",\"props\":{},\"children\":[{\"type\":\"Text\",\"props\":{},\"children\":[\"Weekly check-in\"]},{\"type\":\"View\",\"props\":{\"accessibilityLabel\":\"Go back\",\"accessible\":true,\"accessibilityState\":{},\"focusable\":true,\"accessibilityValue\":{},\"collapsable\":false},\"children\":null}]},{\"type\":\"View\",\"props\":{\"revision\":2,\"style\":{\"gap\":24},\"testID\":\"weekly-step-content\"},\"children\":[{\"type\":\"View\",\"props\":{\"style\":{\"gap\":4}},\"children\":[{\"type\":\"View\",\"props\":{\"testID\":\"weekly-step-title\",\"accessible\":true,\"focusable\":true,\"accessibilityRole\":\"header\"},\"children\":[{\"type\":\"Text\",\"props\":{\"variant\":\"h1\",\"accessibilityElementsHidden\":true},\"children\":[\"Training\"]}]},{\"type\":\"Text\",\"props\":{\"variant\":\"bodySm\",\"tone\":\"muted\"},\"children\":[\"How did training go?\"]}]},{\"type\":\"Text\",\"props\":{\"variant\":\"bodySm\",\"tone\":\"muted\"},\"children\":[\"Daily-record window: 21 Sep 2026 · device local dates. Only recorded values are averaged.\"]},{\"type\":\"View\",\"props\":{\"style\":{\"gap\":24}},\"children\":[{\"type\":\"View\",\"props\":{\"style\":{\"gap\":8}},\"children\":[{\"type\":\"Text\",\"props\":{\"variant\":\"label\",\"tone\":\"muted\"},\"children\":[\"Are you progressing in your training?\"]},{\"type\":\"View\",\"props\":{\"accessibilityLabel\":\"Yes\",\"accessible\":true,\"accessibilityState\":{},\"focusable\":true,\"accessibilityValue\":{},\"collapsable\":false},\"children\":null},{\"type\":\"View\",\"props\":{\"accessibilityLabel\":\"No\",\"accessible\":true,\"accessibilityState\":{},\"focusable\":true,\"accessibilityValue\":{},\"collapsable\":false},\"children\":null},{\"type\":\"View\",\"props\":{\"accessibilityLabel\":\"Stalled\",\"accessible\":true,\"accessibilityState\":{},\"focusable\":true,\"accessibilityValue\":{},\"collapsable\":false},\"children\":null}]},{\"type\":\"View\",\"props\":{\"style\":{\"gap\":8}},\"children\":[{\"type\":\"Text\",\"props\":{\"variant\":\"label\",\"tone\":\"muted\"},\"children\":[\"Are you enjoying your training?\"]},{\"type\":\"View\",\"props\":{\"accessibilityLabel\":\"Yes\",\"accessible\":true,\"accessibilityState\":{},\"focusable\":true,\"accessibilityValue\":{},\"collapsable\":false},\"children\":null},{\"type\":\"View\",\"props\":{\"accessibilityLabel\":\"No\",\"accessible\":true,\"accessibilityState\":{},\"focusable\":true,\"accessibilityValue\":{},\"collapsable\":false},\"children\":null}]},{\"type\":\"View\",\"props\":{\"style\":{\"gap\":8}},\"children\":[{\"type\":\"Text\",\"props\":{\"variant\":\"label\",\"tone\":\"muted\"},\"children\":[\"Did you miss any sessions?\"]},{\"type\":\"View\",\"props\":{\"accessibilityLabel\":\"Yes\",\"accessible\":true,\"accessibilityState\":{},\"focusable\":true,\"accessibilityValue\":{},\"collapsable\":false},\"children\":null},{\"type\":\"View\",\"props\":{\"accessibilityLabel\":\"No\",\"accessible\":true,\"accessibilityState\":{},\"focusable\":true,\"accessibilityValue\":{},\"collapsable\":false},\"children\":null}]},{\"type\":\"View\",\"props\":{\"style\":{\"gap\":8}},\"children\":[{\"type\":\"Text\",\"props\":{\"variant\":\"label\",\"tone\":\"muted\"},\"children\":[\"Any joint pain?\"]},{\"type\":\"View\",\"props\":{\"accessibilityLabel\":\"Yes\",\"accessible\":true,\"accessibilityState\":{},\"focusable\":true,\"accessibilityValue\":{},\"collapsable\":false},\"children\":null},{\"type\":\"View\",\"props\":{\"accessibilityLabel\":\"No\",\"accessible\":true,\"accessibilityState\":{},\"focusable\":true,\"accessibilityValue\":{},\"collapsable\":false},\"children\":null}]},{\"type\":\"View\",\"props\":{},\"children\":[{\"type\":\"TextInput\",\"props\":{\"accessibilityLabel\":\"What's your average step count this week?\",\"value\":\"8000\"},\"children\":null},{\"type\":\"Text\",\"props\":{},\"children\":[\"No daily observations available for 21 Sep 2026. You can enter your own answer.\"]}]},{\"type\":\"View\",\"props\":{},\"children\":[{\"type\":\"TextInput\",\"props\":{\"accessibilityLabel\":\"Any training questions?\",\"value\":\"\"},\"children\":null}]}]}]}]}]},{\"type\":\"View\",\"props\":{},\"children\":[{\"type\":\"View\",\"props\":{\"style\":{\"flexDirection\":\"row\",\"flexWrap\":\"wrap\",\"alignItems\":\"center\",\"gap\":8}},\"children\":[{\"type\":\"Text\",\"props\":{\"variant\":\"bodySm\",\"tone\":\"muted\"},\"children\":[\"Step 3 of 5\"]},{\"type\":\"Text\",\"props\":{\"testID\":\"draft-status\"},\"children\":[\"saved\"]}]},{\"type\":\"View\",\"props\":{\"testID\":\"primary-action\",\"accessibilityLabel\":\"Next\",\"accessible\":true,\"accessibilityState\":{},\"focusable\":true,\"accessibilityValue\":{},\"collapsable\":false},\"children\":null},{\"type\":\"View\",\"props\":{\"accessibilityLabel\":\"Back\",\"accessible\":true,\"accessibilityState\":{},\"focusable\":true,\"accessibilityValue\":{},\"collapsable\":false},\"children\":null}]}]}"
+
+      396 |     } as WeeklyFeedbackDraft);
+      397 |     const renderer = await renderScreen();
+    > 398 |     expect(JSON.stringify(renderer.toJSON())).toContain('14 Sep–20 Sep 2026');
+          |                                               ^
+      399 |     expect(renderer.root.findByProps({ accessibilityLabel: "What's your average step count this week?" }).props.value).toBe('8000');
+      400 |     await press(renderer, 'Next');
+      401 |     await press(renderer, 'Next');
+
+      at Object.toContain (src/screens/__tests__/weekly-feedback.test.tsx:398:47)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● WeeklyFeedbackScreen › restores a history-confirmed leftover draft as cleanup-only after remount
+
+    No instances found with props: {"accessibilityLabel":"Retry cleanup"}
+
+      409 |     mockLoadDraft.mockResolvedValueOnce({ form, step: 4 });
+      410 |     const renderer = await renderScreen();
+    > 411 |     expect(renderer.root.findByProps({ accessibilityLabel: 'Retry cleanup' })).toBeTruthy();
+          |                          ^
+      412 |     expect(renderer.root.findAllByProps({ accessibilityLabel: 'Submit' })).toHaveLength(0);
+      413 |     expect(mockClearDraft).not.toHaveBeenCalled();
+      414 |     await press(renderer, 'Retry cleanup');
+
+      at expectOne (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15161:13)
+      at ReactTestInstance.Object.<anonymous>.process.env.NODE_ENV._proto.findByProps (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:17219:18)
+      at Object.findByProps (src/screens/__tests__/weekly-feedback.test.tsx:411:26)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● WeeklyFeedbackScreen › keeps divergent same-week draft answers in a protected review instead of submitting again
+
+    No instances found with props: {"children":"Review saved draft"}
+
+      421 |     mockLoadDraft.mockResolvedValueOnce({ form: { ...emptyWeekly(), overall_feeling: 'Newer saved answer' }, step: 4 });
+      422 |     const renderer = await renderScreen();
+    > 423 |     expect(renderer.root.findByProps({ children: 'Review saved draft' })).toBeTruthy();
+          |                          ^
+      424 |     expect(renderer.root.findByProps({ children: 'Newer saved answer' })).toBeTruthy();
+      425 |     expect(renderer.root.findByProps({ children: 'Previously sent' })).toBeTruthy();
+      426 |     expect(renderer.root.findAllByProps({ accessibilityLabel: 'Submit' })).toHaveLength(0);
+
+      at expectOne (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15161:13)
+      at ReactTestInstance.Object.<anonymous>.process.env.NODE_ENV._proto.findByProps (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:17219:18)
+      at Object.findByProps (src/screens/__tests__/weekly-feedback.test.tsx:423:26)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● WeeklyFeedbackScreen › retains edits made while submission was in flight as a protected divergent draft
+
+    No instances found with props: {"children":"Review saved draft"}
+
+      439 |     act(() => renderer.root.findByProps({ accessibilityLabel: 'Anything else you want to share?' }).props.onChangeText('Newer answer during save'));
+      440 |     await act(async () => pending.resolve({ error: null }));
+    > 441 |     expect(renderer.root.findByProps({ children: 'Review saved draft' })).toBeTruthy();
+          |                          ^
+      442 |     expect(renderer.root.findByProps({ children: 'Newer answer during save' })).toBeTruthy();
+      443 |     expect(mockClearDraft).not.toHaveBeenCalled();
+      444 |     expect(mockSaveDraft).toHaveBeenCalledWith(expect.objectContaining({ feedback: 'Newer answer during save' }), expect.any(Number), expect.objectContaining({ immediate: true }));
+
+      at expectOne (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15161:13)
+      at ReactTestInstance.Object.<anonymous>.process.env.NODE_ENV._proto.findByProps (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:17219:18)
+      at Object.findByProps (src/screens/__tests__/weekly-feedback.test.tsx:441:26)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL src/screens/__tests__/tabs/plans.test.tsx
+  ● gives simultaneous training failures distinct accessible retry names
+
+    No instances found with props: {"accessibilityLabel":"Retry training plan"}
+
+      335 |   let renderer!: ReturnType<typeof create>;
+      336 |   act(() => { renderer = create(<PlansScreen />); });
+    > 337 |   act(() => renderer.root.findByProps({ accessibilityLabel: 'Retry training plan' }).props.onPress());
+          |                           ^
+      338 |   act(() => renderer.root.findByProps({ accessibilityLabel: 'Retry training history' }).props.onPress());
+      339 |   expect(mockPlanRefetch).toHaveBeenCalled();
+      340 |   expect(mockProgressRefetch).toHaveBeenCalled();
+
+      at expectOne (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15161:13)
+      at ReactTestInstance.Object.<anonymous>.process.env.NODE_ENV._proto.findByProps (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:17219:18)
+      at findByProps (src/screens/__tests__/tabs/plans.test.tsx:337:27)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:814:22)
+      at Object.<anonymous> (src/screens/__tests__/tabs/plans.test.tsx:337:6)
+
+FAIL src/features/weekly/selectors.test.ts
+  ● lists every sparse observation date without implying continuous coverage
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "Daily records: 3 observations, recorded 14 Sep 2026, 16 Sep 2026, 19 Sep 2026. Edit if needed."
+    Received: "Daily records: 3 observations, recorded 14 Sep–19 Sep 2026. Edit if needed."
+
+      33 | it('lists every sparse observation date without implying continuous coverage', () => {
+      34 |   const report = weeklyAutofill(['2026-09-14', '2026-09-16', '2026-09-19'].map((date) => ({ date, daily_steps: 8000, water_liters: null, stress_level: null })), '2026-09-19');
+    > 35 |   expect(weeklyObservationHint(report, 'step_count')).toBe('Daily records: 3 observations, recorded 14 Sep 2026, 16 Sep 2026, 19 Sep 2026. Edit if needed.');
+         |                                                       ^
+      36 | });
+      37 |
+
+      at Object.toBe (src/features/weekly/selectors.test.ts:35:55)
+
+Test Suites: 4 failed, 4 total
+Tests:       9 failed, 54 passed, 63 total
+Snapshots:   0 total
+Time:        71.966 s, estimated 119 s
+Ran all test suites within paths "src/screens/__tests__/weekly-feedback.test.tsx", "src/screens/__tests__/tabs/index.test.tsx", "src/screens/__tests__/tabs/plans.test.tsx", "src/features/weekly/selectors.test.ts".
+Verification directory cache: 31411 missing-path checks resolved; 708 directories read.
+Verification dependency cache: 3479 repeated reads; 2644 files; 16612241 bytes.

@@ -1,4 +1,4 @@
-appId: com.dawnage.app
+appId: ${DAWNAGE_E2E_APP_ID}
 name: Workout draft and timer survive interruption
 ---
 - runFlow: helpers/sign-in.yaml
@@ -8,14 +8,37 @@ name: Workout draft and timer survive interruption
 - tapOn:
     text: "Start Day .*"
 - extendedWaitUntil:
-    visible: "Workout title"
+    visible: "Edit session details.*"
     timeout: 10000
+- runFlow:
+    when:
+      visible: "(Set|Warm-up) 1 weight in kilograms"
+    commands:
+      - tapOn: "(Set|Warm-up) 1 weight in kilograms"
+      - inputText: "40"
+      - tapOn: "(Set|Warm-up) 1 repetitions"
+      - inputText: "8"
+      - hideKeyboard
+- runFlow:
+    when:
+      visible: "(Set|Warm-up) 1 duration in seconds"
+    commands:
+      - tapOn: "(Set|Warm-up) 1 duration in seconds"
+      - inputText: "45"
+      - hideKeyboard
 - tapOn:
-    text: "Mark set 1 complete"
+    text: "Complete set"
 - extendedWaitUntil:
     visible: "Saved on this device"
     timeout: 5000
-- tapOn: "Start rest timer"
+- tapOn: "Rest options"
+- runFlow:
+    when:
+      visible: "Choose your rest duration."
+    commands:
+      - tapOn: "90s"
+- tapOn:
+    text: "Start [0-9]+ second rest"
 - assertVisible: "Pause rest timer"
 # Background and resume without terminating so the absolute-deadline timer can recover.
 - pressKey: Home
@@ -40,7 +63,18 @@ name: Workout draft and timer survive interruption
       - tapOn:
           text: "Continue Day .*"
 - extendedWaitUntil:
-    visible: "Workout title"
+    visible: "Edit session details.*"
     timeout: 10000
+- tapOn:
+    id: "workout-sets-toggle"
 - assertVisible:
-    text: "Mark set 1 incomplete"
+    text: "Mark (set|warm-up) 1 incomplete"
+
+# Review is separate from persistence. Return preserves the entered sets.
+- tapOn:
+    id: "workout-overview"
+- tapOn:
+    id: "logger-finish"
+- assertVisible: "Review your workout"
+- tapOn: "Return to editing"
+- assertVisible: "Edit session details.*"

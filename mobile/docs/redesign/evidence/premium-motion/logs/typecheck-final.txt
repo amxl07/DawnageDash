@@ -1,0 +1,2 @@
+Verification directory cache: 4816 missing-path checks resolved; 491 directories read.
+Verification dependency cache: 8 repeated reads; 1735 files; 19657313 bytes.

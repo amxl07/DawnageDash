@@ -1,0 +1,22 @@
+{
+  "outputDirectory": "/tmp/dawnage-premium-20260917/export",
+  "environment": "Fictional Supabase URL/key; no live backend access",
+  "exitCode": 0,
+  "bundles": [
+    {
+      "path": "_expo/static/js/android/index-31c6247f16200a8fb5fd80fb80a0e18c.hbc",
+      "bytes": 8495917,
+      "sha256": "30b4a27c1311f1ec0f81f4026baebb88746440138fb7831f2feef1a60f94fa71"
+    },
+    {
+      "path": "_expo/static/js/ios/index-d197f21980e434013db2a51b34692b1b.hbc",
+      "bytes": 8262099,
+      "sha256": "37453da977e1a45840b075944d18b990368f9f38b50d4d63fe402eaa78f1f9ef"
+    },
+    {
+      "path": "_expo/static/js/web/index-5d5d9bf3c5866b1574632a113844ac9b.js",
+      "bytes": 5936129,
+      "sha256": "1646530c8d218ce9a9d37a4d84fc8c45c4f0a8f0bcfae8431286e456242181e2"
+    }
+  ]
+}

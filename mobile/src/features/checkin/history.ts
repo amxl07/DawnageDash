@@ -1,4 +1,5 @@
 import type { DailyCheckIn, Numeric } from '@/types/db';
+import { isDateKeyStrict } from '@/lib/dates';
 
 import type { NumericHistoryFieldId } from './config/fields';
 
@@ -31,7 +32,7 @@ const HISTORY_FIELDS: Record<NumericHistoryFieldId, keyof DailyCheckIn> = {
 };
 
 function numericValue(value: Numeric | undefined): number | null {
-  if (value === null || value === undefined || value === '') return null;
+  if (value === null || value === undefined || (typeof value === 'string' && !value.trim())) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
@@ -41,7 +42,7 @@ export function buildHistoryStats(
   targetDate: string,
 ): CheckInHistory {
   const priorRows = [...(checkIns ?? [])]
-    .filter((row) => row.date < targetDate)
+    .filter((row) => isDateKeyStrict(row.date) && row.date < targetDate)
     .sort((a, b) => a.date.localeCompare(b.date));
 
   return Object.fromEntries(
@@ -81,4 +82,3 @@ export function historyCaption(
   const unit = format.unit ? ` ${format.unit}` : '';
   return `Recent range ${formatted(history.min14, precision)}–${formatted(history.max14, precision)}${unit}`;
 }
-

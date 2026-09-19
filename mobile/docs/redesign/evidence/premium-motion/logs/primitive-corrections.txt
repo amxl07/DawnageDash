@@ -1,0 +1,28 @@
+FAIL src/screens/__tests__/tabs/plans.test.tsx (523.465 s)
+  ● PlansScreen plan provenance › keeps prescription access inside the day card without a duplicate exercise list
+
+    TypeError: root.queryAll is not a function
+
+      218 |
+      219 |     expect(renderer.root.findAllByProps({ children: 'Exercise details' })).toHaveLength(0);
+    > 220 |     const detailActions = within(renderer.root).getAllByRole('button', {
+          |                                                 ^
+      221 |       name: 'Show details for Squat',
+      222 |     });
+      223 |     expect(detailActions).toHaveLength(1);
+
+      at queryAll (node_modules/@testing-library/react-native/src/helpers/find-all.ts:23:24)
+      at queryAllByRoleFn (node_modules/@testing-library/react-native/src/queries/role.ts:60:19)
+      at Object.getAllFn [as getAllByRole] (node_modules/@testing-library/react-native/src/queries/make-queries.ts:119:48)
+      at Object.getAllByRole (src/screens/__tests__/tabs/plans.test.tsx:220:49)
+
+PASS src/components/ui/AnimatedNumber.test.tsx (84.624 s)
+PASS src/components/ui/RatingRow.test.tsx
+
+Test Suites: 1 failed, 2 passed, 3 total
+Tests:       1 failed, 11 passed, 12 total
+Snapshots:   0 total
+Time:        696.015 s
+Ran all test suites within paths "src/components/ui/RatingRow.test.tsx", "src/components/ui/AnimatedNumber.test.tsx", "src/screens/__tests__/tabs/plans.test.tsx".
+Test results written to: ../../../../../../tmp/dawnage-premium-20260917/jest-primitives-results.json
+Verification directory cache: 23178 missing-path checks resolved; 640 directories read.

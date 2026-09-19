@@ -14,6 +14,7 @@ import {
 import { AccessibilityInfo, AppState } from 'react-native';
 
 export const REST_PRESETS = [60, 90, 120, 180];
+type RestStartOptions = { haptic?: boolean };
 
 const storageKey = (userId: string) => `rest-timer:${userId}`;
 
@@ -62,12 +63,16 @@ export type RestTimerState = {
   progress: number;
   running: boolean;
   complete: boolean;
-  start: (seconds: number) => void;
+  paused: boolean;
+  extend: (seconds: number) => void;
+  start: (seconds: number, options?: RestStartOptions) => void;
   toggle: () => void;
   reset: () => void;
   skip: () => void;
 };
 
+export type RestTimerActions = Pick<RestTimerState, 'start' | 'toggle' | 'reset' | 'skip' | 'extend'>;
+const RestTimerActionsContext = createContext<RestTimerActions | null>(null);
 const RestTimerContext = createContext<RestTimerState | null>(null);
 
 /**
@@ -231,7 +236,8 @@ export function RestTimerProvider({ children, userId }: { children: ReactNode; u
     return () => subscription.remove();
   }, [endsAt, generation, pausedRemainingMs, syncFromClock]);
 
-  const start = useCallback((seconds: number) => {
+  const start = useCallback((seconds: number, options?: RestStartOptions) => {
+    if (!Number.isFinite(seconds) || seconds <= 0) return;
     const nextEndsAt = Date.now() + seconds * 1000;
     interactionVersionRef.current += 1;
     advanceGeneration();
@@ -243,7 +249,7 @@ export function RestTimerProvider({ children, userId }: { children: ReactNode; u
     setPausedRemainingMs(null);
     setEndsAt(nextEndsAt);
     persist({ version: 1, duration: seconds, endsAt: nextEndsAt, pausedRemainingMs: null });
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (options?.haptic !== false) void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, [advanceGeneration, persist]);
 
   const running = endsAt !== null && pausedRemainingMs === null;
@@ -305,6 +311,26 @@ export function RestTimerProvider({ children, userId }: { children: ReactNode; u
     persist(null);
   }, [advanceGeneration, persist]);
 
+  const extend = useCallback((seconds: number) => {
+    if (!Number.isFinite(seconds) || seconds <= 0) return;
+    if (pausedRemainingMs !== null) {
+      const next = pausedRemainingMs + seconds * 1000;
+      interactionVersionRef.current += 1;
+      setPausedRemainingMs(next); setRemaining(Math.ceil(next / 1000));
+      persist({ version: 1, duration, endsAt: null, pausedRemainingMs: next });
+    } else if (endsAt !== null) {
+      const next = Math.max(Date.now(), endsAt) + seconds * 1000;
+      interactionVersionRef.current += 1; advanceGeneration();
+      endsAtRef.current = next; firedRef.current = false;
+      setEndsAt(next); setRemaining(remainingAt(next, Date.now())); setComplete(false);
+      persist({ version: 1, duration, endsAt: next, pausedRemainingMs: null });
+    } else start(seconds);
+  }, [advanceGeneration, duration, endsAt, pausedRemainingMs, persist, start]);
+
+  // This value excludes countdown state. Set editors can start rest without
+  // subscribing their entire route to every one-second display change.
+  const actions = useMemo(() => ({ start, toggle, reset, skip, extend }), [start, toggle, reset, skip, extend]);
+
   const value = useMemo<RestTimerState>(() => {
     const progress = duration > 0 ? 1 - remaining / duration : 0;
     return {
@@ -313,18 +339,26 @@ export function RestTimerProvider({ children, userId }: { children: ReactNode; u
       progress: Math.max(0, Math.min(1, progress)),
       running,
       complete,
+      paused: pausedRemainingMs !== null,
+      extend,
       start,
       toggle,
       reset,
       skip,
     };
-  }, [complete, duration, remaining, reset, running, skip, start, toggle]);
+  }, [complete, duration, remaining, reset, running, skip, start, toggle, extend, pausedRemainingMs]);
 
-  return createElement(RestTimerContext.Provider, { value }, children);
+  return createElement(RestTimerActionsContext.Provider, { value: actions }, createElement(RestTimerContext.Provider, { value }, children));
 }
 
 export function useRestTimer(): RestTimerState {
   const timer = useContext(RestTimerContext);
   if (!timer) throw new Error('useRestTimer must be used inside <RestTimerProvider>');
   return timer;
+}
+
+export function useRestTimerActions(): RestTimerActions {
+  const actions = useContext(RestTimerActionsContext);
+  if (!actions) throw new Error('useRestTimerActions must be used inside <RestTimerProvider>');
+  return actions;
 }

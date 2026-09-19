@@ -1,0 +1,10 @@
+file:///private/tmp/dawnage-hardening-20260919/capture.mjs:71
+    const timer = setTimeout(() => reject(new Error('Chrome did not expose its debugger within ' + startupSeconds + ' seconds.')), startupSeconds * 1000);
+                                          ^
+
+Error: Chrome did not expose its debugger within 60 seconds.
+    at Timeout._onTimeout (file:///private/tmp/dawnage-hardening-20260919/capture.mjs:71:43)
+    at listOnTimeout (node:internal/timers:588:17)
+    at process.processTimers (node:internal/timers:523:7)
+
+Node.js v22.16.0

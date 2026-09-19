@@ -1,4 +1,4 @@
-import { contentMaxWidth, getResponsiveMode, screenContentPadding } from './layout';
+import { ACTION_BAR_HEIGHT, contentMaxWidth, getResponsiveMode, screenContentPadding } from './layout';
 
 const insets = { top: 47, right: 0, bottom: 34, left: 0 };
 
@@ -15,6 +15,12 @@ describe('screenContentPadding', () => {
 
   it('keeps the full Dynamic Island safe-area inset', () => {
     expect(screenContentPadding('root', { ...insets, top: 59 }, 'ios').paddingTop).toBe(75);
+  });
+
+  it('keeps legacy sticky-action clearance until an editor measures its footer', () => {
+    expect(screenContentPadding('editor', insets, 'ios').paddingBottom).toBe(
+      insets.bottom + ACTION_BAR_HEIGHT + 24,
+    );
   });
 });
 

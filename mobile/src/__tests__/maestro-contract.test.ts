@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
+import { runInNewContext } from 'node:vm';
 
 const requireFromPackage = createRequire(join(process.cwd(), 'package.json'));
 const { parseAllDocuments } = requireFromPackage(
@@ -23,6 +24,12 @@ const yamlFiles = [
   ...flows,
 ] as const;
 
+const deepLinkFlows = [
+  '.maestro/checkin-backfill.yaml',
+  '.maestro/manual/checkin-offline-retention.yaml',
+  '.maestro/manual/checkin-sync-recovery.yaml',
+] as const;
+
 const parseYaml = (relativePath: string): unknown[] =>
   parseAllDocuments(read(relativePath)).map((document) => {
     expect(document.errors).toEqual([]);
@@ -37,13 +44,13 @@ describe('Maestro release smoke contract', () => {
     for (const flow of flows) {
       expect(existsSync(join(process.cwd(), flow))).toBe(true);
       const [config, commands] = parseYaml(flow);
-      expect(config).toMatchObject({ appId: 'com.dawnage.app' });
+      expect(config).toMatchObject({ appId: '${DAWNAGE_E2E_APP_ID}' });
       expect(Array.isArray(commands)).toBe(true);
       expect((commands as unknown[]).length).toBeGreaterThan(0);
     }
 
     const [helperConfig, helperCommands] = parseYaml('.maestro/helpers/sign-in.yaml');
-    expect(helperConfig).toMatchObject({ appId: 'com.dawnage.app' });
+    expect(helperConfig).toMatchObject({ appId: '${DAWNAGE_E2E_APP_ID}' });
     expect(Array.isArray(helperCommands)).toBe(true);
     expect(parseYaml('.maestro/config.yaml')).toEqual([{ flows: ['*.yaml'] }]);
     expect(yamlFiles).toHaveLength(6);
@@ -63,13 +70,53 @@ describe('Maestro release smoke contract', () => {
     ).toBeDefined();
   });
 
+  it('derives every check-in deep link scheme from the validated installed app id', () => {
+    const identities = [
+      ['com.dawnage.app.dev', 'dawnage-dev'],
+      ['com.dawnage.app.preview', 'dawnage-preview'],
+      ['com.dawnage.app', 'dawnage'],
+    ] as const;
+
+    for (const flow of deepLinkFlows) {
+      const [config, commands] = parseYaml(flow) as [
+        { appId?: string },
+        { evalScript?: string; openLink?: string }[],
+      ];
+      const script = commands.find((command) => command.evalScript)?.evalScript;
+      expect(config.appId).toBe('${DAWNAGE_E2E_APP_ID}');
+      expect(script).toBeDefined();
+
+      for (const [appId, expectedScheme] of identities) {
+        const output: { appScheme?: string } = {};
+        runInNewContext(script!.slice(2, -1), { DAWNAGE_E2E_APP_ID: appId, output });
+        expect(output.appScheme).toBe(expectedScheme);
+      }
+
+      expect(() => {
+        const output: { appScheme?: string } = {};
+        runInNewContext(script!.slice(2, -1), {
+          DAWNAGE_E2E_APP_ID: 'com.example.other',
+          output,
+        });
+      }).toThrow('Unsupported DAWNAGE_E2E_APP_ID');
+      const deepLinks = commands.filter((command) => command.openLink);
+      expect(deepLinks).toHaveLength(flow.includes('sync-recovery') ? 1 : 2);
+      expect(deepLinks.every(
+        (command) => command.openLink?.startsWith('${output.appScheme}://check-in'),
+      )).toBe(true);
+      expect(read(flow)).not.toContain('openLink: dawnage://');
+    }
+  });
+
   it('ships the approved stable ids for ambiguous interactive controls', () => {
     const selectorsBySource = {
       "app/(auth)/login.tsx": ['login-email', 'login-password'],
-      "app/(app)/(tabs)/index.tsx": ['home-today-action'],
+      'src/features/home/TodayBrief.tsx': ['home-today-action'],
       "app/(app)/(tabs)/check-in.tsx": ['checkin-next', 'checkin-save'],
       "app/(app)/(tabs)/plans.tsx": ['plan-current-day'],
-      "app/(app)/logger.tsx": ['logger-finish'],
+      "app/(app)/logger.tsx": ['workout-overview', 'workout-rest-footer'],
+      'src/components/logger/WorkoutOverviewSheet.tsx': ['logger-finish', 'workout-add-exercise', 'workout-exercise-name'],
+      'src/components/logger/ExerciseSlide.tsx': ['workout-sets-toggle', 'workout-continue'],
       "app/(app)/measurements.tsx": ['measurement-add'],
       "app/(app)/media.tsx": ['photo-add-current-week'],
       'src/components/checkin/CheckInForm.tsx': [
@@ -84,7 +131,7 @@ describe('Maestro release smoke contract', () => {
     }
 
     expect(read('app/(auth)/login.tsx')).toMatch(
-      /\) : \(\s*<>\s*<Input\s+testID="login-email"\s+label="Email"/,
+      /\) : \(\s*<>\s*<Input[\s\S]*?testID="login-email"[\s\S]*?label="Email"/,
     );
   });
 
@@ -94,11 +141,12 @@ describe('Maestro release smoke contract', () => {
     const workout = read('.maestro/workout-interruption.yaml');
     const progress = read('.maestro/progress.yaml');
 
-    expect(onboarding).toContain('Build muscle');
-    expect(onboarding).toContain('Your weekly rhythm');
-    expect(onboarding).toContain('Your timezone');
+    expect(onboarding).toContain('setup-goal-muscle_gain');
+    expect(onboarding).toContain('A moment for your day');
+    expect(onboarding).toContain('Your focus');
+    expect(onboarding).toContain('Profile timezone');
     expect(checkIn).toContain('stopApp');
-    expect(checkIn).toContain('Sleep and recovery');
+    expect(checkIn).toContain('Saved on this device');
     expect(workout).toContain('pressKey: Home');
     expect(workout).toMatch(/launchApp:\s+stopApp: false/);
     expect(workout).not.toContain('backgroundApp');
@@ -121,19 +169,24 @@ describe('Maestro release smoke contract', () => {
     ];
 
     expect(signInCommands).toContainEqual({
-      extendedWaitUntil: { visible: 'Home, your dashboard', timeout: 20000 },
+      extendedWaitUntil: { visible: { id: 'home-screen' }, timeout: 20000 },
     });
     expect(JSON.stringify(checkInCommands)).toContain('Check in for today');
     expect(JSON.stringify(checkInCommands)).toContain('Home, your dashboard');
     expect(checkInCommands).toContainEqual({ tapOn: { id: 'checkin-energy-rating-5' } });
     expect(checkInCommands).toContainEqual({ tapOn: { id: 'checkin-stress-rating-5' } });
+    expect(checkInCommands).toContainEqual({ tapOn: { id: 'checkin-next' } });
+    expect(checkInCommands).toContainEqual({ tapOn: '8 h' });
+    expect(workoutCommands).toContainEqual({ tapOn: { id: 'workout-sets-toggle' } });
+    expect(workoutCommands).toContainEqual({ tapOn: { id: 'workout-overview' } });
+    expect(workoutCommands).toContainEqual({ tapOn: { id: 'logger-finish' } });
     expect(JSON.stringify(workoutCommands)).toContain('Your training and nutrition plans');
     expect(JSON.stringify(progressCommands)).toContain('More options');
     expect(progress).toContain("^Photos upload to Dawnage only after you tap Save photos\\..*");
     expect(progress).toMatch(/Close Add measurements/);
     expect(progress).not.toContain('tapOn: "Cancel"');
-    expect(workout).toContain('"Mark set 1 complete"');
-    expect(workout).toContain('"Mark set 1 incomplete"');
+    expect(workout).toContain('"Complete set"');
+    expect(workout).toContain('"Mark (set|warm-up) 1 incomplete"');
     expect(workout).not.toContain('warm-up|set');
   });
 });

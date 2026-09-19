@@ -1,7 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
-import { act, create } from 'react-test-renderer';
+import { act, create, type ReactTestInstance } from 'react-test-renderer';
 
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { AdaptiveGrid } from './AdaptiveGrid';
@@ -47,7 +46,7 @@ function render(ui: React.ReactElement) {
   };
 }
 
-function expectToHaveStyle(node: { props: { style: unknown } }, style: object) {
+function expectToHaveStyle(node: ReactTestInstance, style: object) {
   expect(StyleSheet.flatten(node.props.style)).toMatchObject(style);
 }
 

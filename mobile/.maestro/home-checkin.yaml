@@ -1,30 +1,38 @@
-appId: com.dawnage.app
-name: Home and check-in preserve progress
+appId: ${DAWNAGE_E2E_APP_ID}
+name: Daily record restores an acknowledged draft
 ---
 - runFlow: helpers/sign-in.yaml
-- assertVisible: "Home, your dashboard"
-- tapOn:
-    id: "home-today-action"
-- assertVisible: "Readiness and energy"
+- tapOn: "Check in for today"
+- assertVisible: "Daily Record"
+- scrollUntilVisible:
+    element:
+      id: "checkin-energy-rating-5"
+    direction: DOWN
 - tapOn:
     id: "checkin-energy-rating-5"
+- scrollUntilVisible:
+    element:
+      id: "checkin-stress-rating-5"
+    direction: DOWN
 - tapOn:
     id: "checkin-stress-rating-5"
 - tapOn:
     id: "checkin-next"
-- assertVisible: "Sleep and recovery"
+- assertVisible: "Sleep"
+- tapOn: "8 h"
+- scrollUntilVisible:
+    element: "Daily Record"
+    direction: UP
 - extendedWaitUntil:
     visible: "Saved on this device"
-    timeout: 5000
-- stopApp
-- launchApp
-- runFlow:
-    when:
-      visible: "Home, your dashboard"
-    commands:
-      - tapOn: "Check in for today"
-- extendedWaitUntil:
-    visible: "Sleep and recovery"
     timeout: 10000
 - tapOn: "Home, your dashboard"
-- assertVisible: "Home, your dashboard"
+- tapOn: "Check in for today"
+- assertVisible: "Daily Record"
+- assertVisible: "Sleep"
+- stopApp
+- launchApp
+- tapOn: "Check in for today"
+- assertVisible: "Daily Record"
+- assertVisible: "Sleep"
+- assertVisible: "Saved on this device"

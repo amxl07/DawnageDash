@@ -1,12 +1,10 @@
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { ChevronDown } from 'lucide-react-native';
 
 import { Input, OptionRow, RatingRow, Sheet, Text } from '@/components/ui';
 import type { Question } from '@/lib/questionnaire-data';
-import { spacing } from '@/theme';
-import { Pressable } from 'react-native';
-import { ChevronDown } from 'lucide-react-native';
-import { HIT_SLOP_MIN, iconSize, radius, useTheme } from '@/theme';
+import { HIT_SLOP_MIN, iconSize, radius, spacing, useTheme } from '@/theme';
 
 type Props = {
   question: Question;
@@ -36,7 +34,7 @@ export function QuestionField({ question: q, value, onChange, error }: Props) {
           accessibilityRole="button"
           accessibilityLabel={q.text}
           accessibilityValue={{ text: value ? String(value) : 'Not answered' }}
-          style={{
+          style={({ pressed }) => ({
             flexDirection: 'row',
             alignItems: 'center',
             minHeight: HIT_SLOP_MIN + 4,
@@ -44,8 +42,8 @@ export function QuestionField({ question: q, value, onChange, error }: Props) {
             borderRadius: radius.md,
             borderWidth: 1,
             borderColor: error ? colors.destructive : colors.borderStrong,
-            backgroundColor: colors.elevated,
-          }}
+            backgroundColor: pressed ? colors.pressed : colors.elevated,
+          })}
         >
           <Text style={{ flex: 1 }} tone={value ? 'default' : 'muted'}>
             {value ? String(value) : 'Select an option…'}

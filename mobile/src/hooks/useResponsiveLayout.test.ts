@@ -1,13 +1,9 @@
-import { useWindowDimensions } from 'react-native';
-
 import { useResponsiveLayout } from './useResponsiveLayout';
 
-jest.mock('react-native', () => ({
-  Platform: { OS: 'ios' },
-  useWindowDimensions: jest.fn(),
-}));
-
-const mockedUseWindowDimensions = jest.mocked(useWindowDimensions);
+const mockedUseWindowDimensions = jest.spyOn(
+  jest.requireActual<typeof import('react-native')>('react-native'),
+  'useWindowDimensions',
+);
 
 describe('useResponsiveLayout', () => {
   it('returns a consistent wide-layout contract for the current window', () => {

@@ -1,6 +1,6 @@
 import { emptyWeekly } from '@/components/weekly/steps';
 
-import { validateWeeklyStep, weeklyDraftKey } from './weekly-feedback';
+import { normalizeWeeklyDraft, validateWeeklyStep, weeklyDraftKey } from './weekly-feedback';
 
 describe('validateWeeklyStep', () => {
   it('rejects invalid numeric values without changing optional text fields', () => {
@@ -71,4 +71,11 @@ describe('validateWeeklyStep', () => {
   it('creates a user-scoped draft key', () => {
     expect(weeklyDraftKey('user-42')).toBe('weekly-feedback-draft:user-42');
   });
+});
+
+it('retains a report snapshot while preserving legacy draft normalization', () => {
+  const report = { through: '2026-09-20', prefill: { step_count: '8000', water_intake: '', stress_level: '' }, observationDates: { step_count: ['2026-09-20'], water_intake: [], stress_level: [] } };
+  expect(normalizeWeeklyDraft({ form: { step_count: '8000' }, step: 2, report })?.report).toEqual(report);
+  expect(normalizeWeeklyDraft({ form: { feedback: 'Legacy answer' }, step: 4 })).toEqual({ form: { ...emptyWeekly(), feedback: 'Legacy answer' }, step: 4 });
+  expect(normalizeWeeklyDraft({ form: { feedback: 'Keep this' }, step: 4, report: { through: 'invalid' } })?.form.feedback).toBe('Keep this');
 });

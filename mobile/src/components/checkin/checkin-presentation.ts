@@ -10,22 +10,18 @@ export const CHECK_IN_DAILY_PROMPTS = [
   'Your daily signal helps reveal the trend.',
 ] as const;
 
-export const CHECK_IN_STAGE_META: Record<CheckInStep, { title: string; description: string }> = {
+export const CHECK_IN_STAGE_META: Record<CheckInStep, { title: string }> = {
   readiness: {
-    title: 'Readiness and energy',
-    description: 'A quick picture of how you are starting today.',
+    title: 'Readiness',
   },
   recovery: {
-    title: 'Sleep and recovery',
-    description: 'Capture sleep and the context that affects recovery.',
+    title: 'Recovery',
   },
   adherence: {
-    title: 'Nutrition and adherence',
-    description: 'Record training and the useful nutrition numbers.',
+    title: 'Training & nutrition',
   },
   finish: {
-    title: 'Notes and confirmation',
-    description: 'Review your check-in before saving it.',
+    title: 'Review',
   },
 };
 

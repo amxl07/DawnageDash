@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { View, type TextStyle } from 'react-native';
+import { useWindowDimensions, View, type TextStyle } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
@@ -104,6 +104,7 @@ export function AnimatedNumber({
   importantForAccessibility,
 }: Props) {
   const { colors } = useTheme();
+  const { fontScale } = useWindowDimensions();
   const motion = useMotion();
 
   const toneColor: Record<Tone, string> = {
@@ -111,6 +112,7 @@ export function AnimatedNumber({
     muted: colors.mutedForeground,
     primary: colors.primary,
     success: colors.success,
+    destructive: colors.destructive,
     gold: colors.gold,
     onPrimary: colors.onPrimary,
   };
@@ -137,8 +139,8 @@ export function AnimatedNumber({
     importantForAccessibility,
   };
 
-  // Under reduced motion there is nothing to reveal — render it plainly.
-  if (!motion.enabled) {
+  // Enlarged text needs natural layout rather than fixed-height digit windows.
+  if (!motion.enabled || fontScale !== 1) {
     return (
       <Text variant={variant} tone={tone} numeric {...a11y}>
         {chars.join('')}
@@ -148,8 +150,16 @@ export function AnimatedNumber({
   }
 
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center' }} {...a11y}>
+    <View
+      accessible
+      accessibilityRole="text"
+      accessibilityLabel={`${chars.join('')}${suffix ? ` ${suffix}` : ''}`}
+      style={{ flexDirection: 'row', alignItems: 'center' }}
+      {...a11y}
+    >
       <Animated.View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
         layout={LinearTransition.duration(motion.duration.enter)}
         style={{ flexDirection: 'row', alignItems: 'center' }}
       >
@@ -180,7 +190,7 @@ export function AnimatedNumber({
         })}
       </Animated.View>
       {suffix ? (
-        <Text variant="bodySm" tone="muted">
+        <Text variant="bodySm" tone="muted" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
           {` ${suffix}`}
         </Text>
       ) : null}

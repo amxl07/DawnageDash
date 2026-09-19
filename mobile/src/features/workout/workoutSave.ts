@@ -14,6 +14,7 @@ export type WorkoutEditAction = Extract<
       | 'TOGGLE_SET'
       | 'ADD_SET'
       | 'REMOVE_SET'
+      | 'RESTORE_SET'
       | 'ADD_EXERCISE'
       | 'REPLACE_EXERCISE';
   }

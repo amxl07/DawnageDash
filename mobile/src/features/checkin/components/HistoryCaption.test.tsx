@@ -1,5 +1,4 @@
 import { Text as MockNativeText } from 'react-native';
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
 import { HistoryCaption } from './HistoryCaption';

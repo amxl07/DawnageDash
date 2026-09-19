@@ -1,5 +1,4 @@
 import { CHECK_IN_FIELDS } from './fields';
-import { isSingleScrollCheckInEnabled } from './featureFlags';
 
 describe('daily check-in registry', () => {
   it('preserves every production field in the established section order', () => {
@@ -36,15 +35,5 @@ describe('daily check-in registry', () => {
       { value: 'constipated', label: 'Constipated' },
       { value: 'diarrhea', label: 'Diarrhea' },
     ]);
-  });
-});
-
-describe('single-scroll feature flag', () => {
-  it.each([undefined, '', 'true', '1', 'on'])('enables the trial for %p', (value) => {
-    expect(isSingleScrollCheckInEnabled(value)).toBe(true);
-  });
-
-  it.each(['false', '0', 'off', 'FALSE'])('restores the wizard for %p', (value) => {
-    expect(isSingleScrollCheckInEnabled(value)).toBe(false);
   });
 });

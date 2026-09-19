@@ -251,3 +251,17 @@ describe('workout log content', () => {
     expect(maxWeightFor(exercises.exercises[0].sets)).toBe(140);
   });
 });
+
+describe('coach compatibility handoff fixtures', () => {
+  const fixtures = require('../features/workout/fixtures/coach-compatibility.json') as { name: string; content: unknown }[];
+  it.each(fixtures)('keeps the $name fixture readable on mobile', ({ content }) => {
+    const parsed = parseWorkoutContent(typeof content === 'string' ? content : JSON.stringify(content));
+    expect(['text', 'exercises']).toContain(parsed.kind);
+    if (parsed.kind === 'exercises') {
+      const roundTrip = parseWorkoutContent(serializeWorkoutContent({ planDayNumber: parsed.planDayNumber ?? null, exercises: parsed.exercises }));
+      expect(roundTrip.kind).toBe('exercises');
+      if (roundTrip.kind === 'exercises') expect(roundTrip.exercises.map((exercise) => exercise.name)).toEqual(parsed.exercises.map((exercise) => exercise.name));
+      if (parsed.version === 2) expect(roundTrip).toEqual(parsed);
+    } else expect(parsed.text).toBe(content);
+  });
+});

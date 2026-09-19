@@ -1,8 +1,9 @@
 import * as ImageManipulator from 'expo-image-manipulator';
 
 import { supabase } from './supabase';
+import { PHOTO_BUCKET, photoStoragePath } from '../../../shared/progress-photos';
 
-export const BUCKET = 'progress_photos';
+export const BUCKET = PHOTO_BUCKET;
 export const MAX_WIDTH = 1200;
 export const MAX_HEIGHT = 1600;
 export const JPEG_QUALITY = 0.75;
@@ -47,7 +48,7 @@ export async function compressImage(
 
 /** Path shape must match the web exactly: userId/date/label_timestamp.jpg */
 export function storagePath(userId: string, dateStr: string, label: string): string {
-  return `${userId}/${dateStr}/${label.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}.jpg`;
+  return photoStoragePath(userId, dateStr, label);
 }
 
 export async function uploadPhoto(
@@ -56,21 +57,18 @@ export async function uploadPhoto(
   dateStr: string,
   label: string,
   dimensions?: { width: number; height: number },
-): Promise<{ publicUrl: string; bytes: number }> {
+): Promise<{ objectPath: string; bytes: number }> {
+  const path = storagePath(userId, dateStr, label);
   const { uri, bytes } = await compressImage(localUri, dimensions?.width, dimensions?.height);
 
   // RN has no File; supabase-js accepts an ArrayBuffer for storage uploads.
   const response = await fetch(uri);
   const arrayBuffer = await response.arrayBuffer();
 
-  const path = storagePath(userId, dateStr, label);
   const { error } = await supabase.storage
     .from(BUCKET)
-    .upload(path, arrayBuffer, { upsert: true, contentType: 'image/jpeg' });
+    .upload(path, arrayBuffer, { upsert: false, contentType: 'image/jpeg', cacheControl: '0' });
   if (error) throw error;
 
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from(BUCKET).getPublicUrl(path);
-  return { publicUrl, bytes };
+  return { objectPath: path, bytes };
 }

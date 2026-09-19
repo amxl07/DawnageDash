@@ -1,0 +1,50 @@
+PASS src/screens/__tests__/profile.test.tsx (554.142 s)
+  ProfileScreen
+    ✓ keeps coach status and both profile sections visible (2233 ms)
+    ✓ stacks program dates in compact and large-text mode (16 ms)
+    ✓ merges changed fields into the latest profile JSON and preserves assessment data (48 ms)
+    ✓ does not write profile JSON when the latest-row fetch fails (25 ms)
+    ✓ requires a positive users receipt before acknowledging a save (missing) (28 ms)
+    ✓ requires a positive users receipt before acknowledging a save (values) (32 ms)
+    ✓ requires a positive users receipt before acknowledging a save (account) (30 ms)
+    ✓ requires a positive assessment receipt before clearing recovery (missing) (30 ms)
+    ✓ requires a positive assessment receipt before clearing recovery (values) (37 ms)
+    ✓ requires a positive assessment receipt before clearing recovery (row) (34 ms)
+    ✓ requires a positive assessment receipt before clearing recovery (account) (27 ms)
+    ✓ retries only assessment sync after the profile row was saved (31 ms)
+    ✓ guards navigation after a partial save with retry and leave-anyway actions (3962 ms)
+    ✓ blocks failed assessment hydration and retries without erasing real answers (Error: offline
+    at /Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/src/screens/__tests__/profile.test.tsx:481:12
+    at _dispatchDescribe (/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/node_modules/jest-circus/build/index.js:91:26)
+    at describe (/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/node_modules/jest-circus/build/index.js:55:5)
+    at Object.describe (/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/src/screens/__tests__/profile.test.tsx:198:1)
+    at Runtime._execModule (/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/node_modules/jest-runtime/build/index.js:1439:24)
+    at Runtime._loadModule (/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/node_modules/jest-runtime/build/index.js:1022:12)
+    at Runtime.requireModule (/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/node_modules/jest-runtime/build/index.js:882:12)
+    at jestAdapter (/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:77:13)
+    at runTestInternal (/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/node_modules/jest-runner/build/runTest.js:444:34)) (23 ms)
+    ✓ blocks failed assessment hydration and retries without erasing real answers (malformed) (21 ms)
+    ✓ keeps an acknowledged assessment retry through unmount and uses only its overlap values (35 ms)
+    ✓ recovers prepared intent truthfully across the users acknowledgment boundary (false) (13 ms)
+    ✓ recovers prepared intent truthfully across the users acknowledgment boundary (true) (14 ms)
+    ✓ keeps the editor and blocks remote writes when preparing local recovery fails (21 ms)
+    ✓ retains prepared recovery after users acknowledgment when the phase write fails (33 ms)
+    ✓ does not replace active edits when the profile cache refreshes (19 ms)
+    ✓ keeps dirty edits and exit protection after a failed background profile refresh (20 ms)
+    ✓ keeps newer draft edits when a prepared save is later confirmed on the server (23 ms)
+    ✓ rejects duplicate saves and retains native exit protection until the write settles (28 ms)
+    ✓ ignores old hydration after A to B to A and keeps the latest account editor (19 ms)
+    ✓ ignores buffered field changes from the previous account (14 ms)
+    ✓ keeps old users acknowledgment scoped to A while B saves independently (50 ms)
+    ✓ waits for an unmounted writer before reconciling its prepared journal (35 ms)
+    ✓ retries only device cleanup after both remote writes were acknowledged (23 ms)
+    ✓ keeps the durable retry on native exit and only discards unjournaled edits (11 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       30 passed, 30 total
+Snapshots:   0 total
+Time:        678.352 s
+Ran all test suites within paths "src/screens/__tests__/profile.test.tsx".
+Test results written to: ../../../../../../tmp/dawnage-premium-20260917/profile-results.json
+Verification dependency-miss cache hits: 1038

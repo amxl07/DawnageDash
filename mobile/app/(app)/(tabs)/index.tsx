@@ -1,435 +1,145 @@
-import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { ChevronDown, Flame, Trophy, Weight, Zap } from 'lucide-react-native';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { InteractionManager, Pressable, RefreshControl, View } from 'react-native';
-import Animated, { Easing, FadeIn, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { ArrowUpRight, ClipboardList } from 'lucide-react-native';
+import { Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
-import { DawnGlow, Logo } from '@/components/brand';
-import { BarChart, DonutChart, LineChart } from '@/components/charts';
-import { CoachBadge } from '@/components/coach/CoachBadge';
-import { CheckInHistorySheet } from '@/components/dashboard/CheckInHistorySheet';
-import { ConsistencyGrid } from '@/components/dashboard/ConsistencyGrid';
-import { MetricCard } from '@/components/dashboard/MetricCard';
-import { StreakHero } from '@/components/dashboard/StreakHero';
-import { TodayActionCard } from '@/components/dashboard/TodayActionCard';
-import { WeekStrip } from '@/components/dashboard/WeekStrip';
-import {
-  Card,
-  AdaptiveGrid,
-  EmptyState,
-  ErrorState,
-  ProgressBar,
-  Screen,
-  SkeletonCard,
-  Stagger,
-  Text,
-} from '@/components/ui';
-import { useAuth } from '@/contexts/AuthContext';
-import { useDashboardData } from '@/hooks/useDashboardData';
-import { useWorkoutPlan } from '@/hooks/usePlans';
+import { Button, Card, Screen, SkeletonCard, Text } from '@/components/ui';
+import { HomeProblem, HomeSectionHeading, TodayBrief } from '@/features/home/TodayBrief';
+import { NextSessionCard } from '@/features/home/NextSessionCard';
+import { RecentRecord } from '@/features/home/RecentRecord';
+import { WeeklyReflection } from '@/features/home/WeeklyReflection';
+import { WeekRecordStrip } from '@/features/home/WeekRecordStrip';
+import { buildWeekRecords, recentRecordSummary } from '@/features/home/selectors';
+import { actionReadiness, isBlocked, pendingRecordRoute, prioritizedPending, queuedPlanDays } from '@/features/home/home-state';
+import { useHomeData } from '@/features/home/useHomeData';
+import { useHomeDate } from '@/features/home/useHomeDate';
+import { useHomeLocal } from '@/features/home/useHomeLocal';
 import { usePlanProvenance } from '@/hooks/usePlanProvenance';
+import { calendarDaysEnding, localDateString, parseLocalDate } from '@/lib/dates';
 import { resolveTodayAction } from '@/lib/today-action';
-import { supabase } from '@/lib/supabase';
-import { buildWeekStrip, calculateStreak } from '@/lib/streak';
-import { localDateString } from '@/lib/dates';
-import { num } from '@/types/db';
-import { iconSize, spacing, useMotion, useTheme } from '@/theme';
+import { spacing, useTheme } from '@/theme';
 
-function greeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 18) return 'Good afternoon';
-  return 'Good evening';
-}
-
-function DashboardGreeting({
-  firstName,
-  fullDate,
-  status,
-  showLogo = false,
-}: {
-  firstName: string;
-  fullDate: string;
-  status?: string;
-  showLogo?: boolean;
-}) {
-  const { colors } = useTheme();
-
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
-      <View style={{ flex: 1, minWidth: 0, gap: spacing.xs }}>
-        <Text variant="h1" style={{ flexShrink: 1 }}>
-          {greeting()}, {firstName}
-        </Text>
-        <Text variant="bodySm" tone="muted">
-          {fullDate}
-        </Text>
-        {status ? (
-          <Text variant="bodySm" tone="muted">
-            {status}
-          </Text>
-        ) : null}
-        <View style={{ alignSelf: 'stretch', paddingTop: spacing.xs }}>
-          <CoachBadge size={28} fallback="status" />
-        </View>
-      </View>
-      {showLogo ? (
-        <Logo variant="glyph" size={20} color={colors.mutedForeground} label={false} />
-      ) : null}
-    </View>
-  );
-}
-
-export default function DashboardScreen() {
-  const { colors } = useTheme();
-  const motion = useMotion();
+export default function HomeScreen() {
   const router = useRouter();
-  const { user } = useAuth();
-  const { data: plan } = useWorkoutPlan();
+  const { colors } = useTheme();
+  const today = useHomeDate();
+  const data = useHomeData(today);
+  const local = useHomeLocal(today);
+  const profile = data.profile.state === 'ready' ? data.profile.data : null;
+  const rows = data.checkIns.state === 'ready' ? data.checkIns.data : [];
+  const plan = data.plan.state === 'ready' ? data.plan.data : null;
   const provenance = usePlanProvenance(plan?.days);
-  const [showInsights, setShowInsights] = useState(false);
-  const insightChevron = useSharedValue(0);
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const selectedHistoryDate = useRef<string | null>(null);
-  const {
-    checkIns,
-    metrics,
-    processed,
-    weightTrend,
-    weightChartData,
-    performanceChartData,
-    nutritionBreakdown,
-    isLoading,
-    isError,
-    refetch,
-    isRefetching,
-  } = useDashboardData();
-
-  const { data: profile } = useQuery({
-    queryKey: ['userProfile', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      const { data } = await supabase
-        .from('users')
-        .select('full_name, package_start_date')
-        .eq('id', user.id)
-        .maybeSingle();
-      return data;
-    },
-    enabled: !!user?.id,
-  });
-
-  const firstName = (profile?.full_name ?? '').split(' ')[0] || 'there';
-  const streak = useMemo(() => calculateStreak(processed), [processed]);
-  const week = useMemo(() => buildWeekStrip(processed), [processed]);
-  const todayStr = localDateString();
-  const checkedInToday = processed.some((p) => p.dateString === todayStr && p.status === 'done');
-  const todayAction = resolveTodayAction({
-    checkedInToday,
-    hasWorkoutPlan: Boolean(plan?.days.length),
-    planChanged: provenance.hasChanged,
-  });
-  const fullDate = new Intl.DateTimeFormat(undefined, {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(new Date());
-
-  const dayNumber = processed.length ? processed[0].dayNumber : 0;
-  const weekNumber = Math.max(1, Math.ceil(dayNumber / 7));
-
-  // Current-week progress (last 7 entries) — targets from the web dashboard.
-  const last7 = useMemo(() => (checkIns ?? []).slice(-7), [checkIns]);
-  const avg = (pick: (c: (typeof last7)[number]) => number) =>
-    last7.length ? last7.reduce((s, c) => s + pick(c), 0) / last7.length : 0;
-  const avgSteps = avg((c) => c.daily_steps ?? 0);
-  const avgNutrition = avg((c) => c.nutrition_score ?? 0);
-  const weeklyWorkouts = last7.filter((c) => c.workout_status === 'done').length;
-  const weeklySleep = last7.reduce((s, c) => s + num(c.sleep_hours), 0);
-
-  const macroTotal =
-    nutritionBreakdown.protein + nutritionBreakdown.carbs + nutritionBreakdown.fats;
-
-  useEffect(() => {
-    if (historyOpen || !selectedHistoryDate.current) return;
-
-    const dateString = selectedHistoryDate.current;
-    selectedHistoryDate.current = null;
-    const interaction = InteractionManager.runAfterInteractions(() => {
-      router.push({ pathname: '/(app)/(tabs)/check-in', params: { date: dateString } });
-    });
-
-    return () => interaction.cancel();
-  }, [historyOpen, router]);
-
-  useEffect(() => {
-    const next = showInsights ? 1 : 0;
-    if (!motion.enabled) {
-      insightChevron.value = next;
-      return;
-    }
-    insightChevron.value = withTiming(next, {
-      duration: motion.duration.feedback,
-      easing: Easing.bezier(...motion.easing.standard),
-    });
-  }, [insightChevron, motion.duration.feedback, motion.easing.standard, motion.enabled, showInsights]);
-
-  const insightChevronStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${insightChevron.value * 180}deg` }],
-  }));
-
-  if (isLoading) {
-    return (
-      <Screen archetype="root">
-        <View style={{ gap: spacing.base }}>
-          <SkeletonCard lines={1} />
-          <View style={{ flexDirection: 'row', gap: spacing.md }}>
-            <SkeletonCard lines={2} />
-            <SkeletonCard lines={2} />
-          </View>
-          <SkeletonCard lines={4} />
-        </View>
-      </Screen>
-    );
-  }
-
-  if (isError) {
-    return (
-      <Screen archetype="root">
-        <ErrorState
-          title="Couldn't load your dashboard"
-          message="Check your connection and try again."
-          onRetry={refetch}
-        />
-      </Screen>
-    );
-  }
-
-  if (!checkIns?.length) {
-    return (
-      <Screen archetype="root">
-        <View style={{ gap: spacing.lg }}>
-          <DashboardGreeting firstName={firstName} fullDate={fullDate} />
-          <TodayActionCard
-            testID="home-today-action"
-            action={todayAction}
-            onPress={() => router.push(todayAction.route)}
-          />
-          <Card>
-            <EmptyState
-              icon={null}
-              title="Welcome to Dawnage Coaching! 🎉"
-              message="Your first check-in starts everything — the charts, your streak, and the weekly report your coach sees."
-            />
-          </Card>
-        </View>
-      </Screen>
-    );
-  }
+  const assigned = plan?.source === 'user' ? plan.days : [];
+  const pending = prioritizedPending([
+    ...(local.data?.checkIns.map((item) => ({ kind: 'check-in' as const, id: item.id, date: item.payload.date, queuedAt: item.queuedAt, failure: item.failure })) ?? []),
+    ...(local.data?.workouts.map((item) => ({ kind: 'workout' as const, id: item.id, date: item.date, logId: item.existingLogId, queuedAt: item.queuedAt, failure: item.failure })) ?? []),
+  ]);
+  const needsAttention = pending.find(isBlocked);
+  const pendingDays = queuedPlanDays(local.data?.workouts ?? [], today);
+  const logged = [...(data.loggedPlanDays.state === 'ready' ? data.loggedPlanDays.data : []), ...pendingDays];
+  const trainingCurrent = data.plan.state === 'ready' && !data.plan.stale && data.loggedPlanDays.state === 'ready' && !data.loggedPlanDays.stale && Boolean(local.data) && !local.isError;
+  const nextSession = trainingCurrent ? assigned.find((day) => !logged.includes(day.day_number)) : undefined;
+  const queuedToday = local.data?.checkIns.find((item) => item.payload.date === today);
+  const ready = actionReadiness({ checkIns: data.checkIns, hasToday: rows.some((row) => row.date === today), hasLocalToday: Boolean(queuedToday),
+    hasRecovery: Boolean(local.data?.workoutDraft || local.data?.checkInDraft || needsAttention), localReady: Boolean(local.data) && !local.isError });
+  const action = ready ? resolveTodayAction({
+    today,
+    checkedInToday: rows.some((row) => row.date === today), queuedCheckInToday: Boolean(queuedToday),
+    blockedRecord: needsAttention ? { date: needsAttention.date, route: pendingRecordRoute(needsAttention) } : null,
+    workoutDraft: local.data?.workoutDraft, checkInDraft: local.data?.checkInDraft,
+    hasWorkoutPlan: Boolean(assigned.length), planChanged: data.plan.state === 'ready' && !data.plan.stale && provenance.hasChanged,
+    nextPlanDay: trainingCurrent ? nextSession?.day_number ?? null : undefined,
+  }) : null;
+  const sunday = parseLocalDate(today);
+  sunday.setDate(sunday.getDate() + (7 - sunday.getDay()) % 7);
+  const week = buildWeekRecords(calendarDaysEnding(localDateString(sunday), 7), [
+    ...rows.map((row) => ({ date: row.date, state: 'synced' as const })),
+    ...(local.data?.checkInDraft ? [{ date: local.data.checkInDraft.date, state: 'draft' as const }] : []),
+    ...(local.data?.checkIns.map((item) => ({ date: item.payload.date, state: isBlocked(item) ? 'blocked' as const : 'queued' as const })) ?? []),
+  ]);
+  const openCheckIn = (date: string) => router.push({ pathname: '/(app)/(tabs)/check-in', params: { date } });
+  const refresh = () => { data.refresh(); void local.refetch(); };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-    <DawnGlow height={220} intensity={0.7} />
-    <Screen
-      archetype="root"
-      refreshControl={
-        <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
-      }
-    >
-      <View style={{ gap: spacing.lg }}>
-        <DashboardGreeting
-          firstName={firstName}
-          fullDate={fullDate}
-          status={checkedInToday ? "Today's logged." : 'Your check-in is waiting.'}
-          showLogo
-        />
-
-        <TodayActionCard
-          testID="home-today-action"
-          action={todayAction}
-          onPress={() => router.push(todayAction.route)}
-        />
-
-        <StreakHero
-          streak={streak}
-          dayNumber={dayNumber}
-          weekNumber={weekNumber}
-          checkedInToday={checkedInToday}
-        />
-
-        <WeekStrip
-          days={week}
-          onSelectDay={(d) =>
-            router.push({ pathname: '/(app)/(tabs)/check-in', params: { date: d.dateString } })
-          }
-        />
-
-        <ConsistencyGrid
-          processed={processed}
-          onOpenHistory={() => {
-            selectedHistoryDate.current = null;
-            setHistoryOpen(true);
-          }}
-        />
-
-        <Stagger index={0}>
-        <AdaptiveGrid testID="home-primary-metrics">
-          <MetricCard
-            icon={Weight}
-            label="Weight"
-            value={metrics.currentWeight ? metrics.currentWeight.toFixed(1) : '—'}
-            unit="kg"
-            trend={{ value: weightTrend, goodDirection: 'down', caption: 'Last 7 days' }}
-          />
-          <MetricCard
-            icon={Trophy}
-            label="Workouts"
-            value={String(metrics.totalWorkouts)}
-            trend={{ value: 0, goodDirection: 'up', caption: 'Total tracked' }}
-          />
-        </AdaptiveGrid>
-        </Stagger>
-
-        <Pressable
-          onPress={() => setShowInsights((shown) => !shown)}
-          accessibilityRole="button"
-          accessibilityLabel="Insights and trends"
-          accessibilityState={{ expanded: showInsights }}
-          style={({ pressed }) => ({ opacity: pressed ? 0.82 : 1 })}
-        >
-          <Card style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-            <View style={{ flex: 1, gap: spacing.xs }}>
-              <Text variant="h2">Insights & trends</Text>
-              <Text variant="bodySm" tone="muted">
-                Energy, nutrition, charts, and weekly targets
-              </Text>
-            </View>
-            <Animated.View style={insightChevronStyle} accessible={false}>
-              <ChevronDown
-                size={iconSize.md}
-                color={colors.mutedForeground}
-                strokeWidth={2}
-                accessible={false}
-              />
-            </Animated.View>
-          </Card>
-        </Pressable>
-
-        {showInsights ? (
-          <Animated.View entering={motion.enabled ? FadeIn.duration(motion.duration.enter) : undefined}>
-          <View style={{ gap: spacing.lg }}>
-            <AdaptiveGrid>
-              <MetricCard
-                icon={Flame}
-                label="Nutrition"
-                value={metrics.avgNutritionScore}
-                unit="/10"
-                trend={{ value: 0, goodDirection: 'up', caption: 'All-time average' }}
-              />
-              <MetricCard
-                icon={Zap}
-                label="Energy"
-                value={String(metrics.avgEnergyLevel)}
-                unit="/10"
-                trend={{ value: 0, goodDirection: 'up', caption: 'All-time average' }}
-              />
-            </AdaptiveGrid>
-
-            {weightChartData.length >= 2 ? (
-              <Card style={{ gap: spacing.md }}>
-                <Text variant="h2">Weight trend</Text>
-                <LineChart
-                  height={190}
-                  legend={false}
-                  series={[{ name: 'Weight', color: colors.chart1, data: weightChartData }]}
-                  summary={`Weight over ${weightChartData.length} check-ins, from ${weightChartData[0].value} to ${weightChartData[weightChartData.length - 1].value} kilograms.`}
-                />
-              </Card>
-            ) : null}
-
-            {performanceChartData.length ? (
-              <Card style={{ gap: spacing.md }}>
-                <Text variant="h2">Weekly performance</Text>
-                <BarChart
-                  height={180}
-                  maxValue={10}
-                  series={[
-                    {
-                      name: 'Performance',
-                      color: colors.chart4,
-                      data: performanceChartData.map((d) => ({ label: d.day, value: d.performance })),
-                    },
-                    {
-                      name: 'Nutrition',
-                      color: colors.chart2,
-                      data: performanceChartData.map((d) => ({ label: d.day, value: d.nutrition })),
-                    },
-                    {
-                      name: 'Energy',
-                      color: colors.chart3,
-                      data: performanceChartData.map((d) => ({ label: d.day, value: d.energy })),
-                    },
-                  ]}
-                  summary={`Performance, nutrition and energy scores out of ten for the last ${performanceChartData.length} days. Missed days show as zero.`}
-                />
-              </Card>
-            ) : null}
-
-            {macroTotal > 0 ? (
-              <Card style={{ gap: spacing.md }}>
-                <Text variant="h2">Macro distribution</Text>
-                <DonutChart
-                  height={150}
-                  centerLabel="grams"
-                  centerValue={String(macroTotal)}
-                  slices={[
-                    { name: 'Protein', value: nutritionBreakdown.protein, color: colors.chart1 },
-                    { name: 'Carbs', value: nutritionBreakdown.carbs, color: colors.chart2 },
-                    { name: 'Fats', value: nutritionBreakdown.fats, color: colors.chart3 },
-                  ]}
-                  summary={`Average daily macros: ${nutritionBreakdown.protein} grams protein, ${nutritionBreakdown.carbs} grams carbs, ${nutritionBreakdown.fats} grams fat.`}
-                />
-              </Card>
-            ) : null}
-
-            <Card style={{ gap: spacing.base }}>
-              <Text variant="h2">Current week progress</Text>
-              {[
-                { label: 'Steps', now: Math.round(avgSteps), target: 10000, color: colors.success, unit: '/day avg' },
-                { label: 'Nutrition', now: Number(avgNutrition.toFixed(1)), target: 10, color: colors.gold, unit: 'avg score' },
-                { label: 'Workouts', now: weeklyWorkouts, target: 6, color: colors.primary, unit: 'this week' },
-                { label: 'Sleep', now: Math.round(weeklySleep), target: 56, color: colors.success, unit: 'hours' },
-              ].map((row) => (
-                <View key={row.label} style={{ gap: spacing.xs }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Text variant="bodySm">{row.label}</Text>
-                    <Text variant="bodySm" tone="muted" numeric>
-                      {row.now.toLocaleString()} / {row.target.toLocaleString()} {row.unit}
-                    </Text>
-                  </View>
-                  <ProgressBar
-                    value={row.now / row.target}
-                    color={row.color}
-                    accessibilityLabel={`${row.label}: ${row.now} of ${row.target} ${row.unit}`}
-                  />
-                </View>
-              ))}
-            </Card>
+    <Screen archetype="root" testID="home-screen" refreshControl={<RefreshControl refreshing={data.refreshing} onRefresh={refresh} tintColor={colors.primary} />}>
+      <TodayBrief date={today} firstName={profile?.full_name?.trim().split(/\s+/)[0] || 'there'}
+        coach={data.coach.state === 'ready' ? data.coach.data : data.coach.state === 'error' ? { kind: 'unavailable' } : undefined} action={action}
+        actionError={data.checkIns.state === 'error' || (data.checkIns.state === 'ready' && data.checkIns.stale) || local.isError}
+        onAction={() => { if (action) router.push(action.route); }} onRetry={refresh} onProfile={() => router.push('/(app)/profile')}>
+        {pending.length ? (
+          <View style={[styles.pending, { borderColor: colors.border }]}>
+            <Text variant="body" style={{ fontWeight: '600' }}>{needsAttention ? 'A saved record needs attention' : 'Saved here. Syncing next.'}</Text>
+            <Text variant="bodySm" tone="muted">{pending.length} {pending.length === 1 ? 'record is' : 'records are'} on this device. Open a record to check its delivery status.</Text>
+            {(['check-in', 'workout'] as const).map((kind) => {
+              const record = pending.find((item) => item.kind === kind);
+              return record ? <Button key={kind} variant="ghost" label={'Review ' + kind} onPress={() => router.push(pendingRecordRoute(record))} /> : null;
+            })}
           </View>
-          </Animated.View>
         ) : null}
-      </View>
+        {data.profile.state === 'error' ? <HomeProblem title="Your profile couldn't load" message="Your other records are still available." onRetry={data.profile.retry} /> : data.profile.state === 'ready' && data.profile.stale ? <HomeProblem title="Showing your saved profile" message="Refresh to check for changes." onRetry={data.profile.retry} /> : null}
+        {local.isError && action ? <HomeProblem title="Some device records couldn't load" message="Your saved work has been kept. Retry before starting another record." onRetry={() => { void local.refetch(); }} /> : null}
+
+        <View style={styles.section}>
+          <HomeSectionHeading title="This week" action="History" onPress={() => router.push({ pathname: '/(app)/(tabs)/check-in', params: { history: '1' } })} />
+          {data.checkIns.state === 'loading' ? <SkeletonCard lines={2} /> : data.checkIns.state === 'error' ?
+            <HomeProblem title="Your records couldn't load" message="Try again to see this week's check-ins." onRetry={data.checkIns.retry} /> : <>
+              <WeekRecordStrip days={week} today={today} onSelect={openCheckIn} />
+              {data.checkIns.stale ? <Text variant="bodySm" tone="muted">Showing saved information. Pull down to refresh.</Text> : null}
+            </>}
+        </View>
+
+        <WeeklyReflection today={today} history={data.weeklyFeedback}
+          draft={local.data?.weeklyDraft} localReady={Boolean(local.data) && !local.isError}
+          draftError={Boolean(local.data?.weeklyDraftError)} onRetryLocal={() => { void local.refetch(); }}
+          onOpen={() => router.push('/(app)/weekly-feedback')} />
+
+        <View style={styles.section}>
+          <HomeSectionHeading title="Your training" action="Your plan" onPress={() => router.push('/(app)/(tabs)/plans')} />
+          {data.plan.state === 'loading' ? <SkeletonCard lines={3} /> : data.plan.state === 'error' ?
+            <HomeProblem title="Your plan couldn't load" message="Your daily record is still available." onRetry={data.plan.retry} /> :
+            nextSession ? <NextSessionCard day={nextSession} onPress={() => router.push({ pathname: '/(app)/logger', params: { day: String(nextSession.day_number) } })} /> :
+            assigned.length && trainingCurrent ? <NextSessionCard day={assigned[0]} allLogged pending={pendingDays.length > 0} onPress={() => router.push('/(app)/(tabs)/plans')} /> :
+            assigned.length ? <Card style={styles.quietCard}>
+              <Text variant="h2">Your plan is ready</Text>
+              <Text variant="bodySm" tone="muted">Open your training plan to choose a session.</Text>
+              <Button variant="secondary" label="View training plan" onPress={() => router.push('/(app)/(tabs)/plans')} />
+            </Card> : <Card style={styles.quietCard}>
+              <Text variant="h2">{plan?.source === 'template' ? 'Explore your training' : 'Space for your next chapter'}</Text>
+              <Text variant="bodySm" tone="muted">{plan?.source === 'template' ? 'A training template is available. Your coach can assign a plan tailored to you.' : 'Your training plan will appear here when it is assigned.'}</Text>
+              {plan?.source === 'template' ? <Button variant="secondary" label="Explore template" onPress={() => router.push('/(app)/(tabs)/plans')} /> : null}
+            </Card>}
+          {data.plan.state === 'ready' && data.plan.stale ? <HomeProblem title="Showing your saved plan" message="Refresh before choosing your next session." onRetry={data.plan.retry} /> : null}
+          {assigned.length && data.loggedPlanDays.state === 'error' ? <HomeProblem title="Training history couldn't load" message="Your plan is available. Retry to find your next unlogged session." onRetry={data.loggedPlanDays.retry} /> : null}
+          {assigned.length && data.loggedPlanDays.state === 'ready' && data.loggedPlanDays.stale ? <HomeProblem title="Showing saved training history" message="Refresh to check which sessions are logged." onRetry={data.loggedPlanDays.retry} /> : null}
+          {pendingDays.length && nextSession ? <Text variant="bodySm" tone="muted">A session is saved on this device and waiting for delivery.</Text> : null}
+        </View>
+
+        {data.checkIns.state === 'ready' && rows.length ? <View style={styles.section}>
+          <HomeSectionHeading title="Your recent record" action="Progress" onPress={() => router.push('/(app)/measurements')} />
+          <RecentRecord summary={recentRecordSummary(rows, today)} />
+        </View> : data.checkIns.state === 'ready' ? <View style={styles.firstRecord}>
+          <Text variant="h2">Start with today.</Text>
+          <Text variant="bodySm" tone="muted">Each check-in adds context. Your observations will appear here as you build your record.</Text>
+        </View> : null}
+
+        {data.assessment.state === 'ready' && data.assessment.data.completed < data.assessment.data.total ?
+          <Pressable onPress={() => router.push({ pathname: '/(app)/profile', params: { assessment: '1' } })} accessibilityRole="button" accessibilityLabel="Continue your coaching assessment" style={[styles.assessment, { borderColor: colors.border }]}>
+            <ClipboardList size={21} color={colors.mutedForeground} accessible={false} />
+            <View style={{ flex: 1, gap: spacing.xs }}>
+              <Text variant="body" style={{ fontWeight: '600' }}>A fuller picture of you</Text>
+              <Text variant="bodySm" tone="muted">Coaching assessment · {data.assessment.data.completed} of {data.assessment.data.total} sections</Text>
+            </View>
+            <ArrowUpRight size={20} color={colors.mutedForeground} accessible={false} />
+          </Pressable> : null}
+        {data.assessment.state === 'error' ? <HomeProblem title="Assessment progress couldn't load" message="Your answers are kept separately from your daily record." onRetry={data.assessment.retry} /> : data.assessment.state === 'ready' && data.assessment.stale ? <HomeProblem title="Showing saved assessment progress" message="Refresh to check your latest saved sections." onRetry={data.assessment.retry} /> : null}
+      </TodayBrief>
     </Screen>
-    <CheckInHistorySheet
-      visible={historyOpen}
-      processed={processed}
-      onSelectDay={(dateString) => {
-        selectedHistoryDate.current = dateString;
-      }}
-      onClose={() => setHistoryOpen(false)}
-    />
-    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  section: { gap: spacing.base },
+  quietCard: { gap: spacing.md, padding: 24, borderRadius: 24 },
+  pending: { borderTopWidth: 1, borderBottomWidth: 1, paddingVertical: 20, gap: spacing.sm },
+  firstRecord: { gap: spacing.sm, paddingVertical: spacing.base },
+  assessment: { borderTopWidth: 1, paddingVertical: 24, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+});

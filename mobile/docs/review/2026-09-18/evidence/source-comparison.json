@@ -1,0 +1,10 @@
+{
+  "reviewDate": "2026-09-18",
+  "scope": "Union of premium-motion baseline-hashes.json and source-manifest.json; current source read with SHA256",
+  "checkedSourcePaths": 324,
+  "sourceMismatches": [],
+  "checkedPlatformExportBundles": 3,
+  "exportMismatches": [],
+  "priorVerificationDate": "2026-09-17",
+  "suiteRerunThisReview": false
+}

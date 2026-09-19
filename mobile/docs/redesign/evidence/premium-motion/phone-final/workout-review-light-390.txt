@@ -1,0 +1,14 @@
+Review your workout
+Check the completed and incomplete work before saving.
+Volume
+1,100
+kg × reps · completed strength sets
+Completed sets
+3
+sets
+Incomplete sets
+7
+sets
+7 sets are still incomplete. You can return to enter them or save this session as recorded.
+Return to editing
+Save workout

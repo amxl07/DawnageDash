@@ -1,0 +1,117 @@
+FAIL src/screens/__tests__/weekly-feedback.test.tsx (712.389 s)
+  ● WeeklyFeedbackScreen › blocks an invalid active step and gives its focused alert sole ownership of the summary announcement
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: 78
+
+    Number of calls: 0
+
+      392 |     expect(summary.props).toMatchObject({ accessible: true, focusable: true });
+      393 |     expect(summary.findByProps({ children: 'Please correct the highlighted fields before continuing.' })).toBeTruthy();
+    > 394 |     expect(AccessibilityInfo.setAccessibilityFocus).toHaveBeenCalledWith(78);
+          |                                                     ^
+      395 |     expect(AccessibilityInfo.announceForAccessibility).not.toHaveBeenCalledWith(
+      396 |       'Please correct the highlighted fields before continuing.',
+      397 |     );
+
+      at Object.toHaveBeenCalledWith (src/screens/__tests__/weekly-feedback.test.tsx:394:53)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● WeeklyFeedbackScreen › resets scroll before focusing a newly opened step heading
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: 77
+
+    Number of calls: 0
+
+      426 |       focusable: true,
+      427 |     });
+    > 428 |     expect(AccessibilityInfo.setAccessibilityFocus).toHaveBeenCalledWith(77);
+          |                                                     ^
+      429 |   });
+      430 |
+      431 |   it('disables animated step and validation scrolling when Reduced Motion is enabled', async () => {
+
+      at Object.toHaveBeenCalledWith (src/screens/__tests__/weekly-feedback.test.tsx:428:53)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+PASS src/components/media/PhotoCaptureSheet.test.tsx (231.859 s)
+PASS src/components/ui/Sheet.test.tsx (143.36 s)
+PASS src/components/logger/SetEditor.test.tsx (391.665 s)
+FAIL src/screens/__tests__/tabs/plans.test.tsx (115.762 s)
+  ● PlansScreen plan provenance › keeps prescription access inside the day card without a duplicate exercise list
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 1
+    Received length: 0
+    Received array:  []
+
+      221 |       (node) => node.props.accessibilityLabel === 'Show details for Squat',
+      222 |     );
+    > 223 |     expect(detailActions).toHaveLength(1);
+          |                           ^
+      224 |
+      225 |     act(() => {
+      226 |       detailActions[0].props.onPress();
+
+      at Object.toHaveLength (src/screens/__tests__/tabs/plans.test.tsx:223:27)
+
+FAIL src/components/logger/ExerciseSlide.test.tsx (164.67 s)
+  ● ignores a repeated completion callback from the disappearing set control
+
+    TypeError: complete is not a function
+
+      75 |
+      76 |   await act(async () => {
+    > 77 |     complete();
+         |     ^
+      78 |     complete();
+      79 |   });
+      80 |
+
+      at complete (src/components/logger/ExerciseSlide.test.tsx:77:5)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at callback (node_modules/@testing-library/react-native/src/act.ts:72:33)
+      at callback (node_modules/@testing-library/react-native/src/act.ts:30:24)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:814:22)
+      at actImplementation (node_modules/@testing-library/react-native/src/act.ts:29:25)
+      at _act (node_modules/@testing-library/react-native/src/act.ts:72:10)
+      at Object.<anonymous> (src/components/logger/ExerciseSlide.test.tsx:76:12)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+PASS src/components/checkin/CheckInRatingScale.test.tsx (148.331 s)
+FAIL src/components/plans/PlanDayCard.test.tsx (80.715 s)
+  ● PlanDayCard › preserves count, notes, video alternative, expansion state, and 44pt actions
+
+    expect(received).toMatchObject(expected)
+
+    Matcher error: received value must be a non-null object
+
+    Received has value: undefined
+
+      144 |       accessibilityLabel: 'Watch demo for Shoulder press',
+      145 |     });
+    > 146 |     expect(StyleSheet.flatten(video.props.style)).toMatchObject({ minWidth: 44, minHeight: 44 });
+          |                                                   ^
+      147 |
+      148 |     act(() => video.props.onPress());
+      149 |     expect(mockOpenBrowserAsync).toHaveBeenCalledWith('https://example.com/press');
+
+      at Object.toMatchObject (src/components/plans/PlanDayCard.test.tsx:146:51)
+
+Test Suites: 4 failed, 4 passed, 8 total
+Tests:       5 failed, 84 passed, 89 total
+Snapshots:   0 total
+Time:        2157.969 s
+Ran all test suites within paths "src/screens/__tests__/weekly-feedback.test.tsx", "src/components/media/PhotoCaptureSheet.test.tsx", "src/components/ui/Sheet.test.tsx", "src/components/logger/SetEditor.test.tsx", "src/screens/__tests__/tabs/plans.test.tsx", "src/components/logger/ExerciseSlide.test.tsx", "src/components/checkin/CheckInRatingScale.test.tsx", "src/components/plans/PlanDayCard.test.tsx".
+Test results written to: ../../../../../../tmp/dawnage-premium-20260917/jest-corrections-results.json
+Verification directory cache: 46049 missing-path checks resolved; 866 directories read.

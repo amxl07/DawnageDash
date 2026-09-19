@@ -1,14 +1,15 @@
-import { Image } from 'expo-image';
+import { PrivatePhoto } from '@/components/media/PrivatePhoto';
 import { format } from 'date-fns';
 import { useRouter } from 'expo-router';
 import { Camera, Columns2, Plus } from 'lucide-react-native';
-import { memo, useMemo, useState } from 'react';
+import { memo, useMemo, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { PhotoCaptureSheet } from '@/components/media/PhotoCaptureSheet';
 import {
   PhotoViewer,
   photoPositionForSourceIndex,
+  type PhotoFocusTarget,
   type ViewerPhoto,
 } from '@/components/media/PhotoViewer';
 import {
@@ -25,6 +26,7 @@ import {
   useListMotion,
 } from '@/components/ui';
 import { useProgressPhotos, type PhotoRow } from '@/hooks/useProgressPhotos';
+import { useAuth } from '@/contexts/AuthContext';
 import { ANGLES } from '@/lib/photos';
 import { localDateString, parseLocalDate } from '@/lib/dates';
 import { iconSize, radius, spacing, useMotion, useTheme } from '@/theme';
@@ -66,13 +68,15 @@ const WeekCard = memo(function WeekCard({
   row: PhotoRow;
   weekNumber: number;
   onEdit: () => void;
-  onOpen: (i: number) => void;
-  onCompare: () => void;
+  onOpen: (i: number, target: PhotoFocusTarget | null) => void;
+  onCompare: (target: PhotoFocusTarget | null) => void;
   canCompare: boolean;
 }) {
   const { colors } = useTheme();
   const motion = useMotion();
   const items = urlsOf(row);
+  const thumbnailRefs = useRef<(View | null)[]>([]);
+  const compareRef = useRef<View>(null);
   const count = items.filter((i) => i.url).length;
   const isBaseline = weekNumber === 0;
 
@@ -100,7 +104,13 @@ const WeekCard = memo(function WeekCard({
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={`Edit week ${weekNumber} photos`}
-          style={{ minHeight: 44, justifyContent: 'center' }}
+          style={({ pressed }) => ({
+            minHeight: 44,
+            justifyContent: 'center',
+            borderRadius: radius.sm,
+            paddingHorizontal: spacing.xs,
+            backgroundColor: pressed ? colors.pressed : 'transparent',
+          })}
         >
           <Text variant="bodySm" tone="primary">
             Edit
@@ -112,34 +122,36 @@ const WeekCard = memo(function WeekCard({
         {items.map((item, i) => (
           <Pressable
             key={item.label}
+            ref={(target) => {
+              thumbnailRefs.current[i] = target;
+            }}
             disabled={!item.url}
-            onPress={() => onOpen(i)}
+            onPress={() => onOpen(i, thumbnailRefs.current[i])}
             accessibilityRole="button"
             accessibilityLabel={
               item.url
                 ? `${item.label} photo, week ${weekNumber}. Tap to view full screen.`
                 : `${item.label} photo missing`
             }
-            style={{
+            style={({ pressed }) => ({
               flex: 1,
               aspectRatio: 3 / 4,
               borderRadius: radius.sm,
               overflow: 'hidden',
               backgroundColor: colors.elevated,
               borderWidth: 1,
-              borderColor: colors.border,
+              borderColor: pressed ? colors.primaryPressed : colors.border,
               alignItems: 'center',
               justifyContent: 'center',
-            }}
+            })}
           >
             {item.url ? (
-              <Image
-                source={{ uri: item.url }}
+              <PrivatePhoto
+                reference={item.url}
+                ownerId={row.user_id}
                 style={{ width: '100%', height: '100%' }}
                 contentFit="cover"
-                cachePolicy="memory-disk"
-                recyclingKey={`${row.id}:${item.label}:${item.url}`}
-                transition={motion.duration.micro}
+                transition={motion.reduced ? 0 : Math.min(160, motion.duration.micro)}
                 accessible={false}
               />
             ) : (
@@ -157,11 +169,20 @@ const WeekCard = memo(function WeekCard({
         </Text>
         {canCompare ? (
           <Pressable
-            onPress={onCompare}
+            ref={compareRef}
+            onPress={() => onCompare(compareRef.current)}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={`Compare week ${weekNumber} with the baseline`}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 44 }}
+            style={({ pressed }) => ({
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: spacing.xs,
+              minHeight: 44,
+              borderRadius: radius.sm,
+              paddingHorizontal: spacing.xs,
+              backgroundColor: pressed ? colors.pressed : 'transparent',
+            })}
           >
             <Columns2 size={iconSize.sm} color={colors.primary} strokeWidth={2} accessible={false} />
             <Text variant="bodySm" tone="primary">
@@ -175,6 +196,11 @@ const WeekCard = memo(function WeekCard({
 });
 
 export default function MediaScreen() {
+  const { user } = useAuth();
+  return <MediaContent key={user?.id ?? 'signed-out'} />;
+}
+
+function MediaContent() {
   const { colors } = useTheme();
   const listMotion = useListMotion();
   const router = useRouter();
@@ -182,7 +208,11 @@ export default function MediaScreen() {
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editDate, setEditDate] = useState<string>(localDateString());
-  const [viewer, setViewer] = useState<{ photos: ViewerPhoto[]; index: number } | null>(null);
+  const [viewer, setViewer] = useState<{
+    photos: ViewerPhoto[];
+    index: number;
+    returnFocusTarget: PhotoFocusTarget | null;
+  } | null>(null);
 
   // rows newest-first; the OLDEST row is Week 0 (baseline).
   const baseline = rows?.length ? rows[rows.length - 1] : null;
@@ -196,7 +226,12 @@ export default function MediaScreen() {
     [rows, editDate],
   );
 
-  const openWeek = (row: PhotoRow, weekNumber: number, index: number) => {
+  const openWeek = (
+    row: PhotoRow,
+    weekNumber: number,
+    index: number,
+    returnFocusTarget: PhotoFocusTarget | null,
+  ) => {
     const sourceSlots = urlsOf(row);
     const viewerIndex = photoPositionForSourceIndex(sourceSlots, index);
     if (viewerIndex == null) return;
@@ -209,10 +244,14 @@ export default function MediaScreen() {
         url: i.url!,
         caption: format(parseLocalDate(row.date), 'd MMM yyyy'),
       }));
-    if (photos.length) setViewer({ photos, index: viewerIndex });
+    if (photos.length) setViewer({ photos, index: viewerIndex, returnFocusTarget });
   };
 
-  const compareWithBaseline = (row: PhotoRow, weekNumber: number) => {
+  const compareWithBaseline = (
+    row: PhotoRow,
+    weekNumber: number,
+    returnFocusTarget: PhotoFocusTarget | null,
+  ) => {
     if (!baseline) return;
     const photos: ViewerPhoto[] = [];
     for (const a of ANGLES) {
@@ -235,7 +274,7 @@ export default function MediaScreen() {
         });
       }
     }
-    if (photos.length) setViewer({ photos, index: 0 });
+    if (photos.length) setViewer({ photos, index: 0, returnFocusTarget });
   };
 
   if (isLoading) {
@@ -306,8 +345,8 @@ export default function MediaScreen() {
                   setEditDate(item.date);
                   setSheetOpen(true);
                 }}
-                onOpen={(i) => openWeek(item, weekNumber, i)}
-                onCompare={() => compareWithBaseline(item, weekNumber)}
+                onOpen={(i, target) => openWeek(item, weekNumber, i, target)}
+                onCompare={(target) => compareWithBaseline(item, weekNumber, target)}
               />
             );
           }}
@@ -343,6 +382,7 @@ export default function MediaScreen() {
           photos={viewer.photos}
           startIndex={viewer.index}
           onClose={() => setViewer(null)}
+          returnFocusTarget={viewer.returnFocusTarget}
         />
       ) : null}
     </>

@@ -1,6 +1,5 @@
 import { View, type ViewProps, type ViewStyle } from 'react-native';
-import { radius, spacing } from '@/theme';
-import { useTheme } from '@/theme';
+import { radius, spacing, useTheme } from '@/theme';
 
 type Props = ViewProps & { padded?: boolean; elevated?: boolean };
 

@@ -1,6 +1,5 @@
 import * as Haptics from 'expo-haptics';
 import { StyleSheet } from 'react-native';
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
 import { SegmentedControl } from './SegmentedControl';
@@ -25,6 +24,9 @@ jest.mock('@/theme', () => ({
     colors: {
       primary: '#00a000',
       primaryFill: '#008000',
+      primarySoft: '#e8f5e8',
+      primaryPressed: '#006000',
+      pressed: '#e0e4e0',
       onPrimary: '#ffffff',
       mutedForeground: '#777777',
       borderStrong: '#222222',
@@ -38,7 +40,7 @@ jest.mock('@/theme', () => ({
 }));
 
 function render(ui: React.ReactElement) {
-  let renderer: ReturnType<typeof create>;
+  let renderer!: ReturnType<typeof create>;
   act(() => {
     renderer = create(ui);
   });
@@ -59,7 +61,7 @@ function render(ui: React.ReactElement) {
 
 type RenderedNode = ReturnType<ReturnType<typeof create>['toJSON']>;
 
-function visibleStrings(node: RenderedNode): string[] {
+function visibleStrings(node: RenderedNode | string): string[] {
   if (node === null) return [];
   if (typeof node === 'string') return [node];
   if (Array.isArray(node)) return node.flatMap(visibleStrings);

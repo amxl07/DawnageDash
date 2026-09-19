@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react-native';
-import { memo, useMemo, useState } from 'react';
+import { memo, useMemo, useState, type RefObject } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 
 import { Sheet, SheetFlatList, Text } from '@/components/ui';
@@ -28,7 +28,7 @@ const ZoneRow = memo(function ZoneRow({
         justifyContent: 'center',
         minHeight: ROW_HEIGHT,
         paddingHorizontal: spacing.base,
-        backgroundColor: pressed ? colors.elevated : 'transparent',
+        backgroundColor: pressed ? colors.pressed : selected ? colors.primarySoft : 'transparent',
       })}
     >
       <Text tone={selected ? 'primary' : 'default'}>{zone.replace(/_/g, ' ')}</Text>
@@ -41,11 +41,13 @@ export function TimezonePicker({
   onClose,
   selected,
   onSelect,
+  returnFocusRef,
 }: {
   visible: boolean;
   onClose: () => void;
   selected: string;
   onSelect: (z: string) => void;
+  returnFocusRef?: RefObject<View | null>;
 }) {
   const { colors } = useTheme();
   const [search, setSearch] = useState('');
@@ -57,7 +59,7 @@ export function TimezonePicker({
   }, [zones, search]);
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Select timezone">
+    <Sheet visible={visible} onClose={onClose} title="Select timezone" returnFocusRef={returnFocusRef}>
       <View
         style={{
           flexDirection: 'row',
