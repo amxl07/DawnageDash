@@ -1,7 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 
-import { Button } from './Button';
+import { ButtonFallback as Button } from './ButtonFallback';
 
 jest.mock('react-native-reanimated', () => {
   const { Pressable } = jest.requireActual('react-native');
@@ -16,8 +16,9 @@ jest.mock('react-native-reanimated', () => {
 });
 
 jest.mock('@/theme', () => ({
-  radius: { button: 14 },
-  spacing: { sm: 8, lg: 24 },
+  HIT_SLOP_MIN: 44,
+  radius: { button: 14, pill: 999 },
+  spacing: { sm: 8, md: 12, lg: 24 },
   useMotion: () => ({ enabled: false, pressScale: 1, spring: { press: {} } }),
   useTheme: () => ({
     colors: {

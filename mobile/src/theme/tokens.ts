@@ -27,7 +27,7 @@ export const radius = {
 export const iconSize = { sm: 16, md: 20, lg: 24, xl: 32 } as const;
 
 /** Minimum interactive target. Reach it with padding first, hitSlop second. */
-export const HIT_SLOP_MIN = 44;
+export const HIT_SLOP_MIN = Platform.select({ android: 48, default: 44 }) ?? 44;
 
 /** Tabular figures: any number that animates, aligns in a column, or sits in a
  *  table. Android support is inconsistent — always pair with a fixed minWidth. */

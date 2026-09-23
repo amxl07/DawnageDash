@@ -2,12 +2,12 @@ import * as Haptics from 'expo-haptics';
 import { StyleSheet } from 'react-native';
 import { act, create } from 'react-test-renderer';
 
-import { SegmentedControl } from './SegmentedControl';
+import { SegmentedControlFallback as SegmentedControl } from './SegmentedControlFallback';
 
 jest.mock('@/theme', () => ({
   HIT_SLOP_MIN: 44,
   iconSize: { md: 20 },
-  radius: { md: 12 },
+  radius: { md: 12, pill: 999 },
   spacing: { xs: 4, sm: 8 },
   tabularNums: {},
   type: {
@@ -37,6 +37,13 @@ jest.mock('@/theme', () => ({
     },
     isDark: false,
   }),
+}));
+
+jest.mock('./AppSymbol', () => ({
+  AppSymbol: () => {
+    const { View } = jest.requireActual('react-native');
+    return <View />;
+  },
 }));
 
 function render(ui: React.ReactElement) {
@@ -104,6 +111,26 @@ describe('SegmentedControl', () => {
     expect(onChange).toHaveBeenCalledWith('nutrition');
   });
 
+  it('presents compact choices as one quiet segmented rail', () => {
+    const { getByRole } = render(
+      <SegmentedControl
+        label="Training view"
+        value="plan"
+        onChange={jest.fn()}
+        segments={[
+          { value: 'plan', label: 'Plan' },
+          { value: 'history', label: 'History' },
+        ]}
+      />,
+    );
+
+    expect(resolvedStyle(getByRole('radiogroup', 'Training view'))).toMatchObject({
+      backgroundColor: '#eeeeee',
+      borderRadius: 999,
+    });
+    expect(resolvedStyle(getByRole('radio', 'History'))).toMatchObject({ borderWidth: 0 });
+  });
+
   it('emits one selection haptic only when the value changes', () => {
     const onChange = jest.fn();
     const { getByRole } = render(
@@ -145,7 +172,7 @@ describe('SegmentedControl', () => {
     expect(getByRole('radio', 'Nutrition').props.accessibilityState).toMatchObject({ selected: true });
     expect(resolvedStyle(getByRole('radio', 'Nutrition'))).toMatchObject({
       backgroundColor: '#008000',
-      borderColor: '#00a000',
+      borderWidth: 0,
     });
     expect(root.findAll((node: { props: { pointerEvents?: string } }) => node.props.pointerEvents === 'none')).toHaveLength(0);
   });
