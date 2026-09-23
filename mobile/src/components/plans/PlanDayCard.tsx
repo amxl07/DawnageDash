@@ -10,7 +10,7 @@ import { MotionReveal } from '@/components/ui/MotionReveal';
 import { Text } from '@/components/ui/Text';
 import type { PlanDay, PlanExercise } from '@/hooks/usePlans';
 import type { PlanDayStatus } from '@/hooks/usePlanProgress';
-import { HIT_SLOP_MIN, iconSize, radius, spacing, useTheme } from '@/theme';
+import { iconSize, radius, spacing, useTheme } from '@/theme';
 
 type Props = {
   day: PlanDay;
@@ -56,7 +56,7 @@ export function PlanDayCard({ day, status, onStart, onShowDetails, testID }: Pro
         style={({ pressed }) => ({
           flexDirection: 'row',
           alignItems: 'center',
-          minHeight: HIT_SLOP_MIN,
+          minHeight: 48,
           borderRadius: radius.md,
           backgroundColor: pressed ? colors.pressed : 'transparent',
         })}
@@ -129,8 +129,8 @@ export function PlanDayCard({ day, status, onStart, onShowDetails, testID }: Pro
                     accessibilityRole="button"
                     accessibilityLabel={`Watch demo for ${exercise.name}`}
                     style={({ pressed }) => ({
-                      minWidth: HIT_SLOP_MIN,
-                      minHeight: HIT_SLOP_MIN,
+                      minWidth: 48,
+                      minHeight: 48,
                       alignItems: 'flex-end',
                       justifyContent: 'center',
                       borderRadius: radius.sm,
@@ -154,8 +154,8 @@ export function PlanDayCard({ day, status, onStart, onShowDetails, testID }: Pro
                 accessibilityRole="button"
                 accessibilityLabel={`Show details for ${exercise.name}`}
                 style={({ pressed }) => ({
-                  minWidth: HIT_SLOP_MIN,
-                  minHeight: HIT_SLOP_MIN,
+                  minWidth: 48,
+                  minHeight: 48,
                   alignSelf: 'flex-start',
                   justifyContent: 'center',
                   paddingHorizontal: spacing.sm,
@@ -172,7 +172,7 @@ export function PlanDayCard({ day, status, onStart, onShowDetails, testID }: Pro
             label={actionLabel(status, day.day_number)}
             variant="secondary"
             onPress={onStart}
-            style={{ minHeight: HIT_SLOP_MIN }}
+            style={{ minHeight: 48 }}
           /> : null}
           </View>
         ) : null}

@@ -1,76 +1,103 @@
 import { act, create } from 'react-test-renderer';
+import { Button } from '@/components/ui';
 
 import PlansScreen from '../../../../app/(app)/(tabs)/plans';
 
 const mockMarkSeen = jest.fn();
-const mockMealRefetch = jest.fn();
+const mockPush = jest.fn();
+const mockSetParams = jest.fn();
+const mockPlanRefetch = jest.fn();
+const mockProgressRefetch = jest.fn();
+let mockView: string | undefined;
 let mockProvenanceReady = false;
-let mockMealError = false;
-let mockMealLoading = false;
 let mockWorkoutPlanLoading = false;
 let mockWorkoutPlanError = false;
 let mockWorkoutPlanMissing = false;
-let mockPlanSource = 'user';
+let mockPlanSource: 'user' | 'template' = 'user';
 let mockProgressError = false;
-const mockPlanRefetch = jest.fn();
-const mockProgressRefetch = jest.fn();
+let mockProgressLoading = false;
+let mockProfileError = false;
+let mockProfileLoading = false;
+let mockProfileFetching = false;
+let mockPlanFetching = false;
+let mockProgressFetching = false;
+let mockProfileFetchStatus: 'idle' | 'fetching' | 'paused' = 'idle';
+let mockPlanFetchStatus: 'idle' | 'fetching' | 'paused' = 'idle';
+let mockProgressFetchStatus: 'idle' | 'fetching' | 'paused' = 'idle';
+let mockStatuses: Record<number, 'today' | 'active' | 'complete' | 'upcoming'> = { 1: 'today', 2: 'upcoming' };
 
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
-jest.mock('lucide-react-native', () => ({ ClipboardList: 'ClipboardList', Utensils: 'Utensils' }));
+jest.mock('expo-router', () => ({
+  useLocalSearchParams: () => ({ view: mockView }),
+  useRouter: () => ({ push: mockPush, setParams: mockSetParams }),
+}));
+jest.mock('lucide-react-native', () => ({ ClipboardList: () => null }));
 jest.mock('@/components/coach/CoachBadge', () => ({ CoachBadge: () => null }));
 jest.mock('@/components/plans/ExercisePrescriptionSheet', () => {
   const native = jest.requireActual('react-native');
   return {
     ExercisePrescriptionSheet: ({ visible, exercise }: {
       visible: boolean;
-      exercise: { name: string } | null;
-    }) => visible ? <native.View testID="exercise-prescription" accessibilityLabel={exercise?.name} /> : null,
+      exercise: { name: string; restSeconds?: number; videoLink?: string; substitutions: unknown[] } | null;
+    }) => visible ? (
+      <native.View
+        testID="exercise-prescription"
+        accessibilityLabel={`${exercise?.name}:${exercise?.restSeconds}:${exercise?.videoLink}:${exercise?.substitutions.length}`}
+      />
+    ) : null,
   };
 });
 jest.mock('@/components/plans/PlanDayCard', () => {
   const native = jest.requireActual('react-native');
   return {
-    PlanDayCard: ({ day, onShowDetails, onStart }: {
+    PlanDayCard: ({ day, onShowDetails, onStart, status }: {
       onStart?: () => void;
-      day: { exercises: { id: string; name: string }[] };
+      day: { day_number: number; exercises: { id: string; name: string }[] };
+      status: string;
       onShowDetails: (exercise: { id: string; name: string }) => void;
     }) => (
-      <native.View testID="plan-day-card">
-        {onStart ? <native.Pressable accessibilityLabel="Start Day 1" onPress={onStart} /> : null}
+      <native.View testID={`plan-day-${day.day_number}`}>
+        <native.Text>{`Day ${day.day_number} status ${status}`}</native.Text>
+        {onStart ? <native.Pressable accessibilityLabel={`Start Day ${day.day_number}`} onPress={onStart} /> : null}
         {day.exercises.map((exercise) => (
           <native.Pressable
             key={exercise.id}
             accessibilityRole="button"
             accessibilityLabel={`Show details for ${exercise.name}`}
             onPress={() => onShowDetails(exercise)}
-            style={{ minWidth: 44, minHeight: 44 }}
+            style={{ minWidth: 48, minHeight: 48 }}
           />
         ))}
       </native.View>
     ),
   };
 });
+jest.mock('@/features/training/workout-history', () => {
+  const native = jest.requireActual('react-native');
+  return { WorkoutHistory: ({ header }: { header?: React.ReactNode }) => <native.View testID="history-list-owner">{header}</native.View> };
+});
+jest.mock('@/components/ui/DisclosureChevron', () => {
+  const native = jest.requireActual('react-native');
+  return { DisclosureChevron: ({ expanded }: { expanded: boolean }) => <native.View accessibilityState={{ expanded }} /> };
+});
 jest.mock('@/components/ui/MotionReveal', () => {
   const native = jest.requireActual('react-native');
-  return {
-    MotionReveal: ({ children, ...props }: React.ComponentProps<typeof native.View>) => (
-      <native.View {...props}>{children}</native.View>
-    ),
-  };
+  return { MotionReveal: ({ children, ...props }: React.ComponentProps<typeof native.View>) => <native.View {...props}>{children}</native.View> };
 });
 jest.mock('@/components/ui', () => {
   const native = jest.requireActual('react-native');
   return {
+    Button: ({ label, onPress }: { label: string; onPress: () => void }) => (
+      <native.Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress}>
+        <native.Text>{label}</native.Text>
+      </native.Pressable>
+    ),
     Card: native.View,
     EmptyState: () => null,
     ErrorState: ({ onRetry, retryLabel = 'Retry' }: { onRetry: () => void; retryLabel?: string }) => (
       <native.Pressable accessibilityRole="button" accessibilityLabel={retryLabel} onPress={onRetry} />
     ),
     Screen: native.View,
-    SegmentedControl: ({
-      onChange,
-      segments,
-    }: {
+    SegmentedControl: ({ onChange, segments }: {
       onChange: (value: string) => void;
       segments: { value: string; label: string }[];
     }) => (
@@ -90,32 +117,19 @@ jest.mock('@/components/ui', () => {
   };
 });
 jest.mock('@/hooks/usePlans', () => ({
-  parseSupplements: () => [],
-  useMealPlan: () => ({
-    data: {
-      pointer: { calories: 2200, dietType: 'vegetarian' },
-      meals: [],
-    },
-    isLoading: mockMealLoading,
-    isError: mockMealError,
-    refetch: mockMealRefetch,
-  }),
   useUserProfile: () => ({
     data: {
       active_workout_plan: JSON.stringify({
-        level: 'beginner',
-        workoutType: 'strength',
-        subCategory: null,
-        daysPerWeek: 1,
+        level: 'beginner', workoutType: 'strength', subCategory: null, daysPerWeek: 2,
       }),
       training_note: null,
       cardio_note: null,
       steps_note: null,
-      nutrition_note: null,
-      supplements_data: null,
     },
-    isLoading: false,
-    isError: false,
+    isLoading: mockProfileLoading,
+    isFetching: mockProfileFetching,
+    fetchStatus: mockProfileFetchStatus,
+    isError: mockProfileError,
     refetch: jest.fn(),
   }),
   useWorkoutPlan: () => ({
@@ -123,33 +137,34 @@ jest.mock('@/hooks/usePlans', () => ({
       source: mockPlanSource,
       days: [
         {
-          id: 'day-1',
-          day_number: 1,
-          focus: 'Full body',
-          exercises: [
-            {
-              id: 'squat',
-              name: 'Squat',
-              sets: 3,
-              reps: '8',
-              warmupSets: 0,
-              substitutions: [],
-            },
-          ],
-          notes: null,
+          id: 'day-1', day_number: 1, focus: 'Full body', notes: 'Keep the tempo controlled.',
           updated_at: '2026-08-29T10:00:00.000Z',
+          exercises: [{
+            id: 'squat', name: 'Squat', sets: 3, reps: '8', warmupSets: 1,
+            restSeconds: 90, notes: 'Leave two reps in reserve.', videoLink: 'https://example.com/squat',
+            substitutions: [{ id: 'goblet', name: 'Goblet squat', sets: 3, reps: '10', warmupSets: 0, substitutions: [] }],
+          }],
+        },
+        {
+          id: 'day-2', day_number: 2, focus: 'Upper body', notes: null,
+          updated_at: '2026-08-29T10:00:00.000Z',
+          exercises: [{ id: 'press', name: 'Press', sets: 3, reps: '10', warmupSets: 0, substitutions: [] }],
         },
       ],
     },
     isLoading: mockWorkoutPlanLoading,
+    isFetching: mockPlanFetching,
+    fetchStatus: mockPlanFetchStatus,
     isError: mockWorkoutPlanError,
     refetch: mockPlanRefetch,
   }),
 }));
 jest.mock('@/hooks/usePlanProgress', () => ({
   usePlanProgress: () => ({
-    statuses: { 1: 'today' },
-    isLoading: false,
+    statuses: mockStatuses,
+    isLoading: mockProgressLoading,
+    isFetching: mockProgressFetching,
+    fetchStatus: mockProgressFetchStatus,
     isError: mockProgressError,
     refetch: mockProgressRefetch,
   }),
@@ -165,177 +180,159 @@ jest.mock('@/hooks/usePlanProvenance', () => ({
 }));
 jest.mock('@/lib/workout-constants', () => ({ formatTypeLabel: (value: string) => value }));
 jest.mock('@/theme', () => ({
-  HIT_SLOP_MIN: 44,
+  HIT_SLOP_MIN: 48,
+  iconSize: { md: 20 },
+  radius: { md: 12 },
   spacing: { xs: 4, sm: 8, md: 12, base: 16, lg: 24 },
-  useTheme: () => ({ colors: { border: '#ddd', primary: '#05f' } }),
+  useTheme: () => ({ colors: { border: '#ddd', primary: '#05f', primarySoft: '#eef' } }),
 }));
 
-describe('PlansScreen plan provenance', () => {
+describe('Training route', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockView = undefined;
     mockProvenanceReady = false;
-    mockMealError = false;
-    mockMealLoading = false;
     mockWorkoutPlanLoading = false;
     mockWorkoutPlanError = false;
     mockWorkoutPlanMissing = false;
     mockProgressError = false;
+    mockProgressLoading = false;
+    mockProfileError = false;
+    mockProfileLoading = false;
+    mockProfileFetching = false;
+    mockPlanFetching = false;
+    mockProgressFetching = false;
+    mockProfileFetchStatus = 'idle';
+    mockPlanFetchStatus = 'idle';
+    mockProgressFetchStatus = 'idle';
+    mockStatuses = { 1: 'today', 2: 'upcoming' };
     mockPlanSource = 'user';
   });
 
-  it('waits for last-seen hydration before marking rendered Training data as seen', () => {
+  it('opens Plan by default and exposes Plan and History as its only views', () => {
     let renderer!: ReturnType<typeof create>;
-    act(() => {
-      renderer = create(<PlansScreen />);
-    });
-
-    expect(mockMarkSeen).not.toHaveBeenCalled();
-
-    mockProvenanceReady = true;
-    act(() => renderer.update(<PlansScreen />));
-
-    expect(mockMarkSeen).toHaveBeenCalledTimes(1);
-    act(() => renderer.unmount());
+    act(() => { renderer = create(<PlansScreen />); });
+    expect(renderer.root.findByProps({ children: 'Training' })).toBeTruthy();
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Plan' })).toBeTruthy();
+    expect(renderer.root.findByProps({ accessibilityLabel: 'History' })).toBeTruthy();
+    expect(renderer.root.findAllByProps({ testID: 'history-list-owner' })).toHaveLength(0);
   });
 
-  it('does not let a Nutrition failure block healthy Training content', () => {
-    mockMealError = true;
+  it('lets explicit route params override a previously selected History view', () => {
+    mockView = 'history';
     let renderer!: ReturnType<typeof create>;
-    act(() => {
-      renderer = create(<PlansScreen />);
-    });
-
-    expect(renderer.root.findByProps({ children: 'Your plan' })).toBeTruthy();
-    expect(
-      renderer.root.findAll(
-        (node: { props: { accessibilityLabel?: string } }) =>
-          node.props.accessibilityLabel === 'Retry',
-      ),
-    ).toHaveLength(0);
-  });
-
-  it('gives the Plans Details action a 44 point target in both dimensions', () => {
-    let renderer!: ReturnType<typeof create>;
-    act(() => {
-      renderer = create(<PlansScreen />);
-    });
-
-    const details = renderer.root.findByProps({ accessibilityLabel: 'Show details for Squat' });
-    expect(details.props.style).toMatchObject({ minWidth: 44, minHeight: 44 });
-  });
-
-  it('keeps prescription access inside the day card without a duplicate exercise list', () => {
-    let renderer!: ReturnType<typeof create>;
-    act(() => {
-      renderer = create(<PlansScreen />);
-    });
-
-    expect(renderer.root.findAllByProps({ children: 'Exercise details' })).toHaveLength(0);
-    const detailActionHosts = renderer.root.findAll(
-      (node) => typeof node.type === 'string'
-        && node.props.accessibilityRole === 'button'
-        && node.props.accessibilityLabel === 'Show details for Squat',
-    );
-    expect(detailActionHosts).toHaveLength(1);
-    const detailAction = renderer.root.find(
-      (node) => typeof node.type !== 'string'
-        && node.props.accessibilityLabel === 'Show details for Squat'
-        && typeof node.props.onPress === 'function',
-    );
-
-    act(() => {
-      detailAction.props.onPress();
-    });
-    expect(renderer.root.findByProps({ testID: 'exercise-prescription' }).props.accessibilityLabel)
-      .toBe('Squat');
-  });
-
-  it('shows Nutrition errors and wires Retry to the meal query', () => {
-    mockMealError = true;
-    let renderer!: ReturnType<typeof create>;
-    act(() => {
-      renderer = create(<PlansScreen />);
-    });
-
-    act(() => renderer.root.findByProps({ accessibilityLabel: 'Nutrition' }).props.onPress());
-    expect(renderer.root.findByProps({ children: 'Your plan' })).toBeTruthy();
-    expect(renderer.root.findByProps({ accessibilityLabel: 'Training' })).toBeTruthy();
-    expect(renderer.root.findByProps({ accessibilityLabel: 'Nutrition' })).toBeTruthy();
-    const retry = renderer.root.findByProps({ accessibilityLabel: 'Retry meal plan' });
-    act(() => retry.props.onPress());
-
-    expect(mockMealRefetch).toHaveBeenCalledTimes(1);
-
-    act(() => renderer.root.findByProps({ accessibilityLabel: 'Training' }).props.onPress());
+    act(() => { renderer = create(<PlansScreen />); });
+    expect(renderer.root.findByProps({ testID: 'history-list-owner' })).toBeTruthy();
+    mockView = 'plan';
+    act(() => { renderer.update(<PlansScreen />); });
+    expect(renderer.root.findAllByProps({ testID: 'history-list-owner' })).toHaveLength(0);
     expect(renderer.root.findByProps({ children: 'Assigned plan' })).toBeTruthy();
-    expect(
-      renderer.root.findAll(
-        (node: { props: { accessibilityLabel?: string } }) =>
-          node.props.accessibilityLabel === 'Retry',
-      ),
-    ).toHaveLength(0);
   });
 
-  it('does not let Training loading block healthy Nutrition content', () => {
-    let renderer!: ReturnType<typeof create>;
-    act(() => {
-      renderer = create(<PlansScreen />);
-    });
-
-    mockWorkoutPlanLoading = true;
-    act(() => renderer.root.findByProps({ accessibilityLabel: 'Nutrition' }).props.onPress());
-    expect(renderer.root.findByProps({ children: 'Daily target' })).toBeTruthy();
-  });
-
-  it('keeps the switch and healthy Nutrition available after a progress failure', () => {
-    mockProgressError = true;
+  it('uses the history FlatList owner when History is selected', () => {
     let renderer!: ReturnType<typeof create>;
     act(() => { renderer = create(<PlansScreen />); });
-    act(() => renderer.root.findByProps({ accessibilityLabel: 'Retry training history' }).props.onPress());
-    expect(mockProgressRefetch).toHaveBeenCalledTimes(1);
-    expect(mockPlanRefetch).not.toHaveBeenCalled();
-    act(() => renderer.root.findByProps({ accessibilityLabel: 'Nutrition' }).props.onPress());
-    expect(renderer.root.findByProps({ children: 'Daily target' })).toBeTruthy();
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'History' }).props.onPress());
+    expect(renderer.root.findByProps({ testID: 'history-list-owner' })).toBeTruthy();
+    expect(mockSetParams).toHaveBeenCalledWith({ view: 'history' });
   });
 
-  it('reports an initial plan query failure and retries that query', () => {
-    mockWorkoutPlanError = true;
-    mockWorkoutPlanMissing = true;
+  it('shows the focused assigned session with prescription and a direct start action', () => {
     let renderer!: ReturnType<typeof create>;
     act(() => { renderer = create(<PlansScreen />); });
-    act(() => renderer.root.findByProps({ accessibilityLabel: 'Retry training plan' }).props.onPress());
-    expect(mockPlanRefetch).toHaveBeenCalledTimes(1);
-    expect(mockProgressRefetch).not.toHaveBeenCalled();
-    expect(renderer.root.findByProps({ accessibilityLabel: 'Nutrition' })).toBeTruthy();
+    expect(renderer.root.findByProps({ children: 'Next session' })).toBeTruthy();
+    expect(renderer.root.findByProps({ children: 'Full body' })).toBeTruthy();
+    expect(renderer.root.findByProps({ children: 'Squat · 3 × 8' })).toBeTruthy();
+    expect(renderer.root.findAllByProps({ testID: 'plan-day-1' })).toHaveLength(0);
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'Start Day 1' }).props.onPress());
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/(app)/logger', params: { day: '1' } });
   });
 
-  it('keeps cached plan details visible when refresh fails', () => {
-    mockWorkoutPlanError = true;
+  it('opens the focused session full prescription and preserves detailed exercise access', () => {
     let renderer!: ReturnType<typeof create>;
     act(() => { renderer = create(<PlansScreen />); });
-    expect(renderer.root.findByProps({ accessibilityLabel: 'Show details for Squat' })).toBeTruthy();
-    expect(renderer.root.findByProps({ accessibilityLabel: 'Retry training plan' })).toBeTruthy();
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'View full prescription for Day 1' }).props.onPress());
+
+    expect(renderer.root.findByProps({ children: 'Keep the tempo controlled.' })).toBeTruthy();
+    expect(renderer.root.findByProps({ children: 'Leave two reps in reserve.' })).toBeTruthy();
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'Show details for Squat' }).props.onPress());
+    expect(renderer.root.findByProps({ testID: 'exercise-prescription' }).props.accessibilityLabel)
+      .toBe('Squat:90:https://example.com/squat:1');
   });
 
-  it('presents global template exercises as a preview without a logger start', () => {
+  it('uses Continue for an active draft and keeps a single focused action', () => {
+    mockStatuses = { 1: 'active', 2: 'upcoming' };
+    let renderer!: ReturnType<typeof create>;
+    act(() => { renderer = create(<PlansScreen />); });
+
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Continue Day 1' })).toBeTruthy();
+    expect(renderer.root.findAllByProps({ accessibilityLabel: 'Start Day 1' })).toHaveLength(0);
+    expect(renderer.root.findAllByType(Button).filter((button) => button.props.label === 'Continue Day 1')).toHaveLength(1);
+  });
+
+  it('does not promote a next session while progress is loading and keeps every day visibly unknown', () => {
+    mockProgressLoading = true;
+    let renderer!: ReturnType<typeof create>;
+    act(() => { renderer = create(<PlansScreen />); });
+
+    expect(renderer.root.findAllByProps({ children: 'Next session' })).toHaveLength(0);
+    expect(renderer.root.findByProps({ children: 'Day 1 status unknown' })).toBeTruthy();
+    expect(renderer.root.findByProps({ children: 'Day 2 status unknown' })).toBeTruthy();
+  });
+
+  it.each([
+    ['profile', 'fetching'],
+    ['profile', 'paused'],
+    ['plan', 'fetching'],
+    ['plan', 'paused'],
+    ['progress', 'fetching'],
+    ['progress', 'paused'],
+  ] as const)('keeps cached days unknown while %s is %s', (source, state) => {
+    if (source === 'profile') {
+      mockProfileFetching = state === 'fetching';
+      mockProfileFetchStatus = state;
+    } else if (source === 'plan') {
+      mockPlanFetching = state === 'fetching';
+      mockPlanFetchStatus = state;
+    } else {
+      mockProgressFetching = state === 'fetching';
+      mockProgressFetchStatus = state;
+    }
+
+    let renderer!: ReturnType<typeof create>;
+    act(() => { renderer = create(<PlansScreen />); });
+
+    expect(renderer.root.findAllByProps({ children: 'Next session' })).toHaveLength(0);
+    expect(renderer.root.findByProps({ children: 'Day 1 status unknown' })).toBeTruthy();
+    expect(renderer.root.findByProps({ children: 'Day 2 status unknown' })).toBeTruthy();
+  });
+
+  it('never gives a template session a logger start action', () => {
     mockPlanSource = 'template';
     let renderer!: ReturnType<typeof create>;
     act(() => { renderer = create(<PlansScreen />); });
     expect(renderer.root.findByProps({ children: 'Training template' })).toBeTruthy();
-    expect(renderer.root.findAllByProps({ children: 'Assigned plan' })).toHaveLength(0);
+    expect(renderer.root.findAllByProps({ children: 'Next session' })).toHaveLength(0);
     expect(renderer.root.findAllByProps({ accessibilityLabel: 'Start Day 1' })).toHaveLength(0);
-    expect(renderer.root.findByProps({ accessibilityLabel: 'Show details for Squat' })).toBeTruthy();
   });
 
-});
+  it('waits for last-seen hydration before marking rendered assigned data as seen', () => {
+    let renderer!: ReturnType<typeof create>;
+    act(() => { renderer = create(<PlansScreen />); });
+    expect(mockMarkSeen).not.toHaveBeenCalled();
+    mockProvenanceReady = true;
+    act(() => renderer.update(<PlansScreen />));
+    expect(mockMarkSeen).toHaveBeenCalledTimes(1);
+  });
 
-it('gives simultaneous training failures distinct accessible retry names', () => {
-  mockWorkoutPlanError = true;
-  mockProgressError = true;
-  let renderer!: ReturnType<typeof create>;
-  act(() => { renderer = create(<PlansScreen />); });
-  act(() => renderer.root.findByProps({ accessibilityLabel: 'Retry training plan' }).props.onPress());
-  act(() => renderer.root.findByProps({ accessibilityLabel: 'Retry training history' }).props.onPress());
-  expect(mockPlanRefetch).toHaveBeenCalled();
-  expect(mockProgressRefetch).toHaveBeenCalled();
+  it('keeps plan and progress retries distinct', () => {
+    mockWorkoutPlanError = true;
+    mockProgressError = true;
+    let renderer!: ReturnType<typeof create>;
+    act(() => { renderer = create(<PlansScreen />); });
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'Retry training plan' }).props.onPress());
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'Retry training history' }).props.onPress());
+    expect(mockPlanRefetch).toHaveBeenCalledTimes(1);
+    expect(mockProgressRefetch).toHaveBeenCalledTimes(1);
+  });
 });

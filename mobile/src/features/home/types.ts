@@ -6,7 +6,7 @@ import type { DailyCheckIn } from '@/types/db';
 export type HomeSection<T> =
   | { state: 'loading' }
   | { state: 'error'; retry: () => void }
-  | { state: 'ready'; data: T; stale: boolean; retry: () => void };
+  | { state: 'ready'; data: T; stale: boolean; refreshing?: boolean; retry: () => void };
 
 export type RecordDay = {
   date: string;

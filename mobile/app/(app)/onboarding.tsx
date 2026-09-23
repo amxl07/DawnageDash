@@ -1,6 +1,5 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Play } from 'lucide-react-native';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
@@ -14,15 +13,16 @@ import {
 
 import { Logo } from '@/components/brand';
 import { TimezonePicker } from '@/components/onboarding/TimezonePicker';
-import { VideoStep } from '@/components/onboarding/VideoStep';
 import { Button, ProgressBar, Screen, SkeletonCard, StickyActionBar, Text } from '@/components/ui';
 import { MotionReveal } from '@/components/ui/MotionReveal';
 import { SetupStage } from '@/features/onboarding/SetupStage';
 import { useSetupController } from '@/features/onboarding/useSetupController';
+import { setupDestination } from '@/features/onboarding/setup-model';
+import { CheckInGuideSheet } from '@/features/program/CheckInGuideSheet';
 import { spacing, useTheme } from '@/theme';
 
-const titles = ['Your next chapter\nstarts here.', 'A rhythm that\nworks for you.', 'Your space.\nYour starting point.'];
-const subtitles = ['What would you like to work toward?', 'A simple connection between your day, your plan and your coach.', 'Take a moment to check your choices.'];
+const titles = ['Make this\nyour beginning.', 'A little each day.\nA clearer way forward.', 'Your Day 1.\nWhen you’re ready.'];
+const subtitles = ['Choose a focus. Your coach will help shape the plan.', 'Two simple habits, with your coach alongside you.', 'Your first submitted check-in starts your program. You choose when to begin.'];
 
 type FocusTarget = View & { focus?: () => void };
 
@@ -49,22 +49,23 @@ export default function OnboardingScreen() {
   const titleRef = useRef<View>(null);
   const [timezoneOpen, setTimezoneOpen] = useState(false);
   const timezoneTriggerRef = useRef<View>(null);
-  const [showVideo, setShowVideo] = useState(false);
-  useEffect(() => { setShowVideo(false); }, [setup.stage]);
+  const [showGuide, setShowGuide] = useState(false);
+  const guideTriggerRef = useRef<View>(null);
+  useEffect(() => { setShowGuide(false); }, [setup.stage]);
   useLayoutEffect(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
     focusSetupTitle(titleRef.current as FocusTarget | null);
   }, [setup.stage]);
   useEffect(() => {
-    const subscription = AppState.addEventListener('change', (state) => { if (state !== 'active') setShowVideo(false); });
+    const subscription = AppState.addEventListener('change', (state) => { if (state !== 'active') setShowGuide(false); });
     return () => subscription.remove();
   }, []);
   const next = async () => {
     const finalStage = setup.stage === 2;
     if (await setup.continue() && finalStage) {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      AccessibilityInfo.announceForAccessibility('Setup saved. Welcome to your Home.');
-      router.replace('/(app)/(tabs)');
+      AccessibilityInfo.announceForAccessibility(setup.values.startPreference === 'start_now' ? 'Setup saved. Let’s begin your first check-in.' : 'Setup saved. You can wait for your coach on Home.');
+      router.replace(setupDestination(setup.values.startPreference));
     }
   };
   return <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -93,12 +94,14 @@ export default function OnboardingScreen() {
           {setup.loadError ? <View style={{ gap: spacing.base }}>
             <Text tone="muted">We couldn’t load your saved choices.</Text><Button label="Try again" onPress={setup.retry} />
           </View> : setup.loading ? <SkeletonCard lines={4} /> : <>
-            <SetupStage stage={setup.stage} values={setup.values} disabled={setup.isSaving} onGoal={setup.setGoal} onTimezone={() => setTimezoneOpen(true)} onEditGoal={setup.editGoal} timezoneTriggerRef={timezoneTriggerRef} />
-            {setup.stage < 2 ? <View style={{ gap: spacing.md }}>
+            <SetupStage stage={setup.stage} values={setup.values} disabled={setup.isSaving} onGoal={setup.setGoal} onTimezone={() => setTimezoneOpen(true)} onEditGoal={setup.editGoal} onStartPreference={setup.setStartPreference} timezoneTriggerRef={timezoneTriggerRef} />
+            {setup.stage === 1 ? <View style={{ gap: spacing.md }}>
               <Pressable
-                onPress={() => setShowVideo((value) => !value)}
+                ref={guideTriggerRef}
+                onPress={() => setShowGuide(true)}
                 accessibilityRole="button"
-                accessibilityState={{ expanded: showVideo }}
+                accessibilityLabel="Try a practice check-in"
+                accessibilityState={{ expanded: showGuide }}
                 style={({ pressed }) => ({
                   minHeight: 48,
                   flexDirection: 'row',
@@ -107,19 +110,18 @@ export default function OnboardingScreen() {
                   backgroundColor: pressed ? colors.pressed : 'transparent',
                 })}
               >
-                <Play size={16} color={colors.mutedForeground} accessible={false} />
-                <Text variant="bodySm" tone="muted">{showVideo ? 'Close video' : 'A short introduction (optional)'}</Text>
+                <Text variant="label" tone="primary">Try a practice check-in</Text>
               </Pressable>
-              {showVideo ? <VideoStep videoId={setup.stage === 0 ? 'QX3_LQxnMXI' : 'zmyQxmksUuc'} title="Meet Dawnage" /> : null}
             </View> : null}
           </>}
         </MotionReveal>
       </View>
     </Screen>
-    <StickyActionBar onHeightChange={setFooterHeight} primaryLabel={setup.stage === 2 ? 'Open my Home' : 'Continue'} primaryTestID="setup-continue" onPrimary={() => { void next(); }}
-      primaryLoading={setup.isSaving} primaryDisabled={setup.loading || setup.loadError || !setup.values.primaryGoal}
+    <StickyActionBar onHeightChange={setFooterHeight} primaryLabel={setup.stage === 2 ? setup.values.startPreference === 'start_now' ? 'Start my first check-in' : setup.values.startPreference === 'wait_for_coach' ? 'Go to my Home' : 'Choose how to begin' : 'Continue'} primaryTestID="setup-continue" onPrimary={() => { void next(); }}
+      primaryLoading={setup.isSaving} primaryDisabled={setup.loading || setup.loadError || !setup.values.primaryGoal || (setup.stage === 2 && !setup.values.startPreference)}
       secondaryLabel={setup.stage > 0 ? 'Back' : undefined} onSecondary={setup.back}
       status={setup.error ? <Text tone="destructive" variant="bodySm" accessibilityLiveRegion="polite">{setup.error}</Text> : undefined} />
     <TimezonePicker visible={timezoneOpen} onClose={() => setTimezoneOpen(false)} selected={setup.values.timezone} onSelect={setup.setTimezone} returnFocusRef={timezoneTriggerRef} />
+    <CheckInGuideSheet visible={showGuide} onClose={() => setShowGuide(false)} returnFocusRef={guideTriggerRef} />
   </View>;
 }

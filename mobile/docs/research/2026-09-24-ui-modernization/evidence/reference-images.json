@@ -1,0 +1,52 @@
+[
+  {
+    "file": "references/moonlitt-grouped-controls.jpg",
+    "source_url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/38/4e/32/384e3279-c0ad-0622-50b0-3b64d3f3fa45/05.jpg/320x480bb.jpg",
+    "app_store_url": "https://apps.apple.com/us/app/moonlitt-moon-phase-tracker/id6444718902?uo=4",
+    "name": "Moonlitt: Moon Phase Tracker",
+    "version_at_retrieval": "2.9",
+    "version_release_date": "2026-09-10T18:28:02Z",
+    "retrieved_during": "2026-09-23/24 Asia/Kolkata",
+    "evidence_type": "developer App Store marketing screenshot; not a hands-on capture",
+    "sha256": "c3b2f0a77a1cb3133b8343cc2a52dbe3f1d790527c00b8b59570728727391418"
+  },
+  {
+    "file": "references/outsiders-training-hierarchy.jpg",
+    "source_url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/d2/80/3d/d2803d0e-3cfc-2a65-5aeb-0703240bc570/iphone_2@3x.png/320x480bb.jpg",
+    "app_store_url": "https://apps.apple.com/us/app/the-outsiders-fitness-tracker/id6751584800?uo=4",
+    "name": "The Outsiders Fitness Tracker",
+    "version_at_retrieval": "1.8.1",
+    "version_release_date": "2026-09-23T07:47:31Z",
+    "retrieved_during": "2026-09-23/24 Asia/Kolkata",
+    "evidence_type": "developer App Store marketing screenshot; not a hands-on capture",
+    "sha256": "22be0c70a04ecb15a316fb129c00c100696f6cef47f2fa13202d16eaaa0df7df"
+  },
+  {
+    "file": "references/tide-guide-charts.jpg",
+    "source_url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/89/bd/e8/89bde881-4951-15e9-3c13-404e1c5bedbd/App_Store_-_6.7_-_2.png/320x480bb.jpg",
+    "app_store_url": "https://apps.apple.com/us/app/tide-guide-charts-tables/id1406371071?uo=4",
+    "name": "Tide Guide: Charts & Tables",
+    "version_at_retrieval": "27.0.4",
+    "version_release_date": "2026-09-21T20:47:40Z",
+    "retrieved_during": "2026-09-23/24 Asia/Kolkata",
+    "evidence_type": "developer App Store marketing screenshot; not a hands-on capture",
+    "sha256": "0b908c5e67b64a6609e36efce4774b71fe64ab7ffb73741c530939bdd9bcd244"
+  },
+  {
+    "file": "references/hevy-workout-entry.jpg",
+    "source_url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/9e/20/11/9e2011c2-ef21-e716-c60a-5c2fe0b26297/a66b427f-5742-4ef6-9f1f-7fb2aeb5f927_screenshot1.png/392x696bb.png",
+    "app_store_url": "https://apps.apple.com/us/app/hevy-workout-tracker-gym-log/id1458862350?uo=4",
+    "name": "Hevy - Workout Tracker Gym Log",
+    "version_at_retrieval": "3.1.15",
+    "version_release_date": "2026-09-21T13:26:40Z",
+    "retrieved_during": "2026-09-23/24 Asia/Kolkata",
+    "evidence_type": "developer App Store marketing screenshot; not a hands-on capture",
+    "sha256": "7da3adfca40639d4c69eecb657944b713c385cafd0f0803a9c93cff49feb86ec"
+  },
+  {
+    "file": "references/expo-native-button-styles.webp",
+    "source_url": "https://raw.githubusercontent.com/expo/expo/sdk-57/docs/public/static/images/expo-ui/button/ios-light.webp",
+    "evidence_type": "official Expo SDK 57 documentation image; not a Dawnage mockup",
+    "sha256": "891e487b1af82b21e5962a34c3e9a90c9033efe856e5b4ad69c50d2e2a133cb1"
+  }
+]

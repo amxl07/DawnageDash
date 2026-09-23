@@ -10,7 +10,7 @@ import { createCheckInIntentQueue } from '@/features/checkin/checkInIntent';
 import { Button, ErrorState, Screen, SkeletonCard, StickyActionBar, Text } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { registerCheckInExitGuard } from '@/features/checkin/checkInExitGuard';
-import { CheckInReceipt } from '@/features/checkin/components/CheckInReceipt';
+import { CheckInCompletion } from '@/features/checkin/components/CheckInCompletion';
 import { DailyRecordHeader } from '@/features/checkin/components/DailyRecordHeader';
 import { MotionReveal } from '@/components/ui/MotionReveal';
 import { NumericCommitProvider, useNumericCommits } from '@/features/checkin/components/NumericCommitProvider';
@@ -19,6 +19,9 @@ import { buildHistoryStats } from '@/features/checkin/history';
 import type { CheckInStep, FormState } from '@/features/checkin/model';
 import { useCheckInEditor } from '@/features/checkin/useCheckInEditor';
 import { findPreviousCheckIn } from '@/hooks/useCheckInMutation';
+import { useUserProfile } from '@/hooks/usePlans';
+import { resolveProgramStatus } from '@/features/program/program-status';
+import { FirstCheckInNotice } from '@/features/program/FirstCheckInNotice';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { processCheckInHistory, type RawDailyCheckIn } from '@/lib/checkin-utils';
 import { validateCheckIn, validateCheckInStep } from '@/lib/checkin-validation';
@@ -45,6 +48,15 @@ export function CheckInJourney() {
   if (!dateProblem) hasShownValidDate.current = true;
   const initialDate = useRef(typeof requested === 'string' && !dateProblem ? requested : localDateString()).current;
   const editor = useCheckInEditor(initialDate);
+  const profile = useUserProfile();
+  const program = resolveProgramStatus({
+    today: localDateString(), startDate: profile.data?.package_start_date,
+    checkInDates: [...(editor.checkIns?.map((row) => row.date) ?? []), ...(editor.receipt?.status === 'synced' ? [editor.receipt.date] : [])],
+    pendingDates: editor.localRecords?.map((row) => row.date) ?? [],
+    ready: profile.data !== undefined && profile.data !== null && !profile.isError && !profile.isFetching && profile.fetchStatus !== 'paused' && editor.checkIns !== undefined && !editor.historyIsStale && !editor.historyRefreshing && editor.loadState === 'ready',
+  });
+  const firstCheckIn = program.kind === 'not-started';
+  const [firstReceiptDate, setFirstReceiptDate] = useState<string | null>(null);
   const editorRef = useRef(editor); editorRef.current = editor;
   const commits = useNumericCommits();
   const motion = useMotion();
@@ -178,6 +190,8 @@ export function CheckInJourney() {
 
   const submit = async () => {
     if (!commitNumbers()) return;
+    const starting = firstCheckIn;
+    const reportingDate = editorRef.current.date;
     const reportingScope = editorRef.current.getSnapshot;
     const result = await editorRef.current.submit();
     if (!mounted.current || editorRef.current.getSnapshot !== reportingScope) return;
@@ -189,6 +203,7 @@ export function CheckInJourney() {
       if (first) revealField(first.id);
     }
     if (result === 'queued' || result === 'synced') {
+      if (starting) setFirstReceiptDate(reportingDate);
       AccessibilityInfo.announceForAccessibility(result === 'synced' ? 'Check-in saved and synced.' : 'Check-in saved on this device. Waiting to sync.');
       // Only this explicit submit requests the receipt. Newer work still gates rendering.
       if (mounted.current) setEditing(false);
@@ -251,7 +266,9 @@ export function CheckInJourney() {
   const primaryLabel = isReview
     ? editor.existing || editor.receipt
       ? 'Save changes'
-      : isToday
+      : firstCheckIn
+        ? 'Save check-in & start Day 1'
+        : isToday
         ? 'Submit check-in'
         : 'Submit for this day'
     : 'Continue';
@@ -267,8 +284,10 @@ export function CheckInJourney() {
     <Screen ref={scrollRef} archetype="root" footerHeight={inlineActions || showReceipt ? 0 : footerHeight}>
       <MotionReveal revision={flowRevision} style={{ gap: spacing.lg }} testID="checkin-flow-handoff">
         {dateProblem ? <View style={{ gap: spacing.sm }}><Text accessibilityRole="alert">{dateProblem}</Text><Button label="Return to today" variant="secondary" onPress={() => { void changeDate(localDateString()); }} /></View> : null}
-        {showReceipt && editor.receipt ? <CheckInReceipt receipt={editor.receipt} onEdit={() => setEditing(true)} onHome={() => router.navigate('/(app)/(tabs)')} /> : <>
+        {showReceipt && editor.receipt ? <CheckInCompletion receipt={editor.receipt} firstCheckIn={firstReceiptDate === editor.date} onEdit={() => setEditing(true)} onHome={() => router.navigate('/(app)/(tabs)')} /> : <>
           <DailyRecordHeader editor={editor} onHistory={openHistory} />
+          {firstCheckIn && (editor.step === 0 || isReview) ? <FirstCheckInNotice date={editor.date} review={isReview} /> : null}
+          {program.kind === 'unknown' && isReview && !editor.existing && !editor.receipt ? <Text variant="bodySm" tone="muted">If this is your first check-in, submitting it starts Day 1 on the reporting date above. Saving a draft does not start your program.</Text> : null}
           {!isToday ? <Text variant="bodySm" tone="muted">{editor.existing ? 'Editing a historical record.' : 'Recording a past day.'} This date stays selected until you change it.</Text> : null}
           {editor.historyIsStale ? <Text variant="bodySm" tone="muted">Showing saved history. Recent updates are unavailable.</Text> : null}
           {Object.keys(visibleErrors).length ? <Text accessibilityRole="alert" accessibilityLiveRegion="polite">Please complete the highlighted fields.</Text> : null}

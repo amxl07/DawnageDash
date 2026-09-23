@@ -63,6 +63,7 @@ export function RestDock({ prescribedSeconds, preference, onPreferenceChange, pr
   onPreferenceChange: (preference: Preference) => void;
   preferenceError?: string | null;
 }) {
+  const { colors } = useTheme();
   const timer = useRestTimer();
   const [expanded, setExpanded] = useState(false);
   const prescribed = prescribedSeconds && Number.isFinite(prescribedSeconds) && prescribedSeconds > 0 ? prescribedSeconds : null;
@@ -71,9 +72,12 @@ export function RestDock({ prescribedSeconds, preference, onPreferenceChange, pr
   const mmss = `${Math.floor(timer.remaining / 60)}:${String(timer.remaining % 60).padStart(2, '0')}`;
   return <View testID="rest-dock" style={{ gap: spacing.xs }}>
     <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm }}>
-      <Text variant="bodySm" numeric accessibilityLabel={active ? `Rest ${timer.paused ? 'paused' : 'running'}, ${timer.remaining} seconds remaining` : timer.complete ? 'Rest finished' : 'Rest timer ready'} style={{ flex: 1 }}>
-        {active ? `Rest · ${mmss}${timer.paused ? ' · paused' : ''}` : timer.complete ? 'Rest finished' : 'Rest'}
-      </Text>
+      <View style={{ flex: 1, gap: spacing.xs }}>
+        <Text variant="overline" tone={active ? 'primary' : 'muted'}>Rest</Text>
+        <Text variant={active ? 'h2' : 'bodySm'} numeric accessibilityLabel={active ? `Rest ${timer.paused ? 'paused' : 'running'}, ${timer.remaining} seconds remaining` : timer.complete ? 'Rest finished' : 'Rest timer ready'}>
+          {active ? `${mmss}${timer.paused ? ' · paused' : ''}` : timer.complete ? 'Rest finished' : 'Rest after each set'}
+        </Text>
+      </View>
       {active ? <>
         <RestAction label={timer.paused ? 'Resume' : 'Pause'} accessibilityLabel={timer.paused ? 'Resume rest timer' : 'Pause rest timer'} onPress={timer.toggle} />
         <RestAction label="+15s" accessibilityLabel="Extend rest by 15 seconds" onPress={() => timer.extend(15)} />
@@ -81,6 +85,9 @@ export function RestDock({ prescribedSeconds, preference, onPreferenceChange, pr
       </> : seconds ? <RestAction label={`Start ${seconds}s`} accessibilityLabel={`Start ${seconds} second rest`} onPress={() => timer.start(seconds)} /> : null}
       <Button label={expanded ? 'Less' : 'Rest options'} variant="ghost" icon={<DisclosureChevron expanded={expanded} />} onPress={() => setExpanded((open) => !open)} />
     </View>
+    {active ? <View accessibilityRole="progressbar" accessibilityLabel="Rest time remaining" accessibilityValue={{ min: 0, max: timer.duration, now: timer.remaining, text: `${timer.remaining} seconds remaining` }} style={{ height: 4, overflow: 'hidden', borderRadius: radius.pill, backgroundColor: colors.elevated }}>
+      <View style={{ width: `${timer.duration > 0 ? Math.max(0, Math.min(100, (timer.remaining / timer.duration) * 100)) : 0}%`, height: '100%', borderRadius: radius.pill, backgroundColor: colors.primary }} />
+    </View> : null}
     {expanded ? <View style={{ gap: spacing.sm }}>
       <Text variant="bodySm" tone="muted">{prescribed ? `Prescribed rest · ${prescribed} seconds` : preference.seconds ? `Your rest choice · ${preference.seconds} seconds` : 'Choose your rest duration.'}</Text>
       {!prescribed ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>{REST_PRESETS.map((duration) => <Button key={duration} label={`${duration}s`} variant="secondary" onPress={() => onPreferenceChange({ ...preference, seconds: duration })} />)}</View> : null}

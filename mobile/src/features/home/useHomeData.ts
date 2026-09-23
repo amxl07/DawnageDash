@@ -16,7 +16,9 @@ import { homePlanSection } from './home-state';
 
 function section<T>(query: UseQueryResult<T>): HomeSection<T> {
   const retry = () => { void query.refetch(); };
-  if (query.data !== undefined) return { state: 'ready', data: query.data, stale: query.isError, retry };
+  // Invalidation retains cached rows. Empty rows cannot prove absence while
+  // their replacement is fetching or paused offline. Keep errors separate.
+  if (query.data !== undefined) return { state: 'ready', data: query.data, stale: query.isError, refreshing: query.isFetching || query.fetchStatus === 'paused', retry };
   if (query.isError) return { state: 'error', retry };
   return { state: 'loading' };
 }

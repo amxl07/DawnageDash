@@ -7,7 +7,7 @@ import { useUserProfile } from '@/hooks/usePlans';
 import { mergeProfileData } from '@/lib/profile-data';
 import { supabase } from '@/lib/supabase';
 import { detectTimezone } from '@/lib/timezones';
-import { hydrateSetup, nextSetupMilestone, type PrimaryGoal, type SetupStageIndex, type SetupValues } from './setup-model';
+import { hydrateSetup, nextSetupMilestone, type PrimaryGoal, type SetupStageIndex, type SetupValues, type StartPreference } from './setup-model';
 
 export type { PrimaryGoal, SetupStageIndex, SetupValues } from './setup-model';
 
@@ -37,6 +37,7 @@ export function useSetupController() {
   const continueSetup = useCallback(async (): Promise<boolean> => {
     const userId = user?.id;
     if (!userId || hydrated.current !== userId || inFlight.current || !values.primaryGoal) return false;
+    if (stage === 2 && !values.startPreference) return false;
     inFlight.current = true;
     setSaving(true); setError(null);
     const active = () => mounted.current && currentUser.current === userId;
@@ -45,7 +46,7 @@ export function useSetupController() {
       if (readError) throw readError;
       if (!active()) return false;
       const next = nextSetupMilestone(current.onboarding_step ?? 0, stage);
-      const patch = { primary_goal: values.primaryGoal, timezone: values.timezone };
+      const patch = { primary_goal: values.primaryGoal, timezone: values.timezone, ...(values.startPreference ? { start_preference: values.startPreference } : {}) };
       const { data: saved, error: writeError } = await supabase.from('users').update({ profile_data: mergeProfileData(current.profile_data, patch), onboarding_step: next }).eq('id', userId).select('*').single();
       if (writeError) throw writeError;
       if (!active()) return false;
@@ -69,6 +70,7 @@ export function useSetupController() {
     retry: () => { void profile.refetch(); void milestone.refetch(); },
     setGoal: (primaryGoal: PrimaryGoal) => { if (!inFlight.current) setValues((previous) => ({ ...previous, primaryGoal })); },
     setTimezone: (timezone: string) => { if (!inFlight.current) setValues((previous) => ({ ...previous, timezone })); },
+    setStartPreference: (startPreference: StartPreference) => { if (!inFlight.current) setValues((previous) => ({ ...previous, startPreference })); },
     back: () => { if (!inFlight.current) { setStage((previous) => Math.max(0, previous - 1) as SetupStageIndex); setError(null); } },
     editGoal: () => { if (!inFlight.current) setStage(0); },
     continue: continueSetup,

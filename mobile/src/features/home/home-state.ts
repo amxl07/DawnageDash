@@ -34,7 +34,7 @@ export function actionReadiness(input: {
   hasRecovery: boolean;
   localReady: boolean;
 }): boolean {
-  return input.hasRecovery || (input.localReady && (input.hasToday || input.hasLocalToday || (input.checkIns.state === 'ready' && !input.checkIns.stale)));
+  return input.hasRecovery || (input.localReady && (input.hasToday || input.hasLocalToday || (input.checkIns.state === 'ready' && !input.checkIns.stale && !input.checkIns.refreshing)));
 }
 
 export function homePlanSection(

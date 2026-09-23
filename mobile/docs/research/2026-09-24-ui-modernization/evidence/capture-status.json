@@ -1,0 +1,22 @@
+{
+  "source_revision": "7e8a9c2bc7b8208f60d1de575a3756b54ab31b89",
+  "source_dirty": true,
+  "platform": "Expo web / headless Chrome",
+  "preview_url": "http://localhost:8094",
+  "fixture_backend": "https://preview.invalid",
+  "result": "blocked before any screenshots",
+  "reason": "Chrome did not expose its debugger within 45 seconds.",
+  "node": "22.16.0",
+  "chrome": "150.0.7871.125",
+  "macOS": "12.7.6",
+  "xcode_path": "/Library/Developer/CommandLineTools",
+  "native_validated": false,
+  "accepted_app_screenshots": 0,
+  "attempted_screens": [
+    "home",
+    "checkin",
+    "workout",
+    "training",
+    "nutrition"
+  ]
+}

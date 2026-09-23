@@ -10,6 +10,14 @@ import { useOnboarding } from '@/hooks/useOnboarding';
 import { useTheme } from '@/theme';
 import { Button, Screen, Text } from '@/components/ui';
 import { resolveAppGate } from '@/features/onboarding/routing';
+import { setupDestination, hydrateSetup } from '@/features/onboarding/setup-model';
+import { useUserProfile } from '@/hooks/usePlans';
+
+function CompletedSetupRedirect() {
+  const profile = useUserProfile();
+  if (profile.isLoading) return <Booting />;
+  return <Redirect href={setupDestination(hydrateSetup(profile.data?.profile_data, 'UTC').startPreference)} />;
+}
 
 function AccessRecovery({ role, retry, signOut }: { role: boolean; retry: () => Promise<unknown>; signOut: () => Promise<void> }) {
   const [busy, setBusy] = useState(false);
@@ -66,7 +74,7 @@ export default function AppLayout() {
 
   const onOnboarding = pathname === '/onboarding';
   if (step < 3 && !onOnboarding) return <Redirect href="/(app)/onboarding" />;
-  if (step >= 3 && onOnboarding) return <Redirect href="/(app)/(tabs)" />;
+  if (step >= 3 && onOnboarding) return <CompletedSetupRedirect />;
 
   return (
     <RestTimerProvider key={session.user.id} userId={session.user.id}>

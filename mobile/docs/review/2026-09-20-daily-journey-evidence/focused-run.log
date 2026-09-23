@@ -1,0 +1,133 @@
+PASS src/screens/__tests__/tabs/index.test.tsx (202.883 s)
+FAIL src/screens/__tests__/tabs/plans.test.tsx (101.608 s)
+  ● Training route › uses Continue for an active draft and keeps a single focused action
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 1
+    Received length: 3
+    Received array:  [{"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}]
+
+      267 |     expect(renderer.root.findByProps({ accessibilityLabel: 'Continue Day 1' })).toBeTruthy();
+      268 |     expect(renderer.root.findAllByProps({ accessibilityLabel: 'Start Day 1' })).toHaveLength(0);
+    > 269 |     expect(renderer.root.findAllByProps({ accessibilityLabel: 'Continue Day 1' })).toHaveLength(1);
+          |                                                                                    ^
+      270 |   });
+      271 |
+      272 |   it('does not promote a next session while progress is loading and keeps every day visibly unknown', () => {
+
+      at Object.toHaveLength (src/screens/__tests__/tabs/plans.test.tsx:269:84)
+
+PASS src/screens/__tests__/tabs/logs.test.tsx (20.37 s)
+FAIL src/components/plans/PlanDayCard.test.tsx
+  ● PlanDayCard › preserves count, notes, video alternative, expansion state, and 44pt actions
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+    -   "minHeight": 44,
+    +   "minHeight": 48,
+      }
+
+      131 |     expect(disclosure.props.accessibilityState).toEqual({ expanded: false });
+      132 |     expect(disclosure.props.testID).toBe('plan-current-day');
+    > 133 |     expect(StyleSheet.flatten(disclosure.props.style({ pressed: false }))).toMatchObject({ minHeight: 44 });
+          |                                                                            ^
+      134 |     expect(renderer.root.findByProps({ children: 'Upper body · 1 exercise' })).toBeTruthy();
+      135 |
+      136 |     act(() => disclosure.props.onPress());
+
+      at Object.toMatchObject (src/components/plans/PlanDayCard.test.tsx:133:76)
+
+  ● PlanDayCard › opens the full prescription from the exercise inside its day disclosure
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "minHeight": 44,
+    -   "minWidth": 44,
+    +   "minHeight": 48,
+    +   "minWidth": 48,
+      }
+
+      158 |       accessibilityLabel: 'Show details for Shoulder press',
+      159 |     });
+    > 160 |     expect(StyleSheet.flatten(details.props.style({ pressed: false }))).toMatchObject({ minWidth: 44, minHeight: 44 });
+          |                                                                         ^
+      161 |
+      162 |     act(() => details.props.onPress());
+      163 |
+
+      at Object.toMatchObject (src/components/plans/PlanDayCard.test.tsx:160:73)
+
+PASS src/components/logger/WorkoutSummary.test.tsx (7.877 s)
+PASS src/features/checkin/components/CheckInCompletion.test.tsx
+FAIL src/screens/__tests__/tabs/navigation.test.tsx
+  ● daily journey tab navigation › shows only Home, Check In, Training, Nutrition and You
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 0
+    + Received  + 5
+
+      Array [
+        "index",
+    +   "index",
+    +   "check-in",
+        "check-in",
+        "plans",
+    +   "plans",
+        "nutrition",
+    +   "nutrition",
+    +   "more",
+        "more",
+      ]
+
+      58 |     const visible = screens.filter((node) => node.props.tabOptions.href !== null);
+      59 |
+    > 60 |     expect(visible.map((node) => node.props.tabName)).toEqual(['index', 'check-in', 'plans', 'nutrition', 'more']);
+         |                                                       ^
+      61 |     expect(visible.map((node) => node.props.tabOptions.title)).toEqual(['Home', 'Check In', 'Training', 'Nutrition', 'You']);
+      62 |     expect(renderer.root.findByProps({ testID: 'tab-logs' }).props.tabOptions.href).toBeNull();
+      63 |   });
+
+      at Object.toEqual (src/screens/__tests__/tabs/navigation.test.tsx:60:55)
+
+FAIL src/screens/__tests__/tabs/nutrition.test.tsx
+  ● Nutrition route › keeps meal targets, supplements and coach notes together
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected substring: "2200 kcal · vegetarian"
+    Received string:    "{\"type\":\"View\",\"props\":{\"archetype\":\"root\"},\"children\":[{\"type\":\"View\",\"props\":{\"style\":{\"gap\":24}},\"children\":[{\"type\":\"Text\",\"props\":{\"variant\":\"h1\"},\"children\":[\"Nutrition\"]},{\"type\":\"View\",\"props\":{\"style\":{\"gap\":12}},\"children\":[{\"type\":\"View\",\"props\":{\"style\":{\"gap\":4}},\"children\":[{\"type\":\"Text\",\"props\":{\"variant\":\"label\",\"tone\":\"muted\"},\"children\":[\"Daily target\"]},{\"type\":\"Text\",\"props\":{\"variant\":\"h2\",\"numeric\":true},\"children\":[\"2200\",\" kcal · \",\"vegetarian\"]}]},{\"type\":\"View\",\"props\":{\"style\":{\"gap\":8}},\"children\":[{\"type\":\"View\",\"props\":{\"style\":{\"flexDirection\":\"row\",\"flexWrap\":\"wrap\",\"justifyContent\":\"space-between\",\"gap\":8}},\"children\":[{\"type\":\"Text\",\"props\":{\"variant\":\"h2\"},\"children\":[\"Breakfast\"]},{\"type\":\"Text\",\"props\":{\"variant\":\"bodySm\",\"tone\":\"muted\",\"numeric\":true},\"children\":[\"500\",\" kcal\"]}]},{\"type\":\"Text\",\"props\":{\"variant\":\"bodySm\"},\"children\":[\"Oats\"]},{\"type\":\"View\",\"props\":{\"style\":{\"flexDirection\":\"row\",\"flexWrap\":\"wrap\",\"gap\":12}},\"children\":[{\"type\":\"Text\",\"props\":{\"variant\":\"bodySm\",\"tone\":\"muted\",\"numeric\":true},\"children\":[\"P\",\" \",\"25\",\"g\"]},{\"type\":\"Text\",\"props\":{\"variant\":\"bodySm\",\"tone\":\"muted\",\"numeric\":true},\"children\":[\"C\",\" \",\"70\",\"g\"]},{\"type\":\"Text\",\"props\":{\"variant\":\"bodySm\",\"tone\":\"muted\",\"numeric\":true},\"children\":[\"F\",\" \",\"12\",\"g\"]}]}]},{\"type\":\"View\",\"props\":{},\"children\":[{\"type\":\"Text\",\"props\":{\"variant\":\"bodySm\",\"tone\":\"muted\",\"numeric\":true},\"children\":[\"Daily total \",\"500\",\" kcal ·\",\" \",\"25\",\"g protein\"]}]},{\"type\":\"View\",\"props\":{\"style\":{\"gap\":12}},\"children\":[{\"type\":\"Text\",\"props\":{\"variant\":\"h2\"},\"children\":[\"Supplements\"]},{\"type\":\"View\",\"props\":{\"style\":{\"gap\":4,\"paddingTop\":0,\"borderTopWidth\":0,\"borderTopColor\":\"#ddd\"}},\"children\":[{\"type\":\"Text\",\"props\":{},\"children\":[\"Vitamin D\"]},{\"type\":\"Text\",\"props\":{\"variant\":\"bodySm\",\"tone\":\"muted\"},\"children\":[\"1 capsule\",\" · Morning\"]}]}]},{\"type\":\"View\",\"props\":{\"style\":{\"gap\":12}},\"children\":[{\"type\":\"Text\",\"props\":{\"variant\":\"h2\"},\"children\":[\"Coach notes\"]},{\"type\":\"Text\",\"props\":{\"variant\":\"bodySm\"},\"children\":[\"Keep meals consistent.\"]},{\"type\":\"View\",\"props\":{\"style\":{\"gap\":4}},\"children\":[{\"type\":\"Text\",\"props\":{\"variant\":\"label\",\"tone\":\"muted\"},\"children\":[\"Cardio\"]},{\"type\":\"Text\",\"props\":{\"variant\":\"bodySm\"},\"children\":[\"Walk after lunch.\"]}]}]}]}]}]}"
+
+      66 |     act(() => { renderer = create(<NutritionScreen />); });
+      67 |     const text = JSON.stringify(renderer.toJSON());
+    > 68 |     expect(text).toContain('2200 kcal · vegetarian');
+         |                  ^
+      69 |     expect(text).toContain('Oats');
+      70 |     expect(text).toContain('Vitamin D');
+      71 |     expect(text).toContain('Keep meals consistent.');
+
+      at Object.toContain (src/screens/__tests__/tabs/nutrition.test.tsx:68:18)
+
+PASS src/features/checkin/components/CheckInReceipt.test.tsx
+PASS src/features/training/training-navigation.test.ts
+PASS src/screens/__tests__/tabs/logs-alias.test.tsx
+PASS src/features/checkin/completion-next-step.test.ts
+PASS src/screens/__tests__/logger.test.tsx
+PASS src/features/checkin/CheckInJourney.integration.test.tsx
+PASS src/__tests__/maestro-contract.test.ts (8.081 s)
+PASS src/screens/__tests__/tabs/check-in.test.tsx (29.613 s)
+
+Test Suites: 4 failed, 12 passed, 16 total
+Tests:       5 failed, 150 passed, 155 total
+Snapshots:   0 total
+Time:        432.117 s, estimated 555 s
+Ran all test suites within paths "src/screens/__tests__/tabs/index.test.tsx", "src/features/checkin/completion-next-step.test.ts", "src/features/checkin/components/CheckInCompletion.test.tsx", "src/features/checkin/components/CheckInReceipt.test.tsx", "src/components/logger/WorkoutSummary.test.tsx", "src/screens/__tests__/tabs/plans.test.tsx", "src/screens/__tests__/tabs/check-in.test.tsx", "src/features/checkin/CheckInJourney.integration.test.tsx", "src/screens/__tests__/logger.test.tsx", "src/features/training/training-navigation.test.ts", "src/screens/__tests__/tabs/logs.test.tsx", "src/screens/__tests__/tabs/logs-alias.test.tsx", "src/screens/__tests__/tabs/navigation.test.tsx", "src/screens/__tests__/tabs/nutrition.test.tsx", "src/components/plans/PlanDayCard.test.tsx", "src/__tests__/maestro-contract.test.ts".

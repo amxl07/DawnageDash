@@ -94,12 +94,15 @@ it('opens final review from exercise completion before calling persistence', asy
   await fireEvent.press(view.getByRole('button', { name: 'Save workout' }));
   expect(session.save).toHaveBeenCalledTimes(1);
 });
-it('keeps partial review and Add exercise inside Overview instead of the persistent footer', async () => {
+it('keeps Add exercise in Overview and exposes partial-workout review from the logger', async () => {
   session.state = { ...session.state, exercises: [workoutExercise('a', 'Squat', false)] };
   const view = await render(<LoggerScreen />);
   expect(view.getByTestId('workout-rest-footer')).toBeTruthy();
   expect(view.queryByLabelText('Add an exercise')).toBeNull();
-  expect(view.queryByRole('button', { name: 'Finish workout' })).toBeNull();
+  await fireEvent.press(view.getByRole('button', { name: 'Finish workout' }));
+  expect(session.save).not.toHaveBeenCalled();
+  expect(view.getByRole('button', { name: 'Save workout' })).toBeTruthy();
+  await fireEvent.press(view.getByRole('button', { name: 'Return to editing' }));
   await fireEvent.press(view.getByTestId('workout-overview'));
   const exerciseName = view.getByTestId('workout-exercise-name');
   expect(exerciseName.props.sheetAware).toBe(true);

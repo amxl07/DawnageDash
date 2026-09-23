@@ -64,12 +64,12 @@ export function ExerciseSlide({ exercise, prescription, targetReps, targetDurati
           <Text variant="h1" accessibilityRole="header" style={{ letterSpacing: -0.5 }}>{exercise.name}</Text>
           <Text variant="bodySm" tone="muted">{completed} of {exercise.sets.length} sets complete</Text>
         </View>
-        {prescription ? <Pressable onPress={() => setDetailsOpen(true)} accessibilityRole="button" accessibilityLabel={'Show details for ' + exercise.name} style={({ pressed }) => ({ minWidth: 48, minHeight: 48, justifyContent: 'center', borderRadius: radius.sm, backgroundColor: pressed ? colors.primarySoft : 'transparent' })}>
-          <Text variant="bodySm" tone="primary">Details</Text>
+        {prescription ? <Pressable onPress={() => setDetailsOpen(true)} accessibilityRole="button" accessibilityLabel={'Open exercise guide for ' + exercise.name} accessibilityHint="View coach notes, targets, and any available demonstration." style={({ pressed }) => ({ minWidth: 48, minHeight: 48, justifyContent: 'center', paddingHorizontal: spacing.sm, borderRadius: radius.sm, backgroundColor: pressed ? colors.primarySoft : 'transparent' })}>
+          <Text variant="bodySm" tone="primary">Exercise guide</Text>
         </Pressable> : null}
       </View>
 
-      {allComplete && !active ? <View testID="exercise-complete" accessibilityLiveRegion="polite" style={{ gap: spacing.sm }}>
+      {allComplete && !active ? <View testID="exercise-complete" accessibilityLiveRegion="polite" style={{ gap: spacing.sm, padding: spacing.base, borderRadius: radius.card, borderLeftWidth: 3, borderLeftColor: colors.success, backgroundColor: colors.elevated }}>
         <Text variant="h2">Exercise complete</Text>
         <Text variant="bodySm" tone="muted">All sets are complete. You can continue or open Sets to edit an entry.</Text>
         {onContinue ? <Button testID="workout-continue" label={continueLabel} onPress={onContinue} /> : null}
@@ -103,7 +103,7 @@ export function ExerciseSlide({ exercise, prescription, targetReps, targetDurati
       /> : null}
       </MotionReveal>
       <MotionReveal revision={lastCompleted?.id ?? 'none'} testID="completed-set-handoff">
-        {lastCompleted ? <View accessibilityLiveRegion="polite" style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+        {lastCompleted ? <View accessibilityLiveRegion="polite" style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radius.sm, backgroundColor: colors.elevated }}>
           <Check size={iconSize.sm} color={colors.success} strokeWidth={2.3} accessible={false} />
           <Text variant="bodySm" style={{ flex: 1 }}>{lastCompleted.label} complete</Text>
           <Pressable

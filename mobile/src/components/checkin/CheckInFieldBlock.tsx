@@ -13,9 +13,10 @@ type Props = {
   children: ReactNode;
   testID?: string;
   focusTarget?: (node: View | null) => void;
+  description?: string;
 };
 
-export function CheckInFieldBlock({ label, complete, error, children, testID, focusTarget }: Props) {
+export function CheckInFieldBlock({ label, complete, error, children, testID, focusTarget, description }: Props) {
   const { colors } = useTheme();
   const { isCompact } = useResponsiveLayout();
 
@@ -27,9 +28,9 @@ export function CheckInFieldBlock({ label, complete, error, children, testID, fo
         paddingVertical: spacing.md,
         paddingHorizontal: isCompact ? spacing.xs : spacing.md,
         borderRadius: radius.md,
-        borderWidth: error || complete ? 2 : 1,
-        borderColor: error ? colors.primary : complete ? colors.borderStrong : colors.border,
-        backgroundColor: complete ? colors.elevated : colors.card,
+        borderWidth: 1,
+        borderColor: error ? colors.destructive : 'transparent',
+        backgroundColor: colors.card,
       }}
     >
       <View
@@ -39,15 +40,16 @@ export function CheckInFieldBlock({ label, complete, error, children, testID, fo
         tabIndex={Platform.OS === 'web' ? -1 : undefined}
         style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
       >
-        <Text variant="label" tone="muted" style={{ flex: 1 }}>{label}</Text>
+        <Text variant="h2" style={{ flex: 1 }}>{label}</Text>
         {complete && !error ? (
           <View testID={testID ? `${testID}-complete` : undefined} accessible={false}>
             <CheckCircle2 size={iconSize.sm} color={colors.primary} accessible={false} />
           </View>
         ) : null}
       </View>
+      {description ? <Text variant="bodySm" tone="muted">{description}</Text> : null}
       {children}
-      {error ? <Text variant="bodySm" tone="primary" accessibilityLiveRegion="polite">{error}</Text> : null}
+      {error ? <Text variant="bodySm" tone="destructive" accessibilityLiveRegion="polite">{error}</Text> : null}
     </View>
   );
 }

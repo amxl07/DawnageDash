@@ -331,9 +331,9 @@ describe('CheckInForm', () => {
     const stress = ratingOptions(readiness, 'Stress out of 10');
 
     expect(energy.map((option) => option.props.accessibilityLabel))
-      .toEqual(Array.from({ length: 10 }, (_, index) => `Energy out of 10, ${index + 1}${index === 0 ? ', Low' : index === 9 ? ', High' : ''}`));
+      .toEqual(Array.from({ length: 10 }, (_, index) => `Energy out of 10, ${index + 1}${index === 0 ? ', Exhausted' : index === 9 ? ', Very energetic' : ''}`));
     expect(stress.map((option) => option.props.accessibilityLabel))
-      .toEqual(Array.from({ length: 10 }, (_, index) => `Stress out of 10, ${index + 1}${index === 0 ? ', Low' : index === 9 ? ', High' : ''}`));
+      .toEqual(Array.from({ length: 10 }, (_, index) => `Stress out of 10, ${index + 1}${index === 0 ? ', Relaxed' : index === 9 ? ', Very stressed' : ''}`));
     expect(ratingOption(readiness, 'checkin-energy-rating-7').props.accessibilityState)
       .toEqual({ selected: true, checked: true });
     expect(ratingOption(readiness, 'checkin-stress-rating-3').props.accessibilityState)

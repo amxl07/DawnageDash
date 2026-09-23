@@ -6,6 +6,7 @@ import { EMPTY_FORM } from '@/features/checkin/model';
 
 let mockParams: Record<string, string> = {};
 let mockEditor: any;
+let mockProfile: any = { data: { package_start_date: '2026-09-01' }, isError: false };
 const mockNavigate = jest.fn();
 const mockSetParams = jest.fn();
 const mockDispatch = jest.fn();
@@ -20,15 +21,19 @@ const mockScrollIntoView = jest.fn();
 const mockMeasureLayout = jest.fn();
 const mockFieldNode = { focus: mockWebFocus, scrollIntoView: mockScrollIntoView, measureLayout: mockMeasureLayout };
 let mockRegisterFields = false;
+jest.mock('lucide-react-native', () => ({ Check: () => null, Clock3: () => null, CircleAlert: () => null, ClipboardCheck: () => null }));
 jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: mockNavigate, setParams: mockSetParams }), useLocalSearchParams: () => mockParams }));
 jest.mock('expo-router/react-navigation', () => ({ useNavigation: () => ({ dispatch: mockDispatch }), usePreventRemove: (_enabled: boolean, callback: (event: any) => void) => { mockRemove = callback; }, useFocusEffect: (callback: () => void) => { require('react').useEffect(callback, [callback]); } }));
 jest.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'u' } }) }));
+jest.mock('@/hooks/usePlans', () => ({ useUserProfile: () => mockProfile, useWorkoutPlan: () => ({ data: { source: 'none', days: [] } }) }));
 jest.mock('@/features/checkin/useCheckInEditor', () => ({ useCheckInEditor: () => mockEditor }));
 jest.mock('@/features/checkin/components/NumericCommitProvider', () => ({
   NumericCommitProvider: ({ children }: { children: React.ReactNode }) => children,
   useNumericCommits: () => mockNumericCommits,
 }));
 jest.mock('@/hooks/useCheckInMutation', () => ({ findPreviousCheckIn: () => null }));
+jest.mock('@/features/home/useHomeDate', () => ({ useHomeDate: () => require('@/lib/dates').localDateString() }));
+jest.mock('@/features/home/useHomeLocal', () => ({ useHomeLocal: () => ({ data: undefined, isError: false }) }));
 jest.mock('@/hooks/useResponsiveLayout', () => ({ useResponsiveLayout: () => ({ height: 850, fontScale: 1 }) }));
 jest.mock('@/features/checkin/history', () => ({ buildHistoryStats: () => ({}) }));
 jest.mock('@/lib/checkin-utils', () => ({ processCheckInHistory: () => [] }));
@@ -55,16 +60,34 @@ jest.mock('@/components/ui', () => {
   const Button = ({ label, onPress, testID, disabled }: any) => <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} testID={testID} disabled={disabled}><Text>{label}</Text></Pressable>;
   return { Text, Button, Card: View, Screen: React.forwardRef(function MockScreen({ children }: any, _ref: unknown) { return <View>{children}</View>; }), ErrorState: ({ title, message, onRetry }: any) => <View><Text>{title}</Text><Text>{message}</Text><Button label="Retry" onPress={onRetry} /></View>, SkeletonCard: () => <Text>Loading record</Text>, RecordStatus: ({ value }: any) => <Text>{value}</Text>, StickyActionBar: ({ primaryLabel, onPrimary, primaryTestID, secondaryLabel, onSecondary }: any) => <View testID="sticky-action-bar"><Button testID={primaryTestID} label={primaryLabel} onPress={onPrimary} /><Button label={secondaryLabel} onPress={onSecondary} /></View>, Sheet: ({ visible, children }: any) => visible ? <View>{children}</View> : null, SheetScrollView: View };
 });
-jest.mock('@/theme', () => ({ spacing: { xs: 4, sm: 8, md: 12, base: 16, lg: 24 }, useMotion: () => ({ enabled: false }) }));
+jest.mock('@/theme', () => ({ spacing: { xs: 4, sm: 8, md: 12, base: 16, lg: 24 }, useMotion: () => ({ enabled: false }), useTheme: () => ({ colors: {} }) }));
 const { Text: MockText, Button: MockButton } = require('@/components/ui');
 
 beforeEach(() => {
   jest.clearAllMocks(); mockParams = {}; mockRegisterFields = false;
+  mockProfile = { data: { package_start_date: '2026-09-01' }, isError: false };
   mockNumericFlush.mockReset().mockReturnValue(true);
   mockFlush.mockReset().mockResolvedValue(true);
   mockChangeDate.mockReset().mockResolvedValue(true);
   mockSubmit.mockReset().mockResolvedValue('invalid');
   mockEditor = { date: '2026-09-14', form: { ...EMPTY_FORM }, errors: {}, loadState: 'ready', draftState: 'clean', deliveryState: 'idle', generation: 0, submittedGeneration: null, isSubmitting: false, hasEdits: false, step: 0, receipt: null, failure: null, recoveryMessage: null, firstInvalidField: null, checkIns: [], existing: null, historyIsStale: false, flushDraft: mockFlush, refreshDelivery: jest.fn(async () => {}), submit: mockSubmit, requestDateChange: mockChangeDate, retryLoad: jest.fn(), setStep: jest.fn(), getSnapshot: () => mockEditor.form, updateForm: jest.fn(), discardDraft: jest.fn(async () => true) };
+});
+
+it('explains the start date and requires the explicit first check-in submission', async () => {
+  mockProfile = { data: { package_start_date: null }, isError: false };
+  mockEditor.step = 3;
+  const screen = await render(<CheckInScreen />);
+  expect(screen.getByText(/This check-in starts Day 1/)).toBeTruthy();
+  expect(mockSubmit).not.toHaveBeenCalled();
+  await fireEvent.press(screen.getByRole('button', { name: 'Save check-in & start Day 1' }));
+  expect(mockSubmit).toHaveBeenCalledTimes(1);
+});
+
+it('never presents unknown history as a confirmed first check-in', async () => {
+  mockProfile = { data: undefined, isError: true };
+  mockEditor.step = 3;
+  const screen = await render(<CheckInScreen />);
+  expect(screen.queryByRole('button', { name: 'Save check-in & start Day 1' })).toBeNull();
 });
 
 it.each(['2026-02-30', 'bad-date', '2999-01-01'])('visibly rejects route date %s before formatting', async (date) => {
@@ -240,4 +263,15 @@ it('keeps a mounted editor frozen until Home supplies an explicit next-day date'
   mockParams = { date: '2026-09-15' };
   await screen.rerender(<CheckInScreen />);
   expect(mockChangeDate).toHaveBeenCalledWith('2026-09-15', expect.any(Function));
+});
+
+
+it('keeps a synced receipt as proof of program start while history is refreshing', async () => {
+  mockProfile = { data: { package_start_date: null }, isError: false };
+  mockEditor.step = 3;
+  mockEditor.receipt = { date: '2026-09-14', form: { ...EMPTY_FORM }, status: 'synced', generation: 0 };
+  mockEditor.hasEdits = true;
+  const view = await render(<CheckInScreen />);
+  expect(view.queryByText(/This check-in starts Day 1/)).toBeNull();
+  expect(view.queryByRole('button', { name: 'Save check-in & start Day 1' })).toBeNull();
 });

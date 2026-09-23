@@ -20,7 +20,7 @@ name: Setup preserves a goal through Back and completes after review
     id: "setup-goal-muscle_gain"
 - tapOn:
     id: "setup-continue"
-- assertVisible: "A moment for your day"
+- assertVisible: "Check in with your day"
 - tapOn: "Back"
 - assertVisible:
     id: "setup-goal-muscle_gain"
@@ -28,11 +28,22 @@ name: Setup preserves a goal through Back and completes after review
     id: "setup-continue"
 - tapOn:
     id: "setup-continue"
+- scrollUntilVisible:
+    element:
+      id: "setup-start-wait_for_coach"
+    direction: DOWN
+- tapOn:
+    id: "setup-start-wait_for_coach"
+- scrollUntilVisible:
+    element:
+      text: "Your timezone"
+    direction: DOWN
+- assertVisible: "Your timezone"
 - assertVisible: "Your focus"
-- assertVisible: "Profile timezone"
 - tapOn:
     id: "setup-continue"
 - extendedWaitUntil:
     visible:
       id: "home-screen"
     timeout: 20000
+- assertVisible: "Ready when.*"

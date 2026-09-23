@@ -32,16 +32,22 @@ const waitSeconds = Number(option('wait-seconds', '600'));
 const startupSeconds = Number(option('startup-seconds', '300'));
 const exerciseFlows = args.includes('--exercise-flows');
 const chromePath = option('chrome', process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome');
-const routes = { signin: '/login', onboarding: '/onboarding', 'onboarding-rhythm': '/onboarding', 'onboarding-ready': '/onboarding', home: '/', checkin: '/check-in?date=2026-09-15', workout: '/logger?date=2026-09-15&day=1' };
+const routes = { signin: '/login', signup: '/login', onboarding: '/onboarding', 'onboarding-rhythm': '/onboarding', 'onboarding-ready': '/onboarding', home: '/', welcome: '/', 'first-checkin': '/check-in?date=2026-09-15', checkin: '/check-in?date=2026-09-15', workout: '/logger?date=2026-09-15&day=1', training: '/plans?view=plan', 'training-history': '/plans?view=history', nutrition: '/nutrition' };
 const setupMilestones = { onboarding: 0, 'onboarding-rhythm': 1, 'onboarding-ready': 2 };
 const readyContent = {
   signin: ['Welcome', 'Sign in'],
+  signup: ['Create', 'Full name', 'Email'],
+  welcome: ['Ready when', 'Start my first check-in'],
+  'first-checkin': ['Your first check-in', 'Energy', 'Continue'],
   onboarding: ['1 of 3', 'Fat loss', 'Continue'],
-  'onboarding-rhythm': ['2 of 3', 'A moment for your day', 'Continue'],
-  'onboarding-ready': ['3 of 3', 'Profile timezone', 'Open my Home'],
+  'onboarding-rhythm': ['2 of 3', 'Check in with your day', 'Continue'],
+  'onboarding-ready': ['3 of 3', 'Your timezone', 'Choose how to begin'],
   home: ['Alex', 'Your daily check-in', 'This week'],
   checkin: ['Readiness', 'Energy', 'Stress', 'Continue'],
   workout: ['Bench press', 'Complete set', 'Overview'],
+  training: ['Training', 'Assigned plan', 'Next session', 'Start Day 1'],
+  'training-history': ['Training', 'Workout history', 'Upper body'],
+  nutrition: ['Nutrition', 'No meal plan yet'],
 };
 if (!screenNames.every((name) => name in routes)) throw new Error('Unknown screen selection.');
 if (!['localhost', '127.0.0.1'].includes(new URL(baseUrl).hostname)) throw new Error('Capture requires a local Expo server.');
@@ -113,8 +119,9 @@ const session = { access_token: tokenPart({ alg: 'HS256', typ: 'JWT' }) + '.' + 
 
 function responseFor(request, screen) {
   const url = new URL(request.url);
+  const firstVisit = screen === 'welcome' || screen === 'first-checkin';
   if (url.pathname.startsWith('/auth/v1/')) return url.pathname.endsWith('/user') ? user : session;
-  if (url.pathname.includes('/rpc/get_my_coach')) return [fixtures.coach];
+  if (url.pathname.includes('/rpc/get_my_coach')) return firstVisit ? [] : [fixtures.coach];
   const table = url.pathname.split('/').at(-1);
   let rows = [];
   if (table === 'users') rows = [{ ...fixtures.profile, onboarding_step: setupMilestones[screen] ?? 3 }];
@@ -123,6 +130,10 @@ function responseFor(request, screen) {
   if (table === 'workout_logs') rows = fixtures.workoutLogs;
   if (table === 'workout_plans') rows = fixtures.planDays.map((day) => ({ ...day, user_id: fixtures.userId, level: 'Intermediate', workout_type: 'Gym', sub_category: null, days_per_week: 3, exercises: JSON.stringify(day.exercises) }));
   if (table === 'onboarding_questionnaire') rows = [fixtures.assessment];
+  if (firstVisit) {
+    if (table === 'users') rows = [{ ...fixtures.profile, package_start_date: null, active_workout_plan: null, active_meal_plan: null, profile_data: { ...fixtures.profile.profile_data, start_preference: 'wait_for_coach' }, onboarding_step: 3 }];
+    if (['daily_check_ins', 'workout_logs', 'workout_plans', 'body_measurements'].includes(table)) rows = [];
+  }
   for (const [key, expression] of url.searchParams) {
     const split = expression.indexOf('.');
     const op = expression.slice(0, split);
@@ -206,7 +217,7 @@ try {
     await call('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: theme }, { name: 'prefers-reduced-motion', value: motionPreference }] }, sessionId);
     await call('Fetch.enable', { patterns: [{ urlPattern: '*' }] }, sessionId);
     const clock = 'const RealDate = Date; globalThis.Date = class extends RealDate { constructor(...args) { if (args.length) super(...args); else super("2026-09-15T04:45:00Z"); } static now() { return RealDate.parse("2026-09-15T04:45:00Z"); } };';
-    await call('Page.addScriptToEvaluateOnNewDocument', { source: clock + 'localStorage.clear(); localStorage.setItem("theme-preference", ' + JSON.stringify(theme) + ');' + (screen === 'signin' ? '' : 'localStorage.setItem("sb-preview-auth-token", ' + JSON.stringify(JSON.stringify(session)) + ');') }, sessionId);
+    await call('Page.addScriptToEvaluateOnNewDocument', { source: clock + 'localStorage.clear(); localStorage.setItem("theme-preference", ' + JSON.stringify(theme) + ');' + (['signin', 'signup'].includes(screen) ? '' : 'localStorage.setItem("sb-preview-auth-token", ' + JSON.stringify(JSON.stringify(session)) + ');') }, sessionId);
     await call('Page.navigate', { url: baseUrl + routes[screen] }, sessionId);
     // Close only the already-recorded SVG interop warning in Expo's development
     // toast. Keep it in the manifest; unexpected errors still reject the frame.
@@ -233,6 +244,7 @@ try {
     let content = '';
     for (let attempt = 0; attempt < waitSeconds; attempt++) {
       await delay(1000);
+      if (screen === 'signup') await call('Runtime.evaluate', { expression: 'document.querySelector(\'[data-testid="login-create-account"]\')?.click()' }, sessionId);
       const result = await call('Runtime.evaluate', { expression: 'document.body.innerText', returnByValue: true }, sessionId);
       content = result.result.value || '';
       if (readyContent[screen].every((text) => content.includes(text)) || errors.length) break;

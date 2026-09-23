@@ -22,9 +22,11 @@ const mockSetParams = jest.fn();
 const mockRouter = { navigate: mockNavigate, setParams: mockSetParams };
 const mockReadQueue = jest.fn(async () => mockQueue);
 
+jest.mock('lucide-react-native', () => ({ Check: () => null, Clock3: () => null, CircleAlert: () => null, ClipboardCheck: () => null }));
 jest.mock('expo-router', () => ({ useRouter: () => mockRouter, useLocalSearchParams: () => mockParams }));
 jest.mock('expo-router/react-navigation', () => ({ useNavigation: () => ({ dispatch: jest.fn() }), usePreventRemove: () => {}, useFocusEffect: (callback: () => void) => { require('react').useEffect(callback, [callback]); } }));
 jest.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'u' } }) }));
+jest.mock('@/hooks/usePlans', () => ({ useUserProfile: () => ({ data: { package_start_date: '2026-09-01' }, isError: false }), useWorkoutPlan: () => ({ data: { source: 'none', days: [] } }) }));
 jest.mock('@/hooks/useDashboardData', () => ({ useDailyCheckIns: () => ({ data: mockRows, isLoading: false, isError: mockQueryError, refetch: mockRefetch }) }));
 jest.mock('@/hooks/useCheckInMutation', () => ({ useCheckInMutation: () => ({ mutateAsync: mockSave }), findPreviousCheckIn: () => ({ date: '2026-09-13', morning_weight: 70.6, calorie_intake: 2000 }) }));
 jest.mock('@/hooks/useCheckInDraft', () => ({ clearCheckInDraftIfUnchanged: jest.fn(async () => true), useCheckInDraft: (_user: string, date: string) => require('react').useMemo(() => ({ loadDraft: () => mockLoad(date), saveDraft: mockSaveDraft, saveDraftNow: mockNow, clearDraft: mockClear, draftStatus: 'saved' }), [date]) }));
@@ -32,6 +34,8 @@ jest.mock('./checkInOutbox', () => ({
   readCheckInOutbox: () => mockReadQueue(),
   subscribeCheckInDelivery: (listener: (event: any) => void) => { mockDeliveryListener = listener; return () => { if (mockDeliveryListener === listener) mockDeliveryListener = undefined; }; },
 }));
+jest.mock('@/features/home/useHomeDate', () => ({ useHomeDate: () => require('@/lib/dates').localDateString() }));
+jest.mock('@/features/home/useHomeLocal', () => ({ useHomeLocal: () => ({ data: undefined, isError: false }) }));
 jest.mock('@/hooks/useResponsiveLayout', () => ({ useResponsiveLayout: () => ({ height: 850, fontScale: 1 }) }));
 jest.mock('@/components/checkin/CheckInStageHeader', () => ({ CheckInStageHeader: () => null }));
 jest.mock('@/components/ui/MotionReveal', () => ({ MotionReveal: ({ children }: any) => children }));

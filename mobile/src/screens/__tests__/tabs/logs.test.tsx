@@ -8,7 +8,7 @@ import { act, create } from 'react-test-renderer';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { flushOutbox, readOutbox } from '@/lib/outbox';
-import LogsScreen, { LogCard } from '../../../../app/(app)/(tabs)/logs';
+import { LogCard, WorkoutHistory } from '@/features/training/workout-history';
 
 jest.mock('@react-native-community/netinfo', () => ({ addEventListener: jest.fn(() => jest.fn()) }));
 jest.mock('expo-router/react-navigation', () => ({
@@ -207,7 +207,7 @@ describe('LogCard set history', () => {
   });
 });
 
-describe('LogsScreen outbox ownership', () => {
+describe('WorkoutHistory outbox ownership', () => {
   const mounted = new Set<ReturnType<typeof create>>();
   beforeEach(() => {
     jest.clearAllMocks();
@@ -237,7 +237,7 @@ describe('LogsScreen outbox ownership', () => {
 
     let renderer!: ReturnType<typeof create>;
     await act(async () => {
-      renderer = create(<LogsScreen />); mounted.add(renderer);
+      renderer = create(<WorkoutHistory />); mounted.add(renderer);
       await Promise.resolve();
     });
 
@@ -272,7 +272,7 @@ describe('LogsScreen outbox ownership', () => {
 
     let renderer!: ReturnType<typeof create>;
     await act(async () => {
-      renderer = create(<LogsScreen />); mounted.add(renderer);
+      renderer = create(<WorkoutHistory />); mounted.add(renderer);
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -307,7 +307,7 @@ describe('LogsScreen outbox ownership', () => {
 
     let renderer!: ReturnType<typeof create>;
     await act(async () => {
-      renderer = create(<LogsScreen />); mounted.add(renderer);
+      renderer = create(<WorkoutHistory />); mounted.add(renderer);
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -319,26 +319,26 @@ describe('LogsScreen outbox ownership', () => {
     jest.mocked(useQuery).mockReturnValue({ data: undefined, isLoading: false, isError: true, refetch: jest.fn() } as never);
     jest.mocked(readOutbox).mockResolvedValue([{ id: 'q', user_id: 'user-1', date: '2026-09-10', title: 'Offline workout', content: '{}', existingLogId: null, queuedAt: 1 }]);
     let renderer!: ReturnType<typeof create>;
-    await act(async () => { renderer = create(<LogsScreen />); mounted.add(renderer); await Promise.resolve(); });
+    await act(async () => { renderer = create(<WorkoutHistory />); mounted.add(renderer); await Promise.resolve(); });
     expect(renderer.root.findByProps({ children: 'Offline workout' })).toBeTruthy();
   });
   it('keeps local read-error recovery visible while remote history also fails', async () => {
     jest.mocked(useQuery).mockReturnValue({ data: undefined, isLoading: false, isError: true, refetch: jest.fn() } as never);
     jest.mocked(readOutbox).mockRejectedValue(new Error('unreadable'));
     let renderer!: ReturnType<typeof create>;
-    await act(async () => { renderer = create(<LogsScreen />); mounted.add(renderer); await Promise.resolve(); });
+    await act(async () => { renderer = create(<WorkoutHistory />); mounted.add(renderer); await Promise.resolve(); });
     expect(renderer.root.findByProps({ accessibilityLabel: 'Reload saved workouts' })).toBeTruthy();
   });
   it('hides previous-account local details while the next account read is pending', async () => {
     jest.mocked(readOutbox).mockResolvedValue([{ id: 'q', user_id: 'user-1', date: '2026-09-10', title: 'Private workout', content: '{}', existingLogId: null, queuedAt: 1 }]);
     let renderer!: ReturnType<typeof create>;
-    await act(async () => { renderer = create(<LogsScreen />); mounted.add(renderer); await Promise.resolve(); });
+    await act(async () => { renderer = create(<WorkoutHistory />); mounted.add(renderer); await Promise.resolve(); });
     jest.mocked(useAuth).mockReturnValue({ user: { id: 'user-2' } } as never);
     jest.mocked(readOutbox).mockImplementation(() => new Promise(() => {}));
-    await act(async () => { renderer.update(<LogsScreen />); });
+    await act(async () => { renderer.update(<WorkoutHistory />); });
     expect(renderer.root.findAllByProps({ children: 'Private workout' })).toHaveLength(0);
     jest.mocked(useAuth).mockReturnValue({ user: null } as never);
-    await act(async () => { renderer.update(<LogsScreen />); });
+    await act(async () => { renderer.update(<WorkoutHistory />); });
     expect(renderer.root.findAllByProps({ children: 'Private workout' })).toHaveLength(0);
   });
 

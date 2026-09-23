@@ -55,7 +55,7 @@ export default function LoggerScreen() {
   const frozenToday = useRef(localDateString()).current;
   const date = params.date ?? frozenToday;
   if (typeof date !== 'string' || !isDateKeyStrict(date) || date > localDateString()) {
-    return <Screen><Text variant="h1">This workout date is unavailable</Text><Text variant="bodySm" tone="muted">Open a workout for today or a previous reporting date.</Text><Button label="Back to logs" onPress={() => router.replace('/(app)/(tabs)/logs')} /></Screen>;
+    return <Screen><Text variant="h1">This workout date is unavailable</Text><Text variant="bodySm" tone="muted">Open a workout for today or a previous reporting date.</Text><Button label="Back to history" onPress={() => router.replace('/(app)/(tabs)/logs')} /></Screen>;
   }
   if (!user?.id) return <Screen><Text>Sign in to open your workout.</Text></Screen>;
   const logId = typeof params.logId === 'string' && params.logId ? params.logId : null;
@@ -87,7 +87,8 @@ function WorkoutEditor({ userId, date, logId, outboxId, initialDay }: { userId: 
   const pendingNavigation = useRef<NavigationAction | null>(null);
   const showingExit = useRef(false);
   const overviewTrigger = useRef<View>(null);
-  const { height, fontScale } = useWindowDimensions();
+  const { width, height, fontScale } = useWindowDimensions();
+  const compactHeader = width < 360 || fontScale > 1.3;
   const inlineFooter = keyboardVisible || height < 650 || fontScale > 1.3;
   const { data: previous } = useQuery({
     queryKey: ['previousWorkoutData', userId, date],
@@ -188,7 +189,7 @@ function WorkoutEditor({ userId, date, logId, outboxId, initialDay }: { userId: 
       <Text variant="h1">Choose your workout</Text><Text variant="bodySm" tone="muted">{outboxId ? 'Choose which saved workout should receive the recovered content. Review it before retrying the save.' : 'There is more than one saved workout for this date.'}</Text>
       {session.entry.ids.map((id) => <Button key={id} label={session.records?.find((row) => row.id === id)?.title || 'Open workout'} variant="secondary" onPress={() => { void session.selectLog(id).then((target) => { if (target) router.setParams({ logId: target.logId, outboxId: target.outboxId ?? '' }); }); }} />)}
       {session.error ? <Text variant="bodySm" tone="destructive" accessibilityLiveRegion="polite">{session.error}</Text> : null}
-    </View> : <View style={{ gap: spacing.base }}><Text variant="h1">Couldn’t open this workout</Text><Text variant="bodySm" tone="muted">{session.entry.reason === 'missing-log' ? 'This workout is missing or no longer available to your account. Choose a record from Logs.' : session.entry.reason === 'draft-unreadable' ? 'Your saved local workout could not be read. Retry without replacing it.' : 'Workout data is unavailable. Your saved work has not been replaced.'}</Text><Button label="Retry loading workout" onPress={session.retry} /><Button label="Back to logs" variant="secondary" onPress={() => router.replace('/(app)/(tabs)/logs')} /></View>}
+    </View> : <View style={{ gap: spacing.base }}><Text variant="h1">Couldn’t open this workout</Text><Text variant="bodySm" tone="muted">{session.entry.reason === 'missing-log' ? 'This workout is missing or no longer available to your account. Choose a record from Training History.' : session.entry.reason === 'draft-unreadable' ? 'Your saved local workout could not be read. Retry without replacing it.' : 'Workout data is unavailable. Your saved work has not been replaced.'}</Text><Button label="Retry loading workout" onPress={session.retry} /><Button label="Back to history" variant="secondary" onPress={() => router.replace('/(app)/(tabs)/logs')} /></View>}
   </Screen>;
 
   if (session.legacyText !== undefined) return <Screen><Button label="Close workout" variant="ghost" onPress={() => router.back()} /><Text variant="h1">{state.title}</Text><Card><Text>{session.legacyText}</Text><Text variant="bodySm" tone="muted">This historical note is preserved in Logs. Structured set editing is unavailable for this note.</Text></Card></Screen>;
@@ -198,10 +199,13 @@ function WorkoutEditor({ userId, date, logId, outboxId, initialDay }: { userId: 
   return <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <Screen archetype={inlineFooter ? 'child' : 'editor'} footerHeight={inlineFooter ? 0 : footerHeight}>
       <View style={{ gap: spacing.base }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm }}>
           <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Close workout logger" style={({ pressed }) => ({ minHeight: HIT_SLOP_MIN, minWidth: HIT_SLOP_MIN, justifyContent: 'center', alignItems: 'center', borderRadius: 999, backgroundColor: pressed ? colors.pressed : 'transparent' })}><X size={iconSize.lg} color={colors.foreground} /></Pressable>
-          <View style={{ flex: 1 }}><Text variant="h2">{format(parseLocalDate(date), 'EEE d MMM')}</Text><Text variant="bodySm" tone="muted">{state.existingLogId ? 'Editing saved workout' : 'Your session'}</Text></View>
+          <View style={{ flex: 1, minWidth: 100 }}><Text variant="h2">{format(parseLocalDate(date), 'EEE d MMM')}</Text><Text variant="bodySm" tone="muted">{state.existingLogId ? 'Editing saved workout' : 'Your session'}</Text></View>
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', flexWrap: 'wrap', gap: spacing.xs, ...(compactHeader ? { width: '100%' as const } : {}) }}>
           <Pressable ref={overviewTrigger} testID="workout-overview" accessibilityRole="button" accessibilityLabel="Open workout overview" onPress={() => setOverview(true)} style={({ pressed }) => ({ minHeight: HIT_SLOP_MIN, justifyContent: 'center', paddingHorizontal: spacing.sm, borderRadius: radius.sm, backgroundColor: pressed ? colors.primarySoft : 'transparent' })}><Text variant="bodySm" tone="primary">Overview</Text></Pressable>
+          {state.exercises.length > 0 ? <Pressable testID="logger-finish-visible" accessibilityRole="button" accessibilityLabel="Finish workout" accessibilityHint="Review completed and incomplete sets before saving." onPress={finish} style={({ pressed }) => ({ minHeight: HIT_SLOP_MIN, justifyContent: 'center', paddingHorizontal: spacing.sm, borderRadius: radius.sm, backgroundColor: pressed ? colors.primarySoft : 'transparent' })}><Text variant="bodySm" tone="primary">Finish</Text></Pressable> : null}
+          </View>
         </View>
         {state.isDirty ? session.draftState === 'error' ? <Text variant="bodySm" tone="destructive">Couldn’t save on this device. Keep this screen open.</Text> : session.draftState === 'clean' ? <Text variant="bodySm" tone="muted">Unsaved local changes</Text> : <RecordStatus value={session.draftState === 'writing' ? 'saving-local' : 'draft'} /> : status === 'queued' || status === 'blocked' || status === 'synced' ? <RecordStatus value={status} /> : null}
         <Pressable accessibilityRole="button" accessibilityLabel={'Edit session details. ' + (state.title || 'Untitled workout')} accessibilityState={{ expanded: sessionDetails }}

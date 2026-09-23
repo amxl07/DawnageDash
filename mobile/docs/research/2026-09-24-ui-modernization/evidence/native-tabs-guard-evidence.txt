@@ -1,0 +1,21 @@
+/**
+ * Event map for `NativeTabs` navigation events.
+ * Only `tabPress` is currently supported.
+ */
+export type NativeTabNavigationEventMap = {
+    tabPress: {
+        data: {
+            __internalTabsType: 'native';
+            /**
+             * `true` when the native side prevented the selection because the target
+             * tab is `disabled`. The event is still emitted so listeners are notified,
+             * but no navigation occurs.
+             */
+            isPrevented: boolean;
+        };
+        canPreventDefault: false;
+    };
+};
+export type NativeScreenProps = Partial<Omit<TabsScreenProps, 'screenKey'>>;
+
+Current app uses event.preventDefault() in mobile/app/(app)/(tabs)/_layout.tsx. Native tabs explicitly declare canPreventDefault: false.

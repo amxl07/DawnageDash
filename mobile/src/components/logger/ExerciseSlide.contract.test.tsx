@@ -84,7 +84,7 @@ const incompleteSet: WorkoutSet = {
 };
 
 describe('ExerciseSlide set completion', () => {
-  it('exposes a visible 44 point Details action for a plan prescription', () => {
+  it('exposes a visible 44 point exercise guide action for a plan prescription', () => {
     mockResponsiveLayout({ isCompact: true });
     let renderer!: ReturnType<typeof create>;
     act(() => {
@@ -114,8 +114,9 @@ describe('ExerciseSlide set completion', () => {
 
     const details = renderer.root.findByProps({
       accessibilityRole: 'button',
-      accessibilityLabel: 'Show details for Squat',
+      accessibilityLabel: 'Open exercise guide for Squat',
     });
+    expect(details.props.accessibilityHint).toBe('View coach notes, targets, and any available demonstration.');
     const detailsStyle = typeof details.props.style === 'function'
       ? details.props.style({ pressed: false })
       : details.props.style;

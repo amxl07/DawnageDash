@@ -1,0 +1,13 @@
+{
+  "markdown_files_checked": 4,
+  "relative_links_checked": 16,
+  "source_citations": 30,
+  "component_replacements": 29,
+  "files_added_to_git_status": [
+    "?? mobile/docs/research/",
+    "?? mobile/docs/superpowers/plans/2026-09-24-native-ui-modernization.md"
+  ],
+  "prior_status_entries_removed": [],
+  "failures": [],
+  "note": "Documentation validation only; app tests and native UI validation were not run."
+}

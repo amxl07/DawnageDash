@@ -281,6 +281,6 @@ export function useCheckInEditor(initialDate: string) {
   const firstInvalidField = CHECK_IN_FIELDS.find(({ id }) => state.errors[id])?.id ?? null;
   const draftState = draftStatus === 'saving' ? 'writing' : draftStatus === 'saved' ? 'saved' : draftStatus === 'error' ? 'error' : 'clean';
 
-  return { ...state, date, draftState: draftState as 'clean' | 'writing' | 'saved' | 'error', setField, updateForm, getSnapshot, submit, flushDraft, requestDateChange, discardDraft, retryLoad, startLocalDraft, refreshDelivery, setStep, firstInvalidField, checkIns: query.data, historyIsStale: query.isError, existing: query.data?.find((row) => row.date === date) ?? null };
+  return { ...state, date, draftState: draftState as 'clean' | 'writing' | 'saved' | 'error', setField, updateForm, getSnapshot, submit, flushDraft, requestDateChange, discardDraft, retryLoad, startLocalDraft, refreshDelivery, setStep, firstInvalidField, checkIns: query.data, historyIsStale: query.isError, historyRefreshing: query.isFetching || query.fetchStatus === 'paused', existing: query.data?.find((row) => row.date === date) ?? null };
 }
 export type CheckInEditor = ReturnType<typeof useCheckInEditor>;

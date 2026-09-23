@@ -2,9 +2,7 @@ appId: ${DAWNAGE_E2E_APP_ID}
 name: Workout draft and timer survive interruption
 ---
 - runFlow: helpers/sign-in.yaml
-- tapOn: "Your training and nutrition plans"
-- tapOn:
-    id: "plan-current-day"
+- tapOn: "Training plan and workout history"
 - tapOn:
     text: "Start Day .*"
 - extendedWaitUntil:
@@ -52,14 +50,12 @@ name: Workout draft and timer survive interruption
     when:
       visible: "Home, your dashboard"
     commands:
-      - tapOn: "Your training and nutrition plans"
+      - tapOn: "Training plan and workout history"
 - runFlow:
     when:
       visible:
         id: "plan-current-day"
     commands:
-      - tapOn:
-          id: "plan-current-day"
       - tapOn:
           text: "Continue Day .*"
 - extendedWaitUntil:

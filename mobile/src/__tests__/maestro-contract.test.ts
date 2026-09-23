@@ -110,10 +110,10 @@ describe('Maestro release smoke contract', () => {
 
   it('ships the approved stable ids for ambiguous interactive controls', () => {
     const selectorsBySource = {
-      "app/(auth)/login.tsx": ['login-email', 'login-password'],
+      "app/(auth)/login.tsx": ['login-email', 'login-password', 'login-create-account'],
       'src/features/home/TodayBrief.tsx': ['home-today-action'],
       "app/(app)/(tabs)/check-in.tsx": ['checkin-next', 'checkin-save'],
-      "app/(app)/(tabs)/plans.tsx": ['plan-current-day'],
+      'src/features/training/training-plan.tsx': ['plan-current-day'],
       "app/(app)/logger.tsx": ['workout-overview', 'workout-rest-footer'],
       'src/components/logger/WorkoutOverviewSheet.tsx': ['logger-finish', 'workout-add-exercise', 'workout-exercise-name'],
       'src/components/logger/ExerciseSlide.tsx': ['workout-sets-toggle', 'workout-continue'],
@@ -131,7 +131,7 @@ describe('Maestro release smoke contract', () => {
     }
 
     expect(read('app/(auth)/login.tsx')).toMatch(
-      /\) : \(\s*<>\s*<Input[\s\S]*?testID="login-email"[\s\S]*?label="Email"/,
+      /<Input[\s\S]*?testID="login-email"[\s\S]*?label="Email"/,
     );
   });
 
@@ -142,9 +142,10 @@ describe('Maestro release smoke contract', () => {
     const progress = read('.maestro/progress.yaml');
 
     expect(onboarding).toContain('setup-goal-muscle_gain');
-    expect(onboarding).toContain('A moment for your day');
+    expect(onboarding).toContain('Check in with your day');
     expect(onboarding).toContain('Your focus');
-    expect(onboarding).toContain('Profile timezone');
+    expect(onboarding).toContain('Your timezone');
+    expect(onboarding).toContain('setup-start-wait_for_coach');
     expect(checkIn).toContain('stopApp');
     expect(checkIn).toContain('Saved on this device');
     expect(workout).toContain('pressKey: Home');
@@ -180,7 +181,7 @@ describe('Maestro release smoke contract', () => {
     expect(workoutCommands).toContainEqual({ tapOn: { id: 'workout-sets-toggle' } });
     expect(workoutCommands).toContainEqual({ tapOn: { id: 'workout-overview' } });
     expect(workoutCommands).toContainEqual({ tapOn: { id: 'logger-finish' } });
-    expect(JSON.stringify(workoutCommands)).toContain('Your training and nutrition plans');
+    expect(JSON.stringify(workoutCommands)).toContain('Training plan and workout history');
     expect(JSON.stringify(progressCommands)).toContain('More options');
     expect(progress).toContain("^Photos upload to Dawnage only after you tap Save photos\\..*");
     expect(progress).toMatch(/Close Add measurements/);

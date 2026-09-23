@@ -26,6 +26,8 @@ type CommonProps = {
   label: string;
   value: number | null;
   onChange: (value: number) => void;
+  lowLabel?: string;
+  highLabel?: string;
 };
 
 type Props = CommonProps &
@@ -43,6 +45,8 @@ type RatingOptionProps = {
   label: string;
   testID?: string;
   selectionRevision: number;
+  lowLabel: string;
+  highLabel: string;
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -56,6 +60,8 @@ function RatingOption({
   label,
   testID,
   selectionRevision,
+  lowLabel,
+  highLabel,
 }: RatingOptionProps) {
   const { colors } = useTheme();
   const motion = useMotion();
@@ -122,7 +128,7 @@ function RatingOption({
       accessibilityElementsHidden={!accessible}
       importantForAccessibility={accessible ? 'yes' : 'no'}
       accessibilityRole={accessible ? 'radio' : undefined}
-      accessibilityLabel={accessible ? `${label}, ${option}${option === 1 ? ', Low' : option === 10 ? ', High' : ''}` : undefined}
+      accessibilityLabel={accessible ? `${label}, ${option}${option === 1 ? ', ' + lowLabel : option === 10 ? ', ' + highLabel : ''}` : undefined}
       accessibilityState={accessible ? { selected: active, checked: active } : undefined}
       pressRetentionOffset={16}
       style={[
@@ -168,6 +174,8 @@ export function CheckInRatingScale({
   onChange,
   accessibilityMode = 'adjustable',
   optionTestIDPrefix,
+  lowLabel = 'Low',
+  highLabel = 'High',
 }: Props) {
   const { isCompact, isWide } = useResponsiveLayout();
   const rows = isWide ? [values] : [values.slice(0, 5), values.slice(5, 10)];
@@ -189,9 +197,9 @@ export function CheckInRatingScale({
       accessibilityRole={exposesOptions ? undefined : 'adjustable'}
       accessibilityLabel={exposesOptions ? undefined : label}
       accessibilityValue={
-        exposesOptions ? undefined : value === null ? { text: 'Not selected' } : { min: 1, max: 10, now: value, text: `${value} of 10${value === 1 ? ', Low' : value === 10 ? ', High' : ''}` }
+        exposesOptions ? undefined : value === null ? { text: 'Not selected' } : { min: 1, max: 10, now: value, text: `${value} of 10${value === 1 ? ', ' + lowLabel : value === 10 ? ', ' + highLabel : ''}` }
       }
-      accessibilityHint={exposesOptions ? undefined : "1 means Low; 10 means High. Swipe up or down to choose."}
+      accessibilityHint={exposesOptions ? undefined : `1 means ${lowLabel}; 10 means ${highLabel}. Swipe up or down to choose.`}
       accessibilityActions={
         exposesOptions ? undefined : [{ name: 'increment' }, { name: 'decrement' }]
       }
@@ -226,15 +234,17 @@ export function CheckInRatingScale({
               label={label}
               testID={optionTestIDPrefix ? `${optionTestIDPrefix}-${option}` : undefined}
               selectionRevision={selectionRevision}
+              lowLabel={lowLabel}
+              highLabel={highLabel}
             />
           ))}
         </View>
       ))}
       <View accessible={false} style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: spacing.sm }}>
-        <Text variant="bodySm" tone="muted">1 · Low</Text>
-        <Text variant="bodySm" tone="muted">{value === null ? 'Choose a value' : value + ' of 10'}</Text>
-        <Text variant="bodySm" tone="muted">10 · High</Text>
+        <Text variant="bodySm" tone="muted" style={{ flex: 1 }}>1 · {lowLabel}</Text>
+        <Text variant="bodySm" tone="muted" style={{ flex: 1, textAlign: 'right' }}>10 · {highLabel}</Text>
       </View>
+      <Text variant="bodySm" tone={value === null ? 'muted' : 'primary'} accessibilityLiveRegion="polite">{value === null ? 'Tap the number that feels closest' : value + ' of 10 selected'}</Text>
     </View>
   );
 }

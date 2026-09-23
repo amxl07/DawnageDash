@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router/js-tabs';
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from 'expo-glass-effect';
-import { CheckCircle2, ClipboardList, Dumbbell, LayoutDashboard, UserRound } from 'lucide-react-native';
+import { CheckCircle2, Dumbbell, LayoutDashboard, UserRound, Utensils } from 'lucide-react-native';
 import { Platform, View, type ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -137,23 +137,24 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="plans"
         options={{
-          title: 'Plans',
-          tabBarAccessibilityLabel: 'Your training and nutrition plans',
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon Icon={ClipboardList} color={color} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="logs"
-        options={{
-          title: 'Logs',
-          tabBarAccessibilityLabel: 'Workout logs',
+          title: 'Training',
+          tabBarAccessibilityLabel: 'Training plan and workout history',
           tabBarIcon: ({ color, focused }) => (
             <TabIcon Icon={Dumbbell} color={color} focused={focused} />
           ),
         }}
       />
+      <Tabs.Screen
+        name="nutrition"
+        options={{
+          title: 'Nutrition',
+          tabBarAccessibilityLabel: 'Nutrition plan and coach notes',
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon Icon={Utensils} color={color} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen name="logs" options={{ href: null }} />
       <Tabs.Screen
         name="more"
         options={{

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- Jest mock factories load native primitives lazily. */
 import * as Haptics from 'expo-haptics';
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, within } from '@testing-library/react-native';
 import { useState } from 'react';
 import { Keyboard, StyleSheet } from 'react-native';
 import type { WorkoutExercise } from '@/features/workout/workoutReducer';
@@ -70,4 +70,21 @@ it('keeps number-field geometry stable while showing keyboard focus', async () =
   const focused = StyleSheet.flatten(view.getByTestId('Set 1 weight in kilograms-field').props.style);
   expect(focused.borderColor).toBe('#F04E45');
   expect(focused.borderWidth).toBe(before.borderWidth);
+});
+
+it('separates the prescribed target from actual entries and keeps bodyweight help by weight', async () => {
+  const view = await render(
+    <CurrentSetEditor
+      exercise={exercise}
+      setId="set-1"
+      targetReps="8–10"
+      onChange={jest.fn()}
+      onComplete={jest.fn()}
+    />,
+  );
+
+  expect(within(view.getByTestId('set-target')).getByText('8–10 reps')).toBeTruthy();
+  expect(within(view.getByTestId('set-actual')).getByText('Actual')).toBeTruthy();
+  expect(within(view.getByTestId('current-weight-entry')).getByText('Bodyweight? Leave weight blank.')).toBeTruthy();
+  expect(view.getByText('Complete set → rest → next set')).toBeTruthy();
 });

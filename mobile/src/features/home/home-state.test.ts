@@ -31,3 +31,12 @@ it('counts a pending plan day only within the current reporting week', () => {
   const content = serializeWorkoutContent({ exercises: [], planDayNumber: 2 });
   expect(queuedPlanDays([{ date: '2026-09-15', content }, { date: '2026-09-13', content: serializeWorkoutContent({ exercises: [], planDayNumber: 3 }) }], '2026-09-15')).toEqual([2]);
 });
+
+
+it('waits for an empty history refresh while retaining confirmed and local recovery actions', () => {
+  const input = { checkIns: { ...ready([]), refreshing: true }, hasToday: false, hasLocalToday: false, hasRecovery: false, localReady: true };
+  expect(actionReadiness(input)).toBe(false);
+  expect(actionReadiness({ ...input, hasToday: true })).toBe(true);
+  expect(actionReadiness({ ...input, hasLocalToday: true })).toBe(true);
+  expect(actionReadiness({ ...input, hasRecovery: true })).toBe(true);
+});

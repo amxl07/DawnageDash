@@ -122,7 +122,7 @@ describe('PlanDayCard', () => {
     expect(renderer.root.findByProps({ accessibilityLabel: action })).toBeTruthy();
   });
 
-  it('preserves count, notes, video alternative, expansion state, and 44pt actions', () => {
+  it('preserves count, notes, video alternative, expansion state, and 48pt actions', () => {
     const renderer = renderCard('today', 'plan-current-day');
     const disclosure = renderer.root.findByProps({
       accessibilityLabel: 'Day 2, Upper body, 1 exercise, status: Today',
@@ -130,7 +130,7 @@ describe('PlanDayCard', () => {
 
     expect(disclosure.props.accessibilityState).toEqual({ expanded: false });
     expect(disclosure.props.testID).toBe('plan-current-day');
-    expect(StyleSheet.flatten(disclosure.props.style({ pressed: false }))).toMatchObject({ minHeight: 44 });
+    expect(StyleSheet.flatten(disclosure.props.style({ pressed: false }))).toMatchObject({ minHeight: 48 });
     expect(renderer.root.findByProps({ children: 'Upper body · 1 exercise' })).toBeTruthy();
 
     act(() => disclosure.props.onPress());
@@ -143,7 +143,7 @@ describe('PlanDayCard', () => {
       accessibilityRole: 'button',
       accessibilityLabel: 'Watch demo for Shoulder press',
     });
-    expect(StyleSheet.flatten(video.props.style({ pressed: false }))).toMatchObject({ minWidth: 44, minHeight: 44 });
+    expect(StyleSheet.flatten(video.props.style({ pressed: false }))).toMatchObject({ minWidth: 48, minHeight: 48 });
 
     act(() => video.props.onPress());
     expect(mockOpenBrowserAsync).toHaveBeenCalledWith('https://example.com/press');
@@ -157,7 +157,7 @@ describe('PlanDayCard', () => {
     const details = renderer.root.findByProps({
       accessibilityLabel: 'Show details for Shoulder press',
     });
-    expect(StyleSheet.flatten(details.props.style({ pressed: false }))).toMatchObject({ minWidth: 44, minHeight: 44 });
+    expect(StyleSheet.flatten(details.props.style({ pressed: false }))).toMatchObject({ minWidth: 48, minHeight: 48 });
 
     act(() => details.props.onPress());
 

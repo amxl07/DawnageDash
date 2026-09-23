@@ -20,6 +20,7 @@ import {
   Card,
   Input,
   SegmentedControl,
+  Text,
   type Segment,
 } from '@/components/ui';
 import { HistoryCaption } from '@/features/checkin/components/HistoryCaption';
@@ -123,6 +124,7 @@ export function CheckInForm({
           <CheckInFieldBlock
             key={key}
             label={label}
+            description={key === 'energyLevel' ? 'How much energy did you have today?' : 'How much stress did you feel today?'}
             focusTarget={(node) => registerField?.(key, node)}
             complete={form[key] !== null}
             error={errors[key]}
@@ -130,6 +132,8 @@ export function CheckInForm({
           >
             <CheckInRatingScale
               label={`${label} out of 10`}
+              lowLabel={key === 'energyLevel' ? 'Exhausted' : 'Relaxed'}
+              highLabel={key === 'energyLevel' ? 'Very energetic' : 'Very stressed'}
               value={form[key]}
               onChange={(v) => set(key, v)}
               accessibilityMode="options"
@@ -191,6 +195,7 @@ export function CheckInForm({
           error={errors.sleepHours}
           history={history?.sleepHours}
         >
+          <Text variant="bodySm" tone="muted">Sleep during the night before this reporting date.</Text>
           {showCarryForward ? (
             <PreviousValueButton
               label="Sleep"
@@ -205,6 +210,7 @@ export function CheckInForm({
         </NumericEntry>
         <CheckInFieldBlock
           label="Hunger"
+          description="Think about your appetite across the day."
           focusTarget={(node) => registerField?.('hungerLevel', node)}
           complete={form.hungerLevel !== null}
           error={errors.hungerLevel}
@@ -212,6 +218,8 @@ export function CheckInForm({
         >
           <CheckInRatingScale
             label="Hunger out of 10"
+            lowLabel="No appetite"
+            highLabel="Very hungry"
             value={form.hungerLevel}
             onChange={(v) => set('hungerLevel', v)}
             accessibilityMode="options"
@@ -244,6 +252,7 @@ export function CheckInForm({
       <Card style={{ gap: spacing.base }}>
         <CheckInFieldBlock
           label="Workout"
+          description="Choose Rest for a planned rest day, or No if you didn’t train. Individual sets belong in your workout log."
           focusTarget={(node) => registerField?.('workoutStatus', node)}
           complete={form.workoutStatus !== null}
           error={errors.workoutStatus}
@@ -279,6 +288,8 @@ export function CheckInForm({
             >
               <CheckInRatingScale
                 label="Workout performance out of 10"
+                lowLabel="Struggled"
+                highLabel="Felt strong"
                 value={form.workoutPerformance}
                 onChange={(v) => set('workoutPerformance', v)}
                 accessibilityMode="options"
@@ -294,6 +305,7 @@ export function CheckInForm({
         ) : null}
         <CheckInFieldBlock
           label="Nutrition score"
+          description="How closely did your eating match your goals today? If your meal plan hasn’t arrived, use your current eating goals."
           focusTarget={(node) => registerField?.('nutritionScore', node)}
           complete={form.nutritionScore !== null}
           error={errors.nutritionScore}
@@ -301,6 +313,8 @@ export function CheckInForm({
         >
           <CheckInRatingScale
             label="Nutrition score out of 10"
+            lowLabel="Far from my goals"
+            highLabel="Matched my goals"
             value={form.nutritionScore}
             onChange={(v) => set('nutritionScore', v)}
             accessibilityMode="options"

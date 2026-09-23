@@ -1,8 +1,10 @@
-import { ArrowUpRight, ChevronRight, RefreshCw, UserRound } from 'lucide-react-native';
+import { ArrowUpRight, Check, ChevronRight, Clock3, RefreshCw, UserRound } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Button, Card, SkeletonCard, Text } from '@/components/ui';
+import { MotionReveal } from '@/components/ui/MotionReveal';
 import type { CoachLookup } from '@/hooks/useCoach';
+import type { PlanDay } from '@/hooks/usePlans';
 import type { TodayAction } from '@/lib/today-action';
 import { parseLocalDate } from '@/lib/dates';
 import { iconSize, radius, spacing, useTheme } from '@/theme';
@@ -17,25 +19,33 @@ type Props = {
   onRetry: () => void;
   onProfile: () => void;
   children: React.ReactNode;
+  welcome?: React.ReactNode;
+  programDay?: number;
+  session?: PlanDay;
+  attention?: boolean;
+  deliveryPending?: boolean;
 };
 
 const actionLabels: Record<string, string> = {
-  'check-in': 'Check in', 'resume-checkin': 'Continue your record',
+  'check-in': 'Check in', 'resume-checkin': 'Continue check-in',
   'resume-workout': 'Resume workout', 'review-update': 'Review update',
-  'open-plan': 'View session', 'review-progress': 'View your record',
+  'open-plan': 'Start session', 'review-progress': 'View your record',
 };
 
-export function TodayBrief({ date, firstName, coach, action, actionError, onAction, onRetry, onProfile, children }: Props) {
+export function TodayBrief({ date, firstName, coach, action, actionError, onAction, onRetry, onProfile, children, welcome, programDay, session, attention = false, deliveryPending = false }: Props) {
   const { colors } = useTheme();
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   const dateLabel = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' }).format(parseLocalDate(date));
+  const recorded = action?.kind === 'review-progress' && !attention;
+  const continuing = action?.kind === 'resume-checkin' || action?.kind === 'resume-workout';
   return (
     <View style={styles.page}>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
           <Text variant="bodySm" tone="muted">{dateLabel}</Text>
-          <Text variant="display" accessibilityRole="header" style={styles.greeting}>{greeting},{'\n'}{firstName}.</Text>
+          <Text variant="h1" accessibilityRole="header" style={styles.greeting}>{welcome ? `Welcome, ${firstName}.` : `${greeting}, ${firstName}.`}</Text>
+          {programDay ? <Text variant="bodySm" tone="primary">Day {programDay} of your program</Text> : null}
           {coach?.kind === 'assigned' ? (
             <View style={styles.coach}>
               <View style={[styles.coachMark, { backgroundColor: colors.primary }]} accessible={false} />
@@ -43,7 +53,7 @@ export function TodayBrief({ date, firstName, coach, action, actionError, onActi
                 Coached by <Text variant="bodySm">{coach.coach.full_name || 'Dawnage'}</Text>
               </Text>
             </View>
-          ) : <Text variant="bodySm" tone="muted">{coach?.kind === 'unassigned' ? 'No coach assigned yet' : coach?.kind === 'unavailable' ? 'Coach details are unavailable' : 'Loading coach details…'}</Text>}
+          ) : <Text variant="bodySm" tone="muted">{coach?.kind === 'unassigned' ? 'Waiting for your coach to connect' : coach?.kind === 'unavailable' ? 'Coach details are unavailable' : 'Loading coach details…'}</Text>}
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel="Open your profile" onPress={onProfile}
           style={({ pressed }) => [styles.profile, { backgroundColor: pressed ? colors.elevated : colors.card, borderColor: colors.border }]}>
@@ -51,23 +61,26 @@ export function TodayBrief({ date, firstName, coach, action, actionError, onActi
         </Pressable>
       </View>
 
-      {action ? (
-        <Card style={[styles.action, { borderColor: colors.border }]} testID="home-next-action">
+      {welcome || (action ? (
+        <MotionReveal revision={action.kind + ':' + (session?.day_number ?? '')}>
+        <Card style={[styles.action, { borderColor: recorded ? colors.border : colors.primarySoft, backgroundColor: recorded ? colors.card : colors.primarySoft }]} testID="home-next-action">
           <View style={styles.actionTop}>
-            <Text variant="label" tone="muted">Your next step</Text>
-            <View style={[styles.actionIcon, { backgroundColor: colors.primaryFill }]} accessible={false}>
-              <ArrowUpRight size={23} color={colors.onPrimary} strokeWidth={1.8} />
+            <Text variant="overline" tone="primary">{attention ? 'Needs your attention' : continuing ? 'Ready to continue' : recorded ? 'Your daily record' : 'Your next step'}</Text>
+            <View style={[styles.actionIcon, { backgroundColor: recorded ? colors.elevated : colors.primaryFill }]} accessible={false}>
+              {recorded ? deliveryPending ? <Clock3 size={23} color={colors.primary} strokeWidth={1.8} /> : <Check size={23} color={colors.primary} strokeWidth={1.8} /> : <ArrowUpRight size={23} color={colors.onPrimary} strokeWidth={1.8} />}
             </View>
           </View>
           <View style={{ gap: spacing.sm }}>
-            <Text variant="h1" accessibilityRole="header" style={styles.actionTitle}>{action.title}</Text>
+            <Text variant="h1" accessibilityRole="header" style={styles.actionTitle}>{session?.focus || action.title}</Text>
+            {session ? <Text variant="label" tone="primary">Day {session.day_number} · {session.exercises.length} exercises</Text> : null}
             <Text variant="bodySm" tone="muted" style={styles.actionDetail}>{action.detail}</Text>
           </View>
-          <Button label={action.kind === 'open-plan' && typeof action.route === 'string' ? 'View your plan' : actionLabels[action.kind] || action.title} onPress={onAction} testID="home-today-action" />
+          <Button variant={recorded ? 'secondary' : 'primary'} label={action.kind === 'open-plan' && typeof action.route === 'string' ? 'View your plan' : actionLabels[action.kind] || action.title} onPress={onAction} testID="home-today-action" />
         </Card>
+        </MotionReveal>
       ) : actionError ? (
         <HomeProblem title="Your day is still here" message="We couldn't load the information for your next step." onRetry={onRetry} />
-      ) : <SkeletonCard lines={4} />}
+      ) : <SkeletonCard lines={4} />)}
       {children}
     </View>
   );
@@ -104,10 +117,10 @@ export function HomeProblem({ title, message, onRetry }: { title: string; messag
 }
 
 const styles = StyleSheet.create({
-  page: { gap: 32, paddingBottom: spacing.base },
+  page: { gap: 28, paddingBottom: spacing.base },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.base },
   headerCopy: { flex: 1, minWidth: 0, gap: spacing.sm },
-  greeting: { letterSpacing: -1.1, marginTop: spacing.xs },
+  greeting: { letterSpacing: -0.6, marginTop: spacing.xs },
   profile: { minWidth: 48, minHeight: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   coach: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xs },
   coachMark: { width: 5, height: 5, borderRadius: 3 },

@@ -35,19 +35,21 @@ it('hydrates values and keeps Back local without lowering saved progress', async
 
 it('finishes with one acknowledged merged users-row write', async () => {
   const { result } = await renderHook(useSetupController);
+  await act(() => result.current.setStartPreference('wait_for_coach'));
   await act(async () => { await result.current.continue(); });
   expect(mockWrite).toHaveBeenCalledTimes(1);
-  expect(mockWrite).toHaveBeenCalledWith({ onboarding_step: 3, profile_data: { custom: 7, primary_goal: 'performance', timezone: 'Asia/Kolkata' } });
+  expect(mockWrite).toHaveBeenCalledWith({ onboarding_step: 3, profile_data: { custom: 7, primary_goal: 'performance', timezone: 'Asia/Kolkata', start_preference: 'wait_for_coach' } });
   expect(mockCache).toHaveBeenCalledWith(['onboardingStep', 'setup-user'], 3);
   expect(mockCache).toHaveBeenCalledWith(['userProfile', 'setup-user'], {
     id: 'setup-user', onboarding_step: 3,
-    profile_data: { custom: 7, primary_goal: 'performance', timezone: 'Asia/Kolkata' },
+    profile_data: { custom: 7, primary_goal: 'performance', timezone: 'Asia/Kolkata', start_preference: 'wait_for_coach' },
   });
 });
 
 it('keeps choices on a failed save and suppresses duplicate activation', async () => {
   mockWrite.mockResolvedValue({ data: null, error: new Error('unavailable') });
   const { result } = await renderHook(useSetupController);
+  await act(() => result.current.setStartPreference('start_now'));
   await act(async () => { await Promise.all([result.current.continue(), result.current.continue()]); });
   expect(mockWrite).toHaveBeenCalledTimes(1);
   expect(result.current.stage).toBe(2);
@@ -59,7 +61,15 @@ it('keeps choices on a failed save and suppresses duplicate activation', async (
 it('never replaces a profile when its latest read fails', async () => {
   mockRead.mockResolvedValue({ data: null, error: new Error('unavailable') });
   const { result } = await renderHook(useSetupController);
+  await act(() => result.current.setStartPreference('start_now'));
   await act(async () => { await result.current.continue(); });
   expect(mockWrite).not.toHaveBeenCalled();
   expect(result.current.error).toBeTruthy();
+});
+
+it('does not complete setup or start a program without an explicit start choice', async () => {
+  const { result } = await renderHook(useSetupController);
+  await act(async () => { expect(await result.current.continue()).toBe(false); });
+  expect(mockWrite).not.toHaveBeenCalled();
+  expect(mockCache).not.toHaveBeenCalled();
 });
