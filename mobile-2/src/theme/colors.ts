@@ -1,0 +1,48 @@
+export const palette = {
+  coral: '#ED7D62',
+  coralSoft: '#FFE1D8',
+  ink: '#16201D',
+  ivory: '#FAF7F0',
+  jade: '#137A67',
+  lime: '#B8E35B',
+  mist: '#E7E5DD',
+  night: '#0D171A',
+  slate: '#243438',
+  snow: '#F2F7F5',
+} as const;
+
+export const lightColors = {
+  accent: palette.jade,
+  accentContrast: palette.snow,
+  background: palette.ivory,
+  border: '#D9D7CF',
+  danger: '#B83C31',
+  dangerSurface: '#FCE6E1',
+  muted: '#66716C',
+  onAccent: palette.snow,
+  progressTrack: '#DCE4D7',
+  surface: '#FFFFFF',
+  surfaceRaised: '#F1EFE8',
+  text: palette.ink,
+  textInverse: palette.snow,
+  warning: '#8C5C00',
+  warningSurface: '#FFF1CE',
+} as const;
+
+export const darkColors = {
+  accent: '#69D7B8',
+  accentContrast: palette.night,
+  background: palette.night,
+  border: '#33484B',
+  danger: '#FF9C89',
+  dangerSurface: '#432827',
+  muted: '#A9B8B7',
+  onAccent: palette.night,
+  progressTrack: '#294145',
+  surface: '#142326',
+  surfaceRaised: '#1C3033',
+  text: palette.snow,
+  textInverse: palette.night,
+  warning: '#F6CC76',
+  warningSurface: '#44391F',
+} as const;

@@ -1,8 +1,10 @@
 import * as Notifications from 'expo-notifications';
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 
+import { requestCheckInTabExit } from '@/features/checkin/checkInExitGuard';
+import { localDateString } from '@/lib/dates';
 import { reconcile } from '@/lib/reminders';
 
 // Foreground presentation — otherwise a reminder that fires while the app is
@@ -17,9 +19,16 @@ Notifications.setNotificationHandler({
 });
 
 const ROUTES: Record<string, string> = {
-  '/check-in': '/(app)/(tabs)/check-in',
   '/weekly-feedback': '/(app)/weekly-feedback',
 };
+
+function notificationRoute(data: unknown): Href | null {
+  const url = (data as { url?: string } | null)?.url;
+  if (url === '/check-in') {
+    return { pathname: '/(app)/(tabs)/check-in', params: { date: localDateString() } };
+  }
+  return url && ROUTES[url] ? ROUTES[url] as Href : null;
+}
 
 /**
  * Routes a notification tap, from background AND from a cold start.
@@ -31,11 +40,13 @@ export function useNotificationRouting(enabled: boolean) {
 
   useEffect(() => {
     if (!enabled) return;
+    let active = true;
 
     const go = (data: unknown) => {
-      const url = (data as { url?: string } | null)?.url;
-      const target = url ? ROUTES[url] : null;
-      if (target) router.push(target as never);
+      const target = notificationRoute(data);
+      if (active && target) {
+        void requestCheckInTabExit(() => { if (active) router.push(target); });
+      }
     };
 
     // Cold start: the tap that launched the app.
@@ -43,19 +54,22 @@ export function useNotificationRouting(enabled: boolean) {
       handledColdStart.current = true;
       void Notifications.getLastNotificationResponseAsync().then((response) => {
         if (response) go(response.notification.request.content.data);
-      });
+      }).catch(() => {});
     }
 
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       go(response.notification.request.content.data);
     });
 
-    void reconcile();
+    // Foreground repair is opportunistic; Settings reports explicit scheduling
+    // failures and reads the actual OS schedule when the user opens it.
+    void reconcile().catch(() => {});
     const appSub = AppState.addEventListener('change', (s) => {
-      if (s === 'active') void reconcile();
+      if (s === 'active') void reconcile().catch(() => {});
     });
 
     return () => {
+      active = false;
       sub.remove();
       appSub.remove();
     };

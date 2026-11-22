@@ -1,431 +1,449 @@
-import { ArrowLeft, ChevronDown, Lock, Mail, Phone, User } from 'lucide-react-native';
-import { useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
+import { CircleCheck, Lock, Mail, User, UserRoundCheck } from 'lucide-react-native';
+import { useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, KeyboardAvoidingView, Platform, TextInput, View } from 'react-native';
 
 import { DawnGlow, Logo } from '@/components/brand';
-import { CountryPicker, type Country } from '@/components/auth/CountryPicker';
 import { Button, Card, Input, Screen, Text } from '@/components/ui';
+import { MotionReveal } from '@/components/ui/MotionReveal';
+import {
+  createVerificationRequestGate,
+  friendlyAuthError,
+  requestVerificationEmail,
+  submitAccountEntry,
+  validEmail,
+  VERIFICATION_RESEND_COOLDOWN_MS,
+  type AccountEntryErrors,
+} from '@/features/auth/account-entry';
+import { requestPasswordReset } from '@/lib/password-reset';
 import { supabase } from '@/lib/supabase';
-import { HIT_SLOP_MIN, iconSize, radius, spacing, type, useTheme } from '@/theme';
+import { iconSize, radius, spacing, useTheme } from '@/theme';
 
 type Mode = 'signIn' | 'signUp' | 'forgot';
-type Sent = null | 'verification' | 'reset';
-
-/** Supabase messages are for developers; these are for people. */
-function friendlyError(message: string): string {
-  const m = message.toLowerCase();
-  if (m.includes('invalid login credentials')) return "That email or password doesn't match.";
-  if (m.includes('email not confirmed')) return 'Please confirm your email first — check your inbox.';
-  if (m.includes('already registered')) return 'An account with this email already exists.';
-  if (m.includes('network') || m.includes('fetch')) return 'Check your connection and try again.';
-  return message;
-}
+type Sent =
+  | { kind: 'verification'; email: string }
+  | { kind: 'reset'; email: string }
+  | null;
 
 export default function LoginScreen() {
   const { colors } = useTheme();
   const [mode, setMode] = useState<Mode>('signIn');
-  const [step, setStep] = useState<1 | 2>(1);
   const [sent, setSent] = useState<Sent>(null);
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-
+  const [fieldErrors, setFieldErrors] = useState<AccountEntryErrors>({});
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [country, setCountry] = useState<Country | null>(null);
-  const [countryCode, setCountryCode] = useState('');
-  const [countryOpen, setCountryOpen] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
+  const [resendRetryAt, setResendRetryAt] = useState(0);
+  const [clockNow, setClockNow] = useState(Date.now());
 
   const passwordRef = useRef<TextInput>(null);
-  const confirmRef = useRef<TextInput>(null);
-  const phoneRef = useRef<TextInput>(null);
+  const emailRef = useRef<TextInput>(null);
+  const nameRef = useRef<TextInput>(null);
+  const submission = useRef(false);
+  const requestGeneration = useRef(0);
+  const verificationGate = useRef(createVerificationRequestGate());
 
-  const reset = (next: Mode) => {
+  useEffect(() => {
+    const message = formError || resendMessage || Object.values(fieldErrors).filter(Boolean).join(' ');
+    if (message) AccessibilityInfo.announceForAccessibility(message);
+  }, [fieldErrors, formError, resendMessage]);
+
+  useEffect(() => {
+    if (sent?.kind !== 'verification' || resendRetryAt <= clockNow) return;
+    const timer = setInterval(() => setClockNow(Date.now()), 1_000);
+    return () => clearInterval(timer);
+  }, [clockNow, resendRetryAt, sent?.kind]);
+
+  const switchMode = (next: Mode) => {
+    // Supabase can publish a session before its promise resolves. Keep one
+    // session-changing request in flight across every account-entry mode.
+    if (submission.current) return;
+    requestGeneration.current += 1;
     setMode(next);
-    setStep(1);
     setSent(null);
+    setLoading(false);
+    setResendLoading(false);
     setFormError(null);
     setFieldErrors({});
+    setResendMessage(null);
+    setPassword('');
   };
 
-  // ── confirmation screens ───────────────────────────────────────────────────
-  if (sent) {
-    const isVerification = sent === 'verification';
+  const updateEmail = (value: string) => {
+    setEmail(value);
+    if (fieldErrors.email) setFieldErrors((current) => ({ ...current, email: undefined }));
+  };
+
+  const handleSignIn = async () => {
+    if (submission.current) return;
+    const errors: AccountEntryErrors = {};
+    if (!validEmail(email)) errors.email = 'Enter a valid email address.';
+    if (!password) errors.password = 'Enter your password.';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      if (errors.email) emailRef.current?.focus();
+      else passwordRef.current?.focus();
+      return;
+    }
+
+    submission.current = true;
+    const generation = ++requestGeneration.current;
+    setLoading(true);
+    setFormError(null);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (generation !== requestGeneration.current) return;
+      if (error) throw error;
+      // AuthLayout observes the session and performs the authenticated redirect.
+    } catch (error) {
+      if (generation === requestGeneration.current) setFormError(friendlyAuthError(error));
+    } finally {
+      if (generation === requestGeneration.current) {
+        submission.current = false;
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleSignUp = async () => {
+    if (submission.current) return;
+    submission.current = true;
+    const generation = ++requestGeneration.current;
+    setLoading(true);
+    setFormError(null);
+    try {
+      const result = await submitAccountEntry(supabase.auth, { fullName, email, password });
+      if (generation !== requestGeneration.current) return;
+      if (result.kind === 'invalid') {
+        setFieldErrors(result.errors);
+        if (result.errors.fullName) nameRef.current?.focus();
+        else if (result.errors.email) emailRef.current?.focus();
+        else passwordRef.current?.focus();
+        return;
+      }
+      if (result.kind === 'error') {
+        setFormError(result.message);
+        return;
+      }
+      if (result.kind === 'authenticated') {
+        setPassword('');
+        // Supabase emitted a session; AuthLayout owns the redirect.
+        return;
+      }
+
+      setEmail(result.email);
+      setPassword('');
+      const now = Date.now();
+      const retryAt = now + VERIFICATION_RESEND_COOLDOWN_MS;
+      verificationGate.current = createVerificationRequestGate(retryAt);
+      setClockNow(now);
+      setResendRetryAt(retryAt);
+      setResendMessage(null);
+      setSent({ kind: 'verification', email: result.email });
+    } finally {
+      if (generation === requestGeneration.current) {
+        submission.current = false;
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleForgot = async () => {
+    if (submission.current) return;
+    if (!validEmail(email)) {
+      setFieldErrors({ email: 'Enter a valid email address.' });
+      emailRef.current?.focus();
+      return;
+    }
+
+    submission.current = true;
+    const generation = ++requestGeneration.current;
+    setLoading(true);
+    setFormError(null);
+    try {
+      const normalizedEmail = email.trim();
+      const { error } = await requestPasswordReset(supabase.auth, normalizedEmail);
+      if (generation !== requestGeneration.current) return;
+      if (error) throw error;
+      setEmail(normalizedEmail);
+      setSent({ kind: 'reset', email: normalizedEmail });
+    } catch (error) {
+      if (generation === requestGeneration.current) setFormError(friendlyAuthError(error));
+    } finally {
+      if (generation === requestGeneration.current) {
+        submission.current = false;
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleResend = async () => {
+    if (sent?.kind !== 'verification') return;
+    const generation = requestGeneration.current;
+    setResendLoading(true);
+    setResendMessage(null);
+    const result = await requestVerificationEmail(
+      supabase.auth,
+      sent.email,
+      verificationGate.current,
+    );
+    if (generation !== requestGeneration.current) return;
+    if (result.kind === 'locked') return;
+    if (result.kind === 'error') setResendMessage(result.message);
+    if (result.kind === 'sent') {
+      setResendRetryAt(result.retryAt);
+      setClockNow(Date.now());
+      setResendMessage('A new verification email is on its way.');
+    }
+    if (result.kind === 'cooldown') setResendRetryAt(result.retryAt);
+    if (generation === requestGeneration.current) setResendLoading(false);
+  };
+
+  if (sent?.kind === 'verification') {
+    const secondsRemaining = Math.max(0, Math.ceil((resendRetryAt - clockNow) / 1_000));
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <DawnGlow />
+        <DawnGlow height={300} />
         <Screen>
-          <View style={{ paddingTop: spacing['2xl'], gap: spacing.lg }}>
-          <View style={{ alignItems: 'center', gap: spacing.md }}>
-            <Mail size={iconSize.xl} color={colors.primary} strokeWidth={2} accessible={false} />
-            <Text variant="h1">Check your email</Text>
-            <Text variant="bodySm" tone="muted" style={{ textAlign: 'center' }}>
-              {isVerification
-                ? `We've sent a verification link to ${email}. Confirm it to access your account.`
-                : `We've sent a password reset link to ${email}. Open it on this device to set a new password.`}
-            </Text>
-          </View>
-          <Button label="Back to sign in" onPress={() => reset('signIn')} />
-          <Text variant="bodySm" tone="muted" style={{ textAlign: 'center' }}>
-            Didn&apos;t get it? Check your spam folder.
-          </Text>
+          <View style={{ paddingTop: spacing.xl, gap: spacing.xl }}>
+            <Logo variant="wordmark" size={128} />
+            <MotionReveal revision="verification" style={{ gap: spacing.lg }}>
+              <View
+                accessible
+                accessibilityRole="summary"
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: radius.pill,
+                  backgroundColor: colors.primarySoft,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Mail size={iconSize.xl} color={colors.primary} strokeWidth={2} accessible={false} />
+              </View>
+              <View style={{ gap: spacing.sm }}>
+                <Text variant="overline" tone="primary">One quick step</Text>
+                <Text variant="h1" accessibilityRole="header">Verify your email</Text>
+                <Text variant="body" tone="muted">
+                  We sent a verification link to <Text>{sent.email}</Text>.
+                </Text>
+              </View>
+              <Card elevated style={{ gap: spacing.sm }}>
+                <Text variant="label">What happens next</Text>
+                <Text variant="bodySm" tone="muted">
+                  Open the link in your email, then return to Dawnage. If verification signs you in automatically, we&apos;ll continue for you; otherwise, sign in here.
+                </Text>
+              </Card>
+              {resendMessage ? (
+                <Text
+                  variant="bodySm"
+                  tone={resendMessage.startsWith('A new') ? 'success' : 'destructive'}
+                  accessibilityLiveRegion="polite"
+                >
+                  {resendMessage}
+                </Text>
+              ) : null}
+              <View style={{ gap: spacing.sm }}>
+                <Button
+                  label={secondsRemaining > 0 ? `Resend in ${secondsRemaining}s` : 'Resend verification email'}
+                  variant="secondary"
+                  onPress={handleResend}
+                  loading={resendLoading}
+                  disabled={secondsRemaining > 0}
+                  accessibilityHint="Requests another verification link for this email address"
+                />
+                <Button
+                  label="Use a different email"
+                  variant="ghost"
+                  accessibilityHint="Returns to account creation. This does not edit the pending account."
+                  disabled={loading}
+                  onPress={() => switchMode('signUp')}
+                />
+                <Button label="Back to sign in" variant="ghost" disabled={loading} onPress={() => switchMode('signIn')} />
+              </View>
+              <Text variant="caption" tone="muted" style={{ textAlign: 'center' }}>
+                Still waiting? Check spam or promotions before requesting another link.
+              </Text>
+              <Text variant="caption" tone="muted" style={{ textAlign: 'center' }}>
+                Using a different email starts a new account request; it won&apos;t edit this pending account.
+              </Text>
+            </MotionReveal>
           </View>
         </Screen>
       </View>
     );
   }
 
-  // ── actions ────────────────────────────────────────────────────────────────
-  const validateStep1 = () => {
-    const errs: Record<string, string> = {};
-    if (!fullName.trim()) errs.fullName = 'Please enter your full name.';
-    if (!country) errs.country = 'Please select your country.';
-    if (!phoneNumber.trim()) errs.phone = 'Please enter your phone number.';
-    setFieldErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
+  if (sent?.kind === 'reset') {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <DawnGlow height={280} />
+        <Screen>
+          <View style={{ paddingTop: spacing['2xl'], gap: spacing.lg, alignItems: 'center' }}>
+            <CircleCheck size={iconSize.xl} color={colors.success} strokeWidth={2} accessible={false} />
+            <Text variant="h1" accessibilityRole="header">Check your email</Text>
+            <Text variant="bodySm" tone="muted" style={{ textAlign: 'center' }}>
+              We sent a password reset link to {sent.email}. Open it on this device to set a new password.
+            </Text>
+            <Button label="Back to sign in" disabled={loading} onPress={() => switchMode('signIn')} style={{ alignSelf: 'stretch' }} />
+            <Text variant="bodySm" tone="muted" style={{ textAlign: 'center' }}>
+              Didn&apos;t get it? Check your spam folder.
+            </Text>
+          </View>
+        </Screen>
+      </View>
+    );
+  }
 
-  const handleSignIn = async () => {
-    setLoading(true);
-    setFormError(null);
-    try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      // The (auth) layout redirects on session; nothing to do here.
-    } catch (e) {
-      setFormError(friendlyError((e as Error).message));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSignUp = async () => {
-    const errs: Record<string, string> = {};
-    if (password.length < 6) errs.password = 'Password must be at least 6 characters.';
-    if (password !== confirmPassword) errs.confirmPassword = 'Passwords do not match.';
-    setFieldErrors(errs);
-    if (Object.keys(errs).length) return;
-
-    setLoading(true);
-    setFormError(null);
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            // Web parity: stored as one combined string (Login.tsx:131).
-            phone_number: `${countryCode}${phoneNumber}`,
-            country: country?.country ?? '',
-            role: 'client',
-          },
-        },
-      });
-      if (error) throw error;
-      setSent('verification');
-    } catch (e) {
-      setFormError(friendlyError((e as Error).message));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleForgot = async () => {
-    if (!email.trim()) {
-      setFieldErrors({ email: 'Please enter your email address.' });
-      return;
-    }
-    setLoading(true);
-    setFormError(null);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'dawnage://reset-password',
-      });
-      if (error) throw error;
-      setSent('reset');
-    } catch (e) {
-      setFormError(friendlyError((e as Error).message));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const heading =
-    mode === 'forgot'
-      ? 'Reset password'
-      : mode === 'signUp'
-        ? step === 1
-          ? "Let's get started"
-          : 'Secure your account'
-        : 'Welcome back';
-
-  const subheading =
-    mode === 'forgot'
-      ? "Enter your email and we'll send you a reset link"
-      : mode === 'signUp'
-        ? step === 1
-          ? 'Tell us a bit about yourself'
-          : 'Create your credentials'
-        : 'Enter your credentials to access your account';
+  const heading = mode === 'forgot' ? 'Reset your password.' : mode === 'signUp' ? 'Start with clarity.' : 'Welcome back.';
+  const subheading = mode === 'forgot'
+    ? "Enter your email and we'll send a secure reset link."
+    : mode === 'signUp'
+      ? 'Create your private account. You decide when your program begins.'
+      : 'Check in, train, and stay connected to your coach.';
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <DawnGlow />
-      <Screen>
-        <View style={{ alignItems: 'center', paddingTop: spacing['2xl'] }}>
-          {/* The mark carries the brand; the heading below carries the task. */}
-          <Logo variant="lockup" size={196} />
-        </View>
+        <DawnGlow height={340} />
+        <Screen>
+          <View style={{ paddingTop: spacing.base }}>
+            <Logo variant="wordmark" size={128} />
+          </View>
 
-        <View style={{ alignItems: 'center', gap: spacing.xs, marginTop: spacing['2xl'] }}>
-          <Text variant="h1">{heading}</Text>
-          <Text variant="bodySm" tone="muted" style={{ textAlign: 'center' }}>
-            {subheading}
-          </Text>
-        </View>
+          <MotionReveal revision={mode} style={{ gap: spacing.xl }}>
+            <View style={{ gap: spacing.sm, marginTop: spacing.xl }}>
+              <Text variant="overline" tone="primary">
+                {mode === 'signUp' ? 'YOUR DAWNAGE ACCOUNT' : mode === 'forgot' ? 'ACCOUNT RECOVERY' : 'DAWNAGE DAILY'}
+              </Text>
+              <Text variant="display" accessibilityRole="header" style={{ letterSpacing: -1 }}>{heading}</Text>
+              <Text variant="body" tone="muted">{subheading}</Text>
+            </View>
 
-        <Card style={{ marginTop: spacing.lg, gap: spacing.base }}>
-          {mode === 'forgot' ? (
-            <>
-              <Input
-                label="Email"
-                icon={Mail}
-                value={email}
-                onChangeText={setEmail}
-                error={fieldErrors.email}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-                returnKeyType="send"
-                onSubmitEditing={handleForgot}
-                placeholder="name@example.com"
-              />
-              <Button label="Send reset link" onPress={handleForgot} loading={loading} />
-              <Button label="Back to sign in" variant="ghost" onPress={() => reset('signIn')} />
-            </>
-          ) : mode === 'signUp' && step === 1 ? (
-            <>
-              <Input
-                label="Full name"
-                icon={User}
-                value={fullName}
-                onChangeText={setFullName}
-                error={fieldErrors.fullName}
-                autoCapitalize="words"
-                autoComplete="name"
-                returnKeyType="next"
-                placeholder="John Doe"
-              />
-
-              <View style={{ gap: spacing.xs }}>
-                <Text variant="label" tone="muted">
-                  Country
-                </Text>
-                <Pressable
-                  onPress={() => setCountryOpen(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Select country"
-                  accessibilityValue={{ text: country?.country ?? 'None selected' }}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: spacing.sm,
-                    minHeight: HIT_SLOP_MIN + 4,
-                    paddingHorizontal: spacing.md,
-                    borderRadius: radius.md,
-                    borderWidth: 1,
-                    borderColor: fieldErrors.country ? colors.destructive : colors.borderStrong,
-                    backgroundColor: colors.elevated,
-                  }}
-                >
-                  {country ? (
-                    <>
-                      <Text style={{ fontSize: 20 }}>{country.flag}</Text>
-                      <Text style={{ flex: 1 }}>{country.country}</Text>
-                      <Text tone="muted" numeric>
-                        {country.code}
-                      </Text>
-                    </>
-                  ) : (
-                    <Text tone="muted" style={{ flex: 1 }}>
-                      Select your country…
-                    </Text>
-                  )}
-                  <ChevronDown size={iconSize.md} color={colors.mutedForeground} strokeWidth={2} accessible={false} />
-                </Pressable>
-                {fieldErrors.country ? (
-                  <Text variant="bodySm" tone="primary">
-                    {fieldErrors.country}
-                  </Text>
-                ) : null}
-              </View>
-
-              <View style={{ gap: spacing.xs }}>
-                <Text variant="label" tone="muted">
-                  Phone number
-                </Text>
-                <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                  <View
-                    style={{
-                      width: 84,
-                      justifyContent: 'center',
-                      paddingHorizontal: spacing.sm,
-                      borderRadius: radius.md,
-                      borderWidth: 1,
-                      borderColor: colors.borderStrong,
-                      backgroundColor: colors.elevated,
-                    }}
-                  >
-                    <TextInput
-                      value={countryCode}
-                      onChangeText={setCountryCode}
-                      placeholder="+00"
-                      placeholderTextColor={colors.mutedForeground}
-                      accessibilityLabel="Country dial code"
-                      keyboardType="phone-pad"
-                      style={[type.body, { color: colors.foreground, textAlign: 'center' }]}
-                    />
-                  </View>
-                  <Input
-                    ref={phoneRef}
-                    containerStyle={{ flex: 1 }}
-                    label=""
-                    icon={Phone}
-                    value={phoneNumber}
-                    onChangeText={(t) => setPhoneNumber(t.replace(/\D/g, ''))}
-                    error={fieldErrors.phone}
-                    keyboardType="phone-pad"
-                    placeholder="Enter your number"
-                  />
-                </View>
-                <Text variant="bodySm" tone="muted">
-                  Used by your coach to contact you.
-                </Text>
-              </View>
-
-              <Button
-                label="Continue"
-                onPress={() => {
-                  if (validateStep1()) setStep(2);
+            {mode === 'signUp' ? (
+              <Card
+                style={{
+                  flexDirection: 'row',
+                  gap: spacing.md,
+                  backgroundColor: colors.primarySoft,
+                  borderColor: colors.primary,
                 }}
-              />
-            </>
-          ) : (
-            <>
+              >
+                <UserRoundCheck size={iconSize.lg} color={colors.primary} strokeWidth={2} accessible={false} />
+                <View style={{ flex: 1, gap: spacing.xs }}>
+                  <Text variant="label">Your pace, your start</Text>
+                  <Text variant="bodySm" tone="muted">
+                    Your coach can connect after you join. Day 1 begins with your first submitted daily check-in—start before assignment or wait for your coach.
+                  </Text>
+                </View>
+              </Card>
+            ) : null}
+
+            <View style={{ gap: spacing.base }}>
+              {formError ? (
+                <Text variant="bodySm" tone="destructive" accessibilityLiveRegion="polite">{formError}</Text>
+              ) : null}
+
+              {mode === 'signUp' ? (
+                <Input
+                  ref={nameRef}
+                  label="Full name"
+                  icon={User}
+                  value={fullName}
+                  editable={!loading}
+                  onChangeText={(value) => {
+                    setFullName(value);
+                    if (fieldErrors.fullName) setFieldErrors((current) => ({ ...current, fullName: undefined }));
+                  }}
+                  error={fieldErrors.fullName}
+                  autoCapitalize="words"
+                  autoComplete="name"
+                  textContentType="name"
+                  returnKeyType="next"
+                  onSubmitEditing={() => emailRef.current?.focus()}
+                  placeholder="Your full name"
+                />
+              ) : null}
+
               <Input
+                ref={emailRef}
                 testID="login-email"
                 label="Email"
                 icon={Mail}
                 value={email}
-                onChangeText={setEmail}
+                editable={!loading}
+                onChangeText={updateEmail}
                 error={fieldErrors.email}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoCorrect={false}
                 autoComplete="email"
-                returnKeyType="next"
-                onSubmitEditing={() => passwordRef.current?.focus()}
+                textContentType="emailAddress"
+                returnKeyType={mode === 'forgot' ? 'send' : 'next'}
+                onSubmitEditing={() => mode === 'forgot' ? handleForgot() : passwordRef.current?.focus()}
                 placeholder="name@example.com"
               />
-              <Input
-                ref={passwordRef}
-                testID="login-password"
-                label="Password"
-                icon={Lock}
-                password
-                value={password}
-                onChangeText={setPassword}
-                error={fieldErrors.password}
-                autoComplete={mode === 'signUp' ? 'new-password' : 'current-password'}
-                returnKeyType={mode === 'signUp' ? 'next' : 'go'}
-                onSubmitEditing={() =>
-                  mode === 'signUp' ? confirmRef.current?.focus() : handleSignIn()
-                }
-                placeholder={mode === 'signUp' ? 'Create a password' : 'Enter your password'}
+
+              {mode !== 'forgot' ? (
+                <Input
+                  ref={passwordRef}
+                  testID="login-password"
+                  label="Password"
+                  icon={Lock}
+                  password
+                  value={password}
+                  editable={!loading}
+                  onChangeText={(value) => {
+                    setPassword(value);
+                    if (fieldErrors.password) setFieldErrors((current) => ({ ...current, password: undefined }));
+                  }}
+                  error={fieldErrors.password}
+                  hint={mode === 'signUp' ? 'At least 6 characters' : undefined}
+                  autoComplete={mode === 'signUp' ? 'new-password' : 'current-password'}
+                  textContentType={mode === 'signUp' ? 'newPassword' : 'password'}
+                  returnKeyType="go"
+                  onSubmitEditing={mode === 'signUp' ? handleSignUp : handleSignIn}
+                  placeholder={mode === 'signUp' ? 'At least 6 characters' : 'Enter your password'}
+                />
+              ) : null}
+
+              {mode === 'signIn' ? (
+                <Button label="Forgot password?" variant="text" disabled={loading} onPress={() => switchMode('forgot')} />
+              ) : null}
+
+              <Button
+                label={mode === 'signUp' ? 'Create my account' : mode === 'forgot' ? 'Send reset link' : 'Sign in'}
+                onPress={mode === 'signUp' ? handleSignUp : mode === 'forgot' ? handleForgot : handleSignIn}
+                loading={loading}
               />
 
               {mode === 'signUp' ? (
-                <Input
-                  ref={confirmRef}
-                  label="Confirm password"
-                  icon={Lock}
-                  password
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  error={fieldErrors.confirmPassword}
-                  returnKeyType="go"
-                  onSubmitEditing={handleSignUp}
-                  placeholder="Re-enter password"
-                />
-              ) : (
-                <Pressable
-                  onPress={() => reset('forgot')}
-                  hitSlop={8}
-                  accessibilityRole="button"
-                  accessibilityLabel="Forgot your password?"
-                  style={{ alignSelf: 'flex-end', minHeight: 32, justifyContent: 'center' }}
-                >
-                  <Text variant="bodySm" tone="primary">
-                    Forgot?
-                  </Text>
-                </Pressable>
-              )}
-
-              {formError ? (
-                <Text variant="bodySm" tone="primary" accessibilityLiveRegion="polite">
-                  {formError}
+                <Text variant="caption" tone="muted" style={{ textAlign: 'center' }}>
+                  Add or change your phone number and country anytime in Profile.
                 </Text>
               ) : null}
 
-              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                {mode === 'signUp' ? (
-                  <Button
-                    label="Back"
-                    variant="secondary"
-                    icon={<ArrowLeft size={iconSize.md} color={colors.primary} strokeWidth={2} />}
-                    onPress={() => setStep(1)}
-                    style={{ width: 110 }}
-                  />
-                ) : null}
-                <Button
-                  label={mode === 'signUp' ? 'Create my account' : 'Sign in'}
-                  onPress={mode === 'signUp' ? handleSignUp : handleSignIn}
-                  loading={loading}
-                  style={{ flex: 1 }}
-                />
-              </View>
-            </>
-          )}
-        </Card>
-
-        {mode !== 'forgot' ? (
-          <Button
-            label={mode === 'signUp' ? 'Already have an account? Sign in' : 'New to Dawnage? Create an account'}
-            variant="ghost"
-            onPress={() => reset(mode === 'signUp' ? 'signIn' : 'signUp')}
-            style={{ marginTop: spacing.base }}
-          />
-        ) : null}
-      </Screen>
+              <Button
+                testID={mode === 'signIn' ? 'login-create-account' : undefined}
+                label={
+                  mode === 'signUp'
+                    ? 'Already have an account? Sign in'
+                    : mode === 'forgot'
+                      ? 'Back to sign in'
+                      : 'New to Dawnage? Create an account'
+                }
+                variant="ghost"
+                disabled={loading}
+                onPress={() => switchMode(mode === 'signIn' ? 'signUp' : 'signIn')}
+              />
+            </View>
+          </MotionReveal>
+        </Screen>
       </View>
-
-      <CountryPicker
-        visible={countryOpen}
-        onClose={() => setCountryOpen(false)}
-        selected={country}
-        onSelect={(c) => {
-          setCountry(c);
-          setCountryCode(c.code);
-          setFieldErrors((p) => ({ ...p, country: '' }));
-        }}
-      />
     </KeyboardAvoidingView>
   );
 }

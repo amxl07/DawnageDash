@@ -41,6 +41,13 @@ const stateWithTwoSets: WorkoutState = {
 };
 
 describe('workoutReducer', () => {
+  it('undoes set removal with the same identity and every entered field', () => {
+    const removed = workoutReducer(stateWithTwoSets, { type: 'REMOVE_SET', payload: { exerciseIndex: 0, setIndex: 0 } });
+    const restored = workoutReducer(removed, { type: 'RESTORE_SET', payload: { exerciseIndex: 0, index: 0, set: squat.sets[0] } });
+    expect(restored.exercises[0].sets).toEqual(squat.sets);
+    const repeated = workoutReducer(restored, { type: 'RESTORE_SET', payload: { exerciseIndex: 0, index: 0, set: squat.sets[0] } });
+    expect(repeated.exercises[0].sets).toHaveLength(2);
+  });
   it('builds stable warm-up sets and duration tracking from a duration-only prescription', () => {
     expect(
       createDraftExerciseFromPlan({

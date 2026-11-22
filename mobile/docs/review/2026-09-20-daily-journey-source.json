@@ -1,0 +1,186 @@
+{
+  "baseline": "/tmp/dawnage-daily-journey-el9t6cvz/mobile",
+  "scope": "This pass only; prior uncommitted edits preserved",
+  "files": [
+    {
+      "file": "app/(app)/(tabs)/_layout.tsx",
+      "kind": "modified",
+      "sha256": "3ceb6902fb3f76ed875505d5f3e40cf390fc18c15a0f35d866dbbc395f721468"
+    },
+    {
+      "file": "app/(app)/(tabs)/check-in.tsx",
+      "kind": "modified",
+      "sha256": "5833efeb2f9d5703b7cd5dae69a954143cc8a7adbb6a8a2c6f230a292931b390"
+    },
+    {
+      "file": "app/(app)/(tabs)/index.tsx",
+      "kind": "modified",
+      "sha256": "550db242bc875a92abb468eadf3be413a4eb48ded4e559558be8530d19ef532a"
+    },
+    {
+      "file": "app/(app)/(tabs)/logs.tsx",
+      "kind": "modified",
+      "sha256": "6ba30561e554d9b9cba0891564391ab6b5ad5619e66c12c9043fa163be9a4ed7"
+    },
+    {
+      "file": "app/(app)/(tabs)/nutrition.tsx",
+      "kind": "new",
+      "sha256": "9b3d906d947f8625eb14c4f0330e9157d07d5ae5f1d1ae5844d48850e3d1c26a"
+    },
+    {
+      "file": "app/(app)/(tabs)/plans.tsx",
+      "kind": "modified",
+      "sha256": "b8c26372fc200c7ab84fc8207bbe149296339bf156d149b519d2a53b63ebe686"
+    },
+    {
+      "file": "app/(app)/logger.tsx",
+      "kind": "modified",
+      "sha256": "49cd38fb1da5eefff22e4de3eee763259a15d815d2b85f08f26cb6ec977b691b"
+    },
+    {
+      "file": "src/__tests__/maestro-contract.test.ts",
+      "kind": "modified",
+      "sha256": "89a5a8ed057c322ba644dd9d8b3fb32e565f399eaa016b5074712402e950d0ab"
+    },
+    {
+      "file": "src/components/logger/WorkoutSummary.test.tsx",
+      "kind": "modified",
+      "sha256": "659831761962af35b0bdb1a521e7d1f58d48fbc95f7b0c39fff263a10b13316a"
+    },
+    {
+      "file": "src/components/logger/WorkoutSummary.tsx",
+      "kind": "modified",
+      "sha256": "d3a87392870a95abdc977d2867cda56960cab1b914aa8f24f95cfae41fa3421c"
+    },
+    {
+      "file": "src/components/plans/PlanDayCard.test.tsx",
+      "kind": "modified",
+      "sha256": "606accc57fdd7c98d5f83a390333d25784f5088d39b4a8cd0bb008b049f02296"
+    },
+    {
+      "file": "src/components/plans/PlanDayCard.tsx",
+      "kind": "modified",
+      "sha256": "660052518d52fbc6bca0640850f1d973a051dc117b4542c18b4dc88352b70fee"
+    },
+    {
+      "file": "src/features/checkin/CheckInJourney.integration.test.tsx",
+      "kind": "modified",
+      "sha256": "ef7c51b594c8f2005290231464640c12755544a3609243db619bd1867e5d09df"
+    },
+    {
+      "file": "src/features/checkin/completion-next-step.test.ts",
+      "kind": "new",
+      "sha256": "b25a95d711668bb4af228487ed54ac93e426b3964e2905683982c6b72c92c4d5"
+    },
+    {
+      "file": "src/features/checkin/completion-next-step.ts",
+      "kind": "new",
+      "sha256": "637cf29451d1718554e141b61b8f1649d9bd058b95f1d4e5f1061079cd2fca75"
+    },
+    {
+      "file": "src/features/checkin/components/CheckInCompletion.test.tsx",
+      "kind": "new",
+      "sha256": "e3b14bce09859c6aa665524660603af2218ea3b53f6c81a578731ab46d9ab256"
+    },
+    {
+      "file": "src/features/checkin/components/CheckInCompletion.tsx",
+      "kind": "new",
+      "sha256": "694ae3fc28ca68ee74430013f9148404eda2ed8d0fc5387d0171f716071843a1"
+    },
+    {
+      "file": "src/features/checkin/components/CheckInReceipt.test.tsx",
+      "kind": "new",
+      "sha256": "834d94bfc6da815916e8101da7c98948a391eaa5d022c857829e2755c4382f49"
+    },
+    {
+      "file": "src/features/checkin/components/CheckInReceipt.tsx",
+      "kind": "modified",
+      "sha256": "f50c03c8d515c6da12e941e1f18b6821cf5d6e64eb3613c03fe6ab4428c6bd70"
+    },
+    {
+      "file": "src/features/completion/CompletionLayout.tsx",
+      "kind": "new",
+      "sha256": "0940d486f7a5e93567c6c3d09865e9f4c9b6fa080289be9713f721c38f1dd8da"
+    },
+    {
+      "file": "src/features/home/HomeDetails.tsx",
+      "kind": "new",
+      "sha256": "181a5022c21f698438de9f83009c10178c1f9fd1cac725ddd971cf08a8020701"
+    },
+    {
+      "file": "src/features/home/NextSessionCard.tsx",
+      "kind": "modified",
+      "sha256": "9429cb613eca6712303f25546c25aaff1bc4afcec2c301d23aef59b5db1f045f"
+    },
+    {
+      "file": "src/features/home/TodayBrief.tsx",
+      "kind": "modified",
+      "sha256": "814ce8a56ddd6deb7744f91749682ee058ed3cda2aeff8e7e16a64ea2bb0c2d1"
+    },
+    {
+      "file": "src/features/nutrition/nutrition-screen.tsx",
+      "kind": "new",
+      "sha256": "a5e49eb98777219acf49d4e2f79562099d5cb81b252c0918cd8ef7e4c9b310a1"
+    },
+    {
+      "file": "src/features/training/training-navigation.test.ts",
+      "kind": "new",
+      "sha256": "f0afc2b0adbd6ff0d8fb8b9e3cc1014104e974f88d3e5c225d4ea33e52a6eb58"
+    },
+    {
+      "file": "src/features/training/training-navigation.ts",
+      "kind": "new",
+      "sha256": "93e36a5062b44dde6b9b3dc2cd35d485977bcacd5d0d61656b5bf72aedd6eb68"
+    },
+    {
+      "file": "src/features/training/training-plan.tsx",
+      "kind": "new",
+      "sha256": "7866c69e42ba129011b41e7ba0c8c1243854541c89019d0d5a6b53648f49cb2f"
+    },
+    {
+      "file": "src/features/training/training-screen.tsx",
+      "kind": "new",
+      "sha256": "aff2249ff01f03694d91ddf6281741b2ff909f443c9de6f53a5973394e6f64e1"
+    },
+    {
+      "file": "src/features/training/workout-history.tsx",
+      "kind": "new",
+      "sha256": "2a21143917fc07b8ea25e9166faf71791753061263239fda480b65f392bdb4f1"
+    },
+    {
+      "file": "src/screens/__tests__/tabs/check-in.test.tsx",
+      "kind": "modified",
+      "sha256": "2228dd0cf74b82bc0e12f451772c2598373bfc5ec4e96bc1a3293cb4a83acdc9"
+    },
+    {
+      "file": "src/screens/__tests__/tabs/index.test.tsx",
+      "kind": "modified",
+      "sha256": "2abc359b8588db2f26affc6b6fe1f916a8473d3466240edd7be3b4edcfd72355"
+    },
+    {
+      "file": "src/screens/__tests__/tabs/logs-alias.test.tsx",
+      "kind": "new",
+      "sha256": "61913e3224efa0e6261cb414b725e164b53386b0f15eb09d09c7fac0d6cd32c1"
+    },
+    {
+      "file": "src/screens/__tests__/tabs/logs.test.tsx",
+      "kind": "modified",
+      "sha256": "2caedff2191e46421362a8e72b0cbd77d23637761fc50955976769be751cdeae"
+    },
+    {
+      "file": "src/screens/__tests__/tabs/navigation.test.tsx",
+      "kind": "new",
+      "sha256": "b6f574a8069e11b23373ac637fd13025e6577e61df2094b1b1cb4143eadec0a5"
+    },
+    {
+      "file": "src/screens/__tests__/tabs/nutrition.test.tsx",
+      "kind": "new",
+      "sha256": "73b46bf95bf2c0d08e63e4d3f80398f4aa1647294b5edad54d90c5a3177af7da"
+    },
+    {
+      "file": "src/screens/__tests__/tabs/plans.test.tsx",
+      "kind": "modified",
+      "sha256": "09b637189c6a61a658e7a7f20c65988eb84a13e7c03aedf3cd4ad5214f02ec18"
+    }
+  ]
+}

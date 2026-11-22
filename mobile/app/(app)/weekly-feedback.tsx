@@ -1,448 +1,33 @@
-import { useNavigation, usePreventRemove, type NavigationAction } from '@react-navigation/native';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { format } from 'date-fns';
-import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Camera, CheckCircle2, Ruler } from 'lucide-react-native';
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import {
-  AccessibilityInfo,
-  Alert,
-  findNodeHandle,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  View,
-} from 'react-native';
-
+import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { CoachBadge } from '@/components/coach/CoachBadge';
 import {
-  AnimatedFlatList,
-  Button,
-  Card,
-  EmptyState,
-  ErrorState,
-  Input,
-  OptionRow,
-  PageHeader,
-  ProgressBar,
-  RatingRow,
-  Screen,
-  SkeletonCard,
-  StatusPill,
-  StickyActionBar,
-  Text,
-  useListMotion,
+  AnimatedFlatList, Button, Card, EmptyState, ErrorState, Input, OptionRow,
+  PageHeader, ProgressBar, RatingRow, Screen, SkeletonCard, StatusPill,
+  StickyActionBar, Text, useListMotion,
 } from '@/components/ui';
-import { WEEKLY_SECTIONS, WEEKLY_STEPS, emptyWeekly } from '@/components/weekly/steps';
-import { useAuth } from '@/contexts/AuthContext';
-import { useDashboardData } from '@/hooks/useDashboardData';
-import { useWeeklyFeedbackDraft } from '@/hooks/useWeeklyFeedbackDraft';
-import {
-  validateWeeklyStep,
-  weeklyAnswer,
-  type WeeklyCheckIn,
-  type WeeklyFeedbackErrors,
-  type WeeklyFeedbackForm,
-} from '@/lib/weekly-feedback';
-import { supabase } from '@/lib/supabase';
-import { num } from '@/types/db';
-import { iconSize, spacing, useMotion, useTheme } from '@/theme';
+import { MotionReveal } from '@/components/ui/MotionReveal';
+import { WEEKLY_STEPS } from '@/components/weekly/steps';
+import { WeeklyFeedbackAnswers, WeeklyFeedbackHistoryCard } from '@/features/weekly/WeeklyFeedbackHistoryCard';
+import { useWeeklyFeedbackController } from '@/features/weekly/useWeeklyFeedbackController';
+import { weeklyObservationHint } from '@/features/weekly/selectors';
+import { iconSize, spacing, useTheme } from '@/theme';
 
-type HistoryCardProps = {
-  item: WeeklyCheckIn;
-  weekNumber: number;
-};
-
-const WeeklyFeedbackHistoryCard = memo(function WeeklyFeedbackHistoryCard({
-  item,
-  weekNumber,
-}: HistoryCardProps) {
-  return (
-    <Card style={{ gap: spacing.sm, marginBottom: spacing.md }}>
-      <Text variant="h2">Week {weekNumber}</Text>
-      <Text variant="bodySm" tone="muted">
-        {item.created_at ? format(new Date(item.created_at), 'd MMM yyyy') : 'Date unavailable'}
-      </Text>
-      {WEEKLY_SECTIONS.map((section) => {
-        const answered = section.keys
-          .map((key) => ({ key, value: weeklyAnswer(item, key) }))
-          .filter((answer): answer is { key: string; value: string } => Boolean(answer.value));
-        if (!answered.length) return null;
-        return (
-          <View key={section.title} style={{ gap: spacing.xs, paddingTop: spacing.sm }}>
-            <Text variant="label" tone="muted">
-              {section.title}
-            </Text>
-            {answered.map(({ key, value }) => (
-              <Text key={key} variant="bodySm" selectable>
-                {value}
-              </Text>
-            ))}
-          </View>
-        );
-      })}
-    </Card>
-  );
-});
+export { focusWeeklyTarget } from '@/features/weekly/useWeeklyFeedbackController';
 
 export default function WeeklyFeedbackScreen() {
   const { colors } = useTheme();
-  const motion = useMotion();
   const router = useRouter();
-  const navigation = useNavigation();
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const flowIdentity = useMemo(() => ({ userId: user?.id }), [user?.id]);
-  const activeFlowIdentityRef = useRef(flowIdentity);
-  const { checkIns } = useDashboardData();
   const listMotion = useListMotion();
-  const scrollRef = useRef<ScrollView>(null);
-  const errorSummaryRef = useRef<View>(null);
-  const pendingExitActionRef = useRef<{
-    action: NavigationAction;
-    identity: typeof flowIdentity;
-  } | null>(null);
-
-  const [started, setStarted] = useState(false);
-  const [step, setStep] = useState(0);
-  const [form, setForm] = useState<WeeklyFeedbackForm>(emptyWeekly);
-  const [formOwnerUserId, setFormOwnerUserId] = useState<string | undefined>(user?.id);
-  const [errors, setErrors] = useState<WeeklyFeedbackErrors>({});
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [exitError, setExitError] = useState<string | null>(null);
-  const [restored, setRestored] = useState(false);
-  const [hasUnsentChanges, setHasUnsentChanges] = useState(false);
-  const [submissionCommitted, setSubmissionCommitted] = useState(false);
-  const [cleanupPending, setCleanupPending] = useState(false);
-  const [exitReady, setExitReady] = useState(0);
-  const ownsCurrentForm = Boolean(user?.id && formOwnerUserId === user.id);
-
-  const { loadDraft, saveDraft, clearDraft, draftStatus } = useWeeklyFeedbackDraft(user?.id);
-
-  const { data: history, isLoading, isError, refetch } = useQuery({
-    queryKey: ['weeklyCheckIns', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
-      const { data, error } = await supabase
-        .from('weekly_check_ins')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as WeeklyCheckIn[];
-    },
-    enabled: Boolean(user?.id),
-  });
-
-  const weekNumber = (history?.length ?? 0) + 1;
-  const firstName = (user?.user_metadata?.full_name ?? '').split(' ')[0] || 'there';
-
-  const prefill = useMemo<WeeklyFeedbackForm>(() => {
-    const last7 = (checkIns ?? []).slice(-7);
-    if (!last7.length) return {} as WeeklyFeedbackForm;
-    const avg = (pick: (checkIn: (typeof last7)[number]) => number) =>
-      last7.reduce((sum, checkIn) => sum + pick(checkIn), 0) / last7.length;
-    return {
-      step_count: String(Math.round(avg((checkIn) => checkIn.daily_steps ?? 0)) || ''),
-      water_intake: (
-        Math.round(avg((checkIn) => num(checkIn.water_liters)) * 10) / 10 || ''
-      ).toString(),
-      stress_level: String(Math.round(avg((checkIn) => checkIn.stress_level ?? 0)) || ''),
-    };
-  }, [checkIns]);
-
-  const latestPrefillRef = useRef(prefill);
-  useLayoutEffect(() => {
-    latestPrefillRef.current = prefill;
-  }, [prefill]);
-
-  useLayoutEffect(() => {
-    activeFlowIdentityRef.current = flowIdentity;
-    pendingExitActionRef.current = null;
-    setStarted(false);
-    setStep(0);
-    setForm(emptyWeekly());
-    setFormOwnerUserId(undefined);
-    setErrors({});
-    setSubmitting(false);
-    setSubmitted(false);
-    setSubmitError(null);
-    setExitError(null);
-    setRestored(false);
-    setHasUnsentChanges(false);
-    setSubmissionCommitted(false);
-    setCleanupPending(false);
-    setExitReady(0);
-  }, [flowIdentity]);
-
-  useEffect(() => {
-    if (!user?.id) {
-      setFormOwnerUserId(undefined);
-      setRestored(true);
-      return;
-    }
-    let active = true;
-    setRestored(false);
-    void loadDraft().then((draft) => {
-      if (!active || activeFlowIdentityRef.current !== flowIdentity) return;
-      const initialPrefill = latestPrefillRef.current;
-      if (draft) {
-        setForm({ ...emptyWeekly(), ...initialPrefill, ...draft.form });
-        setFormOwnerUserId(user.id);
-        setStep(draft.step);
-        setStarted(true);
-        setHasUnsentChanges(true);
-      } else {
-        setForm({ ...emptyWeekly(), ...initialPrefill });
-        setFormOwnerUserId(user.id);
-        setStep(0);
-        setStarted(false);
-        setHasUnsentChanges(false);
-      }
-      setRestored(true);
-    });
-    return () => {
-      active = false;
-    };
-  }, [flowIdentity, loadDraft, user?.id]);
-
-  useEffect(() => {
-    if (
-      !ownsCurrentForm ||
-      !restored ||
-      !started ||
-      submitted ||
-      submissionCommitted ||
-      !hasUnsentChanges
-    ) {
-      return;
-    }
-    void saveDraft(form, step);
-  }, [
-    form,
-    hasUnsentChanges,
-    ownsCurrentForm,
-    restored,
-    saveDraft,
-    started,
-    step,
-    submissionCommitted,
-    submitted,
-  ]);
-
-  useEffect(() => {
-    if (!started) return;
-    const current = WEEKLY_STEPS[step];
-    AccessibilityInfo.announceForAccessibility(
-      `Step ${step + 1} of ${WEEKLY_STEPS.length}: ${current.title}`,
-    );
-  }, [started, step]);
-
-  useEffect(() => {
-    const pendingExit = pendingExitActionRef.current;
-    if (
-      !exitReady ||
-      hasUnsentChanges ||
-      submissionCommitted ||
-      !pendingExit ||
-      pendingExit.identity !== activeFlowIdentityRef.current
-    ) {
-      return;
-    }
-    pendingExitActionRef.current = null;
-    navigation.dispatch(pendingExit.action);
-  }, [exitReady, hasUnsentChanges, navigation, submissionCommitted]);
-
-  const permitExit = useCallback(
-    (action: NavigationAction, identity: typeof flowIdentity) => {
-      if (activeFlowIdentityRef.current !== identity) return;
-      pendingExitActionRef.current = { action, identity };
-      setHasUnsentChanges(false);
-      setSubmissionCommitted(false);
-      setCleanupPending(false);
-      setExitReady((value) => value + 1);
-    },
-    [],
-  );
-
-  usePreventRemove(
-    ownsCurrentForm && (hasUnsentChanges || submissionCommitted) && !submitted,
-    ({ data }) => {
-      const alertIdentity = flowIdentity;
-      if (submissionCommitted) {
-        Alert.alert(
-          'Finish local cleanup?',
-          'Your check-in was submitted, but its saved draft still needs to be removed from this device.',
-          [
-            { text: 'Keep here', style: 'cancel' },
-            {
-              text: 'Retry cleanup & exit',
-              onPress: async () => {
-                const cleared = await clearDraft();
-                if (activeFlowIdentityRef.current !== alertIdentity) return;
-                if (cleared) {
-                  permitExit(data.action, alertIdentity);
-                  return;
-                }
-                setExitError('Check-in sent, but local draft cleanup still failed. Try again.');
-              },
-            },
-          ],
-        );
-        return;
-      }
-
-      Alert.alert('Leave weekly check-in?', 'Your answers have not been submitted yet.', [
-        { text: 'Keep editing', style: 'cancel' },
-        {
-          text: 'Discard draft',
-          style: 'destructive',
-          onPress: async () => {
-            const cleared = await clearDraft();
-            if (activeFlowIdentityRef.current !== alertIdentity) return;
-            if (cleared) {
-              permitExit(data.action, alertIdentity);
-              return;
-            }
-            setExitError('Couldn’t discard your draft. Keep editing and try again.');
-          },
-        },
-        {
-          text: 'Save draft & exit',
-          onPress: async () => {
-            setExitError(null);
-            const saved = await saveDraft(form, step, { immediate: true });
-            if (activeFlowIdentityRef.current !== alertIdentity) return;
-            if (saved) {
-              permitExit(data.action, alertIdentity);
-              return;
-            }
-            const message = 'Couldn’t save your draft. Keep editing and try again.';
-            setExitError(message);
-            AccessibilityInfo.announceForAccessibility(message);
-          },
-        },
-      ]);
-    },
-  );
-
-  const focusErrors = useCallback((nextErrors: WeeklyFeedbackErrors) => {
-    setErrors(nextErrors);
-    const message = 'Please correct the highlighted fields before continuing.';
-    AccessibilityInfo.announceForAccessibility(message);
-    scrollRef.current?.scrollTo({ y: 0, animated: motion.enabled });
-    requestAnimationFrame(() => {
-      const handle = findNodeHandle(errorSummaryRef.current);
-      if (handle !== null) AccessibilityInfo.setAccessibilityFocus(handle);
-    });
-  }, [motion.enabled]);
-
-  const validateCurrentStep = useCallback(() => {
-    if (!ownsCurrentForm || activeFlowIdentityRef.current !== flowIdentity) return false;
-    const nextErrors = validateWeeklyStep(step, form);
-    if (Object.keys(nextErrors).length) {
-      focusErrors(nextErrors);
-      return false;
-    }
-    setErrors({});
-    return true;
-  }, [flowIdentity, focusErrors, form, ownsCurrentForm, step]);
-
-  const moveToStep = useCallback((nextStep: number) => {
-    if (!ownsCurrentForm || activeFlowIdentityRef.current !== flowIdentity) return;
-    setErrors({});
-    setSubmitError(null);
-    setStep(nextStep);
-    setHasUnsentChanges(true);
-    scrollRef.current?.scrollTo({ y: 0, animated: motion.enabled });
-  }, [flowIdentity, motion.enabled, ownsCurrentForm]);
-
-  const continueForward = useCallback(() => {
-    if (!validateCurrentStep()) return;
-    moveToStep(step + 1);
-  }, [moveToStep, step, validateCurrentStep]);
-
-  const updateField = useCallback((key: string, value: string) => {
-    if (!ownsCurrentForm || activeFlowIdentityRef.current !== flowIdentity) return;
-    setForm((previous) => ({ ...previous, [key]: value }));
-    setErrors((previous) => {
-      if (!previous[key]) return previous;
-      const next = { ...previous };
-      delete next[key];
-      return next;
-    });
-    setSubmitError(null);
-    setExitError(null);
-    setHasUnsentChanges(true);
-  }, [flowIdentity, ownsCurrentForm]);
-
-  const showSubmissionSuccess = useCallback((identity: typeof flowIdentity) => {
-    if (activeFlowIdentityRef.current !== identity) return;
-    setSubmissionCommitted(false);
-    setCleanupPending(false);
-    setSubmitError(null);
-    setSubmitted(true);
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    AccessibilityInfo.announceForAccessibility('Weekly check-in submitted.');
-  }, []);
-
-  const retryCleanup = useCallback(async () => {
-    const cleanupIdentity = flowIdentity;
-    setSubmitting(true);
-    setExitError(null);
-    const cleared = await clearDraft();
-    if (activeFlowIdentityRef.current !== cleanupIdentity) return;
-    setSubmitting(false);
-    if (cleared) {
-      showSubmissionSuccess(cleanupIdentity);
-      return;
-    }
-    setCleanupPending(true);
-    setSubmitError('Check-in sent, but its saved draft could not be cleared from this device.');
-  }, [clearDraft, flowIdentity, showSubmissionSuccess]);
-
-  const submit = useCallback(async () => {
-    if (!user?.id || !validateCurrentStep()) return;
-    const submissionIdentity = flowIdentity;
-    const submissionUserId = user.id;
-    setSubmitting(true);
-    setSubmitError(null);
-    try {
-      const { error } = await supabase.from('weekly_check_ins').insert({
-        user_id: submissionUserId,
-        ...form,
-      });
-      if (error) throw error;
-
-      const isCurrent = activeFlowIdentityRef.current === submissionIdentity;
-      if (isCurrent) {
-        setSubmissionCommitted(true);
-        setHasUnsentChanges(false);
-        void queryClient.invalidateQueries({ queryKey: ['weeklyCheckIns', submissionUserId] });
-      }
-
-      const cleared = await clearDraft();
-      if (activeFlowIdentityRef.current !== submissionIdentity) return;
-      if (!cleared) {
-        setCleanupPending(true);
-        setSubmitError('Check-in sent, but its saved draft could not be cleared from this device.');
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        return;
-      }
-
-      setHasUnsentChanges(false);
-      showSubmissionSuccess(submissionIdentity);
-    } catch {
-      if (activeFlowIdentityRef.current !== submissionIdentity) return;
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setSubmitError("Couldn’t submit. Your answers are still here — check your connection and retry.");
-    } finally {
-      if (activeFlowIdentityRef.current === submissionIdentity) setSubmitting(false);
-    }
-  }, [clearDraft, flowIdentity, form, queryClient, showSubmissionSuccess, user?.id, validateCurrentStep]);
+  const {
+    user, firstName, submitted, isLoading, restored, ownsCurrentForm,
+    submissionCommitted, submitError, cleanupPending, retryCleanup, submitting,
+    started, weekNumber, start, history, isError, refetch, step, form, errors,
+    scrollRef, errorSummaryRef, stepTitleRef, updateField, exitError, draftStatus,
+    moveToStep, submit, continueForward, report, dailyRecordsError, retryDailyRecords,
+    conflictingReport, discardConflictingDraft, saveCurrentDraft, historyReady, inferredReportDate,
+  } = useWeeklyFeedbackController();
 
   if (submitted) {
     return (
@@ -499,6 +84,37 @@ export default function WeeklyFeedbackScreen() {
     );
   }
 
+  if (conflictingReport) {
+    return (
+      <Screen archetype="editor">
+        <View style={{ gap: spacing.lg }}>
+          <PageHeader title="Weekly check-in" onBack={() => router.back()} />
+          <Card style={{ gap: spacing.md }}>
+            <Text variant="h2">Review saved draft</Text>
+            <Text variant="bodySm">A report for this reporting week was already submitted. This draft has different answers, so sending it again is paused. Your saved answers have been kept.</Text>
+            <Text variant="bodySm" tone="muted">{`Draft reporting window: ${report.label}`}</Text>
+            {inferredReportDate ? <Text variant="bodySm" tone="muted">This older draft did not store its original reporting dates. Review the displayed week; your answers are unchanged.</Text> : null}
+            <Button label="Keep draft and exit" variant="secondary" onPress={() => router.back()} />
+            <Button label="Discard saved draft" variant="destructive" onPress={discardConflictingDraft} />
+            {draftStatus === 'error' ? <>
+              <Text variant="bodySm" tone="primary">Newer answers could not be saved on this device. Keep this screen open and retry saving the draft.</Text>
+              <Button label="Retry saving draft" onPress={() => void saveCurrentDraft()} />
+            </> : null}
+            {exitError ? <Text variant="bodySm" tone="primary" accessibilityRole="alert">{exitError}</Text> : null}
+          </Card>
+          <Card style={{ gap: spacing.md }}>
+            <Text variant="h2">Saved draft answers</Text>
+            <WeeklyFeedbackAnswers answers={form} />
+          </Card>
+          <Card style={{ gap: spacing.md }}>
+            <Text variant="h2">Submitted answers</Text>
+            <WeeklyFeedbackAnswers answers={conflictingReport.form} />
+          </Card>
+        </View>
+      </Screen>
+    );
+  }
+
   if (submissionCommitted) {
     return (
       <View style={{ flex: 1 }}>
@@ -523,7 +139,7 @@ export default function WeeklyFeedbackScreen() {
           </View>
         </Screen>
         <StickyActionBar
-          status={<StatusPill status={cleanupPending ? 'error' : 'saving'} />}
+          status={<StatusPill status={submitting ? 'saving' : cleanupPending ? 'error' : 'saved'} label={submitting ? 'Clearing saved draft…' : 'Report sent · draft still on device'} />}
           primaryLabel="Retry cleanup"
           onPrimary={() => void retryCleanup()}
           primaryLoading={submitting}
@@ -544,10 +160,7 @@ export default function WeeklyFeedbackScreen() {
           </Text>
           <Button
             label="Start"
-            onPress={() => {
-              setStarted(true);
-              setHasUnsentChanges(true);
-            }}
+            onPress={start}
           />
         </Card>
         {history?.length ? <Text variant="h2">Past check-ins</Text> : null}
@@ -607,33 +220,53 @@ export default function WeeklyFeedbackScreen() {
         <View style={{ gap: spacing.lg }}>
           <PageHeader title="Weekly check-in" onBack={() => router.back()} />
 
-          <View style={{ gap: spacing.xs }}>
-            <Text variant="h1">{current.title}</Text>
-            <Text variant="bodySm" tone="muted">
-              {current.description}
-            </Text>
-          </View>
-
-          {Object.keys(errors).length ? (
-            <View
-              ref={errorSummaryRef}
-              accessible
-              accessibilityRole="alert"
-              accessibilityLiveRegion="polite"
-              style={{ gap: spacing.xs }}
-            >
-              <Text variant="bodySm" tone="primary">
-                Please correct the highlighted fields before continuing.
+          <MotionReveal revision={step} style={{ gap: spacing.lg }} testID="weekly-step-content">
+            <View style={{ gap: spacing.xs }}>
+              <View
+                ref={stepTitleRef}
+                testID="weekly-step-title"
+                accessible
+                focusable
+                accessibilityRole="header"
+              >
+                <Text variant="h1" accessibilityElementsHidden>
+                  {current.title}
+                </Text>
+              </View>
+              <Text variant="bodySm" tone="muted">
+                {current.description}
               </Text>
             </View>
-          ) : null}
 
-          <ProgressBar
-            value={(step + 1) / WEEKLY_STEPS.length}
-            accessibilityLabel={`Step ${step + 1} of ${WEEKLY_STEPS.length}`}
-          />
+            {Object.keys(errors).length ? (
+              <View
+                ref={errorSummaryRef}
+                accessible
+                focusable
+                accessibilityRole="alert"
+                accessibilityLiveRegion="polite"
+                style={{ gap: spacing.xs }}
+              >
+                <Text variant="bodySm" tone="primary">
+                  Please correct the highlighted fields before continuing.
+                </Text>
+              </View>
+            ) : null}
 
-          <Card style={{ gap: spacing.lg }}>
+            <Text variant="bodySm" tone="muted">
+              {`Daily-record window: ${report.label} · device local dates. Only recorded values are averaged.`}
+            </Text>
+
+            {inferredReportDate ? <Text variant="bodySm" tone="muted">This older draft did not store its original reporting dates. Review the displayed week before submitting; your answers are unchanged.</Text> : null}
+            {!historyReady ? <ErrorState title="Check submitted reports before sending" message="You can keep editing. Retry history before sending to avoid submitting this report twice." onRetry={() => void refetch()} retryLabel="Retry submitted history" /> : null}
+            {dailyRecordsError ? <ErrorState title="Daily records couldn’t refresh" message="Your answers are still here. Review them or retry your daily records." onRetry={() => void retryDailyRecords()} /> : null}
+
+            <ProgressBar
+              value={(step + 1) / WEEKLY_STEPS.length}
+              accessibilityLabel={`Step ${step + 1} of ${WEEKLY_STEPS.length}`}
+            />
+
+            <Card style={{ gap: spacing.lg }}>
             {current.fields.map((field) => {
               const value = form[field.key] ?? '';
               const setValue = (nextValue: string) => updateField(field.key, nextValue);
@@ -667,6 +300,7 @@ export default function WeeklyFeedbackScreen() {
                     <Text variant="label" tone="muted">
                       {field.label}
                     </Text>
+                    <Text variant="bodySm" tone="muted">{weeklyObservationHint(report, field.key)}</Text>
                     <RatingRow
                       label={field.label}
                       min={1}
@@ -695,11 +329,12 @@ export default function WeeklyFeedbackScreen() {
                   numberOfLines={multiline ? 4 : 1}
                   inputStyle={multiline ? { minHeight: 96, textAlignVertical: 'top' } : undefined}
                   keyboardType={field.type === 'number' ? 'decimal-pad' : 'default'}
-                  hint={field.prefill ? 'Prefilled from your daily check-ins — edit if needed' : undefined}
+                  hint={field.prefill ? weeklyObservationHint(report, field.key) : undefined}
                 />
               );
             })}
-          </Card>
+            </Card>
+          </MotionReveal>
 
           {submitError ? (
             <Text

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { photoReferencesForSave } from "@shared/progress-photos";
 import { PhotoUploadCard } from "@/components/PhotoUploadCard";
 
 interface PhotosUploadDialogProps {
@@ -24,6 +25,11 @@ export function PhotosUploadDialog({ open, onOpenChange, selectedDate, onSuccess
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
     const [isFetching, setIsFetching] = useState(false);
+    const [fetchError, setFetchError] = useState(false);
+    const [uploads, setUploads] = useState<Record<string, boolean>>({});
+    const uploading = Object.values(uploads).some(Boolean);
+    const mounted = useRef(true);
+    useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
     // Date state
     const [date, setDate] = useState<Date>(selectedDate || new Date());
@@ -49,9 +55,13 @@ export function PhotosUploadDialog({ open, onOpenChange, selectedDate, onSuccess
     // Fetch data
     useEffect(() => {
         if (!open || !user) return;
+        let active = true;
 
         const fetchData = async () => {
             setIsFetching(true);
+            setFetchError(false);
+            setUploads({});
+            setFormData({ id: null, frontUrl: null, backUrl: null, sideLeftUrl: null, sideRightUrl: null });
             try {
                 const dateStr = format(date, 'yyyy-MM-dd');
 
@@ -63,6 +73,7 @@ export function PhotosUploadDialog({ open, onOpenChange, selectedDate, onSuccess
                     .maybeSingle();
 
                 if (error) throw error;
+                if (!active) return;
 
                 if (data) {
                     setFormData({
@@ -82,18 +93,19 @@ export function PhotosUploadDialog({ open, onOpenChange, selectedDate, onSuccess
                     });
                 }
             } catch (error) {
-                console.error("Error fetching photos:", error);
+                if (active) setFetchError(true);
             } finally {
-                setIsFetching(false);
+                if (active) setIsFetching(false);
             }
         };
 
-        fetchData();
-    }, [date, open, user]);
+        void fetchData();
+        return () => { active = false; };
+    }, [date, open, user?.id]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!user) return;
+        if (!user || isFetching || fetchError || uploading || isLoading) return;
 
         // Check if at least one photo is uploaded (optional, but good practice)
         // Actually user might want to upload one by one.
@@ -111,21 +123,26 @@ export function PhotosUploadDialog({ open, onOpenChange, selectedDate, onSuccess
                 side_right_url: formData.sideRightUrl,
             };
 
+            const canonicalPayload = { ...payload, ...photoReferencesForSave(payload, import.meta.env.VITE_SUPABASE_URL, user.id) };
             let error;
             if (formData.id) {
                 const { error: updateError } = await supabase
                     .from("weekly_progress_photos")
-                    .update(payload)
-                    .eq("id", formData.id);
+                    .update(canonicalPayload)
+                    .eq("id", formData.id)
+                    .eq("user_id", user.id)
+                    .select("id")
+                    .single();
                 error = updateError;
             } else {
                 const { error: insertError } = await supabase
                     .from("weekly_progress_photos")
-                    .insert(payload);
+                    .insert(canonicalPayload).select("id").single();
                 error = insertError;
             }
 
             if (error) throw error;
+            if (!mounted.current) return;
 
             toast({
                 title: "Success",
@@ -134,14 +151,15 @@ export function PhotosUploadDialog({ open, onOpenChange, selectedDate, onSuccess
 
             onSuccess?.();
             onOpenChange(false);
-        } catch (error: any) {
+        } catch {
+            if (!mounted.current) return;
             toast({
                 title: "Error",
-                description: error.message || "Failed to save photos",
+                description: "Failed to save photos. Please try again.",
                 variant: "destructive",
             });
         } finally {
-            setIsLoading(false);
+            if (mounted.current) setIsLoading(false);
         }
     };
 
@@ -169,7 +187,7 @@ export function PhotosUploadDialog({ open, onOpenChange, selectedDate, onSuccess
                                         "w-full justify-start text-left font-normal",
                                         !date && "text-muted-foreground"
                                     )}
-                                    disabled={!!selectedDate}
+                                    disabled={!!selectedDate || uploading || isLoading || isFetching}
                                 >
                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                     {date ? format(date, "PPP") : <span>Pick a date</span>}
@@ -187,6 +205,7 @@ export function PhotosUploadDialog({ open, onOpenChange, selectedDate, onSuccess
                         </Popover>
                     </div>
 
+                    {fetchError && <p role="alert">Photo history could not load. Close and reopen to retry before saving.</p>}
                     {isFetching ? (
                         <div className="py-8 flex justify-center">
                             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -196,32 +215,44 @@ export function PhotosUploadDialog({ open, onOpenChange, selectedDate, onSuccess
                             {user && (
                                 <>
                                     <PhotoUploadCard
+                                        key={`${user.id}:${format(date, 'yyyy-MM-dd')}:front`}
                                         label="Front View"
-                                        currentUrl={formData.frontUrl}
+                                        disabled={isLoading}
+                                        currentReference={formData.frontUrl}
+                                        onUploadingChange={(busy) => setUploads(prev => ({ ...prev, frontUrl: busy }))}
                                         onUpload={(url) => handleUpdateUrl('frontUrl', url)}
                                         onDelete={() => handleUpdateUrl('frontUrl', null)}
                                         userId={user.id}
                                         dateStr={format(date, 'yyyy-MM-dd')}
                                     />
                                     <PhotoUploadCard
+                                        key={`${user.id}:${format(date, 'yyyy-MM-dd')}:back`}
                                         label="Back View"
-                                        currentUrl={formData.backUrl}
+                                        disabled={isLoading}
+                                        currentReference={formData.backUrl}
+                                        onUploadingChange={(busy) => setUploads(prev => ({ ...prev, backUrl: busy }))}
                                         onUpload={(url) => handleUpdateUrl('backUrl', url)}
                                         onDelete={() => handleUpdateUrl('backUrl', null)}
                                         userId={user.id}
                                         dateStr={format(date, 'yyyy-MM-dd')}
                                     />
                                     <PhotoUploadCard
+                                        key={`${user.id}:${format(date, 'yyyy-MM-dd')}:left`}
                                         label="Side (Left)"
-                                        currentUrl={formData.sideLeftUrl}
+                                        disabled={isLoading}
+                                        currentReference={formData.sideLeftUrl}
+                                        onUploadingChange={(busy) => setUploads(prev => ({ ...prev, sideLeftUrl: busy }))}
                                         onUpload={(url) => handleUpdateUrl('sideLeftUrl', url)}
                                         onDelete={() => handleUpdateUrl('sideLeftUrl', null)}
                                         userId={user.id}
                                         dateStr={format(date, 'yyyy-MM-dd')}
                                     />
                                     <PhotoUploadCard
+                                        key={`${user.id}:${format(date, 'yyyy-MM-dd')}:right`}
                                         label="Side (Right)"
-                                        currentUrl={formData.sideRightUrl}
+                                        disabled={isLoading}
+                                        currentReference={formData.sideRightUrl}
+                                        onUploadingChange={(busy) => setUploads(prev => ({ ...prev, sideRightUrl: busy }))}
                                         onUpload={(url) => handleUpdateUrl('sideRightUrl', url)}
                                         onDelete={() => handleUpdateUrl('sideRightUrl', null)}
                                         userId={user.id}
@@ -234,7 +265,7 @@ export function PhotosUploadDialog({ open, onOpenChange, selectedDate, onSuccess
 
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                        <Button type="submit" disabled={isLoading}>
+                        <Button type="submit" disabled={isLoading || isFetching || fetchError || uploading}>
                             {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                             Save Photos
                         </Button>

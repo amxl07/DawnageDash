@@ -126,7 +126,8 @@ export default function MoreScreen() {
             justifyContent: 'center',
             gap: spacing.sm,
             minHeight: HIT_SLOP_MIN,
-            opacity: pressed ? 0.6 : 1,
+            borderRadius: spacing.sm,
+            backgroundColor: pressed ? colors.pressed : 'transparent',
           })}
         >
           <LogOut size={iconSize.md} color={colors.primary} strokeWidth={2} accessible={false} />

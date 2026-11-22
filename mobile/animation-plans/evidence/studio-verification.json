@@ -1,0 +1,30 @@
+{
+  "date": "2026-09-17",
+  "artifact": "motion-studio.html",
+  "environment": "Headless Chrome, web illustration only",
+  "checks": [
+    "Home preview boots",
+    "Check-in validates unanswered ratings",
+    "Chosen ratings expose checked semantics",
+    "Check-in reaches review",
+    "Receipt is explicitly fictional",
+    "Set advances and Undo is available",
+    "Undo restores first set",
+    "Undo preserves entered values",
+    "Rest pauses",
+    "Rest resumes",
+    "Summary uses recorded demo values",
+    "Chart reports exact selected observation",
+    "Welcome action is available",
+    "Reduced motion switches live",
+    "390px has no horizontal document overflow",
+    "320px has no horizontal document overflow",
+    "No runtime exceptions"
+  ],
+  "errors": [],
+  "nativePerformanceTested": false,
+  "artifactSha256": "144b849b0f71145338983f57e37523bdc17d85b467a512e3cce6dec4f8fab85f",
+  "runnerSha256": "8f8421aaab7389f9123240483c10a615cff0b958c1ca267b3b97f1a20ab0a91b",
+  "sourceCommit": "8ec16a7",
+  "sourceIncludesExistingUncommittedChanges": true
+}

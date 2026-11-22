@@ -1,0 +1,20 @@
+{
+  "reviewDate": "2026-09-18",
+  "status": "unverified",
+  "reason": "First attempt timed out during Chrome debugger startup; retry timed out evaluating the page (Runtime.evaluate).",
+  "acceptedFreshFrames": 0,
+  "surface": "isolated headless Chrome with fictional fixture export; in-app browser unavailable",
+  "nativeValidation": false,
+  "priorScreenshotsReusedAsCurrentEvidence": false,
+  "attempts": [
+    {
+      "failure": "Chrome debugger startup",
+      "startupTimeoutSeconds": 180
+    },
+    {
+      "failure": "Runtime.evaluate",
+      "commandTimeoutSeconds": 90,
+      "startupTimeoutSeconds": 600
+    }
+  ]
+}

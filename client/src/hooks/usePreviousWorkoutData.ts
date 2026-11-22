@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { supabase } from "@/lib/supabase";
+import { workoutHistoryValues } from "@/lib/workout-record";
 
 interface PreviousSetData {
   weight: string;
@@ -30,35 +31,7 @@ export function usePreviousWorkoutData(userId: string | undefined, date: Date) {
       if (error) throw error;
       if (!data || data.length === 0) return {};
 
-      const result: PreviousExerciseData = {};
-
-      for (const log of data) {
-        try {
-          const content =
-            typeof log.content === "string"
-              ? JSON.parse(log.content)
-              : log.content;
-
-          if (!Array.isArray(content)) continue;
-
-          for (const ex of content) {
-            const name = (ex.exercise || "").toLowerCase().trim();
-            if (!name || result[name]) continue;
-
-            result[name] = {
-              sets: (ex.sets || []).map((s: any) => ({
-                weight: s.weight || "",
-                reps: s.reps || "",
-                rpe: s.rpe || "",
-              })),
-            };
-          }
-        } catch {
-          continue;
-        }
-      }
-
-      return result;
+      return workoutHistoryValues(data);
     },
     enabled: !!userId,
     staleTime: 5 * 60 * 1000,

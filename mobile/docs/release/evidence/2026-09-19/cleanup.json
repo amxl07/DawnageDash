@@ -1,0 +1,54 @@
+{
+  "removed_production_modules": 18,
+  "removed_production_lines": 2171,
+  "removed_production_bytes": 67917,
+  "removed_files_inventory_count": 40,
+  "note": "Inventory excludes replaced SetEditor.test.tsx; its two active ExerciseSlide tests were moved, not discarded.",
+  "removedDirectDependencies": [
+    "@expo-google-fonts/poppins",
+    "@hookform/resolvers",
+    "expo-blur",
+    "react-hook-form",
+    "react-native-gifted-charts",
+    "zod"
+  ],
+  "addedDirectDependencies": [
+    "@sentry/react-native",
+    "expo-dev-client"
+  ],
+  "fonts": {
+    "previousUniqueTtfCount": 36,
+    "previousRawBytes": 9249512,
+    "exportedUniqueTtfCount": 3,
+    "exportedRawBytes": 1028932,
+    "rawBytesSaved": 8220580,
+    "measurement": "Raw unique exported font assets; not compressed download or native binary savings",
+    "files": [
+      {
+        "path": "assets/node_modules/@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.a5f35888d2da465de352e0dcfaf33324.ttf",
+        "bytes": 343632,
+        "sha256": "f30e9d2574c3bec5144347ff965f9841c8f06857f0b7383000f8c9489a161841"
+      },
+      {
+        "path": "assets/node_modules/@expo-google-fonts/inter/500Medium/Inter_500Medium.137ab18bace28dd0bd83eb3b8ed2bc54.ttf",
+        "bytes": 342892,
+        "sha256": "f1738576525e86db1d5cf63a6c1b56e0a7e2a2898b499ac93db95f2e7a9f9cd5"
+      },
+      {
+        "path": "assets/node_modules/@expo-google-fonts/inter/400Regular/Inter_400Regular.51b6ad87261f18b6433ec52871ddfabc.ttf",
+        "bytes": 342408,
+        "sha256": "a414b48aa577ef2c62ebb135341ddeef33ee26a4f5dc9f787f93c1aab08ebb50"
+      }
+    ],
+    "scope": "Inter/Poppins text font families; required platform icon fonts are separate",
+    "retainedAndroidIconFont": {
+      "name": "MaterialSymbols_400Regular.ttf",
+      "rawBytes": 966544
+    },
+    "allFontBytesByPlatform": {
+      "ios": 1028932,
+      "android": 1995476,
+      "web": 1028932
+    }
+  }
+}

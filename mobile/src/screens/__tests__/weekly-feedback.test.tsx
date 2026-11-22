@@ -1,10 +1,21 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { Alert, AccessibilityInfo } from 'react-native';
+import { Alert, AccessibilityInfo, findNodeHandle } from 'react-native';
 
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
+import { emptyWeekly } from '@/components/weekly/steps';
+import type { WeeklyCheckIn, WeeklyFeedbackDraft } from '@/lib/weekly-feedback';
 
-const mockHistory = [
+jest.mock('react-native', () => {
+  const actual = jest.requireActual('react-native');
+  const mock = Object.create(actual);
+  Object.defineProperty(mock, 'findNodeHandle', {
+    configurable: true,
+    value: jest.fn(),
+  });
+  return mock;
+});
+
+const mockHistory: (Partial<WeeklyCheckIn> & Pick<WeeklyCheckIn, 'id' | 'user_id' | 'created_at' | 'week_start_date'> & { coach_reply?: string })[] = [
   {
     id: 'week-new',
     user_id: 'user-1',
@@ -39,13 +50,15 @@ const mockHistory = [
   },
 ];
 let mockCheckIns: {
+  date?: string;
   daily_steps: number | null;
   water_liters: number | null;
   stress_level: number | null;
 }[] = [];
+let mockToday = '2026-09-19';
 let mockUser = { id: 'user-1', user_metadata: { full_name: 'Maya Singh' } };
 
-const mockLoadDraft = jest.fn(async () => null);
+const mockLoadDraft = jest.fn(async (): Promise<WeeklyFeedbackDraft | null> => null);
 const mockSaveDraft = jest.fn(async () => true);
 const mockUser2SaveDraft = jest.fn(async () => true);
 const mockClearDraft = jest.fn(async () => true);
@@ -55,6 +68,7 @@ const mockRefetchHistory = jest.fn();
 const mockDispatch = jest.fn();
 const mockRouterBack = jest.fn();
 const mockScrollTo = jest.fn();
+const mockAnimationFrames: ((time: number) => void)[] = [];
 let mockPreventRemoveEnabled = false;
 let mockPreventRemoveCallback:
   | ((event: { data: { action: { type: string } } }) => void)
@@ -74,7 +88,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   removeItem: jest.fn(async () => undefined),
 }));
 
-jest.mock('@react-navigation/native', () => ({
+jest.mock('expo-router/react-navigation', () => ({
   useNavigation: () => ({ dispatch: mockDispatch }),
   usePreventRemove: (
     enabled: boolean,
@@ -100,7 +114,9 @@ jest.mock('@/contexts/AuthContext', () => ({
 
 jest.mock('@/hooks/useDashboardData', () => ({
   useDashboardData: () => ({ checkIns: mockCheckIns }),
+  useDailyCheckIns: () => ({ data: mockCheckIns }),
 }));
+jest.mock('@/features/home/useHomeDate', () => ({ useHomeDate: () => mockToday }));
 
 jest.mock('@/hooks/useWeeklyFeedbackDraft', () => ({
   useWeeklyFeedbackDraft: () => ({
@@ -116,6 +132,15 @@ jest.mock('@/lib/supabase', () => ({
 }));
 
 jest.mock('@/components/coach/CoachBadge', () => ({ CoachBadge: () => null }));
+
+jest.mock('@/components/ui/MotionReveal', () => {
+  const Native = require('react-native');
+  return {
+    MotionReveal: ({ children, ...props }: React.ComponentProps<typeof Native.View>) => (
+      <Native.View {...props}>{children}</Native.View>
+    ),
+  };
+});
 
 jest.mock('lucide-react-native', () => ({
   Camera: () => null,
@@ -205,14 +230,16 @@ jest.mock('@/components/ui', () => {
         ) : null}
       </MockView>
     ),
-    Input: ({ label, value, onChangeText, error }: {
+    Input: ({ label, value, onChangeText, error, hint }: {
       label: string;
       value: string;
       onChangeText: (value: string) => void;
       error?: string;
+      hint?: string;
     }) => (
       <MockView>
         <MockTextInput accessibilityLabel={label} value={value} onChangeText={onChangeText} />
+        {hint ? <MockText>{hint}</MockText> : null}
         {error ? <MockText testID={`error-${label}`}>{error}</MockText> : null}
       </MockView>
     ),
@@ -262,7 +289,12 @@ jest.mock('@/components/ui', () => {
   };
 });
 
-const WeeklyFeedbackScreen = require('../../../app/(app)/weekly-feedback').default;
+const weeklyFeedbackModule = require('../../../app/(app)/weekly-feedback');
+const WeeklyFeedbackScreen = weeklyFeedbackModule.default;
+const focusWeeklyTarget = weeklyFeedbackModule.focusWeeklyTarget as (
+  target: { focus: () => void },
+  platform: 'web',
+) => void;
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -277,7 +309,9 @@ function deferred<T>() {
 async function renderScreen() {
   let renderer!: ReturnType<typeof create>;
   await act(async () => {
-    renderer = create(<WeeklyFeedbackScreen />, { createNodeMock: () => ({ mounted: true }) });
+    renderer = create(<WeeklyFeedbackScreen />, {
+      createNodeMock: () => ({ mounted: true }),
+    });
     await Promise.resolve();
   });
   return renderer;
@@ -298,6 +332,7 @@ describe('WeeklyFeedbackScreen', () => {
     mockClearDraft.mockResolvedValue(true);
     mockInsert.mockResolvedValue({ error: null });
     mockCheckIns = [];
+    mockToday = '2026-09-19';
     mockUser = { id: 'user-1', user_metadata: { full_name: 'Maya Singh' } };
     mockHistoryQuery = {
       data: mockHistory,
@@ -309,12 +344,193 @@ describe('WeeklyFeedbackScreen', () => {
     mockMotionEnabled = true;
     mockPreventRemoveEnabled = false;
     mockPreventRemoveCallback = undefined;
+    mockAnimationFrames.length = 0;
+    jest.mocked(findNodeHandle).mockImplementation(
+      (target) => {
+        const props = (target as unknown as {
+          props?: { testID?: string; accessibilityRole?: string };
+        } | null)?.props;
+        if (props?.testID === 'weekly-step-title') return 77;
+        if (props?.accessibilityRole === 'alert') return 78;
+        return null;
+      },
+    );
+    jest.spyOn(global, 'requestAnimationFrame').mockImplementation((callback) => {
+      mockAnimationFrames.push(callback);
+      return mockAnimationFrames.length;
+    });
     jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
     jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(jest.fn());
     jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus').mockImplementation(jest.fn());
   });
 
   afterEach(() => jest.restoreAllMocks());
+
+
+  it('keeps a Sunday report and its hints frozen through Monday and submits its captured week', async () => {
+    mockToday = '2026-09-20';
+    mockHistoryQuery.data = [];
+    mockCheckIns = [{ date: '2026-09-20', daily_steps: 8000, water_liters: 3, stress_level: 4 }];
+    const renderer = await renderScreen();
+    await press(renderer, 'Start');
+    await press(renderer, 'Next');
+    await press(renderer, 'Next');
+    mockToday = '2026-09-21';
+    mockCheckIns = [{ date: '2026-09-21', daily_steps: 1000, water_liters: 1, stress_level: 1 }];
+    await act(async () => renderer.update(<WeeklyFeedbackScreen />));
+    expect(JSON.stringify(renderer.toJSON())).toContain('14 Sep–20 Sep 2026');
+    expect(JSON.stringify(renderer.toJSON())).toContain('recorded 20 Sep 2026');
+    expect(renderer.root.findByProps({ accessibilityLabel: "What's your average step count this week?" }).props.value).toBe('8000');
+    await press(renderer, 'Next');
+    await press(renderer, 'Next');
+    await press(renderer, 'Submit');
+    expect(mockInsert).toHaveBeenCalledWith(expect.objectContaining({ week_start_date: '2026-09-14', step_count: '8000' }));
+  });
+
+  it('restores the persisted reporting date without relabeling an older draft after restart', async () => {
+    mockToday = '2026-09-21';
+    mockHistoryQuery.data = [];
+    mockLoadDraft.mockResolvedValueOnce({
+      form: { ...emptyWeekly(), step_count: '8000' }, step: 2,
+      report: { through: '2026-09-20', prefill: { step_count: '8000', water_intake: '', stress_level: '' }, observationDates: { step_count: ['2026-09-20'], water_intake: [], stress_level: [] } },
+    } as WeeklyFeedbackDraft);
+    const renderer = await renderScreen();
+    expect(JSON.stringify(renderer.toJSON())).toContain('14 Sep–20 Sep 2026');
+    expect(renderer.root.findByProps({ accessibilityLabel: "What's your average step count this week?" }).props.value).toBe('8000');
+    await press(renderer, 'Next');
+    await press(renderer, 'Next');
+    await press(renderer, 'Submit');
+    expect(mockInsert).toHaveBeenCalledWith(expect.objectContaining({ week_start_date: '2026-09-14' }));
+  });
+
+  it('restores a history-confirmed leftover draft as cleanup-only after remount', async () => {
+    const form = { ...emptyWeekly(), overall_feeling: 'Already sent' };
+    mockHistoryQuery.data = [{ ...mockHistory[0], ...form, week_start_date: '2026-09-14' }];
+    mockLoadDraft.mockResolvedValueOnce({ form, step: 4 });
+    const renderer = await renderScreen();
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Retry cleanup' })).toBeTruthy();
+    expect(renderer.root.findAllByProps({ accessibilityLabel: 'Submit' })).toHaveLength(0);
+    expect(mockClearDraft).not.toHaveBeenCalled();
+    await press(renderer, 'Retry cleanup');
+    expect(mockClearDraft).toHaveBeenCalledTimes(1);
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it('keeps divergent same-week draft answers in a protected review instead of submitting again', async () => {
+    mockHistoryQuery.data = [{ ...mockHistory[0], ...emptyWeekly(), overall_feeling: 'Previously sent', week_start_date: '2026-09-14' }];
+    mockLoadDraft.mockResolvedValueOnce({ form: { ...emptyWeekly(), overall_feeling: 'Newer saved answer' }, step: 4 });
+    const renderer = await renderScreen();
+    expect(renderer.root.findByProps({ children: 'Review saved draft' })).toBeTruthy();
+    expect(renderer.root.findByProps({ children: 'Newer saved answer' })).toBeTruthy();
+    expect(renderer.root.findByProps({ children: 'Previously sent' })).toBeTruthy();
+    expect(renderer.root.findAllByProps({ accessibilityLabel: 'Submit' })).toHaveLength(0);
+    expect(mockInsert).not.toHaveBeenCalled();
+    expect(mockClearDraft).not.toHaveBeenCalled();
+  });
+
+  it('retains edits made while submission was in flight as a protected divergent draft', async () => {
+    mockHistoryQuery.data = [];
+    const pending = deferred<{ error: Error | null }>();
+    mockInsert.mockReturnValueOnce(pending.promise);
+    const renderer = await renderScreen();
+    await press(renderer, 'Start');
+    for (let index = 0; index < 4; index++) await press(renderer, 'Next');
+    act(() => renderer.root.findByProps({ testID: 'primary-action' }).props.onPress());
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'Anything else you want to share?' }).props.onChangeText('Newer answer during save'));
+    await act(async () => pending.resolve({ error: null }));
+    expect(renderer.root.findByProps({ children: 'Review saved draft' })).toBeTruthy();
+    expect(renderer.root.findByProps({ children: 'Newer answer during save' })).toBeTruthy();
+    expect(mockClearDraft).not.toHaveBeenCalled();
+    expect(mockSaveDraft).toHaveBeenCalledWith(expect.objectContaining({ feedback: 'Newer answer during save' }), expect.any(Number), expect.objectContaining({ immediate: true }));
+  });
+
+  it('discloses unknown original dates for a legacy draft without changing its answers', async () => {
+    mockHistoryQuery.data = [];
+    mockLoadDraft.mockResolvedValueOnce({ form: { ...emptyWeekly(), overall_feeling: 'Keep my legacy answer' }, step: 0 });
+    const renderer = await renderScreen();
+    expect(JSON.stringify(renderer.toJSON())).toContain('did not store its original reporting dates');
+    expect(renderer.root.findByProps({ accessibilityLabel: 'How are you feeling overall this week?' }).props.value).toBe('Keep my legacy answer');
+    expect(mockSaveDraft).toHaveBeenCalledWith(expect.objectContaining({ overall_feeling: 'Keep my legacy answer' }), 0, expect.objectContaining({ report: expect.objectContaining({ inferred: true }) }));
+  });
+
+  it('requires explicit confirmation before removing a divergent saved draft', async () => {
+    mockHistoryQuery.data = [{ ...mockHistory[0], ...emptyWeekly(), overall_feeling: 'Submitted answer', week_start_date: '2026-09-14' }];
+    mockLoadDraft.mockResolvedValueOnce({ form: { ...emptyWeekly(), overall_feeling: 'Newer draft answer' }, step: 4 });
+    const renderer = await renderScreen();
+    await press(renderer, 'Discard saved draft');
+    expect(mockClearDraft).not.toHaveBeenCalled();
+    const discard = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2]?.find((action) => action.text === 'Discard draft');
+    mockClearDraft.mockResolvedValueOnce(false);
+    await act(async () => { await discard?.onPress?.(); });
+    expect(renderer.root.findByProps({ children: 'Newer draft answer' })).toBeTruthy();
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it('uses guarded DOM focus for weekly targets on web', () => {
+    const focus = jest.fn();
+
+    focusWeeklyTarget({ focus }, 'web');
+
+    expect(focus).toHaveBeenCalledTimes(1);
+    expect(AccessibilityInfo.setAccessibilityFocus).not.toHaveBeenCalled();
+  });
+
+  it('labels each history answer with its question and unit', async () => {
+    const renderer = await renderScreen();
+    expect(renderer.root.findByProps({ children: 'Are you progressing in your training?' })).toBeTruthy();
+    expect(renderer.root.findByProps({ children: '8000 steps/day' })).toBeTruthy();
+    expect(renderer.root.findByProps({ children: '3 litres/day' })).toBeTruthy();
+  });
+
+  it('prefills Monday-to-today observations without treating missing values as zero', async () => {
+    mockCheckIns = [
+      { date: '2026-08-01', daily_steps: 1000, water_liters: 1, stress_level: 1 },
+      { date: '2026-09-14', daily_steps: 8000, water_liters: 3, stress_level: 4 },
+      { date: '2026-09-19', daily_steps: null, water_liters: null, stress_level: null },
+      { date: '2026-09-20', daily_steps: 1000, water_liters: 1, stress_level: 1 },
+    ];
+    const renderer = await renderScreen();
+    await press(renderer, 'Start');
+    await press(renderer, 'Next');
+    await press(renderer, 'Next');
+    expect(renderer.root.findByProps({ accessibilityLabel: "What's your average step count this week?" }).props.value).toBe('8000');
+    expect(JSON.stringify(renderer.toJSON())).toContain('14 Sep–19 Sep 2026');
+    expect(JSON.stringify(renderer.toJSON())).toContain('1 observation');
+  });
+
+  it('keeps empty weeks blank and preserves observed zero values', async () => {
+    mockCheckIns = [{ date: '2026-09-01', daily_steps: 5000, water_liters: 3, stress_level: 4 }];
+    let renderer = await renderScreen();
+    await press(renderer, 'Start');
+    await press(renderer, 'Next');
+    await press(renderer, 'Next');
+    expect(renderer.root.findByProps({ accessibilityLabel: "What's your average step count this week?" }).props.value).toBe('');
+    act(() => renderer.unmount());
+    mockCheckIns = [{ date: '2026-09-14', daily_steps: 0, water_liters: 0, stress_level: 4 }];
+    renderer = await renderScreen();
+    await press(renderer, 'Start');
+    await press(renderer, 'Next');
+    await press(renderer, 'Next');
+    expect(renderer.root.findByProps({ accessibilityLabel: "What's your average step count this week?" }).props.value).toBe('0');
+  });
+
+  it.each([
+    ['2026-09-14', '2026-09-14', '2026-09-13', '2026-09-15'],
+    ['2026-09-20', '2026-09-14', '2026-09-13', '2026-09-21'],
+    ['2027-01-01', '2026-12-28', '2026-12-27', '2027-01-02'],
+  ])('respects calendar week boundaries through %s', async (today, included, before, after) => {
+    mockToday = today;
+    mockCheckIns = [
+      { date: before, daily_steps: 1000, water_liters: null, stress_level: null },
+      { date: included, daily_steps: 8000, water_liters: null, stress_level: null },
+      { date: after, daily_steps: 1000, water_liters: null, stress_level: null },
+    ];
+    const renderer = await renderScreen();
+    await press(renderer, 'Start');
+    await press(renderer, 'Next');
+    await press(renderer, 'Next');
+    expect(renderer.root.findByProps({ accessibilityLabel: "What's your average step count this week?" }).props.value).toBe('8000');
+  });
 
   it('virtualizes history using stable server IDs and bounded render windows', async () => {
     const renderer = await renderScreen();
@@ -327,11 +543,14 @@ describe('WeeklyFeedbackScreen', () => {
     expect(renderer.root.findAllByProps({ children: 'This undeclared field must never render' })).toHaveLength(0);
   });
 
-  it('blocks an invalid active step, renders its inline error, and announces the summary', async () => {
+  it('blocks an invalid active step and gives its focused alert sole ownership of the summary announcement', async () => {
     const renderer = await renderScreen();
     await press(renderer, 'Start');
     await press(renderer, 'Next');
     await press(renderer, 'Next');
+    jest.mocked(AccessibilityInfo.announceForAccessibility).mockClear();
+    jest.mocked(AccessibilityInfo.setAccessibilityFocus).mockClear();
+    jest.mocked(findNodeHandle).mockClear();
 
     act(() => {
       renderer.root
@@ -339,13 +558,26 @@ describe('WeeklyFeedbackScreen', () => {
         .props.onChangeText('-1');
     });
     await act(async () => renderer.root.findByProps({ testID: 'primary-action' }).props.onPress());
+    act(() => {
+      for (const callback of mockAnimationFrames.splice(0)) callback(0);
+    });
 
     expect(
       renderer.root.findByProps({
         testID: "error-What's your average step count this week?",
       }).props.children,
     ).toBe('Enter a step count of zero or more.');
-    expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith(
+    const summary = renderer.root.findByProps({
+      accessibilityRole: 'alert',
+      accessibilityLiveRegion: 'polite',
+    });
+    expect(summary.props).toMatchObject({ accessible: true, focusable: true });
+    expect(summary.findByProps({ children: 'Please correct the highlighted fields before continuing.' })).toBeTruthy();
+    expect(findNodeHandle).toHaveBeenCalledWith(expect.objectContaining({
+      props: expect.objectContaining({ accessibilityRole: 'alert' }),
+    }));
+    expect(AccessibilityInfo.setAccessibilityFocus).toHaveBeenCalledWith(78);
+    expect(AccessibilityInfo.announceForAccessibility).not.toHaveBeenCalledWith(
       'Please correct the highlighted fields before continuing.',
     );
     expect(renderer.root.findByProps({ children: 'Training' })).toBeTruthy();
@@ -361,6 +593,27 @@ describe('WeeklyFeedbackScreen', () => {
     );
     expect(renderer.root.findByProps({ testID: 'draft-status' }).props.children).toBe('saved');
     expect(renderer.root.findByProps({ children: 'Step 2 of 5' })).toBeTruthy();
+  });
+
+  it('resets scroll before focusing a newly opened step heading', async () => {
+    const renderer = await renderScreen();
+    await press(renderer, 'Start');
+    mockScrollTo.mockClear();
+    jest.mocked(AccessibilityInfo.setAccessibilityFocus).mockClear();
+    jest.mocked(findNodeHandle).mockClear();
+
+    await press(renderer, 'Next');
+
+    expect(mockScrollTo).toHaveBeenLastCalledWith({ y: 0, animated: false });
+    expect(renderer.root.findByProps({ testID: 'weekly-step-title' }).props).toMatchObject({
+      accessible: true,
+      accessibilityRole: 'header',
+      focusable: true,
+    });
+    expect(findNodeHandle).toHaveBeenCalledWith(expect.objectContaining({
+      props: expect.objectContaining({ testID: 'weekly-step-title' }),
+    }));
+    expect(AccessibilityInfo.setAccessibilityFocus).toHaveBeenCalledWith(77);
   });
 
   it('disables animated step and validation scrolling when Reduced Motion is enabled', async () => {
@@ -405,7 +658,7 @@ describe('WeeklyFeedbackScreen', () => {
     expect(mockSaveDraft).toHaveBeenLastCalledWith(
       expect.objectContaining({ overall_feeling: 'Keep this response' }),
       0,
-      { immediate: true },
+      { immediate: true, report: expect.objectContaining({ through: '2026-09-19' }) },
     );
     expect(mockDispatch).not.toHaveBeenCalled();
     expect(
@@ -519,7 +772,7 @@ describe('WeeklyFeedbackScreen', () => {
   });
 
   it('does not re-run restoration when daily-check-in prefill changes during active editing', async () => {
-    mockCheckIns = [{ daily_steps: 5000, water_liters: 2, stress_level: 3 }];
+    mockCheckIns = [{ date: '2026-09-14', daily_steps: 5000, water_liters: 2, stress_level: 3 }];
     const renderer = await renderScreen();
     await press(renderer, 'Start');
     act(() => {
@@ -529,7 +782,7 @@ describe('WeeklyFeedbackScreen', () => {
     });
     await press(renderer, 'Next');
 
-    mockCheckIns = [{ daily_steps: 9000, water_liters: 4, stress_level: 8 }];
+    mockCheckIns = [{ date: '2026-09-14', daily_steps: 9000, water_liters: 4, stress_level: 8 }];
     await act(async () => {
       renderer.update(<WeeklyFeedbackScreen />);
       await Promise.resolve();

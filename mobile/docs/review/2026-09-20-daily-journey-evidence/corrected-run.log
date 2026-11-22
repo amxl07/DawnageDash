@@ -1,0 +1,10 @@
+PASS src/screens/__tests__/tabs/plans.test.tsx (136.203 s)
+PASS src/components/plans/PlanDayCard.test.tsx (32.15 s)
+PASS src/screens/__tests__/tabs/navigation.test.tsx (5.973 s)
+PASS src/screens/__tests__/tabs/nutrition.test.tsx
+
+Test Suites: 4 passed, 4 total
+Tests:       30 passed, 30 total
+Snapshots:   0 total
+Time:        209.881 s
+Ran all test suites within paths "src/screens/__tests__/tabs/plans.test.tsx", "src/components/plans/PlanDayCard.test.tsx", "src/screens/__tests__/tabs/navigation.test.tsx", "src/screens/__tests__/tabs/nutrition.test.tsx".

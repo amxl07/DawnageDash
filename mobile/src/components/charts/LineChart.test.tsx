@@ -1,70 +1,80 @@
-import { Text as NativeText, View } from 'react-native';
+import { render } from '@testing-library/react-native';
 
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
-import { act, create } from 'react-test-renderer';
-
-import type { Series } from './types';
 import { LineChart } from './LineChart';
-
-const MockNativeText = NativeText;
-const MockView = View;
-const mockGiftedLine = jest.fn();
-
-jest.mock('react-native-gifted-charts', () => ({
-  LineChart: (props: Record<string, unknown>) => {
-    mockGiftedLine(props);
-    return <MockView testID="gifted-line" />;
-  },
-}));
-
-jest.mock('@/components/ui', () => ({
-  Text: ({ children, ...props }: React.ComponentProps<typeof MockNativeText>) => (
-    <MockNativeText {...props}>{children}</MockNativeText>
-  ),
-}));
+import type { Series } from './types';
 
 jest.mock('@/theme', () => ({
-  fonts: { interRegular: 'Inter' },
-  spacing: { xs: 4, sm: 8, md: 12 },
-  useMotion: () => ({ enabled: false, duration: { enter: 0 } }),
-  useTheme: () => ({
-    colors: { border: '#ddd', mutedForeground: '#666' },
-  }),
+  ...jest.requireActual('@/theme/tokens'),
+  useTheme: () => ({ colors: jest.requireActual('@/theme/colors').dark }),
 }));
+jest.mock('@/components/ui', () => ({ Text: jest.requireActual('@/components/ui/Text').Text }));
 
 const series: Series[] = [
-  { name: 'Chest', color: '#111', dash: [1, 1], data: [{ label: 'W0', value: 96 }, { label: 'W1', value: 95 }] },
-  { name: 'Waist', color: '#222', dash: [2, 2], data: [{ label: 'W0', value: 86 }, { label: 'W1', value: 82 }] },
-  { name: 'Hips', color: '#333', dash: [3, 3], data: [{ label: 'W0', value: 100 }, { label: 'W1', value: 98 }] },
-  { name: 'Thighs', color: '#444', dash: [4, 4], data: [{ label: 'W0', value: 55 }, { label: 'W1', value: 54 }] },
-  { name: 'Arms', color: '#555', dash: [5, 5], data: [{ label: 'W0', value: 34 }, { label: 'W1', value: 33 }] },
+  {
+    name: 'Waist',
+    color: '#f00',
+    dash: [6, 4],
+    data: [
+      { date: '2026-07-01', value: 86 },
+      { date: '2026-07-22', value: null },
+      { date: '2026-08-29', value: 82.5 },
+    ],
+  },
+  {
+    name: 'Hips',
+    color: '#0f0',
+    data: [{ date: '2026-08-29', value: 98 }],
+  },
 ];
 
-describe('LineChart', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
+it('provides the authored summary and truthful latest values for sparse series', async () => {
+  const view = await render(
+    <LineChart
+      series={series}
+      summary="Body measurements by recorded date. Missing values appear as gaps."
+      yAxisSuffix=" cm"
+    />,
+  );
 
-  it('forwards fourth and fifth series data, colors, and dash patterns', () => {
-    act(() => {
-      create(<LineChart series={series} summary="Five measurement trends." />);
-    });
+  expect(
+    view.getByRole('image', {
+      name: 'Body measurements by recorded date. Missing values appear as gaps.',
+    }),
+  ).toBeTruthy();
+  expect(view.getByText('82.5 cm')).toBeTruthy();
+  expect(view.getByText('98 cm')).toBeTruthy();
+  expect(view.getByText(/Jul.*1|1.*Jul/)).toBeTruthy();
+  expect(view.getByText(/Aug.*29|29.*Aug/)).toBeTruthy();
+});
 
-    expect(mockGiftedLine).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data4: [
-          { label: 'W0', value: 55 },
-          { label: 'W1', value: 54 },
+it('keeps a single observation visible rather than claiming more data is required', async () => {
+  const view = await render(
+    <LineChart
+      series={[{ name: 'Waist', color: '#f00', data: [{ date: '2026-08-29', value: 82.5 }] }]}
+      summary="One waist measurement."
+    />,
+  );
+
+  expect(view.getByRole('image', { name: 'One waist measurement.' })).toBeTruthy();
+  expect(view.getByText('82.5')).toBeTruthy();
+  expect(view.queryByText(/Not enough data/)).toBeNull();
+});
+
+it('ignores non-finite values when reporting the latest observation', async () => {
+  const view = await render(
+    <LineChart
+      series={[{
+        name: 'Waist',
+        color: '#f00',
+        data: [
+          { date: '2026-08-20', value: 83 },
+          { date: '2026-08-29', value: Number.NaN },
         ],
-        data5: [
-          { label: 'W0', value: 34 },
-          { label: 'W1', value: 33 },
-        ],
-        color4: '#444',
-        color5: '#555',
-        strokeDashArray4: [4, 4],
-        strokeDashArray5: [5, 5],
-      }),
-    );
-  });
+      }]}
+      summary="Waist measurements."
+      yAxisSuffix=" cm"
+    />,
+  );
+
+  expect(view.getByText('83 cm')).toBeTruthy();
 });

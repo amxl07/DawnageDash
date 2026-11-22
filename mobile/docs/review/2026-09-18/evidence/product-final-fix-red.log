@@ -1,0 +1,235 @@
+FAIL src/hooks/useProgressPhotos.test.tsx (79.059 s)
+  ● rejects an update with zero rows acknowledgement from installed PostgREST
+
+    expect(received).toBeDefined()
+
+    Received: undefined
+
+      48 | ])('rejects an update with %s acknowledgement from installed PostgREST', async (_label, acknowledgement) => {
+      49 |   const { failure } = await runMutation(true, acknowledgement);
+    > 50 |   expect(failure).toBeDefined();
+         |                   ^
+      51 | });
+      52 |
+      53 | it.each([
+
+      at toBeDefined (src/hooks/useProgressPhotos.test.tsx:50:19)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● rejects an update with wrong row acknowledgement from installed PostgREST
+
+    expect(received).toBeDefined()
+
+    Received: undefined
+
+      48 | ])('rejects an update with %s acknowledgement from installed PostgREST', async (_label, acknowledgement) => {
+      49 |   const { failure } = await runMutation(true, acknowledgement);
+    > 50 |   expect(failure).toBeDefined();
+         |                   ^
+      51 | });
+      52 |
+      53 | it.each([
+
+      at toBeDefined (src/hooks/useProgressPhotos.test.tsx:50:19)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● rejects an update with wrong owner acknowledgement from installed PostgREST
+
+    expect(received).toBeDefined()
+
+    Received: undefined
+
+      48 | ])('rejects an update with %s acknowledgement from installed PostgREST', async (_label, acknowledgement) => {
+      49 |   const { failure } = await runMutation(true, acknowledgement);
+    > 50 |   expect(failure).toBeDefined();
+         |                   ^
+      51 | });
+      52 |
+      53 | it.each([
+
+      at toBeDefined (src/hooks/useProgressPhotos.test.tsx:50:19)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● rejects an update with missing identity acknowledgement from installed PostgREST
+
+    expect(received).toBeDefined()
+
+    Received: undefined
+
+      48 | ])('rejects an update with %s acknowledgement from installed PostgREST', async (_label, acknowledgement) => {
+      49 |   const { failure } = await runMutation(true, acknowledgement);
+    > 50 |   expect(failure).toBeDefined();
+         |                   ^
+      51 | });
+      52 |
+      53 | it.each([
+
+      at toBeDefined (src/hooks/useProgressPhotos.test.tsx:50:19)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● rejects an insert with zero rows acknowledgement from installed PostgREST
+
+    expect(received).toBeDefined()
+
+    Received: undefined
+
+      57 | ])('rejects an insert with %s acknowledgement from installed PostgREST', async (_label, acknowledgement) => {
+      58 |   const { failure } = await runMutation(false, acknowledgement);
+    > 59 |   expect(failure).toBeDefined();
+         |                   ^
+      60 | });
+      61 |
+      62 | it.each([true, false])('accepts an owned photo row and requests its representation (update: %s)', async (existing) => {
+
+      at toBeDefined (src/hooks/useProgressPhotos.test.tsx:59:19)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● rejects an insert with wrong owner acknowledgement from installed PostgREST
+
+    expect(received).toBeDefined()
+
+    Received: undefined
+
+      57 | ])('rejects an insert with %s acknowledgement from installed PostgREST', async (_label, acknowledgement) => {
+      58 |   const { failure } = await runMutation(false, acknowledgement);
+    > 59 |   expect(failure).toBeDefined();
+         |                   ^
+      60 | });
+      61 |
+      62 | it.each([true, false])('accepts an owned photo row and requests its representation (update: %s)', async (existing) => {
+
+      at toBeDefined (src/hooks/useProgressPhotos.test.tsx:59:19)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● rejects an insert with missing identity acknowledgement from installed PostgREST
+
+    expect(received).toBeDefined()
+
+    Received: undefined
+
+      57 | ])('rejects an insert with %s acknowledgement from installed PostgREST', async (_label, acknowledgement) => {
+      58 |   const { failure } = await runMutation(false, acknowledgement);
+    > 59 |   expect(failure).toBeDefined();
+         |                   ^
+      60 | });
+      61 |
+      62 | it.each([true, false])('accepts an owned photo row and requests its representation (update: %s)', async (existing) => {
+
+      at toBeDefined (src/hooks/useProgressPhotos.test.tsx:59:19)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● accepts an owned photo row and requests its representation (update: true)
+
+    expect(received).toContain(expected) // indexOf
+
+    Matcher error: received value must not be null nor undefined
+
+    Received has value: null
+
+      65 |   expect(writes).toHaveLength(1);
+      66 |   expect(writes[0].method).toBe(existing ? 'PATCH' : 'POST');
+    > 67 |   expect(writes[0].headers.get('prefer')).toContain('return=representation');
+         |                                           ^
+      68 |   expect(writes[0].url.searchParams.get('select')).toBe('id,user_id');
+      69 |   if (existing) {
+      70 |     expect(writes[0].url.searchParams.get('id')).toBe(`eq.${existingId}`);
+
+      at toContain (src/hooks/useProgressPhotos.test.tsx:67:43)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● accepts an owned photo row and requests its representation (update: false)
+
+    expect(received).toContain(expected) // indexOf
+
+    Matcher error: received value must not be null nor undefined
+
+    Received has value: null
+
+      65 |   expect(writes).toHaveLength(1);
+      66 |   expect(writes[0].method).toBe(existing ? 'PATCH' : 'POST');
+    > 67 |   expect(writes[0].headers.get('prefer')).toContain('return=representation');
+         |                                           ^
+      68 |   expect(writes[0].url.searchParams.get('select')).toBe('id,user_id');
+      69 |   if (existing) {
+      70 |     expect(writes[0].url.searchParams.get('id')).toBe(`eq.${existingId}`);
+
+      at toContain (src/hooks/useProgressPhotos.test.tsx:67:43)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL src/components/media/PhotoCaptureSheet.test.tsx (42.436 s)
+  ● PhotoCaptureSheet › retains exact uploaded references after zero-row acknowledgement and retries without uploading again
+
+    expect(jest.fn()).not.toHaveBeenCalled()
+
+    Expected number of calls: 0
+    Received number of calls: 1
+
+    1: called with 0 arguments
+
+      305 |     await act(async () => { await getByLabelText('Choose Front photo from library').props.onPress(); });
+      306 |     await act(async () => { await getByLabelText('Save photos').props.onPress(); });
+    > 307 |     expect(onClose).not.toHaveBeenCalled();
+          |                         ^
+      308 |     expect(getByLabelText('Front photo, uploaded')).toBeTruthy();
+      309 |     expect(getByLabelText('Retry save')).toBeTruthy();
+      310 |     await act(async () => { await getByLabelText('Retry save').props.onPress(); });
+
+      at Object.toHaveBeenCalled (src/components/media/PhotoCaptureSheet.test.tsx:307:25)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL src/components/measurements/MeasurementSheet.test.tsx (61.546 s)
+  ● keeps newer edits unsaved and open when an older snapshot finishes saving
+
+    expect(jest.fn()).not.toHaveBeenCalled()
+
+    Expected number of calls: 0
+    Received number of calls: 1
+
+    1: "Waist −7.5 cm since last time"
+
+      211 |   await act(async () => { pending.resolve(); await save; });
+      212 |   expect(waist().props.value).toBe('83');
+    > 213 |   expect(onSaved).not.toHaveBeenCalled();
+          |                       ^
+      214 |   expect(onClose).not.toHaveBeenCalled();
+      215 |   expect(renderer.root.findByProps({ children: 'Earlier values saved. Your latest changes still need saving.' })).toBeTruthy();
+      216 |   await act(async () => { await renderer.root.findByProps({ accessibilityLabel: 'Retry save' }).props.onPress(); });
+
+      at Object.toHaveBeenCalled (src/components/measurements/MeasurementSheet.test.tsx:213:23)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● ignores repeated keyboard and button submits synchronously while saving
+
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+
+    Expected number of calls: 1
+    Received number of calls: 3
+
+      235 |     void button.props.onPress();
+      236 |   });
+    > 237 |   expect(mockMutateAsync).toHaveBeenCalledTimes(1);
+          |                           ^
+      238 |   await act(async () => { pending.resolve(); await pending.promise; });
+      239 |   expect(onSaved).toHaveBeenCalledTimes(1);
+      240 |   expect(onClose).toHaveBeenCalledTimes(1);
+
+      at Object.toHaveBeenCalledTimes (src/components/measurements/MeasurementSheet.test.tsx:237:27)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 3 failed, 3 total
+Tests:       12 failed, 22 passed, 34 total
+Snapshots:   0 total
+Time:        201.036 s
+Ran all test suites within paths "src/components/measurements/MeasurementSheet.test.tsx", "src/hooks/useProgressPhotos.test.tsx", "src/components/media/PhotoCaptureSheet.test.tsx".

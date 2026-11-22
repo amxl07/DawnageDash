@@ -30,7 +30,7 @@ export function ListRow({ icon: Icon, title, subtitle, onPress, divider = false 
         paddingVertical: spacing.sm,
         borderTopWidth: divider ? 1 : 0,
         borderTopColor: colors.border,
-        backgroundColor: pressed ? colors.elevated : 'transparent',
+        backgroundColor: pressed ? colors.pressed : 'transparent',
       })}
     >
       <Icon size={iconSize.md} color={colors.mutedForeground} strokeWidth={2} accessible={false} />

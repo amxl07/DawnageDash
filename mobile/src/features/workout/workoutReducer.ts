@@ -95,6 +95,7 @@ export type WorkoutAction =
   | { type: 'TOGGLE_SET'; payload: { exerciseIndex: number; setIndex: number } }
   | { type: 'ADD_SET'; payload: { exerciseIndex: number } }
   | { type: 'REMOVE_SET'; payload: { exerciseIndex: number; setIndex: number } }
+  | { type: 'RESTORE_SET'; payload: { exerciseIndex: number; index: number; set: WorkoutSet } }
   | { type: 'ADD_EXERCISE'; payload: { name: string; tracking?: WorkoutExercise['tracking'] } }
   | {
       type: 'REPLACE_EXERCISE';
@@ -265,6 +266,16 @@ export function workoutReducer(state: WorkoutState, action: WorkoutAction): Work
           ...exercise,
           sets: exercise.sets.filter((_, index) => index !== action.payload.setIndex),
         })),
+        isDirty: true,
+      };
+    case 'RESTORE_SET':
+      return {
+        ...state,
+        exercises: updateExercise(state, action.payload.exerciseIndex, (exercise) => {
+          if (exercise.sets.some((set) => set.id === action.payload.set.id)) return exercise;
+          const index = Math.max(0, Math.min(exercise.sets.length, action.payload.index));
+          return { ...exercise, sets: [...exercise.sets.slice(0, index), { ...action.payload.set }, ...exercise.sets.slice(index)] };
+        }),
         isDirty: true,
       };
     case 'ADD_EXERCISE': {

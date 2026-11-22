@@ -1,28 +1,13 @@
+import NetInfo from '@react-native-community/netinfo';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect } from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { flushCheckInOutbox, saveCheckIn } from '@/features/checkin/checkInOutbox';
+import type { CheckInPayload } from '@/features/checkin/persistence';
 import type { DailyCheckIn } from '@/types/db';
 
-export type CheckInPayload = {
-  date: string; // local yyyy-MM-dd
-  morning_weight: number | null;
-  sleep_hours: number | null;
-  workout_status: string | null;
-  workout_performance: number | null;
-  nutrition_score: number | null;
-  calorie_intake: number | null;
-  water_liters: number | null;
-  daily_steps: number | null;
-  protein: number | null;
-  carbs: number | null;
-  fats: number | null;
-  energy_level: number | null;
-  hunger_level: number | null;
-  stress_level: number | null;
-  digestion: string | null;
-  notes: string | null;
-};
+export type { CheckInPayload } from '@/features/checkin/persistence';
 
 /**
  * Save a check-in.
@@ -34,51 +19,48 @@ export function useCheckInMutation() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async (payload: CheckInPayload) => {
-      if (!user?.id) throw new Error('Not signed in');
+  const invalidateCheckIns = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ['dailyCheckIns', user?.id] });
+    void queryClient.invalidateQueries({ queryKey: ['userProfile', user?.id] });
+  }, [queryClient, user?.id]);
 
-      const { data: existing, error: fetchError } = await supabase
-        .from('daily_check_ins')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('date', payload.date)
-        .maybeSingle();
-      if (fetchError) throw fetchError;
+  const invalidateLocalRecords = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ['homeLocalRecords', user?.id] });
+  }, [queryClient, user?.id]);
 
-      const row = { ...payload, user_id: user.id };
+  useEffect(() => {
+    const userId = user?.id;
+    if (!userId) return;
 
-      if (existing) {
-        const { error } = await supabase
-          .from('daily_check_ins')
-          .update(row)
-          .eq('id', existing.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('daily_check_ins').insert(row);
-        if (error) throw error;
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      if (!state.isConnected) return;
+      void flushCheckInOutbox(userId).then((synced) => {
+        invalidateLocalRecords();
+        if (synced > 0) {
+          invalidateCheckIns();
+        }
+      }, () => { invalidateLocalRecords(); });
+    });
+    return unsubscribe;
+  }, [invalidateCheckIns, invalidateLocalRecords, user?.id]);
+
+  const mutation = useMutation({
+    mutationFn: async ({ userId, payload }: { userId: string; payload: CheckInPayload }) => saveCheckIn(userId, payload),
+    onSuccess: (result, { userId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['homeLocalRecords', userId] });
+      if (result.status === 'synced') {
+        void queryClient.invalidateQueries({ queryKey: ['dailyCheckIns', userId] });
+        void queryClient.invalidateQueries({ queryKey: ['userProfile', userId] });
       }
-
-      // Fallback for the DB trigger trg_auto_set_start_date (CheckInForm.tsx:131-150).
-      const { data: userRow, error: userErr } = await supabase
-        .from('users')
-        .select('package_start_date')
-        .eq('id', user.id)
-        .maybeSingle();
-      if (!userErr && userRow && !userRow.package_start_date) {
-        await supabase
-          .from('users')
-          .update({ package_start_date: payload.date })
-          .eq('id', user.id);
-      }
-
-      return { updated: Boolean(existing) };
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['dailyCheckIns', user?.id] });
-      void queryClient.invalidateQueries({ queryKey: ['userProfile', user?.id] });
     },
   });
+  const { mutateAsync: saveForAccount } = mutation;
+  // Capture account identity in mutation variables, not mutable observer options.
+  const mutateAsync = useCallback((payload: CheckInPayload) => {
+    if (!user?.id) return Promise.reject(new Error('Not signed in'));
+    return saveForAccount({ userId: user.id, payload });
+  }, [saveForAccount, user?.id]);
+  return { ...mutation, mutateAsync };
 }
 
 /** Most recent check-in strictly before `date`, for prefill. */

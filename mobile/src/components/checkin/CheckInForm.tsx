@@ -1,146 +1,44 @@
-import * as Haptics from 'expo-haptics';
-import { format } from 'date-fns';
 import {
   AlertCircle,
   Check,
-  ChevronDown,
   CircleDot,
   Dumbbell,
   Footprints,
   MinusCircle,
   Moon,
-  Sparkles,
   X,
 } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { useMemo } from 'react';
+import { TextInput, View } from 'react-native';
 import Animated, {
   Easing,
-  FadeIn,
   FadeInDown,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
 } from 'react-native-reanimated';
 
 import {
+  Button,
   Card,
   Input,
   SegmentedControl,
-  Stepper,
   Text,
   type Segment,
 } from '@/components/ui';
-import type { CheckInPayload } from '@/hooks/useCheckInMutation';
+import { HistoryCaption } from '@/features/checkin/components/HistoryCaption';
+import { NumericEntry } from '@/features/checkin/components/NumericEntry';
+import { PreviousValueButton } from '@/features/checkin/components/PreviousValueButton';
+import type { CheckInHistory } from '@/features/checkin/history';
+import { fromRow, type FormState, type CheckInStep } from '@/features/checkin/model';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
-import { parseLocalDate } from '@/lib/dates';
 import { requiresWorkoutPerformance } from '@/lib/checkin-validation';
-import { num, type DailyCheckIn, type Digestion, type WorkoutStatus } from '@/types/db';
-import { iconSize, spacing, useMotion, useTheme } from '@/theme';
+import type { DailyCheckIn, Digestion, WorkoutStatus } from '@/types/db';
+import { spacing, useMotion } from '@/theme';
 import { CheckInFieldBlock } from './CheckInFieldBlock';
 import { CheckInRatingScale } from './CheckInRatingScale';
 import { CheckInSummarySection } from './CheckInSummarySection';
+import { OptionalCheckInFields } from './OptionalCheckInFields';
 
-export type FormState = {
-  morningWeight: number | null;
-  sleepHours: number | null;
-  workoutStatus: WorkoutStatus | null;
-  workoutPerformance: number | null;
-  nutritionScore: number | null;
-  calorieIntake: number | null;
-  waterLiters: number | null;
-  dailySteps: number | null;
-  protein: number | null;
-  carbs: number | null;
-  fats: number | null;
-  energyLevel: number | null;
-  hungerLevel: number | null;
-  stressLevel: number | null;
-  digestion: Digestion | null;
-  notes: string;
-};
-
-export const EMPTY_FORM: FormState = {
-  morningWeight: null,
-  sleepHours: null,
-  workoutStatus: null,
-  workoutPerformance: null,
-  nutritionScore: null,
-  calorieIntake: null,
-  waterLiters: null,
-  dailySteps: null,
-  protein: null,
-  carbs: null,
-  fats: null,
-  energyLevel: null,
-  hungerLevel: null,
-  stressLevel: null,
-  digestion: null,
-  notes: '',
-};
-
-export function fromRow(row: DailyCheckIn): FormState {
-  return {
-    morningWeight: row.morning_weight === null ? null : num(row.morning_weight),
-    sleepHours: row.sleep_hours === null ? null : num(row.sleep_hours),
-    workoutStatus: (row.workout_status as WorkoutStatus) ?? null,
-    workoutPerformance: row.workout_performance,
-    nutritionScore: row.nutrition_score,
-    calorieIntake: row.calorie_intake,
-    waterLiters: row.water_liters === null ? null : num(row.water_liters),
-    dailySteps: row.daily_steps,
-    protein: row.protein === null ? null : num(row.protein),
-    carbs: row.carbs === null ? null : num(row.carbs),
-    fats: row.fats === null ? null : num(row.fats),
-    energyLevel: row.energy_level,
-    hungerLevel: row.hunger_level,
-    stressLevel: row.stress_level,
-    digestion: (row.digestion as Digestion) ?? null,
-    notes: row.notes ?? '',
-  };
-}
-
-/**
- * Only objective measurements are reusable. Subjective scores describe today
- * and must always be answered again instead of being silently copied.
- */
-export function prefillFrom(row: DailyCheckIn): Partial<FormState> {
-  const f = fromRow(row);
-  return {
-    morningWeight: f.morningWeight,
-    sleepHours: f.sleepHours,
-    calorieIntake: f.calorieIntake,
-    waterLiters: f.waterLiters,
-    dailySteps: f.dailySteps,
-    protein: f.protein,
-    carbs: f.carbs,
-    fats: f.fats,
-  };
-}
-
-export function toPayload(form: FormState, date: string): CheckInPayload {
-  return {
-    date,
-    morning_weight: form.morningWeight,
-    sleep_hours: form.sleepHours,
-    workout_status: form.workoutStatus,
-    workout_performance: requiresWorkoutPerformance(form.workoutStatus)
-      ? form.workoutPerformance
-      : null,
-    nutrition_score: form.nutritionScore,
-    calorie_intake: form.calorieIntake,
-    water_liters: form.waterLiters,
-    daily_steps: form.dailySteps,
-    protein: form.protein,
-    carbs: form.carbs,
-    fats: form.fats,
-    energy_level: form.energyLevel,
-    hunger_level: form.hungerLevel,
-    stress_level: form.stressLevel,
-    digestion: form.digestion,
-    notes: form.notes.trim() ? form.notes.trim() : null,
-  };
-}
+export { EMPTY_FORM, fromRow, prefillFrom, toPayload } from '@/features/checkin/model';
+export type { FormState, CheckInStep } from '@/features/checkin/model';
 
 // Lucide glyphs + text labels — never emoji for controls (§02.8).
 const WORKOUT_SEGMENTS: Segment<WorkoutStatus>[] = [
@@ -163,23 +61,36 @@ type Props = {
   previous: DailyCheckIn | null;
   step: CheckInStep;
   errors: Partial<Record<keyof FormState, string>>;
+  history?: CheckInHistory;
+  showCarryForward?: boolean;
+  hideFinishSummary?: boolean;
+  focusField?: keyof FormState | null;
+  focusRequest?: number;
+  registerField?: (field: keyof FormState, node: View | TextInput | null) => void;
+  onEditSection?: (step: CheckInStep) => void;
 };
 
-export type CheckInStep = 'readiness' | 'recovery' | 'adherence' | 'finish';
 
-export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
-  const { colors } = useTheme();
+export function CheckInForm({
+  form,
+  setForm,
+  previous,
+  step,
+  errors,
+  history,
+  showCarryForward = false,
+  hideFinishSummary = false,
+  focusField,
+  focusRequest,
+  registerField,
+  onEditSection,
+}: Props) {
   const motion = useMotion();
   const { isCompact } = useResponsiveLayout();
-  const [showMore, setShowMore] = useState(false);
-  const macroChevronRotation = useSharedValue(0);
-  const macroChevronStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${macroChevronRotation.get()}deg` }],
-  }));
-
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
+  const previousForm = useMemo(() => previous ? fromRow(previous) : null, [previous]);
   const prevHint = useMemo(() => {
     if (!previous) return {} as Record<string, string>;
     const p = fromRow(previous);
@@ -204,21 +115,6 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
   if (step === 'readiness') {
     return (
       <Card style={{ gap: spacing.base }}>
-        <Text variant="label" tone="muted">
-          Readiness and energy
-        </Text>
-        <Stepper
-          label="Morning weight"
-          value={form.morningWeight}
-          onChange={(v) => set('morningWeight', v)}
-          step={0.1}
-          precision={1}
-          min={20}
-          max={400}
-          suffix="kg"
-          hint={prevHint.weight}
-          error={errors.morningWeight}
-        />
         {(
           [
             ['Energy', 'energyLevel', 'checkin-energy-rating', 'checkin-field-energy'],
@@ -228,19 +124,56 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
           <CheckInFieldBlock
             key={key}
             label={label}
+            description={key === 'energyLevel' ? 'How much energy did you have today?' : 'How much stress did you feel today?'}
+            focusTarget={(node) => registerField?.(key, node)}
             complete={form[key] !== null}
             error={errors[key]}
             testID={testID}
           >
             <CheckInRatingScale
               label={`${label} out of 10`}
+              lowLabel={key === 'energyLevel' ? 'Exhausted' : 'Relaxed'}
+              highLabel={key === 'energyLevel' ? 'Very energetic' : 'Very stressed'}
               value={form[key]}
               onChange={(v) => set(key, v)}
               accessibilityMode="options"
               optionTestIDPrefix={optionTestIDPrefix}
             />
+            <HistoryCaption value={form[key]} history={history?.[key]} precision={0} />
           </CheckInFieldBlock>
         ))}
+        <OptionalCheckInFields
+          label="Optional weight"
+          testID="checkin-optional-weight"
+          reveal={Boolean(errors.morningWeight || focusField === 'morningWeight')}
+          revealRequest={focusField === 'morningWeight' ? focusRequest : undefined}
+        >
+          <NumericEntry
+            label="Morning weight"
+            focusTarget={(node) => registerField?.('morningWeight', node)}
+            value={form.morningWeight}
+            onChange={(value) => set('morningWeight', value)}
+            precision={1}
+            min={20}
+            max={400}
+            unit="kg"
+            hint={showCarryForward ? undefined : prevHint.weight}
+            error={errors.morningWeight}
+            history={history?.morningWeight}
+          >
+            {showCarryForward ? (
+              <PreviousValueButton
+                label="Morning weight"
+                date={previous?.date}
+                currentValue={form.morningWeight}
+                onRestore={(value) => set('morningWeight', value)}
+                value={previousForm?.morningWeight ?? null}
+                unit="kg"
+                onApply={(value) => set('morningWeight', value)}
+              />
+            ) : null}
+          </NumericEntry>
+        </OptionalCheckInFields>
       </Card>
     );
   }
@@ -248,35 +181,55 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
   if (step === 'recovery') {
     return (
       <Card style={{ gap: spacing.base }}>
-        <Text variant="label" tone="muted">
-          Sleep and recovery
-        </Text>
-        <Stepper
+        <NumericEntry
           label="Sleep"
+          focusTarget={(node) => registerField?.('sleepHours', node)}
           value={form.sleepHours}
-          onChange={(v) => set('sleepHours', v)}
-          step={0.5}
+          onChange={(value) => set('sleepHours', value)}
           precision={1}
           min={0}
           max={24}
-          suffix="h"
-          hint={prevHint.sleep}
+          unit="h"
+          quickValues={[6, 7, 8, 9]}
+          hint={showCarryForward ? undefined : prevHint.sleep}
           error={errors.sleepHours}
-        />
+          history={history?.sleepHours}
+        >
+          <Text variant="bodySm" tone="muted">Sleep during the night before this reporting date.</Text>
+          {showCarryForward ? (
+            <PreviousValueButton
+              label="Sleep"
+              date={previous?.date}
+              currentValue={form.sleepHours}
+              onRestore={(value) => set('sleepHours', value)}
+              value={previousForm?.sleepHours ?? null}
+              unit="h"
+              onApply={(value) => set('sleepHours', value)}
+            />
+          ) : null}
+        </NumericEntry>
         <CheckInFieldBlock
           label="Hunger"
+          description="Think about your appetite across the day."
+          focusTarget={(node) => registerField?.('hungerLevel', node)}
           complete={form.hungerLevel !== null}
           error={errors.hungerLevel}
           testID="checkin-field-hunger"
         >
           <CheckInRatingScale
             label="Hunger out of 10"
+            lowLabel="No appetite"
+            highLabel="Very hungry"
             value={form.hungerLevel}
             onChange={(v) => set('hungerLevel', v)}
+            accessibilityMode="options"
+            optionTestIDPrefix="checkin-hunger-rating"
           />
+          <HistoryCaption value={form.hungerLevel} history={history?.hungerLevel} precision={0} />
         </CheckInFieldBlock>
         <CheckInFieldBlock
           label="Digestion"
+          focusTarget={(node) => registerField?.('digestion', node)}
           complete={form.digestion !== null}
           error={errors.digestion}
           testID="checkin-field-digestion"
@@ -290,9 +243,6 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
             onChange={(v) => set('digestion', v)}
           />
         </CheckInFieldBlock>
-        <Text variant="bodySm" tone="muted">
-          A quick recovery snapshot helps us spot patterns.
-        </Text>
       </Card>
     );
   }
@@ -300,11 +250,10 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
   if (step === 'adherence') {
     return (
       <Card style={{ gap: spacing.base }}>
-        <Text variant="label" tone="muted">
-          Nutrition and adherence
-        </Text>
         <CheckInFieldBlock
           label="Workout"
+          description="Choose Rest for a planned rest day, or No if you didn’t train. Individual sets belong in your workout log."
+          focusTarget={(node) => registerField?.('workoutStatus', node)}
           complete={form.workoutStatus !== null}
           error={errors.workoutStatus}
           testID="checkin-field-workout"
@@ -332,108 +281,114 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
           >
             <CheckInFieldBlock
               label="How did it go?"
+              focusTarget={(node) => registerField?.('workoutPerformance', node)}
               complete={form.workoutPerformance !== null}
               error={errors.workoutPerformance}
               testID="checkin-field-workout-performance"
             >
               <CheckInRatingScale
                 label="Workout performance out of 10"
+                lowLabel="Struggled"
+                highLabel="Felt strong"
                 value={form.workoutPerformance}
                 onChange={(v) => set('workoutPerformance', v)}
+                accessibilityMode="options"
+                optionTestIDPrefix="checkin-workout-performance-rating"
+              />
+              <HistoryCaption
+                value={form.workoutPerformance}
+                history={history?.workoutPerformance}
+                precision={0}
               />
             </CheckInFieldBlock>
           </Animated.View>
         ) : null}
         <CheckInFieldBlock
           label="Nutrition score"
+          description="How closely did your eating match your goals today? If your meal plan hasn’t arrived, use your current eating goals."
+          focusTarget={(node) => registerField?.('nutritionScore', node)}
           complete={form.nutritionScore !== null}
           error={errors.nutritionScore}
           testID="checkin-field-nutrition"
         >
           <CheckInRatingScale
             label="Nutrition score out of 10"
+            lowLabel="Far from my goals"
+            highLabel="Matched my goals"
             value={form.nutritionScore}
             onChange={(v) => set('nutritionScore', v)}
+            accessibilityMode="options"
+            optionTestIDPrefix="checkin-nutrition-rating"
           />
+          <HistoryCaption value={form.nutritionScore} history={history?.nutritionScore} precision={0} />
         </CheckInFieldBlock>
-        <Stepper
-          label="Calories"
-          value={form.calorieIntake}
-          onChange={(v) => set('calorieIntake', v === null ? null : Math.round(v))}
-          step={50}
-          precision={0}
-          min={0}
-          max={20000}
-          suffix="kcal"
-          hint={prevHint.calories}
-          error={errors.calorieIntake}
-        />
-        <Stepper
-          label="Water"
-          value={form.waterLiters}
-          onChange={(v) => set('waterLiters', v)}
-          step={0.25}
-          precision={2}
-          min={0}
-          max={20}
-          suffix="L"
-          hint={prevHint.water}
-          error={errors.waterLiters}
-        />
-        <Stepper
-          label="Steps"
-          value={form.dailySteps}
-          onChange={(v) => set('dailySteps', v === null ? null : Math.round(v))}
-          step={500}
-          precision={0}
-          min={0}
-          max={200000}
-          hint={prevHint.steps}
-          error={errors.dailySteps}
-        />
-        <Pressable
-          onPress={() => {
-            const next = !showMore;
-            setShowMore(next);
-            macroChevronRotation.set(
-              motion.enabled
-                ? withTiming(next ? 180 : 0, {
-                    duration: motion.duration.enter,
-                    easing: Easing.bezier(...motion.easing.standard),
-                  })
-                : next
-                  ? 180
-                  : 0,
-            );
-            void Haptics.selectionAsync();
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="More detail: macros"
-          accessibilityState={{ expanded: showMore }}
-          style={{ flexDirection: 'row', alignItems: 'center', minHeight: 44 }}
+        <OptionalCheckInFields
+          label="Optional measurements"
+          testID="checkin-optional-details"
+          reveal={Boolean(
+            errors.calorieIntake
+            || errors.waterLiters
+            || errors.dailySteps
+            || errors.protein
+            || errors.carbs
+            || errors.fats
+            || ['calorieIntake', 'waterLiters', 'dailySteps', 'protein', 'carbs', 'fats'].includes(focusField ?? ''),
+          )}
+          revealRequest={['calorieIntake', 'waterLiters', 'dailySteps', 'protein', 'carbs', 'fats'].includes(focusField ?? '') ? focusRequest : undefined}
         >
-          <Text variant="label" tone="muted" style={{ flex: 1 }}>
-            More detail (optional)
-          </Text>
-          <Animated.View
-            testID="checkin-macros-chevron"
-            style={macroChevronStyle}
-            accessible={false}
+          <NumericEntry
+            label="Calories"
+            focusTarget={(node) => registerField?.('calorieIntake', node)}
+            value={form.calorieIntake}
+            onChange={(value) => set('calorieIntake', value)}
+            precision={0}
+            min={0}
+            max={20000}
+            unit="kcal"
+            hint={showCarryForward ? undefined : prevHint.calories}
+            error={errors.calorieIntake}
+            history={history?.calorieIntake}
           >
-            <ChevronDown
-              size={iconSize.md}
-              color={colors.mutedForeground}
-              strokeWidth={2}
-              accessible={false}
-            />
-          </Animated.View>
-        </Pressable>
-        {showMore ? (
-          <Animated.View
-            testID="checkin-macros-content"
-            entering={motion.enabled ? FadeIn.duration(motion.duration.enter) : undefined}
-            style={{ flexDirection: isCompact ? 'column' : 'row', gap: spacing.sm }}
+            {showCarryForward ? (
+              <PreviousValueButton label="Calories" date={previous?.date} currentValue={form.calorieIntake} onRestore={(value) => set('calorieIntake', value)} value={previousForm?.calorieIntake ?? null} unit="kcal" onApply={(value) => set('calorieIntake', value)} />
+            ) : null}
+          </NumericEntry>
+          <NumericEntry
+            label="Water"
+            focusTarget={(node) => registerField?.('waterLiters', node)}
+            value={form.waterLiters}
+            onChange={(value) => set('waterLiters', value)}
+            precision={2}
+            min={0}
+            max={20}
+            unit="L"
+            quickValues={[1, 1.5, 2, 2.5, 3]}
+            hint={showCarryForward ? undefined : prevHint.water}
+            error={errors.waterLiters}
+            history={history?.waterLiters}
           >
+            {showCarryForward ? (
+              <PreviousValueButton label="Water" date={previous?.date} currentValue={form.waterLiters} onRestore={(value) => set('waterLiters', value)} value={previousForm?.waterLiters ?? null} unit="L" onApply={(value) => set('waterLiters', value)} />
+            ) : null}
+          </NumericEntry>
+          <NumericEntry
+            label="Steps"
+            focusTarget={(node) => registerField?.('dailySteps', node)}
+            value={form.dailySteps}
+            onChange={(value) => set('dailySteps', value)}
+            precision={0}
+            min={0}
+            max={200000}
+            unit="steps"
+            hint={showCarryForward ? undefined : prevHint.steps}
+            error={errors.dailySteps}
+            history={history?.dailySteps}
+          >
+            {showCarryForward ? (
+              <PreviousValueButton label="Steps" date={previous?.date} currentValue={form.dailySteps} onRestore={(value) => set('dailySteps', value)} value={previousForm?.dailySteps ?? null} unit="steps" onApply={(value) => set('dailySteps', value)} />
+            ) : null}
+          </NumericEntry>
+          <View style={{ flexDirection: isCompact ? 'column' : 'row', gap: spacing.sm }}>
             {(
               [
                 ['Protein', 'protein'],
@@ -441,31 +396,90 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
                 ['Fats', 'fats'],
               ] as const
             ).map(([label, key]) => (
-              <Input
+              <NumericEntry
                 key={key}
-                containerStyle={isCompact ? undefined : { flex: 1 }}
+                style={isCompact ? undefined : { flex: 1 }}
                 label={label}
-                value={form[key] === null ? '' : String(form[key])}
-                onChangeText={(t) => {
-                  const n = parseFloat(t);
-                  set(key, t.trim() === '' || !Number.isFinite(n) ? null : n);
-                }}
-                keyboardType="number-pad"
-                placeholder="g"
-              />
+                focusTarget={(node) => registerField?.(key, node)}
+                error={errors[key]}
+                value={form[key]}
+                onChange={(value) => set(key, value)}
+                min={0}
+                precision={0}
+                unit="g"
+                history={history?.[key]}
+              >
+                {showCarryForward ? (
+                  <PreviousValueButton
+                    label={label}
+                    date={previous?.date}
+                    currentValue={form[key]}
+                    onRestore={(value) => set(key, value)}
+                    value={previousForm?.[key] ?? null}
+                    unit="g"
+                    onApply={(value) => set(key, value)}
+                  />
+                ) : null}
+              </NumericEntry>
             ))}
-          </Animated.View>
-        ) : null}
+          </View>
+        </OptionalCheckInFields>
       </Card>
     );
   }
 
   return (
     <Card style={{ gap: spacing.base }}>
-      <Text variant="label" tone="muted">
-        Notes and confirmation
-      </Text>
+      {!hideFinishSummary ? <View style={{ gap: spacing.sm }}>
+        <View style={{ gap: spacing.xs }}>
+          <CheckInSummarySection
+            title="Readiness and energy"
+            rows={[
+              ...(form.morningWeight === null ? [] : [['Weight', `${form.morningWeight} kg`] as const]),
+              ['Energy', form.energyLevel === null ? 'Not recorded' : `${form.energyLevel}/10`],
+              ['Stress', form.stressLevel === null ? 'Not recorded' : `${form.stressLevel}/10`],
+            ]}
+          />
+          {onEditSection ? <Button testID="checkin-edit-readiness" label="Edit readiness" variant="ghost" onPress={() => onEditSection('readiness')} /> : null}
+        </View>
+        <View style={{ gap: spacing.xs }}>
+          <CheckInSummarySection
+            title="Sleep and recovery"
+            rows={[
+              ['Sleep', form.sleepHours === null ? 'Not recorded' : `${form.sleepHours} h`],
+              ['Hunger', form.hungerLevel === null ? 'Not recorded' : `${form.hungerLevel}/10`],
+              ['Digestion', DIGESTION_SEGMENTS.find(({ value }) => value === form.digestion)?.label ?? 'Not recorded'],
+            ]}
+          />
+          {onEditSection ? <Button testID="checkin-edit-recovery" label="Edit recovery" variant="ghost" onPress={() => onEditSection('recovery')} /> : null}
+        </View>
+        <View style={{ gap: spacing.xs }}>
+          <CheckInSummarySection
+            title="Nutrition and adherence"
+            rows={[
+              ['Workout', WORKOUT_SEGMENTS.find(({ value }) => value === form.workoutStatus)?.label ?? 'Not recorded'],
+              ...(showPerformance
+                ? [[
+                    'Workout performance',
+                    form.workoutPerformance === null
+                      ? 'Not recorded'
+                      : `${form.workoutPerformance}/10`,
+                  ] as const]
+                : []),
+              ['Nutrition', form.nutritionScore === null ? 'Not recorded' : `${form.nutritionScore}/10`],
+              ...(form.calorieIntake === null ? [] : [['Calories', `${form.calorieIntake} kcal`] as const]),
+              ...(form.waterLiters === null ? [] : [['Water', `${form.waterLiters} L`] as const]),
+              ...(form.dailySteps === null ? [] : [['Steps', String(form.dailySteps)] as const]),
+              ...(form.protein === null ? [] : [['Protein', `${form.protein} g`] as const]),
+              ...(form.carbs === null ? [] : [['Carbs', `${form.carbs} g`] as const]),
+              ...(form.fats === null ? [] : [['Fats', `${form.fats} g`] as const]),
+            ]}
+          />
+          {onEditSection ? <Button testID="checkin-edit-adherence" label="Edit adherence" variant="ghost" onPress={() => onEditSection('adherence')} /> : null}
+        </View>
+      </View> : null}
       <Input
+        ref={(node) => registerField?.('notes', node)}
         label="Notes (optional)"
         value={form.notes}
         onChangeText={(t) => set('notes', t)}
@@ -474,94 +488,7 @@ export function CheckInForm({ form, setForm, previous, step, errors }: Props) {
         inputStyle={{ minHeight: 72, textAlignVertical: 'top' }}
         placeholder="Anything your coach should know?"
       />
-      <View style={{ gap: spacing.sm }}>
-        <Text variant="label" tone="muted">
-          Ready to save
-        </Text>
-        <CheckInSummarySection
-          title="Readiness and energy"
-          rows={[
-            ['Weight', form.morningWeight === null ? 'Not recorded' : `${form.morningWeight} kg`],
-            ['Energy', form.energyLevel === null ? 'Not recorded' : `${form.energyLevel}/10`],
-            ['Stress', form.stressLevel === null ? 'Not recorded' : `${form.stressLevel}/10`],
-          ]}
-        />
-        <CheckInSummarySection
-          title="Sleep and recovery"
-          rows={[
-            ['Sleep', form.sleepHours === null ? 'Not recorded' : `${form.sleepHours} h`],
-            ['Hunger', form.hungerLevel === null ? 'Not recorded' : `${form.hungerLevel}/10`],
-            ['Digestion', form.digestion ?? 'Not recorded'],
-          ]}
-        />
-        <CheckInSummarySection
-          title="Nutrition and adherence"
-          rows={[
-            ['Workout', form.workoutStatus ?? 'Not recorded'],
-            ...(showPerformance
-              ? [[
-                  'Workout performance',
-                  form.workoutPerformance === null
-                    ? 'Not recorded'
-                    : `${form.workoutPerformance}/10`,
-                ] as const]
-              : []),
-            ['Nutrition', form.nutritionScore === null ? 'Not recorded' : `${form.nutritionScore}/10`],
-            ['Calories', form.calorieIntake === null ? 'Not recorded' : `${form.calorieIntake} kcal`],
-            ['Water', form.waterLiters === null ? 'Not recorded' : `${form.waterLiters} L`],
-            ['Steps', form.dailySteps === null ? 'Not recorded' : String(form.dailySteps)],
-            ['Protein', form.protein === null ? 'Not recorded' : `${form.protein} g`],
-            ['Carbs', form.carbs === null ? 'Not recorded' : `${form.carbs} g`],
-            ['Fats', form.fats === null ? 'Not recorded' : `${form.fats} g`],
-          ]}
-        />
-        <CheckInSummarySection
-          title="Coach note"
-          rows={[[
-            'Notes',
-            form.notes.trim() || 'Not recorded',
-          ]]}
-        />
-      </View>
 
     </Card>
-  );
-}
-
-export function SameAsYesterdayChip({
-  previous,
-  onApply,
-}: {
-  previous: DailyCheckIn;
-  onApply: () => void;
-}) {
-  const { colors } = useTheme();
-  return (
-    <Pressable
-      onPress={() => {
-        onApply();
-        void Haptics.selectionAsync();
-      }}
-      accessibilityRole="button"
-      accessibilityLabel={`Reuse measurements from ${format(parseLocalDate(previous.date), 'EEEE d MMMM')}`}
-      accessibilityHint="Copies objective measurements only. Today's ratings stay empty."
-      style={({ pressed }) => ({
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: spacing.sm,
-        minHeight: 44,
-        paddingHorizontal: spacing.base,
-        borderRadius: 999,
-        borderWidth: 1,
-        borderColor: colors.primary,
-        backgroundColor: pressed ? colors.elevated : 'transparent',
-        alignSelf: 'flex-start',
-      })}
-    >
-      <Sparkles size={iconSize.sm} color={colors.primary} strokeWidth={2} accessible={false} />
-      <Text variant="bodySm" tone="primary">
-        Reuse measurements from {format(parseLocalDate(previous.date), 'EEE d MMM')}
-      </Text>
-    </Pressable>
   );
 }

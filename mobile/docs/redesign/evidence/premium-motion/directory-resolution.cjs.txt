@@ -1,0 +1,70 @@
+// Verification-only directory cache for the frozen installed modules/app/source.
+// Avoid slow ENOENT probes; all existing paths, symlinks, writes, caches and paths
+// outside this scope continue to use the real filesystem. No module contents change.
+const fs = require('node:fs');
+const path = require('node:path');
+const root = '/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile';
+const scopes = ['node_modules', 'src', 'app'].map((name) => root + '/' + name);
+const readDirectory = fs.readdirSync.bind(fs);
+const inspectPath = fs.lstatSync.bind(fs);
+const directories = new Map();
+let avoided = 0;
+function entries(directory) {
+  if (directories.has(directory)) return directories.get(directory);
+  try {
+    const info = inspectPath(directory);
+    if (info.isSymbolicLink() || !info.isDirectory()) return null;
+    const names = readDirectory(directory);
+    const values = { names: new Set(names), folded: new Set(names.map((name) => name.normalize('NFC').toLowerCase())) };
+    directories.set(directory, values);
+    return values;
+  } catch { return null; }
+}
+function knownMissing(p) {
+  if (typeof p !== 'string' || p.includes('\0') || !path.isAbsolute(p) || p.includes('/../') || p.endsWith('/..')) return false;
+  const normalized = path.normalize(p).replace(/\/$/, '');
+  if (normalized.includes('/.cache/') || normalized.endsWith('/.cache')) return false;
+  const configAtRoot = path.dirname(normalized) === root && /^(?:\.babelrc(?:\..*)?|babel\.config\..*|metro\.config\..*|package\.json|tsconfig\.json|eslint\.config\..*)$/.test(path.basename(normalized));
+  if (!configAtRoot && !scopes.some((scope) => normalized.startsWith(scope + '/'))) return false;
+  const parts = normalized.slice(root.length + 1).split('/');
+  let directory = root;
+  for (let index = 0; index < parts.length; index++) {
+    const values = entries(directory);
+    if (!values) return false;
+    if (!values.names.has(parts[index])) {
+      const spelling = parts[index].normalize('NFC').toLowerCase();
+      if (values.folded.has(spelling)) return false;
+      avoided++;
+      return true;
+    }
+    if (index === parts.length - 1) return false;
+    directory += '/' + parts[index];
+  }
+  return false;
+}
+// Node's CJS loader can retain its own native-stat function before preloads run.
+// Preserve its resolver, but omit only search directories known to be absent.
+const Module = require('node:module');
+const originalFindPath = Module._findPath;
+Module._findPath = function (request, paths, ...args) {
+  const available = Array.isArray(paths) ? paths.filter((directory) => !knownMissing(directory)) : paths;
+  return originalFindPath.call(this, request, available, ...args);
+};
+for (const name of ['statSync', 'lstatSync', 'existsSync']) {
+  const original = fs[name];
+  fs[name] = function (p, ...args) {
+    if (!knownMissing(p)) return original.call(fs, p, ...args);
+    if (name === 'existsSync') return false;
+    if (args[0]?.throwIfNoEntry === false) return undefined;
+    const syscall = name === 'statSync' ? 'stat' : 'lstat';
+    const error = new Error(`ENOENT: no such file or directory, ${syscall} '${p}'`);
+    Object.assign(error, { errno: -2, code: 'ENOENT', syscall, path: p });
+    throw error;
+  };
+}
+const binding = process.binding('fs');
+const originalModuleStat = binding.internalModuleStat;
+binding.internalModuleStat = function (p, ...args) {
+  return knownMissing(p) ? -2 : originalModuleStat.call(binding, p, ...args);
+};
+process.on('exit', () => process.stderr.write('Verification directory cache: ' + avoided + ' missing-path checks resolved; ' + directories.size + ' directories read.\n'));

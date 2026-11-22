@@ -8,12 +8,14 @@ import {
     AccordionItem,
     AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Calendar, Dumbbell, Clock, TrendingUp, Flame, Target, Award, CheckCircle2, Loader2, ChevronDown, ChevronUp, Plus, CalendarRange, Video, Pencil } from "lucide-react";
+import { Calendar, Dumbbell, TrendingUp, Flame, Target, Award, CheckCircle2, Loader2, ChevronDown, ChevronUp, Plus, CalendarRange, Pencil } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { MetricCard } from "@/components/MetricCard";
 import { WorkoutLogDialog } from "@/components/WorkoutLogDialog";
+import { WorkoutRecordDetails } from "@/components/WorkoutRecordDetails";
+import { readWorkoutRecord } from "@/lib/workout-record";
 import { startOfWeek, endOfWeek, format, parseISO, isSameWeek } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -24,14 +26,17 @@ export default function WorkoutLogs() {
     const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
     const [isLogDialogOpen, setIsLogDialogOpen] = useState(false);
     const [editDate, setEditDate] = useState<Date | undefined>(undefined);
+    const [editLogId, setEditLogId] = useState<string | undefined>(undefined);
 
-    const handleEditLog = (logDate: string) => {
-        setEditDate(parseISO(logDate));
+    const handleEditLog = (log: { id: string; date: string }) => {
+        setEditDate(parseISO(log.date));
+        setEditLogId(log.id);
         setIsLogDialogOpen(true);
     };
 
     const handleNewLog = () => {
         setEditDate(undefined);
+        setEditLogId(undefined);
         setIsLogDialogOpen(true);
     };
 
@@ -94,14 +99,7 @@ export default function WorkoutLogs() {
             return diffDays <= 7;
         });
 
-        const totalExercises = logs.reduce((acc, log) => {
-            try {
-                const content = JSON.parse(log.content);
-                return acc + (Array.isArray(content) ? content.length : 0);
-            } catch {
-                return acc;
-            }
-        }, 0);
+        const totalExercises = logs.reduce((acc, log) => acc + readWorkoutRecord(log.content).exercises.length, 0);
 
         return {
             totalWorkouts,
@@ -111,137 +109,7 @@ export default function WorkoutLogs() {
         };
     };
 
-    const renderExerciseContent = (content: any) => {
-        if (!content) return null;
-
-        let parsedContent;
-        try {
-            parsedContent = typeof content === 'string' ? JSON.parse(content) : content;
-        } catch (e) {
-            return <p className="text-muted-foreground whitespace-pre-wrap">{content}</p>;
-        }
-
-        if (Array.isArray(parsedContent)) {
-            return (
-                <div className="space-y-3">
-                    {parsedContent.map((exercise, idx) => {
-                        // Handle simple string format or old object format
-                        if (typeof exercise !== 'object') {
-                            return <div key={idx} className="text-sm">{String(exercise)}</div>;
-                        }
-
-                        // Handle new structured format with multiple sets
-                        const isNewFormat = Array.isArray(exercise.sets);
-
-                        const exerciseName = exercise.Exercise || exercise.exercise || exercise.name || `Exercise ${idx + 1}`;
-
-                        // For old format
-                        const sets = exercise.Sets || exercise.sets;
-                        const reps = exercise.Reps || exercise.reps;
-                        const weight = exercise.Weight || exercise.weight;
-                        const duration = exercise.Duration || exercise.duration;
-                        const rest = exercise.Rest || exercise.rest;
-                        const videoLink = exercise.VideoLink || exercise.videoLink;
-
-                        return (
-                            <div key={idx} className="group relative bg-gradient-to-br from-muted/40 to-muted/20 hover:from-primary/5 hover:to-primary/10 p-4 rounded-xl transition-all duration-200 border border-border/50 hover:border-primary/20">
-                                <div className="flex items-start justify-between mb-3">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold">
-                                            {idx + 1}
-                                        </div>
-                                        <div>
-                                            <h4 className="font-bold text-base">{exerciseName}</h4>
-                                            {duration && (
-                                                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                                                    <Clock className="w-3 h-3" />
-                                                    {duration}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-                                        <CheckCircle2 className="w-3 h-3 mr-1" />
-                                        Done
-                                    </Badge>
-                                </div>
-
-                                {isNewFormat ? (
-                                    // Render table for new format
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-sm text-center">
-                                            <thead>
-                                                <tr className="text-xs text-muted-foreground border-b border-border/30">
-                                                    <th className="py-1 font-medium">Set</th>
-                                                    <th className="py-1 font-medium">Weight</th>
-                                                    <th className="py-1 font-medium">Reps</th>
-                                                    <th className="py-1 font-medium">RPE</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {exercise.sets.map((set: any, sIdx: number) => (
-                                                    <tr key={sIdx} className="border-b border-border/10 last:border-0 hover:bg-muted/30">
-                                                        <td className="py-1.5 font-bold text-muted-foreground">{set.setNumber}</td>
-                                                        <td className="py-1.5 text-primary font-medium">{set.weight ? `${set.weight}` : '-'}</td>
-                                                        <td className="py-1.5 font-medium">{set.reps || '-'}</td>
-                                                        <td className="py-1.5 text-muted-foreground">{set.rpe || '-'}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                ) : (
-                                    // Old format grid
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                        {sets && (
-                                            <div className="bg-background/60 rounded-lg p-2.5 text-center border border-border/30">
-                                                <p className="text-xs font-medium text-muted-foreground mb-0.5">Sets</p>
-                                                <p className="text-lg font-bold text-foreground">{sets}</p>
-                                            </div>
-                                        )}
-                                        {reps && (
-                                            <div className="bg-background/60 rounded-lg p-2.5 text-center border border-border/30">
-                                                <p className="text-xs font-medium text-muted-foreground mb-0.5">Reps</p>
-                                                <p className="text-lg font-bold text-foreground">{reps}</p>
-                                            </div>
-                                        )}
-                                        {weight && (
-                                            <div className="bg-background/60 rounded-lg p-2.5 text-center border border-border/30">
-                                                <p className="text-xs font-medium text-muted-foreground mb-0.5">Weight</p>
-                                                <p className="text-lg font-bold text-primary">{weight}</p>
-                                            </div>
-                                        )}
-                                        {rest && (
-                                            <div className="bg-background/60 rounded-lg p-2.5 text-center border border-border/30">
-                                                <p className="text-xs font-medium text-muted-foreground mb-0.5">Rest</p>
-                                                <p className="text-lg font-bold text-foreground">{rest}</p>
-                                            </div>
-                                        )}
-                                        {videoLink && (
-                                            <div className="col-span-2 sm:col-span-1 bg-background/60 rounded-lg p-2.5 text-center border border-primary/20">
-                                                <p className="text-xs font-medium text-muted-foreground mb-0.5">Video</p>
-                                                <a
-                                                    href={videoLink}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-sm font-bold text-primary hover:underline flex items-center justify-center gap-1"
-                                                >
-                                                    <Video className="w-4 h-4" />
-                                                    Watch
-                                                </a>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-            );
-        }
-
-        return <pre className="text-sm whitespace-pre-wrap">{JSON.stringify(parsedContent, null, 2)}</pre>;
-    };
+    const renderExerciseContent = (content: unknown) => <WorkoutRecordDetails document={readWorkoutRecord(content)} />;
 
     const stats = logs ? calculateStats(logs) : null;
 
@@ -370,11 +238,7 @@ export default function WorkoutLogs() {
                                                     const isExpanded = expandedLogId === log.id;
                                                     const logDate = new Date(log.date);
 
-                                                    let exerciseCount = 0;
-                                                    try {
-                                                        const content = JSON.parse(log.content);
-                                                        exerciseCount = Array.isArray(content) ? content.length : 0;
-                                                    } catch { }
+                                                    const exerciseCount = readWorkoutRecord(log.content).exercises.length;
 
                                                     return (
                                                         <Card key={log.id} className={`overflow-hidden transition-all duration-300 ${isExpanded ? 'ring-2 ring-primary/20' : ''} hover:shadow-lg border-muted`}>
@@ -420,7 +284,7 @@ export default function WorkoutLogs() {
                                                                         <Button
                                                                             variant="ghost"
                                                                             size="sm"
-                                                                            onClick={() => handleEditLog(log.date)}
+                                                                            onClick={() => handleEditLog(log)}
                                                                             className="rounded-xl"
                                                                         >
                                                                             <Pencil className="w-4 h-4 mr-2" />
@@ -470,6 +334,7 @@ export default function WorkoutLogs() {
                 open={isLogDialogOpen}
                 onOpenChange={setIsLogDialogOpen}
                 initialDate={editDate}
+                initialLogId={editLogId}
             />
         </div>
     );

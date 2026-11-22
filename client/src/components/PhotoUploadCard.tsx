@@ -1,7 +1,10 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, Upload, X, Image as ImageIcon, Download } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+import { usePrivatePhotoUrl } from "@/hooks/usePrivatePhotoUrl";
+import { PHOTO_BUCKET, photoStoragePath } from "@shared/progress-photos";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -12,7 +15,9 @@ const JPEG_QUALITY = 0.75;
 function compressImage(file: File): Promise<Blob> {
     return new Promise((resolve, reject) => {
         const img = new Image();
+        const sourceUrl = URL.createObjectURL(file);
         img.onload = () => {
+            URL.revokeObjectURL(sourceUrl);
             let { width, height } = img;
 
             // Scale down if exceeds max dimensions
@@ -46,42 +51,58 @@ function compressImage(file: File): Promise<Blob> {
                 JPEG_QUALITY
             );
         };
-        img.onerror = () => reject(new Error('Failed to load image'));
-        img.src = URL.createObjectURL(file);
+        img.onerror = () => { URL.revokeObjectURL(sourceUrl); reject(new Error('Failed to load image')); };
+        img.src = sourceUrl;
     });
 }
 
 interface PhotoUploadCardProps {
     label: string;
-    currentUrl?: string | null;
+    currentReference?: string | null;
     onUpload: (url: string) => void;
     onDelete: () => void;
-    bucket?: string;
+    onUploadingChange?: (uploading: boolean) => void;
+    disabled?: boolean;
     userId: string;
     dateStr: string;
 }
 
 export function PhotoUploadCard({
     label,
-    currentUrl,
+    currentReference,
     onUpload,
     onDelete,
-    bucket = 'progress_photos',
+    onUploadingChange,
+    disabled = false,
     userId,
     dateStr
 }: PhotoUploadCardProps) {
     const { toast } = useToast();
+    const { user } = useAuth();
+    const photo = usePrivatePhotoUrl(currentReference, userId);
+    const scope = `${user?.id}:${userId}:${dateStr}`;
+    const activeScope = useRef<string | null>(scope);
+    activeScope.current = scope;
+    useEffect(() => { activeScope.current = scope; return () => { activeScope.current = null; }; }, [scope]);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const editingDisabled = disabled || isUploading || user?.id !== userId;
 
     // Helper to trigger file input
     const handleVerifyClick = () => {
+        if (editingDisabled || activeScope.current !== scope) return;
         fileInputRef.current?.click();
+    };
+
+    const handleRemove = () => {
+        if (editingDisabled || activeScope.current !== scope) return;
+        onDelete();
     };
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (!file) return;
+        if (!file || editingDisabled || activeScope.current !== scope) return;
+        const operationScope = scope;
 
         // Validate file type
         if (!file.type.startsWith('image/')) {
@@ -104,45 +125,75 @@ export function PhotoUploadCard({
         }
 
         setIsUploading(true);
+        onUploadingChange?.(true);
         try {
             // Compress the image before uploading
             const compressedBlob = await compressImage(file);
 
-            // Create a unique path: userId/date/label_timestamp.jpg
-            const fileName = `${userId}/${dateStr}/${label.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}.jpg`;
+            if (activeScope.current !== operationScope) return;
+            const fileName = photoStoragePath(userId, dateStr, label);
 
             const { error: uploadError } = await supabase.storage
-                .from(bucket)
+                .from(PHOTO_BUCKET)
                 .upload(fileName, compressedBlob, {
-                    upsert: true,
+                    upsert: false,
+                    cacheControl: '0',
                     contentType: 'image/jpeg',
                 });
 
             if (uploadError) throw uploadError;
 
-            const { data: { publicUrl } } = supabase.storage
-                .from(bucket)
-                .getPublicUrl(fileName);
-
-            onUpload(publicUrl);
+            if (activeScope.current !== operationScope) return;
+            onUpload(fileName);
             toast({
                 title: "Success",
                 description: `Photo compressed & uploaded (${(compressedBlob.size / 1024).toFixed(0)}KB)`,
             });
 
         } catch (error: any) {
-            console.error('Upload error:', error);
+            if (activeScope.current !== operationScope) return;
             toast({
                 title: "Upload Failed",
-                description: error.message || "Failed to upload photo",
+                description: "Failed to upload photo. Please try again.",
                 variant: "destructive",
             });
         } finally {
+            if (activeScope.current !== operationScope) return;
             setIsUploading(false);
+            onUploadingChange?.(false);
             // Reset input
             if (fileInputRef.current) fileInputRef.current.value = "";
         }
     };
+
+    const editActions = (
+        <>
+            <Button
+                size="icon"
+                variant="secondary"
+                className="rounded-full h-8 w-8"
+                onClick={handleVerifyClick}
+                disabled={editingDisabled}
+                title="Replace"
+                aria-label={`Replace ${label} photo`}
+                type="button"
+            >
+                <Upload className="w-4 h-4" />
+            </Button>
+            <Button
+                size="icon"
+                variant="destructive"
+                className="rounded-full h-8 w-8"
+                onClick={handleRemove}
+                disabled={editingDisabled}
+                title="Remove"
+                aria-label={`Remove ${label} photo`}
+                type="button"
+            >
+                <X className="w-4 h-4" />
+            </Button>
+        </>
+    );
 
     return (
         <div className="flex flex-col gap-2">
@@ -151,7 +202,7 @@ export function PhotoUploadCard({
             <div
                 className={cn(
                     "relative aspect-[3/4] rounded-xl border-2 border-dashed flex flex-col items-center justify-center transition-colors bg-muted/20 hover:bg-muted/40 overflow-hidden group",
-                    currentUrl ? "border-solid border-border" : "border-muted"
+                    currentReference ? "border-solid border-border" : "border-muted"
                 )}
             >
                 <input
@@ -160,7 +211,7 @@ export function PhotoUploadCard({
                     className="hidden"
                     accept="image/*"
                     onChange={handleFileChange}
-                    disabled={isUploading}
+                    disabled={editingDisabled}
                 />
 
                 {isUploading ? (
@@ -168,28 +219,20 @@ export function PhotoUploadCard({
                         <Loader2 className="w-8 h-8 animate-spin text-primary" />
                         <span className="text-xs text-muted-foreground">Uploading...</span>
                     </div>
-                ) : currentUrl ? (
+                ) : photo.url ? (
                     <>
                         <img
-                            src={currentUrl}
+                            src={photo.url}
+                            referrerPolicy="no-referrer"
                             alt={label}
                             className="absolute inset-0 w-full h-full object-cover"
                         />
 
                         {/* Overlay Actions */}
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                            <Button
-                                size="icon"
-                                variant="secondary"
-                                className="rounded-full h-8 w-8"
-                                onClick={handleVerifyClick}
-                                title="Replace"
-                                type="button"
-                            >
-                                <Upload className="w-4 h-4" />
-                            </Button>
+                            {editActions}
                             <a
-                                href={currentUrl}
+                                href={photo.url}
                                 download={`progress_photo_${label}.jpg`}
                                 target="_blank"
                                 rel="noreferrer"
@@ -204,18 +247,13 @@ export function PhotoUploadCard({
                                     <Download className="w-4 h-4" />
                                 </Button>
                             </a>
-                            <Button
-                                size="icon"
-                                variant="destructive"
-                                className="rounded-full h-8 w-8"
-                                onClick={onDelete}
-                                title="Remove"
-                                type="button"
-                            >
-                                <X className="w-4 h-4" />
-                            </Button>
                         </div>
                     </>
+                ) : currentReference ? (
+                    <div className="flex flex-col items-center gap-3 p-3">
+                        <Button type="button" onClick={() => void photo.refresh()} disabled={photo.loading}>{photo.loading ? "Loading…" : "Retry photo"}</Button>
+                        <div className="flex items-center gap-2">{editActions}</div>
+                    </div>
                 ) : (
                     <div
                         className="flex flex-col items-center gap-2 cursor-pointer p-4 text-center w-full h-full justify-center"

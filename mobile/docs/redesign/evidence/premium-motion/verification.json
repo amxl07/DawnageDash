@@ -1,0 +1,96 @@
+{
+  "updatedAt": "2026-09-17T16:07:07.734269+00:00",
+  "sourceManifest": "source-manifest.json",
+  "checks": [
+    {
+      "name": "UI contracts and production TypeScript syntax",
+      "command": "node scripts/verify-ui-contracts.mjs",
+      "status": "passed",
+      "sourceFiles": 191,
+      "artifact": "logs/ui-contracts.txt"
+    },
+    {
+      "name": "Semantic contrast",
+      "status": "passed",
+      "pairs": 64,
+      "artifact": "contrast.json"
+    },
+    {
+      "name": "Production data and dated geometry smoke",
+      "status": "passed",
+      "assertions": 21,
+      "artifacts": [
+        "logs/data-smoke.txt",
+        "logs/geometry.txt"
+      ]
+    },
+    {
+      "name": "TypeScript",
+      "status": "passed",
+      "exitCode": 0,
+      "artifact": "logs/typecheck-final.txt",
+      "command": "node --require /tmp/dawnage-premium-20260917/dependency-read-cache.cjs node_modules/typescript/bin/tsc --noEmit"
+    },
+    {
+      "name": "ESLint",
+      "status": "passed after one style-warning correction",
+      "artifact": "logs/lint-final-scan.txt",
+      "exitCode": 0,
+      "correctionArtifact": "logs/lint-final-correction.txt"
+    },
+    {
+      "name": "Jest regression coverage",
+      "status": "passed across full run plus corrected-suite rerun",
+      "suites": 122,
+      "tests": 904,
+      "failures": 0,
+      "skipped": 0,
+      "initialRun": {
+        "passedSuites": 109,
+        "failedSuites": 13
+      },
+      "correctedRerun": {
+        "passedSuites": 13,
+        "passedTests": 104,
+        "exitCode": 0
+      },
+      "artifact": "jest-latest-outcomes.json",
+      "logs": [
+        "logs/full-jest.txt",
+        "logs/final-corrections.txt"
+      ],
+      "environment": "Temporary verification-only directory and immutable installed-dependency byte caches; source reads/writes and assertions unchanged. 60000 ms CLI-only timeout."
+    },
+    {
+      "name": "Actual app browser captures and journeys",
+      "status": "passed",
+      "routeFrames": 20,
+      "journeyCheckpoints": 32,
+      "guidedChecks": 32,
+      "applicationErrors": 0,
+      "exitCodes": [
+        0,
+        0
+      ],
+      "artifacts": [
+        "phone-final/capture-manifest.json",
+        "compact/capture-manifest.json"
+      ],
+      "details": "390x844 dark/light with normal motion; 320x568 dark/light with Reduced Motion. Known SVG accessible=false web warning retained in manifests; only matching Expo development toast dismissed for capture."
+    },
+    {
+      "name": "iOS, Android, web platform export",
+      "status": "passed",
+      "command": "EXPO_OFFLINE=1 EXPO_PUBLIC_SUPABASE_URL=https://preview.invalid EXPO_PUBLIC_SUPABASE_ANON_KEY=fixture-public-key node --require /tmp/dawnage-premium-20260917/dependency-read-cache.cjs --max-old-space-size=1536 node_modules/expo/bin/cli export --platform all --max-workers 1 --output-dir /tmp/dawnage-premium-20260917/export",
+      "exitCode": 0,
+      "artifact": "logs/export.txt",
+      "bundleHashes": "export-artifacts.json",
+      "details": "JavaScript/Hermes bundles exported successfully; this is not a native app install or device-performance result."
+    },
+    {
+      "name": "Physical-device performance and accessibility",
+      "status": "not verified",
+      "details": "Requires real iOS/Android testing for touch, haptics, glass, assistive technologies and frame timing. No native performance claims; Skia pilot deferred."
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 import { useRouter } from 'expo-router';
-import { Plus, Ruler, Scale, TrendingDown } from 'lucide-react-native';
+import { Plus, Ruler, Scale } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   InteractionManager,
@@ -28,11 +28,16 @@ import {
   Text,
   useListMotion,
 } from '@/components/ui';
-import { useDashboardData } from '@/hooks/useDashboardData';
+import { useAuth } from '@/contexts/AuthContext';
+import { useDailyCheckIns } from '@/hooks/useDashboardData';
 import { useMeasurements } from '@/hooks/useMeasurements';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { calculateWeeklyAverages } from '@/lib/checkin-utils';
 import { parseLocalDate } from '@/lib/dates';
+import {
+  buildMeasurementChartSeries,
+  measurementComparison,
+} from '@/features/measurements/observations';
 import { num, type BodyMeasurement } from '@/types/db';
 import { iconSize, spacing, useTheme } from '@/theme';
 
@@ -60,12 +65,17 @@ function MeasurementMetricSkeleton() {
 }
 
 export default function MeasurementsScreen() {
+  const { user } = useAuth();
+  return <MeasurementsContent key={user?.id ?? 'signed-out'} />;
+}
+
+function MeasurementsContent() {
   const { colors } = useTheme();
   const { isCompact } = useResponsiveLayout();
   const listMotion = useListMotion();
   const router = useRouter();
   const { data: rows, isLoading, isError, refetch } = useMeasurements();
-  const { checkIns } = useDashboardData();
+  const { data: checkIns } = useDailyCheckIns();
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<BodyMeasurement | null>(null);
@@ -132,62 +142,76 @@ export default function MeasurementsScreen() {
     [mountChartWhenVisible],
   );
 
-  // rows are newest-first: [0] = current, [last] = baseline (Week 0).
+  // Rows are newest-first. Field comparisons resolve their own valid endpoints.
   const current = rows?.[0] ?? null;
-  const baseline = rows?.length ? rows[rows.length - 1] : null;
+  const comparisons = useMemo(
+    () =>
+      Object.fromEntries(
+        SERIES.map((series) => [series.key, measurementComparison(rows ?? [], series.key)]),
+      ) as Record<SeriesKey, ReturnType<typeof measurementComparison>>,
+    [rows],
+  );
 
   const metrics = useMemo(() => {
-    let totalWeightLost = '0';
-    let avgWeeklyLoss = '0';
+    let totalWeightChange = '—';
+    let avgWeeklyChange = '—';
     if (checkIns?.length) {
       const sorted = [...checkIns].sort((a, b) => (a.date < b.date ? -1 : 1));
       const first = sorted.find((c) => num(c.morning_weight) > 0);
       const last = [...sorted].reverse().find((c) => num(c.morning_weight) > 0);
       if (first && last) {
-        const lost = num(first.morning_weight) - num(last.morning_weight);
-        totalWeightLost = lost.toFixed(1);
+        const change = num(last.morning_weight) - num(first.morning_weight);
+        totalWeightChange = change.toFixed(1);
         const weeks = calculateWeeklyAverages(checkIns).length || 1;
-        avgWeeklyLoss = (lost / weeks).toFixed(1);
+        avgWeeklyChange = (change / weeks).toFixed(1);
       }
     }
-    const waistReduction =
-      current && baseline ? (num(baseline.waist) - num(current.waist)).toFixed(0) : '0';
-    return { totalWeightLost, avgWeeklyLoss, waistReduction };
-  }, [checkIns, current, baseline]);
+    const waistChange =
+      comparisons.waist.delta === null ? '—' : comparisons.waist.delta.toFixed(1);
+    return { totalWeightChange, avgWeeklyChange, waistChange };
+  }, [checkIns, comparisons.waist.delta]);
 
-  // Chart is oldest→newest, W0 = baseline.
+  // Chart is oldest→newest and preserves both elapsed dates and missing observations.
   const chartSeries = useMemo(() => {
-    const asc = [...(rows ?? [])].reverse();
     return SERIES.filter((s) => visible.includes(s.key)).map((s) => ({
-      name: s.name,
-      color: colors[
-        (['chart1', 'chart2', 'chart3', 'chart4', 'chart1'] as const)[SERIES.indexOf(s)]
-      ],
-      dash: s.dash ? [...s.dash] : undefined,
-      data: asc.map((r, i) => ({ label: `W${i}`, value: num(r[s.key]) })),
+      ...buildMeasurementChartSeries(rows ?? [], {
+        field: s.key,
+        name: s.name,
+        color: colors[
+          (['chart1', 'chart2', 'chart3', 'chart4', 'chart1'] as const)[SERIES.indexOf(s)]
+        ],
+        dash: s.dash ? [...s.dash] : undefined,
+      }),
     }));
   }, [rows, visible, colors]);
 
   const latestSummaries = useMemo(() => {
-    if (!current || !baseline) return [];
     return SERIES.filter((series) => visible.includes(series.key)).map((series) => {
-      const latest = num(current[series.key]);
-      if (!latest) return `${series.name}: no latest value`;
-
-      const start = num(baseline[series.key]);
-      if (!start) return `${series.name}: ${latest} cm · no baseline value`;
-
-      const delta = latest - start;
+      const comparison = comparisons[series.key];
+      if (!comparison.latest) return `${series.name}: no recorded value`;
+      const latest = comparison.latest.value;
+      if (!comparison.baseline || comparison.delta === null) {
+        return `${series.name}: ${latest} cm · first recorded ${format(
+          parseLocalDate(comparison.latest.date),
+          'd MMM yyyy',
+        )}`;
+      }
+      const delta = comparison.delta;
       const change =
         delta === 0
           ? 'no change from baseline'
           : `${delta < 0 ? 'down' : 'up'} ${Math.abs(delta).toFixed(1)} cm from baseline`;
       return `${series.name}: ${latest} cm · ${change}`;
     });
-  }, [baseline, current, visible]);
-  const latestDateSummary = current
-    ? `Latest entry · recorded ${format(parseLocalDate(current.date), 'd MMM yyyy')}`
-    : '';
+  }, [comparisons, visible]);
+  const latestVisibleDate = SERIES.filter((series) => visible.includes(series.key))
+    .map((series) => comparisons[series.key].latest?.date)
+    .filter((date): date is string => Boolean(date))
+    .sort()
+    .at(-1);
+  const latestDateSummary = latestVisibleDate
+    ? `Latest entry · recorded ${format(parseLocalDate(latestVisibleDate), 'd MMM yyyy')}`
+    : 'No recorded values in the selected series';
 
   if (isLoading) {
     return (
@@ -255,25 +279,25 @@ export default function MeasurementsScreen() {
       <AdaptiveGrid testID="measurement-primary-metrics">
         <MetricCard
           icon={Scale}
-          label="Weight lost"
-          value={metrics.totalWeightLost}
+          label="Weight change"
+          value={metrics.totalWeightChange}
           unit="kg"
-          trend={{ value: 0, goodDirection: 'up', caption: 'Since day 1' }}
+          trend={{ value: 0, goodDirection: 'up', caption: 'Since first recorded weight' }}
         />
         <MetricCard
-          icon={TrendingDown}
-          label="Waist"
-          value={metrics.waistReduction}
+          icon={Ruler}
+          label="Waist change"
+          value={metrics.waistChange}
           unit="cm"
-          trend={{ value: 0, goodDirection: 'up', caption: 'Reduction' }}
+          trend={{ value: 0, goodDirection: 'up', caption: 'Since first recorded waist' }}
         />
       </AdaptiveGrid>
       <MetricCard
         icon={Ruler}
-        label="Avg weekly loss"
-        value={metrics.avgWeeklyLoss}
+        label="Avg weekly change"
+        value={metrics.avgWeeklyChange}
         unit="kg"
-        trend={{ value: 0, goodDirection: 'up', caption: 'Per week' }}
+        trend={{ value: 0, goodDirection: 'up', caption: 'Per recorded week' }}
       />
 
       {rows && rows.length >= 2 ? (
@@ -327,7 +351,7 @@ export default function MeasurementsScreen() {
                 height={200}
                 series={chartSeries}
                 yAxisSuffix=""
-                summary={`Body measurements by week, week zero is your baseline. Showing ${chartSeries.map((s) => s.name).join(', ')}.`}
+                summary={`Body measurements by recorded date. Missing values appear as gaps. Showing ${chartSeries.map((s) => s.name).join(', ') || 'no series'}.`}
               />
             ) : (
               <Text variant="bodySm" tone="muted">
@@ -338,15 +362,12 @@ export default function MeasurementsScreen() {
         </Card>
       ) : null}
 
-      {current && baseline && current !== baseline ? (
+      {rows && rows.length >= 2 ? (
         <Card style={{ gap: spacing.md }}>
           <Text variant="h2">Baseline vs latest</Text>
           {SERIES.map((s) => {
-            const start = num(baseline[s.key]);
-            const now = num(current[s.key]);
-            if (!start && !now) return null;
-            const delta = now - start;
-            const reduced = delta < 0;
+            const comparison = comparisons[s.key];
+            if (!comparison.latest) return null;
             return (
               <View
                 key={s.key}
@@ -362,11 +383,16 @@ export default function MeasurementsScreen() {
                   {s.name}
                 </Text>
                 <Text variant="bodySm" numeric>
-                  {start} → {now} cm{'  '}
-                  <Text variant="bodySm" tone={reduced ? 'success' : 'muted'} numeric>
-                    ({delta > 0 ? '+' : ''}
-                    {delta.toFixed(1)})
-                  </Text>
+                  {comparison.baseline && comparison.delta !== null ? (
+                    <>
+                      {comparison.baseline.value} → {comparison.latest.value} cm{'  '}
+                      <Text variant="bodySm" tone="muted" numeric>
+                        ({comparison.delta > 0 ? '+' : ''}{comparison.delta.toFixed(1)})
+                      </Text>
+                    </>
+                  ) : (
+                    <>{comparison.latest.value} cm · first recorded value</>
+                  )}
                 </Text>
               </View>
             );

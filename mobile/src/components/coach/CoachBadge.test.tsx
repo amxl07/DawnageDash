@@ -1,6 +1,6 @@
+import { Image as ExpoImage } from 'expo-image';
 import { StyleSheet, Text as NativeText, View } from 'react-native';
 
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
 import type { CoachLookup } from '@/hooks/useCoach';
@@ -157,7 +157,7 @@ describe('CoachBadge', () => {
     });
 
     const renderer = renderBadge();
-    const portrait = renderer.root.findByType('ExpoImage');
+    const portrait = renderer.root.findByType(ExpoImage);
 
     expect(portrait.props).toMatchObject({
       source: { uri: 'https://example.com/amal.jpg' },

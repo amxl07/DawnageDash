@@ -1,4 +1,3 @@
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
 import { CheckInStageHeader } from './CheckInStageHeader';
@@ -34,7 +33,7 @@ jest.mock('@/theme', () => ({
   }),
 }));
 
-it('shows fixed stage copy, deterministic framing, and accessible exact progress', () => {
+it('shows one concise stage title with accessible exact progress', () => {
   let renderer!: ReturnType<typeof create>;
   act(() => {
     renderer = create(
@@ -47,8 +46,11 @@ it('shows fixed stage copy, deterministic framing, and accessible exact progress
     (node: { props: { accessibilityRole?: string } }) => node.props.accessibilityRole === 'progressbar',
   );
 
-  expect(output).toContain('Sleep and recovery');
+  expect(output).toContain('Recovery');
   expect(output).toContain('Step 2 of 4');
+  expect(output).not.toContain('Capture sleep and the context that affects recovery.');
+  expect(output).not.toContain('A quick honest check-in is enough.');
+  expect(renderer.root.findByProps({ children: 'Recovery' }).props.variant).toBe('h1');
   expect(progress.props).toMatchObject({
     accessibilityLabel: 'Check-in step 2 of 4',
     accessibilityValue: { min: 0, max: 100, now: 50 },

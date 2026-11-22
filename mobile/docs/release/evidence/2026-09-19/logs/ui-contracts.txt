@@ -1,0 +1,5 @@
+
+> dawnage-mobile@1.0.0 verify:ui
+> node scripts/verify-ui-contracts.mjs
+
+UI contracts passed for 186 source files.

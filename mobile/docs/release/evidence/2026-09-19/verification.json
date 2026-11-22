@@ -1,0 +1,112 @@
+{
+  "completedAt": "2026-09-18T20:11:41.567973+00:00",
+  "sourceManifest": "source-hashes.json",
+  "checks": [
+    {
+      "name": "Full mobile Jest",
+      "exitCode": 0,
+      "suites": 125,
+      "tests": 945,
+      "elapsedSeconds": 657.657,
+      "artifact": "jest.json",
+      "log": "logs/jest-full.txt",
+      "scope": "Full run before final two persistence fixes; final affected suites rerun below."
+    },
+    {
+      "name": "Lint-cleanup regressions",
+      "exitCode": 0,
+      "suites": 7,
+      "tests": 33,
+      "elapsedSeconds": 276.959,
+      "artifact": "jest-lint-cleanup.json",
+      "log": "logs/jest-lint-cleanup.txt"
+    },
+    {
+      "name": "Final persistence regressions",
+      "exitCode": 0,
+      "suites": 3,
+      "tests": 34,
+      "log": "logs/product-final-fix-green.log",
+      "scope": "Measurements, installed-SDK photo acknowledgement, actual mutation-to-capture retry."
+    },
+    {
+      "name": "Reopen serialization amendment",
+      "exitCode": 0,
+      "suites": 1,
+      "tests": 6,
+      "log": "logs/product-final-reopen-green.log"
+    },
+    {
+      "name": "Final TypeScript",
+      "exitCode": 0,
+      "log": "logs/typecheck.txt"
+    },
+    {
+      "name": "ESLint",
+      "exitCode": 0,
+      "errors": 0,
+      "warnings": 0,
+      "logs": [
+        "logs/lint-full.txt",
+        "logs/lint-final-fixes.txt",
+        "logs/lint-reopen.txt"
+      ],
+      "scope": "Full lint followed by affected-file checks after final corrections. No rules relaxed."
+    },
+    {
+      "name": "Import resolver regression probes",
+      "exitCode": 0,
+      "assertions": 5,
+      "log": "logs/lint-resolver.txt"
+    },
+    {
+      "name": "Final UI contracts",
+      "exitCode": 0,
+      "log": "logs/ui-contracts.txt"
+    },
+    {
+      "name": "Expo SDK dependency alignment",
+      "exitCode": 0,
+      "log": "logs/expo-check.txt"
+    },
+    {
+      "name": "Final iOS Android web export",
+      "exitCode": 0,
+      "log": "logs/export.txt",
+      "artifacts": "export-artifacts.json",
+      "scope": "JavaScript/Hermes export with fixture backend values; no native app build or install."
+    },
+    {
+      "name": "Web production build",
+      "exitCode": 0,
+      "log": "logs/web-build.txt"
+    },
+    {
+      "name": "Shared/native/web photo and operator contracts + PGlite SQL",
+      "status": "passed",
+      "report": "../../../review/2026-09-18/implementation-photos.md",
+      "scope": "Injected clients and actual local PostgreSQL; no live Storage HTTP/JWT/CDN validation."
+    },
+    {
+      "name": "Fresh browser capture",
+      "exitCode": 1,
+      "status": "unavailable",
+      "log": "logs/browser-attempt.txt",
+      "reason": "Chrome debugger startup timeout60seconds; no accepted screenshots. Attempt used the first hardening export before final persistence corrections."
+    }
+  ],
+  "countsOverlap": true,
+  "environment": "Standard installed tooling, Node22.16.0; no dependency read preloader used for final gates. Jest --runInBand and one Metro worker on existing host.",
+  "corrections": "Initial full run had a missing native-storage test mock and fixture typing errors; corrected. Lint needed a repo-root process cwd and explicit mobile tsconfig for sibling shared imports. These are resolved; final affected tests and lint passed.",
+  "externalGates": [
+    "Native device/accessibility/performance matrix",
+    "EAS cloud/native builds and distribution",
+    "Coordinated staging/live private-photo migration and Storage authorization/CDN checks",
+    "Trusted coach photo grants",
+    "Received preview diagnostics validation",
+    "5\u20138-person usability study"
+  ],
+  "liveMigration": "not applied",
+  "remoteTelemetry": "not sent",
+  "git": "Existing feature checkout preserved; no reset, stash, commit, merge or push."
+}

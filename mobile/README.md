@@ -3,12 +3,13 @@
 React Native (Expo) client app for DawnAge — iOS + Android. Reimplements the
 **client-facing** experience of the web dashboard. No coach/admin features.
 
-Fully isolated from the web app: its own `package.json`, lockfile and
-`node_modules`. Nothing outside `mobile/` is ever modified.
+The app has its own `package.json`, lockfile and `node_modules`. The pure
+progress-photo contract in `../shared/` is shared with the web dashboard; keep
+mobile and web photo readers compatible with the storage migration.
 
 ## Prerequisites
 
-- Node 20+ (verified on v22.16.0)
+- Node 22 LTS, v22.13 or newer in the 22.x line (verified on v22.16.0)
 - `watchman` (`brew install watchman`) — recommended on macOS
 - **Expo Go** on a physical iOS and Android device
 
@@ -17,27 +18,17 @@ Fully isolated from the web app: its own `package.json`, lockfile and
 > for an Android emulator. Develop against physical devices over Expo Go; use
 > **EAS Build** (cloud) for any native or store build.
 
-## SDK version — why 54 and not the latest
+## Expo SDK 57
 
-Pinned to **Expo SDK 54** deliberately. Two reasons, both load-bearing:
+The app uses **Expo 57.0.24**, **React Native 0.86.3**, and **React 19.2.3**,
+matching the SDK 57 Expo Go client. On physical iOS devices, the App Store's
+current Expo Go client supports only its current SDK; an SDK 54 project cannot
+run in the SDK 57 client.
 
-1. **Expo Go on the iOS App Store stops at SDK 54.** Each Expo Go build bundles
-   exactly one SDK and the project must match. On SDK 55+ an iPhone can only run
-   the app through `sign.expo.dev` certificates that expire every ~7 days, or a
-   paid-account development build. SDK 54 is the newest SDK that just works with
-   the App Store app.
-2. **Minimum iOS 15.1 instead of 16.4.** SDK 56/57 require iOS 16.4+, which cuts
-   off iPhone 7 / 6s / SE-1 (they cap at iOS 15.8). iOS 15+ reaches ~97.7% of
-   devices vs ~95.5% for iOS 16+.
-
-| SDK | React Native | Min iOS | App Store Expo Go |
-|---|---|---|---|
-| 57 | 0.86 | 16.4+ | no |
-| 56 | 0.85 | 16.4+ | no |
-| 55 | 0.83 | 15.1+ | no |
-| **54** | **0.81** | **15.1+** | **yes** |
-
-Before upgrading past 54, be deliberate about both consequences.
+After upgrading dependencies, stop the previous Metro server and start a fresh
+one. See [the SDK 57 upgrade notes](docs/expo-sdk-57-upgrade.md) for compatibility
+changes and verification. Older redesign plans describe the SDK 54 baseline
+used when those plans were written.
 
 `.npmrc` sets `legacy-peer-deps=true` because `@react-native-community/datetimepicker`
 carries an optional peer on `react-native-windows` that pins a different React
@@ -64,7 +55,7 @@ Without these the app shows a "missing configuration" screen instead of crashing
 ## Run
 
 ```bash
-npx expo start
+npm start -- --clear --max-workers 1
 ```
 
 Scan the QR code with the **Camera app** on iOS or the **Expo Go app** on
@@ -79,13 +70,23 @@ npx eas-cli build --profile preview     --platform android   # installable APK
 npx eas-cli build --profile production  --platform all
 ```
 
-Minimum OS: **iOS 15.1**, **Android 7**. Bundle identifiers are `com.dawnage.app` on both platforms — change in
-`app.json` before the first production build if you want something else.
+App identities come from `app.config.ts`: development uses `com.dawnage.app.dev`,
+preview uses `com.dawnage.app.preview`, and production keeps `com.dawnage.app`.
+The preview profile targets physical devices; use `preview-simulator` for an iOS
+Simulator. Start an installed development client with `npm run start:dev`.
+`npm start` continues to open Expo Go.
+
+See [release hardening and validation](docs/release/2026-09-19-hardening.md) for
+build environments, photo rollout, diagnostics and the device/user-study gates.
+The [current preview/device pass](docs/release/2026-09-19-device-preview.md) keeps
+the existing Supabase project and defers photo staging. The repository-root
+`.easignore` limits cloud uploads to the mobile app and its shared runtime contract;
+configure the existing public backend values in EAS, because `.env` is excluded.
 
 ## Layout
 
 ```
-app/                     Expo Router routes (thin — they render screens)
+app/                     Expo Router routes, layouts and screen composition
   (auth)/                login, password reset
   (app)/(tabs)/          Home · Check In · Plans · Logs · More
   (app)/                 measurements, media, weekly-feedback, profile, settings
@@ -94,7 +95,8 @@ src/
   contexts/AuthContext   session + role, no impersonation
   lib/                   supabase client, env guard
   theme/                 colours, tokens, ThemeProvider, useMotion
-plans/                   the phased implementation plan (start at 00-MASTER-PLAN.md)
+plans/                   historical phased implementation specifications
+docs/release/            current release handoff and validation evidence
 ```
 
 ## Conventions
@@ -108,9 +110,11 @@ plans/                   the phased implementation plan (start at 00-MASTER-PLAN
 
 ## Development status
 
-**All 9 phases implemented.** Auth, onboarding, questionnaire, dashboard,
-daily check-ins, measurements, progress photos, plans, workout logger,
-weekly feedback, profile, and local reminders.
+Auth, onboarding, Home, guided check-ins, measurements, photos, Plans,
+workout logging, weekly feedback, Profile and local reminders are implemented.
+The [current release handoff](docs/release/2026-09-19-hardening.md) is the
+maintained index for reliability fixes, cleanup, verification and remaining
+release work. `plans/` and `docs/redesign/` preserve earlier design history.
 
-Not yet verified on a physical device — see the handover notes from the build
-session. `plans/` holds the original specification.
+Physical-device acceptance, the coordinated private-photo migration and the
+usability study remain release gates; source checks do not replace them.

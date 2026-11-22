@@ -1,0 +1,52 @@
+{
+  "harness": "Actual current TypeScript source and installed PostgREST SDK; injected fake fetch; memory-only storage",
+  "offlineBoundary": {
+    "fetchCalls": 1,
+    "rawException": {
+      "kind": "transport",
+      "retryable": true,
+      "code": "network-request-failed"
+    },
+    "sdkError": {
+      "message": "TypeError: Network request failed",
+      "code": ""
+    },
+    "sdkClassification": {
+      "kind": "unknown",
+      "retryable": false,
+      "code": "unknown"
+    },
+    "saveStatus": "blocked",
+    "flushed": 0,
+    "reconnectCalls": 0,
+    "retainedFailure": {
+      "kind": "unknown",
+      "retryable": false,
+      "code": "unknown"
+    }
+  },
+  "zeroRowBoundary": {
+    "scenario": "Row visible at SELECT, PATCH returns normal 204 for zero affected rows",
+    "calls": [
+      {
+        "table": "/daily_check_ins",
+        "method": "GET"
+      },
+      {
+        "table": "/daily_check_ins",
+        "method": "PATCH"
+      },
+      {
+        "table": "/users",
+        "method": "GET"
+      }
+    ],
+    "result": {
+      "status": "synced",
+      "value": {
+        "updated": true
+      }
+    },
+    "retainedQueueLength": 0
+  }
+}

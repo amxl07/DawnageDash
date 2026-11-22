@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "Dawnage",
+    "owner": "amxlm",
     "slug": "dawnage",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -30,11 +31,12 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0B0B0C",
+          "backgroundColor": "#F3F6FA",
           "dark": {
-            "backgroundColor": "#0B0B0C"
+            "backgroundColor": "#0B0B0C",
+            "image": "./assets/images/splash-icon.png"
           },
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/splash-icon-light.png",
           "imageWidth": 220
         }
       ],
@@ -55,6 +57,11 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "08d6bcb5-ebb0-4c32-96c4-22c777b33f2d"
+      }
     }
   }
 }

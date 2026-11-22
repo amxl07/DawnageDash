@@ -1,0 +1,14 @@
+PASS src/features/weekly/readWeeklyDraft.test.ts (135.042 s)
+PASS src/hooks/usePrivatePhotoUrl.test.tsx (25.556 s)
+PASS src/components/AppErrorBoundary.test.tsx (13.622 s)
+PASS src/screens/__tests__/media.test.tsx (57.564 s)
+PASS src/components/media/PhotoViewer.test.tsx (16.636 s)
+PASS src/features/checkin/persistence.test.ts
+PASS src/components/media/PhotoSlot.test.tsx
+
+Test Suites: 7 passed, 7 total
+Tests:       33 passed, 33 total
+Snapshots:   0 total
+Time:        276.959 s
+Ran all test suites matching /src\/components\/AppErrorBoundary.test.tsx|src\/features\/weekly\/readWeeklyDraft.test.ts|src\/hooks\/usePrivatePhotoUrl.test.tsx|src\/components\/media\/PhotoSlot.test.tsx|src\/components\/media\/PhotoViewer.test.tsx|src\/features\/checkin\/persistence.test.ts|src\/screens\/__tests__\/media.test.tsx/i.
+Test results written to: ../../../../../../tmp/dawnage-hardening-20260919/jest-lint-cleanup.json

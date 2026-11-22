@@ -26,7 +26,7 @@ export type ResponsiveMode = 'compact' | 'regular' | 'wide';
 
 /** Height of the tab bar body, excluding the bottom safe area. */
 export const TAB_BAR_HEIGHT = 56;
-/** Height of a sticky action bar body, excluding the bottom safe area. */
+/** Legacy fallback for consumers that have not adopted measured footer height. */
 export const ACTION_BAR_HEIGHT = 64;
 
 export function getResponsiveMode(width: number, fontScale: number): ResponsiveMode {
@@ -50,7 +50,8 @@ export function statusBarHeight(
 
 /** Horizontal gutter — wider on tablets so text keeps a readable measure. */
 export function horizontalInset(width: number): number {
-  return width >= 768 ? spacing.lg : spacing.base;
+  if (width >= 768) return spacing.lg;
+  return width < 360 ? spacing.base : spacing.content;
 }
 
 export function screenContentPadding(
@@ -68,7 +69,7 @@ export function screenContentPadding(
     case 'editor':
       return {
         paddingTop: statusBarHeight(insets, platform) + spacing.base,
-        // Clear the sticky action bar, which sits inside the safe area itself.
+        // Keep the safe legacy clearance until each editor owns measurement.
         paddingBottom: insets.bottom + ACTION_BAR_HEIGHT + spacing.lg,
       };
     case 'sheet':

@@ -1,0 +1,102 @@
+// Read-only source review harness. Every HTTP call uses the injected fake fetch.
+// Storage is an in-memory Map. No app storage or backend is accessed or changed.
+const fs = require('node:fs');
+const path = require('node:path');
+const { createRequire } = require('node:module');
+
+const mobile = process.argv[2] ?? '/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile';
+const appRequire = createRequire(path.join(mobile, 'package.json'));
+const ts = appRequire('typescript');
+const { PostgrestClient } = appRequire('@supabase/postgrest-js');
+
+function loadTs(file, modules = {}) {
+  const compiled = ts.transpileModule(fs.readFileSync(path.join(mobile, file), 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
+  }).outputText;
+  const module = { exports: {} };
+  new Function('require', 'module', 'exports', compiled)(
+    (name) => modules[name] ?? appRequire(name), module, module.exports,
+  );
+  return module.exports;
+}
+
+function memoryOutbox(classifier) {
+  const memory = new Map();
+  const storage = {
+    getItem: async (key) => memory.get(key) ?? null,
+    setItem: async (key, value) => { memory.set(key, value); },
+  };
+  const { createAsyncOutbox } = loadTs('src/lib/asyncOutbox.ts', {
+    '@react-native-async-storage/async-storage': storage,
+    './delivery-errors': classifier,
+  });
+  return createAsyncOutbox({
+    storageKey: 'memory-only-review',
+    belongsTo: (item, owner) => item.owner === owner,
+    sameTarget: (item, input) => item.id === input.id,
+    toItem: (input) => ({ ...input, queuedAt: 1 }),
+  });
+}
+
+async function offlineBoundary(classifier) {
+  let fetchCalls = 0;
+  const client = new PostgrestClient('https://no-network.invalid', {
+    fetch: async () => { fetchCalls++; throw new TypeError('Network request failed'); },
+  });
+  const response = await client.from('fictional_records').select('id').retry(false);
+  const outbox = memoryOutbox(classifier);
+  const save = await outbox.save({ id: 'fictional-item', owner: 'fictional-user' }, async () => {
+    throw response.error;
+  });
+  let reconnectCalls = 0;
+  const flushed = await outbox.flush('fictional-user', async () => { reconnectCalls++; return 'saved'; });
+  return {
+    fetchCalls,
+    rawException: classifier.classifyDeliveryFailure(new TypeError('Network request failed')),
+    sdkError: { message: response.error.message, code: response.error.code },
+    sdkClassification: classifier.classifyDeliveryFailure(response.error),
+    saveStatus: save.status,
+    flushed,
+    reconnectCalls,
+    retainedFailure: (await outbox.read('fictional-user'))[0].failure,
+  };
+}
+
+async function zeroRowBoundary(classifier) {
+  const calls = [];
+  const client = new PostgrestClient('https://no-network.invalid', {
+    fetch: async (url, options) => {
+      const table = new URL(url).pathname;
+      calls.push({ table, method: options.method });
+      // PostgREST returns 204 for return=minimal PATCH even when zero rows match.
+      if (options.method === 'PATCH') return new Response(null, { status: 204 });
+      const body = table.endsWith('daily_check_ins') ? [{ id: 'fictional-previously-readable-row' }] : [];
+      return new Response(JSON.stringify(body), {
+        status: 200, headers: { 'Content-Type': 'application/json' },
+      });
+    },
+  });
+  const { persistCheckIn } = loadTs('src/features/checkin/persistence.ts', {
+    '@/lib/supabase': { supabase: client },
+  });
+  const outbox = memoryOutbox(classifier);
+  const result = await outbox.save({ id: 'fictional-item', owner: 'fictional-user' }, () =>
+    persistCheckIn('fictional-user', { date: '2026-09-18', notes: 'fictional review fixture' }),
+  );
+  return {
+    scenario: 'Row visible at SELECT, PATCH returns normal 204 for zero affected rows',
+    calls,
+    result,
+    retainedQueueLength: (await outbox.read('fictional-user')).length,
+  };
+}
+
+(async () => {
+  const classifier = loadTs('src/lib/delivery-errors.ts');
+  const results = {
+    harness: 'Actual current TypeScript source and installed PostgREST SDK; injected fake fetch; memory-only storage',
+    offlineBoundary: await offlineBoundary(classifier),
+    zeroRowBoundary: await zeroRowBoundary(classifier),
+  };
+  console.log(JSON.stringify(results, null, 2));
+})().catch((error) => { console.error(error); process.exitCode = 1; });

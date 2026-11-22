@@ -8,7 +8,7 @@ export function useOnboarding() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: step = 0, isLoading } = useQuery({
+  const query = useQuery({
     queryKey: ['onboardingStep', user?.id],
     queryFn: async () => {
       if (!user?.id) return 0;
@@ -17,7 +17,7 @@ export function useOnboarding() {
         .select('onboarding_step')
         .eq('id', user.id)
         .single();
-      if (error) return 0;
+      if (error) throw error;
       return (data?.onboarding_step as number | null) ?? 0;
     },
     enabled: !!user?.id,
@@ -40,8 +40,10 @@ export function useOnboarding() {
   });
 
   return {
-    step,
-    isLoading,
+    step: query.data ?? 0,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    refetch: query.refetch,
     updateStep: updateStep.mutateAsync,
     isUpdating: updateStep.isPending,
   };

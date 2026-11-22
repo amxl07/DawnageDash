@@ -1,0 +1,329 @@
+{
+  "verifiedAt": "2026-09-16T21:51:13.503268+00:00",
+  "sourceRevision": "8ec16a7ca5fdc560a5f7858cb1722329ba2c4df2",
+  "sourceDirty": true,
+  "checks": {
+    "typecheck": {
+      "exit_code": 0,
+      "seconds": 37.4,
+      "command": [
+        "node",
+        "--max-old-space-size=768",
+        "node_modules/typescript/bin/tsc",
+        "--noEmit"
+      ]
+    },
+    "lint": {
+      "exit_code": 0,
+      "seconds": 101.9,
+      "command": [
+        "node",
+        "--max-old-space-size=768",
+        "node_modules/eslint/bin/eslint.js",
+        "."
+      ]
+    },
+    "tests": {
+      "exit_code": 0,
+      "seconds": 102.5,
+      "command": [
+        "node",
+        "--expose-gc",
+        "--max-old-space-size=768",
+        "node_modules/jest/bin/jest.js",
+        "--runInBand",
+        "--no-watchman",
+        "--roots",
+        "src",
+        "app",
+        "--logHeapUsage",
+        "--json",
+        "--outputFile",
+        "/tmp/dawnage-guided-20260917/full-tests.json"
+      ]
+    },
+    "focused": {
+      "exit_code": 0,
+      "seconds": 4.6,
+      "command": [
+        "node",
+        "--expose-gc",
+        "--max-old-space-size=768",
+        "node_modules/jest/bin/jest.js",
+        "--runInBand",
+        "--no-watchman",
+        "--roots",
+        "src",
+        "app",
+        "--runTestsByPath",
+        "src/components/ui/Input.test.tsx",
+        "src/components/checkin/CheckInForm.test.tsx",
+        "--json",
+        "--outputFile",
+        "/tmp/dawnage-guided-20260917/focused-tests.json"
+      ]
+    },
+    "ui": {
+      "exit_code": 0,
+      "seconds": 0.9,
+      "command": [
+        "node",
+        "scripts/verify-ui-contracts.mjs"
+      ]
+    },
+    "export": {
+      "exit_code": 0,
+      "seconds": 126.7,
+      "command": [
+        "node",
+        "--max-old-space-size=1024",
+        "node_modules/expo/bin/cli",
+        "export",
+        "--platform",
+        "all",
+        "--max-workers",
+        "1",
+        "--output-dir",
+        "/tmp/dawnage-guided-20260917/export"
+      ]
+    },
+    "sheet": {
+      "exit_code": 0,
+      "seconds": 5.2,
+      "command": [
+        "node",
+        "--expose-gc",
+        "--max-old-space-size=768",
+        "node_modules/jest/bin/jest.js",
+        "--runInBand",
+        "--no-watchman",
+        "--roots",
+        "src",
+        "app",
+        "--runTestsByPath",
+        "src/components/ui/Sheet.test.tsx",
+        "--json",
+        "--outputFile",
+        "/tmp/dawnage-guided-20260917/sheet-tests.json"
+      ]
+    }
+  },
+  "tests": {
+    "suites": 118,
+    "passed": 857,
+    "failed": 0
+  },
+  "uiContractSourceFiles": 187,
+  "bundles": [
+    {
+      "platform": "ios",
+      "file": "_expo/static/js/ios/index-967a62af3b4ef2fae96201bde85bc57a.hbc",
+      "bytes": 8221235,
+      "sha256": "cffd6266cb3d1a198844f0d5529e3a6e631b3539d12ce4c55526fe9acc44e24e"
+    },
+    {
+      "platform": "android",
+      "file": "_expo/static/js/android/index-2aca2d15cd73b2636c12661d3f4b7e3b.hbc",
+      "bytes": 8457818,
+      "sha256": "0c95e2214c2dcba68567263af0557ac18cb2b43331ab525ed7dde4fc3646b19f"
+    },
+    {
+      "platform": "web",
+      "file": "_expo/static/js/web/index-41ebc7e50ae52dd3eb9447ffa766fedf.js",
+      "bytes": 5911035,
+      "sha256": "2ccaf4ca2ab6e2124f09ff71e4979a515b5e9807a63daa80a6a1d042e5f63135"
+    }
+  ],
+  "browser": [
+    {
+      "viewport": "phone",
+      "manifest": "phone/capture-manifest.json",
+      "capturedAt": "2026-09-16T21:47:49.849Z",
+      "journeys": 4,
+      "errors": 0,
+      "checks": 16
+    },
+    {
+      "viewport": "compact",
+      "manifest": "compact/capture-manifest.json",
+      "capturedAt": "2026-09-16T21:49:25.656Z",
+      "journeys": 4,
+      "errors": 0,
+      "checks": 16
+    }
+  ],
+  "sourceChanges": [
+    {
+      "file": ".maestro/home-checkin.yaml",
+      "sha256": "5c953d16cb863c9f77a7bb699d419652a77006984b8dc9a92cc46b9200a94946",
+      "before": "506f5a1e44781b32092600c79ca301242712bfcbf72049756f17425cddc209a2"
+    },
+    {
+      "file": ".maestro/workout-interruption.yaml",
+      "sha256": "16f59e5f7e9c4b13f32330581d2041c13bd63b2c7fd8eaf28522b2b91c2dd48d",
+      "before": "62c4687e9ea56ff13b9f7fc7de2e5e1a5e3aaaa20bc70d0b747b9a68d94ada9b"
+    },
+    {
+      "file": "app/(app)/(tabs)/check-in.tsx",
+      "sha256": "4900ece79ed6cafa4a6c46f7567446710400ee04d4accde6eafa9ce41190dc96",
+      "before": "d2ea47da11e4a8bb7af60572410e741150fad400916a57ed2f48312c36e4ee39"
+    },
+    {
+      "file": "app/(app)/logger.tsx",
+      "sha256": "bc01a3f44061efa5028f5cf74c761d8eab81217737705e835cdb39079cf78a59",
+      "before": "f2e3e8de6089c534c8cd0280ea753e111142db7b787c15dc4a952686868cc094"
+    },
+    {
+      "file": "scripts/capture-redesign.mjs",
+      "sha256": "f09fca5dd0ebb27e5f222c8f1c5fe8321a5ef947bd67820f71b2100cd658999c",
+      "before": "5839fc8659aa200bebc8945c871ab9c1ab9bf993e8fd0b91b86c0095b7048f89"
+    },
+    {
+      "file": "scripts/guided-journeys.mjs",
+      "sha256": "a58fdc5d9d9bc32a651ce04779fb0a969ed32136e99c690ec0c4f9408e3b2ad3",
+      "before": null
+    },
+    {
+      "file": "scripts/journey-driver.mjs",
+      "sha256": "3a5e55cf705417b14c025860b949d95cbb7e6895f6ca49cd90fd3ce4444e7de6",
+      "before": null
+    },
+    {
+      "file": "src/__tests__/maestro-contract.test.ts",
+      "sha256": "1e91971b5f87ee6c05a71acd5b1c4930d2d7a42ce65926ff083a781a63ac3c9b",
+      "before": "969ccb6c969df0bef722ad404df09e133d9d327f0d9031c5e64500e9a1c598c5"
+    },
+    {
+      "file": "src/components/checkin/CheckInFieldBlock.test.tsx",
+      "sha256": "419554888b6bf4897c9093872f1b6da7c1f0b296ad2ff1404ffb67acb603375e",
+      "before": "a38df9f767e361a87d8e1c692008e3c5d6d8afed25c8704be7aa756a45483e03"
+    },
+    {
+      "file": "src/components/checkin/CheckInFieldBlock.tsx",
+      "sha256": "07d0d65d255d101c36b67c2be60c15046a5e4d5f5899beae424d0b12ce838dcc",
+      "before": "28ef507d5539333a1437e86261ae5e2829e136f0b134207007e54ed3046a1f0d"
+    },
+    {
+      "file": "src/components/checkin/CheckInForm.test.tsx",
+      "sha256": "1e63bdfa927ec8324f4d8715211f3fe85f352528f06225288718add2043b6d7b",
+      "before": "47d78c17d3597877749b063eeaeca13c79a94c031bd9f0a3a56fa9d95366d741"
+    },
+    {
+      "file": "src/components/checkin/CheckInForm.tsx",
+      "sha256": "3c0a01ae5de396946a235556e7036409e07b0e30c013b22c14b4f937f6c2fd05",
+      "before": "7bf2aa83c09f34695a36f290ed042cd72b6d82a43dc034bd1a7e6bf9be37fad1"
+    },
+    {
+      "file": "src/components/checkin/CheckInStageHeader.test.tsx",
+      "sha256": "721db50f1da39696a7858fc48927b858a23245ae1df3d6e261d86132523d3145",
+      "before": "6e3a5a562ed7795ad7823f6daf2d4b794121e6eec560ea03c3bf5e49c70b8a13"
+    },
+    {
+      "file": "src/components/checkin/CheckInStageHeader.tsx",
+      "sha256": "14af0ec41e54a2df615536c997749b9d70f039a4abff001c6be5c8ec5380744b",
+      "before": "9a2e188f3ac21bce053789640d2023d73a8bea7f67cea3548bca03c41ced8b87"
+    },
+    {
+      "file": "src/components/checkin/OptionalCheckInFields.tsx",
+      "sha256": "59f62f5faf5ae777e89745ffd480b759883819effbd783eabdd7182880195a69",
+      "before": null
+    },
+    {
+      "file": "src/components/checkin/checkin-presentation.test.ts",
+      "sha256": "72ee3cb3c66ace119c8c8c05f090aa6ada2ec155a578307a9115b59bd6a5bbf3",
+      "before": "7d267a3243b2a245b7d8ff2628e1dfef2ba4dc9d507173ba196d9d794323bdce"
+    },
+    {
+      "file": "src/components/checkin/checkin-presentation.ts",
+      "sha256": "692fccfac5658bdf2fbf0352ae9f755a1ea39dc9a7ed101d8269cbb469c7ef0e",
+      "before": "ef892f48c22933b6e2fbc51c34ff763e692ec7f857df04aedc54877c6bba1505"
+    },
+    {
+      "file": "src/components/logger/ExerciseSlide.test.tsx",
+      "sha256": "b7d23a4bc3fb4c509b3c70cc1c48e4c6b52d00c5d13170c8c4e93ac0aab44fd6",
+      "before": "314191dbe71b1d2fb81a39d30aa8bd3d75adda49ea6c679adf2005258ccbe1bd"
+    },
+    {
+      "file": "src/components/logger/ExerciseSlide.tsx",
+      "sha256": "0db08222f1a7663955fbd715ae04d07db293718b5b690cbe396faeea22c5bd7b",
+      "before": "de5192065faaa5b8a6c7f79b35622a53ce0a0d63fd0da9daeecc2a15a2a3e442"
+    },
+    {
+      "file": "src/components/logger/RestDock.test.tsx",
+      "sha256": "1741d7ef18a0579c0c4bee44c0a728cb968b8a1fbe752b3e7475e6188d315bc7",
+      "before": null
+    },
+    {
+      "file": "src/components/logger/RestDock.tsx",
+      "sha256": "be60071aa85df78cdaeafcc524c24b8b1daec325fe896f0ed54528f031dabedf",
+      "before": "07392ec0bd95a320772f20338cee742909a7a2a5c2233033bc129f9908db2da3"
+    },
+    {
+      "file": "src/components/logger/WorkoutOverviewSheet.tsx",
+      "sha256": "d4e99b5a4f28101664f9a01fe615a207751be76efd1f0eabc2300d1c8fa110f6",
+      "before": "5bbfb3c76870b3885fa3cd5192bd7c14510acb33cd9b873b379ad24dbab882f9"
+    },
+    {
+      "file": "src/components/ui/Input.test.tsx",
+      "sha256": "d0b3c7ddda7eb7be41f9ee046ec7fca30eb521ae317329831b178dc2a71ac630",
+      "before": null
+    },
+    {
+      "file": "src/components/ui/Input.tsx",
+      "sha256": "bafae1a377cf81a2c92b5c97e1f91a6ccb1accbc5e01e943d9e1056693076138",
+      "before": "5971e997681d84229e7188391dc35c2ecaf39e5b35bf4a164a18e4d0cf195943"
+    },
+    {
+      "file": "src/components/ui/Sheet.test.tsx",
+      "sha256": "69f7663fc3a9af6fb5390192f0314ab6e02deccec664e46cc47f80650dfaa90b",
+      "before": "d32c841b0f284a33f984e16fa469b46d5cce693df188f65d6716b890d2738ccd"
+    },
+    {
+      "file": "src/components/ui/Sheet.tsx",
+      "sha256": "e371dc12b2f5ec2afdffd70a2ece94bec722203baa21a122efeed7659a0e915b",
+      "before": "15372551f84e94dc1c10cfad5fd404211e014c027850a89064ed133476bbf409"
+    },
+    {
+      "file": "src/features/checkin/CheckInJourney.integration.test.tsx",
+      "sha256": "d0b14ea707783523024e8f616e2c12fe7c519c6f3a7b2aec4cd8a3da9722f672",
+      "before": "493027c44cb63e03064aad6a52ca8c26fc64f50497725b4587a5eddd9f0bacc7"
+    },
+    {
+      "file": "src/features/checkin/components/DailyRecordHeader.tsx",
+      "sha256": "ce7f80c54ca1c0e153c0d7ced690d95a46b074adb9a5aeeb82c0ed48501440f4",
+      "before": "d63aa0f0a658d23e7f26d42e2e5f4b8f41903dc37a283967e7421c5a78318b42"
+    },
+    {
+      "file": "src/features/checkin/components/NumericEntry.test.tsx",
+      "sha256": "d05f828fd9da6a01c2cae0bc809963c80a7a00d0ea625fd0f344c8fc39792330",
+      "before": "e5e4c4f6dbffbf380acdc09451af089d6c663acc1db855f51d9de1c4edaed19c"
+    },
+    {
+      "file": "src/features/checkin/components/NumericEntry.tsx",
+      "sha256": "218fd89bdfc8f400ded1bd835c474b6d8c79e13dda7193cc7b13715b78a8d02e",
+      "before": "f44bc9234f46bf8a35e0039ecb6e8b4ef82ff6876b6dedf4a96bbd6f761df45c"
+    },
+    {
+      "file": "src/features/checkin/useCheckInEditor.test.tsx",
+      "sha256": "b418640c67ba6c07674e3e398012c512ba5e053bfd55a5a53ecc357408d4e333",
+      "before": "b86d67d2b06b9d27ec1ff81d48d7b11c02f26737ee1d68a53c0dabe292a44f47"
+    },
+    {
+      "file": "src/screens/__tests__/logger.test.tsx",
+      "sha256": "707984e82bb55c24d36dc19299049cde83f1f12b93f1fe3b97d9070f3cbdb242",
+      "before": "9be64e239759c788ca0c45ffa24343de619b26d7f28ad59bb2764dd180c178c0"
+    },
+    {
+      "file": "src/screens/__tests__/tabs/check-in.test.tsx",
+      "sha256": "7b9b9dc85ad95025143830230c7ca33c7b2571458703a85866a36bd63a5bff15",
+      "before": "267c0a4837ce3e1a4fa02f78634e92d42804808f66f931ba21f4800c10a69367"
+    }
+  ],
+  "independentReview": "Approved after numeric, guided-flow, native keyboard, sheet lifecycle, and measured-header corrections.",
+  "limits": {
+    "nativeDeviceTested": false,
+    "maestroExecutedOnDevice": false,
+    "deployed": false,
+    "note": "Native keyboard placement, VoiceOver/TalkBack, Dynamic Type, haptics, and app interruption still require device validation."
+  }
+}

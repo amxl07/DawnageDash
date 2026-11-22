@@ -1,0 +1,7 @@
+[
+  {"name":"v2-mixed","content":{"version":2,"planDayNumber":2,"exercises":[{"name":"Squat","tracking":"weight-reps","sets":[{"setNumber":1,"reps":"8","weight":"40","rpe":"","kind":"warmup","completed":true},{"setNumber":2,"reps":"6","weight":"60","rpe":"8","kind":"work","completed":false}]},{"name":"Plank","tracking":"duration","sets":[{"setNumber":1,"duration":"45","reps":"","weight":"","rpe":"7","kind":"work","completed":true}]},{"name":"Unstarted","tracking":"weight-reps","sets":[]}]}},
+  {"name":"legacy-current-array","content":[{"exercise":"Press","sets":[{"setNumber":1,"reps":"10","weight":"20","rpe":"7"}]}]},
+  {"name":"legacy-object","content":[{"Exercise":"Lunge","Sets":"3","Reps":"8-12","Weight":"bodyweight","Duration":"","Rest":"90"}]},
+  {"name":"legacy-array-text","content":["Mobility practice"]},
+  {"name":"legacy-plain-text","content":"Walked outside for recovery"}
+]

@@ -3,6 +3,7 @@ import {
   type WorkoutLogPersistence,
   type WorkoutLogPayload,
 } from './workoutPersistence';
+import { classifyDeliveryFailure } from './delivery-errors';
 
 jest.mock('./supabase', () => ({ supabase: {} }));
 
@@ -21,7 +22,7 @@ describe('persistWorkoutLog', () => {
   it('reuses the inserted same-date row on a later save instead of inserting twice', async () => {
     let storedId: string | null = null;
     const persistence: WorkoutLogPersistence = {
-      findByDate: jest.fn(async () => ({ data: storedId ? { id: storedId } : null, error: null })),
+      findAllByDate: jest.fn(async () => ({ data: storedId ? [{ id: storedId }] : [], error: null })),
       updateById: jest.fn(async (id) => result(id)),
       insert: jest.fn(async () => {
         storedId = 'created-1';
@@ -42,24 +43,30 @@ describe('persistWorkoutLog', () => {
     );
   });
 
-  it('recovers a stale requested id through one same-date lookup and insert', async () => {
+  it('refuses a missing explicit id without falling through to insert or another row', async () => {
     const persistence: WorkoutLogPersistence = {
-      findByDate: jest.fn(async () => result(null)),
+      findAllByDate: jest.fn(async () => ({ data: [{ id: 'other' }], error: null })),
       updateById: jest.fn(async () => result(null)),
-      insert: jest.fn(async () => result('replacement-1')),
+      insert: jest.fn(async () => result('replacement')),
     };
-
-    await expect(persistWorkoutLog(first, 'stale-id', persistence)).resolves.toBe(
-      'replacement-1',
-    );
-    expect(persistence.updateById).toHaveBeenCalledTimes(1);
-    expect(persistence.findByDate).toHaveBeenCalledTimes(1);
-    expect(persistence.insert).toHaveBeenCalledTimes(1);
+    await expect(persistWorkoutLog(first, 'missing', persistence)).rejects.toThrow('Workout is missing or no longer editable');
+    expect(persistence.findAllByDate).not.toHaveBeenCalled();
+    expect(persistence.insert).not.toHaveBeenCalled();
+  });
+  it('requires selection instead of overwriting an arbitrary same-date row', async () => {
+    const persistence: WorkoutLogPersistence = {
+      findAllByDate: jest.fn(async () => ({ data: [{ id: 'a' }, { id: 'b' }], error: null })),
+      updateById: jest.fn(async () => result('a')),
+      insert: jest.fn(async () => result('replacement')),
+    };
+    await expect(persistWorkoutLog(first, null, persistence)).rejects.toMatchObject({ status: 409 });
+    expect(persistence.updateById).not.toHaveBeenCalled();
+    expect(persistence.insert).not.toHaveBeenCalled();
   });
 
   it('rejects an insert that returns no affected row id', async () => {
     const persistence: WorkoutLogPersistence = {
-      findByDate: jest.fn(async () => result(null)),
+      findAllByDate: jest.fn(async () => ({ data: [], error: null })),
       updateById: jest.fn(async () => result(null)),
       insert: jest.fn(async () => result(null)),
     };
@@ -67,5 +74,25 @@ describe('persistWorkoutLog', () => {
     await expect(persistWorkoutLog(first, null, persistence)).rejects.toThrow(
       'Workout insert affected no row',
     );
+  });
+
+  it('preserves the outer SDK status when an error body has no provider code', async () => {
+    const persistence: WorkoutLogPersistence = {
+      findAllByDate: jest.fn(async () => ({
+        data: null,
+        error: { message: 'private upstream response', code: '' },
+        status: 503,
+      })),
+      updateById: jest.fn(async () => result(null)),
+      insert: jest.fn(async () => result(null)),
+    };
+
+    const thrown = await persistWorkoutLog(first, null, persistence).catch((error) => error);
+
+    expect(classifyDeliveryFailure(thrown)).toEqual({
+      kind: 'temporary-server',
+      retryable: true,
+      code: 'http-503',
+    });
   });
 });

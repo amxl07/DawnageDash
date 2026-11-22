@@ -23,6 +23,10 @@ export type ColorScheme = {
   // surfaces that carry a white label (white on #F04E45 is only 3.57:1).
   primary: string;
   primaryFill: string;
+  /** Tonal selection, pressed primary and neutral touch feedback surfaces. */
+  primarySoft: string;
+  primaryPressed: string;
+  pressed: string;
   onPrimary: string;
   success: string;
   gold: string;
@@ -50,7 +54,10 @@ export const dark: ColorScheme = {
   mutedForeground: '#A1A1A8', //  7.18:1 on card
 
   primary: '#F04E45', //          5.16:1 on card
-  primaryFill: '#D93A31', //      white label 4.57:1
+  primaryFill: '#CF382F', //      white label 4.93:1
+  primarySoft: '#30191B',
+  primaryPressed: '#AE2D26',
+  pressed: '#24262C',
   onPrimary: '#FFFFFF',
   success: '#00D26A', //          9.15:1 on card
   gold: '#F6C85A', //            11.70:1 on card
@@ -58,7 +65,7 @@ export const dark: ColorScheme = {
   destructive: '#F04E45',
 
   border: '#1F1F23', //           1.12:1 — decorative only
-  borderStrong: '#5E6268', //     3.00:1 — interactive boundaries
+  borderStrong: '#6B6F76', //     3.41:1 on elevated — interactive boundaries
   focusRing: '#F04E45',
 
   chart1: '#F44A3E', //           5.17:1
@@ -68,33 +75,35 @@ export const dark: ColorScheme = {
 };
 
 export const light: ColorScheme = {
-  // Grey background + white card: the web's #FAFAFA/#F5F5F5 pair measured
-  // 1.03:1, so cards were invisible without shadows. Inverted to the native
-  // pattern; separation comes from elevation (see tokens.shadow).
-  background: '#F2F2F5',
+  // Cool pearl and slate, informed by SparkyFitness's light surface hierarchy.
+  // Dawnage retains its own deep coral actions and accessible essential text.
+  background: '#F3F6FA',
   card: '#FFFFFF',
-  elevated: '#FFFFFF',
-  scrim: 'rgba(0,0,0,0.45)',
+  elevated: '#F7F9FC',
+  scrim: 'rgba(15,23,42,0.38)',
 
-  foreground: '#17171A', //       17.89:1 on card
-  mutedForeground: '#5C5C63', //   6.63:1 on card
+  foreground: '#17243B', //       14.33:1 on background
+  mutedForeground: '#53647C', //  5.56:1 on background
 
-  primary: '#C0362C', //           5.52:1 on card  (#F04E45 was 3.28 — failed)
-  primaryFill: '#D93A31', //       white label 4.57:1
+  primary: '#B63B32', //           4.92:1 on primarySoft
+  primaryFill: '#C94136', //       white label 4.89:1
+  primarySoft: '#FBEAE7',
+  primaryPressed: '#A9322B', //    white label 6.61:1
+  pressed: '#E7EDF5',
   onPrimary: '#FFFFFF',
-  success: '#0F7A43', //           5.41:1 on card  (was 2.56 — failed)
-  gold: '#7D5E00', //              6.05:1 on card  (was 3.28 — failed)
-  orange: '#A85A00',
-  destructive: '#C0362C',
+  success: '#0F766E',
+  gold: '#8A6508',
+  orange: '#AD5B18',
+  destructive: '#B53B3B',
 
-  border: '#E4E4E9', //            decorative only
-  borderStrong: '#8E8E96', //      3.25:1 — interactive boundaries
-  focusRing: '#C0362C',
+  border: '#DEE5EE', //            decorative only
+  borderStrong: '#7E8CA1', //      >=3:1 on all light surfaces — interactive boundaries
+  focusRing: '#B63B32',
 
-  chart1: '#E0392E', //            4.38:1   (light chart values were 1.37–2.74)
-  chart2: '#00994D', //            3.71:1
-  chart3: '#A87C05', //            3.78:1
-  chart4: '#2E86E0', //            3.75:1
+  chart1: '#B63B32',
+  chart2: '#147D75',
+  chart3: '#A27816',
+  chart4: '#356FBB',
 };
 
 export const palettes = { light, dark };

@@ -1,28 +1,25 @@
-import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from '@expo-google-fonts/inter';
-import {
-  Poppins_400Regular,
-  Poppins_600SemiBold,
-  Poppins_700Bold,
-} from '@expo-google-fonts/poppins';
+import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
+import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
+import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import * as SystemUI from 'expo-system-ui';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AppErrorBoundary } from '@/components/AppErrorBoundary';
+import { initializeTelemetry } from '@/lib/telemetry';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { isConfigured } from '@/lib/env';
 import { ThemeProvider, useTheme } from '@/theme';
 import { MissingConfigScreen } from '@/components/MissingConfigScreen';
+
+initializeTelemetry();
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -32,6 +29,10 @@ const queryClient = new QueryClient({
 
 function RootNavigator() {
   const { colors, isDark } = useTheme();
+
+  useEffect(() => {
+    void SystemUI.setBackgroundColorAsync(colors.background).catch(() => {});
+  }, [colors.background]);
 
   if (!isConfigured) return <MissingConfigScreen />;
 
@@ -56,10 +57,6 @@ export default function RootLayout() {
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
-    Inter_700Bold,
-    Poppins_400Regular,
-    Poppins_600SemiBold,
-    Poppins_700Bold,
   });
 
   useEffect(() => {
@@ -75,9 +72,11 @@ export default function RootLayout() {
         <ThemeProvider>
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
-              <BottomSheetModalProvider>
-                <RootNavigator />
-              </BottomSheetModalProvider>
+              <AppErrorBoundary>
+                <BottomSheetModalProvider>
+                  <RootNavigator />
+                </BottomSheetModalProvider>
+              </AppErrorBoundary>
             </AuthProvider>
           </QueryClientProvider>
         </ThemeProvider>

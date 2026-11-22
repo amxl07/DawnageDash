@@ -1,0 +1,65 @@
+name: Mobile quality
+on:
+  pull_request:
+    paths: ['mobile/**', 'package.json', 'package-lock.json', 'shared/progress-photos*', 'scripts/*photo*', 'client/**', 'sqlmigrationfiles/**', '.github/workflows/mobile.yml']
+  push:
+    branches: [main]
+    paths: ['mobile/**', 'package.json', 'package-lock.json', 'shared/progress-photos*', 'scripts/*photo*', 'client/**', 'sqlmigrationfiles/**', '.github/workflows/mobile.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      CI: '1'
+      EXPO_NO_TELEMETRY: '1'
+      EXPO_PUBLIC_SUPABASE_URL: https://ci.invalid
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-not-a-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run verify
+      - run: npx expo install --check
+      - run: npx expo export --platform all --output-dir dist-ci
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mobile-platform-exports
+          path: mobile/dist-ci
+          retention-days: 7
+  photo-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            mobile/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm ci --prefix mobile --no-audit --no-fund
+      - run: node --experimental-strip-types --test shared/progress-photos.test.ts
+      - run: node --experimental-vm-modules --test scripts/mobile-photo-upload.test.mjs scripts/progress-photo-access.test.mjs scripts/web-photo-upload-card.test.mjs
+      - name: Verify private storage migration locally
+        run: |
+          npm install --prefix "$RUNNER_TEMP/photo-sql" --no-save --package-lock=false --no-audit --no-fund @electric-sql/pglite@0.5.8
+          PHOTO_SQL_MODULE="$RUNNER_TEMP/photo-sql/node_modules/@electric-sql/pglite/dist/index.js" node scripts/verify-photo-privacy.mjs
+      - run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://ci.invalid
+          VITE_SUPABASE_ANON_KEY: ci-placeholder-not-a-secret

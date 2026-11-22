@@ -1,18 +1,29 @@
 import { View, type ViewProps, type ViewStyle } from 'react-native';
-import { radius, spacing } from '@/theme';
-import { useTheme } from '@/theme';
+import { radius, spacing, useTheme } from '@/theme';
 
-type Props = ViewProps & { padded?: boolean; elevated?: boolean };
+export type CardSurface = 'grouped' | 'metric' | 'hero';
+export type CardElevation = 'flat' | 'raised' | 'overlay';
+export type CardProps = ViewProps & {
+  padded?: boolean;
+  elevated?: boolean;
+  surface?: CardSurface;
+  elevation?: CardElevation;
+};
 
-export function Card({ style, padded = true, elevated = false, ...rest }: Props) {
+export function Card({ style, padded = true, elevated = false, surface = 'grouped', elevation, ...rest }: CardProps) {
   const { colors, shadow } = useTheme();
+  const resolvedElevation = elevated ? 'overlay' : elevation ?? (surface === 'hero' ? 'raised' : 'flat');
   const base: ViewStyle = {
-    backgroundColor: elevated ? colors.elevated : colors.card,
+    backgroundColor: elevated || surface === 'metric' ? colors.elevated : colors.card,
     borderRadius: radius.card,
     borderCurve: 'continuous',
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 0,
     padding: padded ? spacing.base : 0,
   };
-  return <View style={[base, elevated ? shadow.sheet : shadow.card, style]} {...rest} />;
+  const elevationStyle = resolvedElevation === 'overlay'
+    ? shadow.sheet
+    : resolvedElevation === 'raised'
+      ? shadow.card
+      : undefined;
+  return <View style={[base, elevationStyle, style]} {...rest} />;
 }

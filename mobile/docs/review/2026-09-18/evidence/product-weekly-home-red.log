@@ -1,0 +1,1070 @@
+FAIL src/screens/__tests__/measurements.test.tsx (252.514 s)
+  ● Console
+
+    console.warn
+      InteractionManager has been deprecated and will be removed in a future release. Please refactor long tasks into smaller ones, and  use 'requestIdleCallback' instead.
+
+      228 |       maxContentWidth: undefined,
+      229 |     });
+    > 230 |     jest.spyOn(InteractionManager, 'runAfterInteractions').mockImplementation(((callback: () => void) => {
+          |                ^
+      231 |       interactionCallbacks.push(callback);
+      232 |       return { cancel: jest.fn(), done: jest.fn(), then: jest.fn() };
+      233 |     }) as typeof InteractionManager.runAfterInteractions);
+
+      at warn (node_modules/react-native/Libraries/Utilities/warnOnce.js:27:11)
+      at Object.warnOnce [as InteractionManager] (node_modules/react-native/index.js:264:5)
+      at Object.InteractionManager (src/screens/__tests__/measurements.test.tsx:230:16)
+
+  ● MeasurementsScreen › uses neutral change labels for weight and circumference in every goal
+
+    No instances found with props: {"label":"Weight change"}
+
+      240 |   it('uses neutral change labels for weight and circumference in every goal', () => {
+      241 |     const renderer = renderScreen();
+    > 242 |     expect(renderer.root.findByProps({ label: 'Weight change' })).toBeTruthy();
+          |                          ^
+      243 |     expect(renderer.root.findByProps({ label: 'Waist change' })).toBeTruthy();
+      244 |     expect(renderer.root.findByProps({ label: 'Avg weekly change' })).toBeTruthy();
+      245 |     expect(renderer.root.findAllByProps({ label: 'Weight lost' })).toHaveLength(0);
+
+      at expectOne (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15161:13)
+      at ReactTestInstance.Object.<anonymous>.process.env.NODE_ENV._proto.findByProps (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:17219:18)
+      at Object.findByProps (src/screens/__tests__/measurements.test.tsx:242:26)
+
+FAIL src/screens/__tests__/tabs/index.test.tsx (111.832 s)
+  ● offers this week’s reflection when account history confirms none was submitted
+
+    Unable to find an element with role: button, name: Start weekly check-in
+
+    <View>
+      <View>
+        <View>
+          <View>
+            <Text>
+              Tuesday, September 15
+            </Text>
+            <Text
+              accessibilityRole="header"
+            >
+              Good morning
+              ,
+              
+    
+              Alex
+              .
+            </Text>
+            <Text>
+              No coach assigned yet
+            </Text>
+          </View>
+          <View
+            accessibilityLabel="Open your profile"
+            accessibilityRole="button"
+            accessible={true}
+          />
+        </View>
+        <View
+          testID="home-next-action"
+        >
+          <View>
+            <Text>
+              Your next step
+            </Text>
+            <View
+              accessible={false}
+            />
+          </View>
+          <View>
+            <Text
+              accessibilityRole="header"
+            >
+              Your daily check-in
+            </Text>
+            <Text>
+              Take a moment to reflect. Build a clear record of your day.
+            </Text>
+          </View>
+          <View
+            accessibilityLabel="Check in"
+            accessibilityRole="button"
+            accessible={true}
+            testID="home-today-action"
+          >
+            <Text>
+              Check in
+            </Text>
+          </View>
+        </View>
+        <View>
+          <View>
+            <Text
+              accessibilityRole="header"
+            >
+              This week
+            </Text>
+            <View
+              accessibilityLabel="History"
+              accessibilityRole="button"
+              accessible={true}
+            >
+              <Text>
+                History
+              </Text>
+            </View>
+          </View>
+          <View>
+            <View>
+              <Text>
+                Check-ins this week
+              </Text>
+              <Text>
+                0
+                 of 
+                7
+                 saved
+              </Text>
+            </View>
+            <RCTScrollView>
+              <View>
+                <View
+                  accessibilityLabel="Monday, September 14, No record"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": false,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Mon
+                  </Text>
+                  <Text>
+                    14
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Tuesday, September 15, No record"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": false,
+                      "selected": true,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Tue
+                  </Text>
+                  <Text>
+                    15
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Wednesday, September 16, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Wed
+                  </Text>
+                  <Text>
+                    16
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Thursday, September 17, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Thu
+                  </Text>
+                  <Text>
+                    17
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Friday, September 18, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Fri
+                  </Text>
+                  <Text>
+                    18
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Saturday, September 19, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Sat
+                  </Text>
+                  <Text>
+                    19
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Sunday, September 20, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Sun
+                  </Text>
+                  <Text>
+                    20
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+              </View>
+            </RCTScrollView>
+          </View>
+        </View>
+        <View>
+          <View>
+            <Text
+              accessibilityRole="header"
+            >
+              Your training
+            </Text>
+            <View
+              accessibilityLabel="Your plan"
+              accessibilityRole="button"
+              accessible={true}
+            >
+              <Text>
+                Your plan
+              </Text>
+            </View>
+          </View>
+          <View
+            accessibilityLabel="View next session: Lower body, day 2, 1 exercises"
+            accessibilityRole="button"
+            accessible={true}
+          >
+            <View />
+            <View>
+              <Text>
+                From your training plan
+              </Text>
+              <Text>
+                Lower body
+              </Text>
+              <Text>
+                Day 2 · 1 exercises
+              </Text>
+            </View>
+          </View>
+        </View>
+        <View>
+          <Text>
+            Start with today.
+          </Text>
+          <Text>
+            Each check-in adds context. Your observations will appear here as you build your record.
+          </Text>
+        </View>
+        <View
+          accessibilityLabel="Continue your coaching assessment"
+          accessibilityRole="button"
+          accessible={true}
+        >
+          <View>
+            <Text>
+              A fuller picture of you
+            </Text>
+            <Text>
+              Coaching assessment · 
+              2
+               of 
+              10
+               sections
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+
+      113 | it('offers this week’s reflection when account history confirms none was submitted', async () => {
+      114 |   const view = await render(<HomeScreen />);
+    > 115 |   await fireEvent.press(view.getByRole('button', { name: 'Start weekly check-in' }));
+          |                              ^
+      116 |   expect(mockPush).toHaveBeenCalledWith('/(app)/weekly-feedback');
+      117 | });
+      118 |
+
+      at Object.getByRole (src/screens/__tests__/tabs/index.test.tsx:115:30)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● resumes a saved weekly draft even when weekly history is unavailable
+
+    Unable to find an element with role: button, name: Resume weekly check-in
+
+    <View>
+      <View>
+        <View>
+          <View>
+            <Text>
+              Tuesday, September 15
+            </Text>
+            <Text
+              accessibilityRole="header"
+            >
+              Good morning
+              ,
+              
+    
+              Alex
+              .
+            </Text>
+            <Text>
+              No coach assigned yet
+            </Text>
+          </View>
+          <View
+            accessibilityLabel="Open your profile"
+            accessibilityRole="button"
+            accessible={true}
+          />
+        </View>
+        <View
+          testID="home-next-action"
+        >
+          <View>
+            <Text>
+              Your next step
+            </Text>
+            <View
+              accessible={false}
+            />
+          </View>
+          <View>
+            <Text
+              accessibilityRole="header"
+            >
+              Your daily check-in
+            </Text>
+            <Text>
+              Take a moment to reflect. Build a clear record of your day.
+            </Text>
+          </View>
+          <View
+            accessibilityLabel="Check in"
+            accessibilityRole="button"
+            accessible={true}
+            testID="home-today-action"
+          >
+            <Text>
+              Check in
+            </Text>
+          </View>
+        </View>
+        <View>
+          <View>
+            <Text
+              accessibilityRole="header"
+            >
+              This week
+            </Text>
+            <View
+              accessibilityLabel="History"
+              accessibilityRole="button"
+              accessible={true}
+            >
+              <Text>
+                History
+              </Text>
+            </View>
+          </View>
+          <View>
+            <View>
+              <Text>
+                Check-ins this week
+              </Text>
+              <Text>
+                0
+                 of 
+                7
+                 saved
+              </Text>
+            </View>
+            <RCTScrollView>
+              <View>
+                <View
+                  accessibilityLabel="Monday, September 14, No record"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": false,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Mon
+                  </Text>
+                  <Text>
+                    14
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Tuesday, September 15, No record"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": false,
+                      "selected": true,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Tue
+                  </Text>
+                  <Text>
+                    15
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Wednesday, September 16, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Wed
+                  </Text>
+                  <Text>
+                    16
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Thursday, September 17, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Thu
+                  </Text>
+                  <Text>
+                    17
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Friday, September 18, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Fri
+                  </Text>
+                  <Text>
+                    18
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Saturday, September 19, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Sat
+                  </Text>
+                  <Text>
+                    19
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Sunday, September 20, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Sun
+                  </Text>
+                  <Text>
+                    20
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+              </View>
+            </RCTScrollView>
+          </View>
+        </View>
+        <View>
+          <View>
+            <Text
+              accessibilityRole="header"
+            >
+              Your training
+            </Text>
+            <View
+              accessibilityLabel="Your plan"
+              accessibilityRole="button"
+              accessible={true}
+            >
+              <Text>
+                Your plan
+              </Text>
+            </View>
+          </View>
+          <View
+            accessibilityLabel="View next session: Lower body, day 2, 1 exercises"
+            accessibilityRole="button"
+            accessible={true}
+          >
+            <View />
+            <View>
+              <Text>
+                From your training plan
+              </Text>
+              <Text>
+                Lower body
+              </Text>
+              <Text>
+                Day 2 · 1 exercises
+              </Text>
+            </View>
+          </View>
+        </View>
+        <View>
+          <Text>
+            Start with today.
+          </Text>
+          <Text>
+            Each check-in adds context. Your observations will appear here as you build your record.
+          </Text>
+        </View>
+        <View
+          accessibilityLabel="Continue your coaching assessment"
+          accessibilityRole="button"
+          accessible={true}
+        >
+          <View>
+            <Text>
+              A fuller picture of you
+            </Text>
+            <Text>
+              Coaching assessment · 
+              2
+               of 
+              10
+               sections
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+
+      121 |   mockLocal.mockReturnValue({ data: { weeklyDraft: { form: { overall_feeling: 'A good week' }, step: 2 }, workoutDraft: null, checkInDraft: null, checkIns: [], workouts: [] }, refetch: jest.fn(), isError: false });
+      122 |   const view = await render(<HomeScreen />);
+    > 123 |   await fireEvent.press(view.getByRole('button', { name: 'Resume weekly check-in' }));
+          |                              ^
+      124 |   expect(mockPush).toHaveBeenCalledWith('/(app)/weekly-feedback');
+      125 | });
+      126 |
+
+      at Object.getByRole (src/screens/__tests__/tabs/index.test.tsx:123:30)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● drops weekly resume when the account-scoped local query resets
+
+    Unable to find an element with role: button, name: Resume weekly check-in
+
+    <View>
+      <View>
+        <View>
+          <View>
+            <Text>
+              Tuesday, September 15
+            </Text>
+            <Text
+              accessibilityRole="header"
+            >
+              Good morning
+              ,
+              
+    
+              Alex
+              .
+            </Text>
+            <Text>
+              No coach assigned yet
+            </Text>
+          </View>
+          <View
+            accessibilityLabel="Open your profile"
+            accessibilityRole="button"
+            accessible={true}
+          />
+        </View>
+        <View
+          testID="home-next-action"
+        >
+          <View>
+            <Text>
+              Your next step
+            </Text>
+            <View
+              accessible={false}
+            />
+          </View>
+          <View>
+            <Text
+              accessibilityRole="header"
+            >
+              Your daily check-in
+            </Text>
+            <Text>
+              Take a moment to reflect. Build a clear record of your day.
+            </Text>
+          </View>
+          <View
+            accessibilityLabel="Check in"
+            accessibilityRole="button"
+            accessible={true}
+            testID="home-today-action"
+          >
+            <Text>
+              Check in
+            </Text>
+          </View>
+        </View>
+        <View>
+          <View>
+            <Text
+              accessibilityRole="header"
+            >
+              This week
+            </Text>
+            <View
+              accessibilityLabel="History"
+              accessibilityRole="button"
+              accessible={true}
+            >
+              <Text>
+                History
+              </Text>
+            </View>
+          </View>
+          <View>
+            <View>
+              <Text>
+                Check-ins this week
+              </Text>
+              <Text>
+                0
+                 of 
+                7
+                 saved
+              </Text>
+            </View>
+            <RCTScrollView>
+              <View>
+                <View
+                  accessibilityLabel="Monday, September 14, No record"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": false,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Mon
+                  </Text>
+                  <Text>
+                    14
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Tuesday, September 15, No record"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": false,
+                      "selected": true,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Tue
+                  </Text>
+                  <Text>
+                    15
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Wednesday, September 16, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Wed
+                  </Text>
+                  <Text>
+                    16
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Thursday, September 17, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Thu
+                  </Text>
+                  <Text>
+                    17
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Friday, September 18, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Fri
+                  </Text>
+                  <Text>
+                    18
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Saturday, September 19, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Sat
+                  </Text>
+                  <Text>
+                    19
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+                <View
+                  accessibilityLabel="Sunday, September 20, upcoming"
+                  accessibilityRole="button"
+                  accessibilityState={
+                    {
+                      "disabled": true,
+                      "selected": false,
+                    }
+                  }
+                  accessible={true}
+                >
+                  <Text>
+                    Sun
+                  </Text>
+                  <Text>
+                    20
+                  </Text>
+                  <View
+                    accessible={false}
+                  >
+                    <View />
+                  </View>
+                </View>
+              </View>
+            </RCTScrollView>
+          </View>
+        </View>
+        <View>
+          <View>
+            <Text
+              accessibilityRole="header"
+            >
+              Your training
+            </Text>
+            <View
+              accessibilityLabel="Your plan"
+              accessibilityRole="button"
+              accessible={true}
+            >
+              <Text>
+                Your plan
+              </Text>
+            </View>
+          </View>
+          <View
+            accessibilityLabel="View next session: Lower body, day 2, 1 exercises"
+            accessibilityRole="button"
+            accessible={true}
+          >
+            <View />
+            <View>
+              <Text>
+                From your training plan
+              </Text>
+              <Text>
+                Lower body
+              </Text>
+              <Text>
+                Day 2 · 1 exercises
+              </Text>
+            </View>
+          </View>
+        </View>
+        <View>
+          <Text>
+            Start with today.
+          </Text>
+          <Text>
+            Each check-in adds context. Your observations will appear here as you build your record.
+          </Text>
+        </View>
+        <View
+          accessibilityLabel="Continue your coaching assessment"
+          accessibilityRole="button"
+          accessible={true}
+        >
+          <View>
+            <Text>
+              A fuller picture of you
+            </Text>
+            <Text>
+              Coaching assessment · 
+              2
+               of 
+              10
+               sections
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+
+      138 |   mockLocal.mockReturnValue({ data: { weeklyDraft: { form: {}, step: 1 }, checkIns: [], workouts: [] }, refetch: jest.fn(), isError: false });
+      139 |   const view = await render(<HomeScreen />);
+    > 140 |   expect(view.getByRole('button', { name: 'Resume weekly check-in' })).toBeTruthy();
+          |               ^
+      141 |   mockLocal.mockReturnValue({ data: undefined, refetch: jest.fn(), isError: false });
+      142 |   await view.rerender(<HomeScreen />);
+      143 |   expect(view.queryByRole('button', { name: 'Resume weekly check-in' })).toBeNull();
+
+      at Object.getByRole (src/screens/__tests__/tabs/index.test.tsx:140:15)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+PASS src/features/weekly/selectors.test.ts
+FAIL src/screens/__tests__/weekly-feedback.test.tsx
+  ● WeeklyFeedbackScreen › labels each history answer with its question and unit
+
+    No instances found with props: {"children":"Are you progressing in your training?"}
+
+      376 |   it('labels each history answer with its question and unit', async () => {
+      377 |     const renderer = await renderScreen();
+    > 378 |     expect(renderer.root.findByProps({ children: 'Are you progressing in your training?' })).toBeTruthy();
+          |                          ^
+      379 |     expect(renderer.root.findByProps({ children: '8000 steps/day' })).toBeTruthy();
+      380 |     expect(renderer.root.findByProps({ children: '3 litres/day' })).toBeTruthy();
+      381 |   });
+
+      at expectOne (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15161:13)
+      at ReactTestInstance.Object.<anonymous>.process.env.NODE_ENV._proto.findByProps (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:17219:18)
+      at Object.findByProps (src/screens/__tests__/weekly-feedback.test.tsx:378:26)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 3 failed, 1 passed, 4 total
+Tests:       5 failed, 51 passed, 56 total
+Snapshots:   0 total
+Time:        392.708 s
+Ran all test suites within paths "src/screens/__tests__/weekly-feedback.test.tsx", "src/screens/__tests__/tabs/index.test.tsx", "src/screens/__tests__/measurements.test.tsx", "src/features/weekly/selectors.test.ts".
+Verification directory cache: 31904 missing-path checks resolved; 713 directories read.
+Verification dependency cache: 3782 repeated reads; 2646 files; 16618645 bytes.

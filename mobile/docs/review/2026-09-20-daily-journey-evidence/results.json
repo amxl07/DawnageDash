@@ -1,0 +1,40 @@
+{
+  "sourceTests": {
+    "suites": 16,
+    "uniqueTests": 156,
+    "passed": true,
+    "initialRun": {
+      "passedSuites": 12,
+      "failedSuites": 4,
+      "totalTests": 155
+    },
+    "correctedRun": {
+      "passedSuites": 4,
+      "passedTests": 30
+    }
+  },
+  "typecheck": {
+    "command": "node node_modules/typescript/bin/tsc --noEmit",
+    "exitCode": 0
+  },
+  "sourceLint": {
+    "command": "node scripts/lint.mjs [changed source paths]",
+    "exitCode": 0
+  },
+  "testLint": {
+    "passed": true,
+    "note": "Scoped test lint plus targeted named-mock correction recheck; both outcomes reconciled."
+  },
+  "uiContracts": {
+    "passed": true,
+    "sourceFiles": 202
+  },
+  "diffCheck": {
+    "exitCode": 0
+  },
+  "nativeValidation": false,
+  "visualCapture": {
+    "acceptedScreenshots": 0,
+    "reason": "Chrome did not expose its debugger within 60 seconds; simctl unavailable."
+  }
+}

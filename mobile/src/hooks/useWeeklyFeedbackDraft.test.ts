@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as React from 'react';
 
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
 import { emptyWeekly } from '@/components/weekly/steps';
@@ -88,6 +87,18 @@ describe('useWeeklyFeedbackDraft', () => {
   afterEach(() => {
     jest.runOnlyPendingTimers();
     jest.useRealTimers();
+  });
+
+  it('persists and restores a frozen report snapshot with the draft', async () => {
+    const form = { ...emptyWeekly(), step_count: '8000' };
+    const report = { through: '2026-09-20', prefill: { step_count: '8000', water_intake: '', stress_level: '' }, observationDates: { step_count: ['2026-09-20'], water_intake: [], stress_level: [] } };
+    const { result, unmount } = renderHook(() => useWeeklyFeedbackDraft('user-1'));
+    await act(async () => { await result.current.saveDraft(form, 2, { immediate: true, report }); });
+    const serialized = mockStorage.setItem.mock.calls[0]?.[1];
+    expect(JSON.parse(serialized!)).toEqual({ form, step: 2, report });
+    mockStorage.getItem.mockResolvedValueOnce(serialized!);
+    await expect(result.current.loadDraft()).resolves.toEqual({ form, step: 2, report });
+    unmount();
   });
 
   it('moves from saving to saved after one 500ms durable write', async () => {

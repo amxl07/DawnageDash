@@ -1,0 +1,9 @@
+PASS src/hooks/useProgressPhotos.test.tsx (157.672 s)
+PASS src/components/measurements/MeasurementSheet.test.tsx (29.742 s)
+PASS src/components/media/PhotoCaptureSheet.test.tsx (67.538 s)
+
+Test Suites: 3 passed, 3 total
+Tests:       34 passed, 34 total
+Snapshots:   0 total
+Time:        278.099 s
+Ran all test suites within paths "src/components/measurements/MeasurementSheet.test.tsx", "src/hooks/useProgressPhotos.test.tsx", "src/components/media/PhotoCaptureSheet.test.tsx".

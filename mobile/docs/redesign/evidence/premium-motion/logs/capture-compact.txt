@@ -1,0 +1,7 @@
+Captured home-dark-320.png
+Captured home-light-320.png
+{"code":-32001,"message":"Session with given id not found."}
+Captured checkin-dark-320.png
+Captured checkin-light-320.png
+Captured workout-dark-320.png
+Captured workout-light-320.png

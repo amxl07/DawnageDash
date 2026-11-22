@@ -1,0 +1,309 @@
+{
+  "referenceDate": "2026-09-15",
+  "userId": "00000000-0000-4000-8000-000000000001",
+  "profile": {
+    "id": "00000000-0000-4000-8000-000000000001",
+    "full_name": "Alex Morgan",
+    "active_workout_plan": "{\"level\": \"Intermediate\", \"workoutType\": \"Gym\", \"subCategory\": null, \"daysPerWeek\": 3}",
+    "active_meal_plan": null,
+    "training_note": "Keep the last reps controlled. Rest as prescribed between working sets.",
+    "nutrition_note": null,
+    "cardio_note": null,
+    "steps_note": null,
+    "supplements_data": null,
+    "package_start_date": "2026-09-01",
+    "package_duration": 90,
+    "phone_number": null,
+    "country": "India",
+    "email": "alex@example.invalid",
+    "profile_data": {
+      "primary_goal": "performance",
+      "timezone": "Asia/Kolkata"
+    },
+    "onboarding_step": 3
+  },
+  "coach": {
+    "id": "00000000-0000-4000-8000-000000000002",
+    "full_name": "Jamie Lee",
+    "avatar_url": null
+  },
+  "checkIns": [
+    {
+      "id": "fixture-checkin-7",
+      "user_id": "00000000-0000-4000-8000-000000000001",
+      "date": "2026-09-07",
+      "morning_weight": 72.8,
+      "sleep_hours": 7,
+      "workout_status": "done",
+      "workout_performance": 8,
+      "nutrition_score": 8,
+      "calorie_intake": 2200,
+      "water_liters": 2.5,
+      "daily_steps": 8200,
+      "protein": 140,
+      "carbs": 250,
+      "fats": 70,
+      "energy_level": 7,
+      "hunger_level": 5,
+      "stress_level": 3,
+      "digestion": "none",
+      "notes": "A steady day.",
+      "created_at": "2026-09-07T15:30:00Z",
+      "updated_at": "2026-09-07T15:30:00Z"
+    },
+    {
+      "id": "fixture-checkin-9",
+      "user_id": "00000000-0000-4000-8000-000000000001",
+      "date": "2026-09-09",
+      "morning_weight": 72.7,
+      "sleep_hours": 7.5,
+      "workout_status": "rest_day",
+      "workout_performance": null,
+      "nutrition_score": 8,
+      "calorie_intake": 2200,
+      "water_liters": 2.5,
+      "daily_steps": 8200,
+      "protein": 140,
+      "carbs": 250,
+      "fats": 70,
+      "energy_level": 7,
+      "hunger_level": 5,
+      "stress_level": 3,
+      "digestion": "none",
+      "notes": "A steady day.",
+      "created_at": "2026-09-09T15:30:00Z",
+      "updated_at": "2026-09-09T15:30:00Z"
+    },
+    {
+      "id": "fixture-checkin-10",
+      "user_id": "00000000-0000-4000-8000-000000000001",
+      "date": "2026-09-10",
+      "morning_weight": 72.6,
+      "sleep_hours": 6.5,
+      "workout_status": "done",
+      "workout_performance": 8,
+      "nutrition_score": 8,
+      "calorie_intake": 2200,
+      "water_liters": 2.5,
+      "daily_steps": 8200,
+      "protein": 140,
+      "carbs": 250,
+      "fats": 70,
+      "energy_level": 7,
+      "hunger_level": 5,
+      "stress_level": 3,
+      "digestion": "none",
+      "notes": "A steady day.",
+      "created_at": "2026-09-10T15:30:00Z",
+      "updated_at": "2026-09-10T15:30:00Z"
+    },
+    {
+      "id": "fixture-checkin-12",
+      "user_id": "00000000-0000-4000-8000-000000000001",
+      "date": "2026-09-12",
+      "morning_weight": 72.6,
+      "sleep_hours": 8,
+      "workout_status": "rest_day",
+      "workout_performance": null,
+      "nutrition_score": 8,
+      "calorie_intake": 2200,
+      "water_liters": 2.5,
+      "daily_steps": 8200,
+      "protein": 140,
+      "carbs": 250,
+      "fats": 70,
+      "energy_level": 7,
+      "hunger_level": 5,
+      "stress_level": 3,
+      "digestion": "none",
+      "notes": "A steady day.",
+      "created_at": "2026-09-12T15:30:00Z",
+      "updated_at": "2026-09-12T15:30:00Z"
+    },
+    {
+      "id": "fixture-checkin-13",
+      "user_id": "00000000-0000-4000-8000-000000000001",
+      "date": "2026-09-13",
+      "morning_weight": 72.5,
+      "sleep_hours": 7,
+      "workout_status": "done",
+      "workout_performance": 8,
+      "nutrition_score": 8,
+      "calorie_intake": 2200,
+      "water_liters": 2.5,
+      "daily_steps": 8200,
+      "protein": 140,
+      "carbs": 250,
+      "fats": 70,
+      "energy_level": 7,
+      "hunger_level": 5,
+      "stress_level": 3,
+      "digestion": "none",
+      "notes": "A steady day.",
+      "created_at": "2026-09-13T15:30:00Z",
+      "updated_at": "2026-09-13T15:30:00Z"
+    },
+    {
+      "id": "fixture-checkin-14",
+      "user_id": "00000000-0000-4000-8000-000000000001",
+      "date": "2026-09-14",
+      "morning_weight": 72.4,
+      "sleep_hours": 7.5,
+      "workout_status": "rest_day",
+      "workout_performance": null,
+      "nutrition_score": 8,
+      "calorie_intake": 2200,
+      "water_liters": 2.5,
+      "daily_steps": 8200,
+      "protein": 140,
+      "carbs": 250,
+      "fats": 70,
+      "energy_level": 7,
+      "hunger_level": 5,
+      "stress_level": 3,
+      "digestion": "none",
+      "notes": "A steady day.",
+      "created_at": "2026-09-14T15:30:00Z",
+      "updated_at": "2026-09-14T15:30:00Z"
+    }
+  ],
+  "measurements": [
+    {
+      "id": "fixture-measurement-1",
+      "user_id": "00000000-0000-4000-8000-000000000001",
+      "date": "2026-09-14",
+      "chest": 98,
+      "waist": 78,
+      "hips": 94,
+      "thighs": 54,
+      "arms": 32
+    }
+  ],
+  "planDays": [
+    {
+      "id": "fixture-plan-1",
+      "day_number": 1,
+      "focus": "Upper body",
+      "exercises": [
+        {
+          "id": "bench",
+          "name": "Bench press",
+          "sets": 3,
+          "reps": "8",
+          "restSeconds": 90,
+          "warmupSets": 1,
+          "substitutions": [],
+          "notes": "Control the lowering phase."
+        },
+        {
+          "id": "row",
+          "name": "Seated cable row",
+          "sets": 3,
+          "reps": "10",
+          "restSeconds": 75,
+          "warmupSets": 0,
+          "substitutions": []
+        },
+        {
+          "id": "press",
+          "name": "Dumbbell shoulder press",
+          "sets": 3,
+          "reps": "10",
+          "restSeconds": 90,
+          "warmupSets": 0,
+          "substitutions": []
+        }
+      ],
+      "notes": "Leave a little in reserve on each working set.",
+      "updated_at": "2026-09-12T08:00:00Z"
+    },
+    {
+      "id": "fixture-plan-2",
+      "day_number": 2,
+      "focus": "Lower body",
+      "exercises": [
+        {
+          "id": "squat",
+          "name": "Goblet squat",
+          "sets": 3,
+          "reps": "8",
+          "restSeconds": 90,
+          "warmupSets": 1,
+          "substitutions": [],
+          "notes": "Control the lowering phase."
+        }
+      ],
+      "notes": null,
+      "updated_at": "2026-09-12T08:00:00Z"
+    }
+  ],
+  "workoutContent": {
+    "v2": {
+      "version": 2,
+      "planDayNumber": 1,
+      "exercises": [
+        {
+          "name": "Bench press",
+          "tracking": "weight-reps",
+          "sets": [
+            {
+              "setNumber": 1,
+              "reps": "8",
+              "weight": "50",
+              "rpe": "7",
+              "completed": true,
+              "kind": "work"
+            },
+            {
+              "setNumber": 2,
+              "reps": "8",
+              "weight": "50",
+              "rpe": "",
+              "completed": true,
+              "kind": "work"
+            },
+            {
+              "setNumber": 3,
+              "reps": "",
+              "weight": "50",
+              "rpe": "",
+              "completed": false,
+              "kind": "work"
+            }
+          ]
+        }
+      ]
+    },
+    "legacy": [
+      {
+        "exercise": "Bench press",
+        "sets": [
+          {
+            "setNumber": 1,
+            "reps": "8",
+            "weight": "50",
+            "rpe": "7"
+          }
+        ]
+      }
+    ],
+    "text": "A relaxed walk."
+  },
+  "workoutLogs": [
+    {
+      "id": "fixture-workout-1",
+      "user_id": "00000000-0000-4000-8000-000000000001",
+      "date": "2026-09-12",
+      "title": "Upper body",
+      "content": "{\"version\": 2, \"planDayNumber\": 1, \"exercises\": [{\"name\": \"Bench press\", \"tracking\": \"weight-reps\", \"sets\": [{\"setNumber\": 1, \"reps\": \"8\", \"weight\": \"50\", \"rpe\": \"7\", \"completed\": true, \"kind\": \"work\"}, {\"setNumber\": 2, \"reps\": \"8\", \"weight\": \"50\", \"rpe\": \"\", \"completed\": true, \"kind\": \"work\"}, {\"setNumber\": 3, \"reps\": \"\", \"weight\": \"50\", \"rpe\": \"\", \"completed\": false, \"kind\": \"work\"}]}]}",
+      "created_at": "2026-09-12T12:00:00Z"
+    }
+  ],
+  "assessment": {
+    "id": "fixture-assessment",
+    "user_id": "00000000-0000-4000-8000-000000000001",
+    "answers": "{\"q1\": \"Alex\", \"q2\": \"Morgan\", \"q14\": \"Build a consistent training routine\"}",
+    "completed_sections": "[]",
+    "status": "in_progress"
+  }
+}

@@ -6,10 +6,10 @@ import {
   View,
 } from 'react-native';
 
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+import type { BodyMeasurement } from '@/types/db';
 import MeasurementsScreen from '../../../app/(app)/measurements';
 
 const MockNativeText = NativeText;
@@ -22,7 +22,9 @@ const MockListView = View as unknown as React.ComponentType<
 >;
 const mockLineChartRender = jest.fn();
 const mockRefetch = jest.fn();
-const mockRows = [
+let mockUserId = 'user-1';
+jest.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: mockUserId } }) }));
+const mockRows: BodyMeasurement[] = [
   {
     id: 'latest-id',
     user_id: 'user-1',
@@ -45,7 +47,7 @@ const mockRows = [
   },
 ];
 let mockMeasurementQuery: {
-  data: typeof mockRows | undefined;
+  data: BodyMeasurement[] | undefined;
   isLoading: boolean;
   isError: boolean;
   refetch: typeof mockRefetch;
@@ -168,6 +170,7 @@ jest.mock('@/components/ui', () => {
 
 jest.mock('@/hooks/useDashboardData', () => ({
   useDashboardData: () => ({ checkIns: [] }),
+  useDailyCheckIns: () => ({ data: [] }),
 }));
 
 jest.mock('@/hooks/useMeasurements', () => ({
@@ -209,6 +212,7 @@ describe('MeasurementsScreen', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUserId = 'user-1';
     mockMeasurementQuery = {
       data: mockRows,
       isLoading: false,
@@ -234,6 +238,23 @@ describe('MeasurementsScreen', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+
+  it('uses neutral change labels for weight and circumference in every goal', () => {
+    const renderer = renderScreen();
+    expect(renderer.root.findByProps({ label: 'Weight change' })).toBeTruthy();
+    expect(renderer.root.findByProps({ label: 'Waist change' })).toBeTruthy();
+    expect(renderer.root.findByProps({ label: 'Avg weekly change' })).toBeTruthy();
+    expect(renderer.root.findAllByProps({ label: 'Weight lost' })).toHaveLength(0);
+  });
+
+  it('closes the previous account’s measurement editor when account identity changes', () => {
+    const renderer = renderScreen();
+    act(() => renderer.root.findByProps({ testID: 'measurement-add' }).props.onPress());
+    expect(renderer.root.findByProps({ testID: 'measurement-sheet' })).toBeTruthy();
+    mockUserId = 'user-2';
+    act(() => renderer.update(<MeasurementsScreen />));
+    expect(renderer.root.findAllByProps({ testID: 'measurement-sheet' })).toHaveLength(0);
   });
 
   it('stacks primary metrics and baseline comparisons for compact or large text', () => {
@@ -277,6 +298,35 @@ describe('MeasurementsScreen', () => {
     expect(renderer.root.findByProps({ children: 'Latest entry · recorded 29 Aug 2026' })).toBeTruthy();
     expect(renderer.root.findByProps({ children: 'Waist: 82.5 cm · down 3.5 cm from baseline' })).toBeTruthy();
     expect(renderer.root.findAllByProps({ testID: 'measurement-chart' })).toHaveLength(0);
+  });
+
+  it('passes dated missing observations to the chart instead of drawing zero', () => {
+    mockMeasurementQuery = {
+      data: [
+        { ...mockRows[0], waist: null },
+        { ...mockRows[1], id: 'middle-id', date: '2026-07-22', waist: 'invalid' },
+        { ...mockRows[1] },
+      ],
+      isLoading: false,
+      isError: false,
+      refetch: mockRefetch,
+    };
+    const renderer = renderScreen();
+    const list = renderer.root.findByProps({ testID: 'measurement-list' });
+    const section = renderer.root.findByProps({ testID: 'measurement-progress-section' });
+    act(() => list.props.onLayout({ nativeEvent: { layout: { height: 700 } } }));
+    act(() => section.props.onLayout({ nativeEvent: { layout: { y: 20, height: 330 } } }));
+    act(() => interactionCallbacks[0]?.());
+
+    const props = mockLineChartRender.mock.calls[0]?.[0] as { series: { name: string; data: unknown[] }[] };
+    expect(props.series.find((series) => series.name === 'Waist')?.data).toEqual([
+      { date: '2026-07-01', value: 86 },
+      { date: '2026-07-22', value: null },
+      { date: '2026-08-29', value: null },
+    ]);
+    expect(
+      renderer.root.findByProps({ children: 'Waist: 86 cm · first recorded 1 Jul 2026' }),
+    ).toBeTruthy();
   });
 
   it('mounts the chart only after its section is visible and interactions finish', () => {

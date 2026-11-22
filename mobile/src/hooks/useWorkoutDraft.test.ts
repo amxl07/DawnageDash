@@ -1,10 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as React from 'react';
 
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
-import { useWorkoutDraft, type DraftData } from './useWorkoutDraft';
+import { readWorkoutDraft, useWorkoutDraft, type DraftData } from './useWorkoutDraft';
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn(),
@@ -68,6 +67,18 @@ describe('useWorkoutDraft durability', () => {
   afterEach(() => {
     jest.runOnlyPendingTimers();
     jest.useRealTimers();
+  });
+
+  it('round trips source protection and still accepts metadata-free older drafts', async () => {
+    const memory = new Map<string, string>();
+    mockStorage.getItem.mockImplementation(async (key) => memory.get(key) ?? null);
+    mockStorage.setItem.mockImplementation(async (key, value) => { memory.set(key, value); });
+    const { result, unmount } = renderHook();
+    await act(async () => { await result.current.saveDraftNow({ ...draft('Historical note'), sourceKind: 'text', legacyText: 'Walked for recovery' }); });
+    expect(await readWorkoutDraft('user-1', '2026-08-30', null)).toMatchObject({ sourceKind: 'text', legacyText: 'Walked for recovery' });
+    memory.set('workout-draft:user-1:2026-08-30', JSON.stringify({ ...draft('Older draft'), savedAt: Date.now() }));
+    expect(await readWorkoutDraft('user-1', '2026-08-30', null)).toMatchObject({ workoutTitle: 'Older draft' });
+    unmount();
   });
 
   it('reports an immediate write failure to the caller and status UI', async () => {
@@ -202,6 +213,64 @@ describe('useWorkoutDraft durability', () => {
 
     expect(mockStorage.setItem).not.toHaveBeenCalled();
     expect(mockStorage.removeItem).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+
+  it('associates a source draft only after durable destination write and rejects a destination collision', async () => {
+    const memory = new Map<string, string>();
+    mockStorage.getItem.mockImplementation(async (key) => memory.get(key) ?? null);
+    mockStorage.setItem.mockImplementation(async (key, value) => { memory.set(key, value); });
+    mockStorage.removeItem.mockImplementation(async (key) => { memory.delete(key); });
+    const { result, unmount } = renderHook();
+    await act(async () => { await result.current.saveDraftNow(draft('Source')); });
+
+    await act(async () => { expect(await result.current.associateDraft('a', { ...draft('Source'), existingLogId: 'a' }, () => true)).toBe(true); });
+    expect(await readWorkoutDraft('user-1', '2026-08-30', null)).toBeNull();
+    expect(await readWorkoutDraft('user-1', '2026-08-30', 'a')).toMatchObject({ workoutTitle: 'Source', existingLogId: 'a' });
+
+    memory.set('workout-draft:user-1:2026-08-30', JSON.stringify({ ...draft('Another source'), savedAt: Date.now() }));
+    memory.set('workout-draft:user-1:2026-08-30:log:b', JSON.stringify({ ...draft('Destination'), existingLogId: 'b', savedAt: Date.now() }));
+    await act(async () => { expect(await result.current.associateDraft('b', { ...draft('Another source'), existingLogId: 'b' }, () => true)).toBe(false); });
+    expect(await readWorkoutDraft('user-1', '2026-08-30', null)).toMatchObject({ workoutTitle: 'Another source' });
+    expect(await readWorkoutDraft('user-1', '2026-08-30', 'b')).toMatchObject({ workoutTitle: 'Destination' });
+    unmount();
+  });
+
+  it('preserves the source when draft association is invalidated after its destination write', async () => {
+    const memory = new Map<string, string>();
+    mockStorage.getItem.mockImplementation(async (key) => memory.get(key) ?? null);
+    mockStorage.setItem.mockImplementation(async (key, value) => { memory.set(key, value); });
+    mockStorage.removeItem.mockImplementation(async (key) => { memory.delete(key); });
+    const { result, unmount } = renderHook();
+    await act(async () => { await result.current.saveDraftNow(draft('Source')); });
+    let checks = 0;
+    await act(async () => { expect(await result.current.associateDraft('a', { ...draft('Source'), existingLogId: 'a' }, () => ++checks < 2)).toBe(false); });
+    expect(await readWorkoutDraft('user-1', '2026-08-30', null)).toMatchObject({ workoutTitle: 'Source' });
+    unmount();
+  });
+
+  it('finishes an identical association after source cleanup failed once', async () => {
+    const memory = new Map<string, string>();
+    const sourceKey = 'workout-draft:user-1:2026-08-30';
+    const targetKey = sourceKey + ':log:a';
+    let failSourceCleanup = true;
+    mockStorage.getItem.mockImplementation(async (key) => memory.get(key) ?? null);
+    mockStorage.setItem.mockImplementation(async (key, value) => { memory.set(key, value); });
+    mockStorage.removeItem.mockImplementation(async (key) => {
+      if (key === sourceKey && failSourceCleanup) { failSourceCleanup = false; throw new Error('cleanup failed'); }
+      memory.delete(key);
+    });
+    const { result, unmount } = renderHook();
+    await act(async () => { await result.current.saveDraftNow({ ...draft('Source'), sourceKind: 'text', legacyText: 'Protected notes' }); });
+    const selected = { ...draft('Source'), existingLogId: 'a', sourceKind: 'text' as const, legacyText: 'Protected notes' };
+
+    await act(async () => { expect(await result.current.associateDraft('a', selected, () => true)).toBe(false); });
+    expect(memory.has(sourceKey)).toBe(true);
+    expect(memory.has(targetKey)).toBe(true);
+
+    await act(async () => { expect(await result.current.associateDraft('a', selected, () => true)).toBe(true); });
+    expect(memory.has(sourceKey)).toBe(false);
+    expect(await readWorkoutDraft('user-1', '2026-08-30', 'a')).toMatchObject({ workoutTitle: 'Source', sourceKind: 'text', legacyText: 'Protected notes', existingLogId: 'a' });
     unmount();
   });
 });

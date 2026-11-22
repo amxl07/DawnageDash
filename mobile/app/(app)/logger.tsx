@@ -1,729 +1,250 @@
 import NetInfo from '@react-native-community/netinfo';
+import { usePreventRemove, type NavigationAction } from 'expo-router/react-navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
 import { format } from 'date-fns';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react-native';
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import {
-  AccessibilityInfo,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  View,
-} from 'react-native';
-
+import { useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
 import { ExerciseSlide } from '@/components/logger/ExerciseSlide';
 import { PlanDayButton } from '@/components/logger/PlanDayButton';
+import { RestDock, useRestPreference, WorkoutRestFooter } from '@/components/logger/RestDock';
+import { useRestTimerActions } from '@/components/logger/useRestTimer';
 import { SwipeableSlide } from '@/components/logger/SwipeableSlide';
-import { RestTimer } from '@/components/logger/RestTimer';
-import {
-  type WorkoutResult,
-  WorkoutSummary,
-} from '@/components/logger/WorkoutSummary';
-import { Button, Card, Input, Screen, StatusPill, StickyActionBar, Text } from '@/components/ui';
+import { WorkoutOverviewSheet } from '@/components/logger/WorkoutOverviewSheet';
+import { WorkoutRecovery } from '@/components/logger/WorkoutRecovery';
+import { WorkoutSummary } from '@/components/logger/WorkoutSummary';
+import { Button, Card, Input, RecordStatus, Screen, SkeletonCard, Text } from '@/components/ui';
+import { DisclosureChevron } from '@/components/ui/DisclosureChevron';
+import { MotionReveal } from '@/components/ui/MotionReveal';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  createDraftExerciseFromPlan,
-  initialWorkoutState,
-  personalRecordSets,
-  workoutReducer,
-  type WorkoutAction,
-  type WorkoutExercise,
-} from '@/features/workout/workoutReducer';
-import {
-  acquireWorkoutSave,
-  applyWorkoutEdit,
-  attachPersistedWorkoutId,
-  finalizeWorkoutSave,
-  releaseWorkoutSave,
-  runDraftMutationBeforeExit,
-  type WorkoutEditAction,
-} from '@/features/workout/workoutSave';
-import { useWorkoutPlan, type PlanExercise } from '@/hooks/usePlans';
-import { useWorkoutDraft } from '@/hooks/useWorkoutDraft';
-import { localDateString, parseLocalDate } from '@/lib/dates';
-import { flushOutbox, saveWorkoutLog } from '@/lib/outbox';
+import { createDraftExerciseFromPlan } from '@/features/workout/workoutReducer';
+import { useWorkoutSession } from '@/features/workout/useWorkoutSession';
+import { reviewWorkout } from '@/features/workout/workout-review';
+import type { PlanExercise } from '@/hooks/usePlans';
+import { isDateKeyStrict, localDateString, parseLocalDate } from '@/lib/dates';
+import { flushOutbox } from '@/lib/outbox';
 import { supabase } from '@/lib/supabase';
-import {
-  countSets,
-  maxWeightFor,
-  parseWorkoutContent,
-  serializeWorkoutContent,
-  totalVolume,
-} from '@/lib/workout-content';
-import { HIT_SLOP_MIN, iconSize, spacing, useTheme } from '@/theme';
-
-function elapsedLabel(totalSeconds: number): string {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-}
+import { parseWorkoutContent, type LoggedSet } from '@/lib/workout-content';
+import { HIT_SLOP_MIN, iconSize, radius, spacing, useTheme } from '@/theme';
 
 function findPrescription(exercises: PlanExercise[], name: string): PlanExercise | undefined {
-  const normalizedName = name.toLowerCase().trim();
   for (const exercise of exercises) {
-    if (exercise.name.toLowerCase().trim() === normalizedName) return exercise;
-    const substitution = findPrescription(exercise.substitutions, name);
-    if (substitution) return substitution;
+    if (exercise.name.toLowerCase().trim() === name.toLowerCase().trim()) return exercise;
+    const match = findPrescription(exercise.substitutions, name); if (match) return match;
   }
-  return undefined;
+}
+
+const unfinished = (exercise: { sets: { completed: boolean }[] }) =>
+  exercise.sets.length === 0 || exercise.sets.some((set) => !set.completed);
+
+function findNextUnfinishedExerciseIndex(exercises: { sets: { completed: boolean }[] }[], currentIndex: number) {
+  for (let index = currentIndex + 1; index < exercises.length; index += 1) {
+    if (unfinished(exercises[index])) return index;
+  }
+  for (let index = 0; index < currentIndex; index += 1) {
+    if (unfinished(exercises[index])) return index;
+  }
+  return -1;
 }
 
 export default function LoggerScreen() {
+  const { user } = useAuth();
+  const router = useRouter();
+  const params = useLocalSearchParams<{ date?: string; day?: string; logId?: string; outboxId?: string }>();
+  const frozenToday = useRef(localDateString()).current;
+  const date = params.date ?? frozenToday;
+  if (typeof date !== 'string' || !isDateKeyStrict(date) || date > localDateString()) {
+    return <Screen><Text variant="h1">This workout date is unavailable</Text><Text variant="bodySm" tone="muted">Open a workout for today or a previous reporting date.</Text><Button label="Back to history" onPress={() => router.replace('/(app)/(tabs)/logs')} /></Screen>;
+  }
+  if (!user?.id) return <Screen><Text>Sign in to open your workout.</Text></Screen>;
+  const logId = typeof params.logId === 'string' && params.logId ? params.logId : null;
+  const outboxId = typeof params.outboxId === 'string' && params.outboxId ? params.outboxId : undefined;
+  return <WorkoutEditor key={`${user.id}:${date}:${logId ?? ''}:${outboxId ?? ''}`} userId={user.id} date={date} logId={logId} outboxId={outboxId} initialDay={Number(params.day) || undefined} />;
+}
+
+function WorkoutEditor({ userId, date, logId, outboxId, initialDay }: { userId: string; date: string; logId: string | null; outboxId?: string; initialDay?: number }) {
   const { colors } = useTheme();
   const router = useRouter();
+  const navigation = useNavigation();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const params = useLocalSearchParams<{ date?: string; day?: string; logId?: string }>();
-
-  const date = params.date && params.date <= localDateString() ? params.date : localDateString();
-  const [state, reducerDispatch] = useReducer(workoutReducer, initialWorkoutState);
-  const editSnapshotRef = useRef({ generation: 0, state });
-  editSnapshotRef.current.state = state;
-  const savingRef = useRef(false);
+  const session = useWorkoutSession({ userId, date, logId }, { initialDay, outboxId });
+  const { state, edit } = session;
+  const restActions = useRestTimerActions();
+  const rest = useRestPreference(userId);
   const [index, setIndex] = useState(0);
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [summary, setSummary] = useState<null | {
-    result: WorkoutResult;
-    syncStatus: 'saved' | 'offline';
-  }>(null);
   const [newExercise, setNewExercise] = useState('');
-  const openedAt = useRef(Date.now());
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-
-  const dispatchEdit = useCallback((action: WorkoutEditAction) => {
-    editSnapshotRef.current = applyWorkoutEdit(editSnapshotRef.current, action);
-    reducerDispatch(action);
-  }, []);
-
-  const dispatchWithoutEdit = useCallback((action: WorkoutAction) => {
-    editSnapshotRef.current = {
-      ...editSnapshotRef.current,
-      state: workoutReducer(editSnapshotRef.current.state, action),
-    };
-    reducerDispatch(action);
-  }, []);
-
-  const markNonReducerEdit = useCallback(() => {
-    editSnapshotRef.current = {
-      ...editSnapshotRef.current,
-      generation: editSnapshotRef.current.generation + 1,
-    };
-  }, []);
-
-  const attachPersistedId = useCallback((logId: string) => {
-    editSnapshotRef.current = attachPersistedWorkoutId(editSnapshotRef.current, logId);
-    reducerDispatch({ type: 'ATTACH_PERSISTED_LOG_ID', payload: logId });
-  }, []);
-
-  const { saveDraft, saveDraftNow, loadDraft, clearDraft, draftStatus } = useWorkoutDraft(
-    user?.id,
-    date,
-  );
-  // Day picker uses ONLY the user's own plan rows (no template fallback).
-  const { data: plan } = useWorkoutPlan({ userRowsOnly: true });
-
-  const { data: existingLog } = useQuery({
-    queryKey: ['workoutLog', user?.id, date],
+  const [overview, setOverview] = useState(false);
+  const [sessionDetails, setSessionDetails] = useState(false);
+  const [review, setReview] = useState(false);
+  const [submittedReview, setSubmittedReview] = useState(false);
+  const [receiptRevision, setReceiptRevision] = useState(0);
+  const [result, setResult] = useState(() => reviewWorkout(state));
+  const [footerHeight, setFooterHeight] = useState(0);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [allowExit, setAllowExit] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const pendingNavigation = useRef<NavigationAction | null>(null);
+  const showingExit = useRef(false);
+  const overviewTrigger = useRef<View>(null);
+  const { width, height, fontScale } = useWindowDimensions();
+  const compactHeader = width < 360 || fontScale > 1.3;
+  const inlineFooter = keyboardVisible || height < 650 || fontScale > 1.3;
+  const { data: previous } = useQuery({
+    queryKey: ['previousWorkoutData', userId, date],
     queryFn: async () => {
-      if (!user?.id) return null;
-      const { data } = await supabase
-        .from('workout_logs')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('date', date)
-        .maybeSingle();
-      return data;
-    },
-    enabled: !!user?.id,
-  });
-
-  const { data: previousData } = useQuery({
-    queryKey: ['previousWorkoutData', user?.id, date],
-    queryFn: async () => {
-      if (!user?.id) return {};
-      const { data } = await supabase
-        .from('workout_logs')
-        .select('content')
-        .eq('user_id', user.id)
-        .lt('date', date)
-        .order('date', { ascending: false })
-        .limit(10);
-      const result: Record<
-        string,
-        { weight: string; reps: string; rpe: string; kind?: 'warmup' | 'work' }[]
-      > = {};
+      const { data, error } = await supabase.from('workout_logs').select('date, content').eq('user_id', userId).lt('date', date).order('date', { ascending: false }).limit(10);
+      if (error) throw error;
+      const result: Record<string, { date: string; tracking: string; sets: LoggedSet[] }> = {};
       for (const log of data ?? []) {
-        const parsed = parseWorkoutContent(log.content);
-        if (parsed.kind !== 'exercises') continue;
-        for (const ex of parsed.exercises) {
-          const key = ex.name.toLowerCase().trim();
-          // First occurrence wins — logs are newest-first.
-          if (!key || result[key]) continue;
-          result[key] = ex.sets.map((s) => ({
-            weight: s.weight,
-            reps: s.reps,
-            rpe: s.rpe,
-            kind: s.kind,
-          }));
+        const parsed = parseWorkoutContent(log.content); if (parsed.kind !== 'exercises') continue;
+        for (const exercise of parsed.exercises) {
+          const key = exercise.name.trim().toLowerCase();
+          if (key && !result[key] && exercise.sets.length) result[key] = { date: log.date, tracking: exercise.tracking ?? 'weight-reps', sets: exercise.sets };
         }
       }
       return result;
-    },
-    enabled: !!user?.id,
-    staleTime: 5 * 60 * 1000,
+    }, retry: false,
   });
 
   useEffect(() => {
-    const updateElapsed = () =>
-      setElapsedSeconds(Math.max(0, Math.floor((Date.now() - openedAt.current) / 1000)));
-    updateElapsed();
-    const timer = setInterval(updateElapsed, 1000);
-    return () => clearInterval(timer);
+    const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+    return () => { show.remove(); hide.remove(); };
   }, []);
-
-  // Seed order: draft → existing log → plan day → empty.
-  const seeded = useRef(false);
   useEffect(() => {
-    if (seeded.current || existingLog === undefined) return;
-    seeded.current = true;
-
-    void (async () => {
-      const draft = await loadDraft();
-      if (draft) {
-        const selectedDay = Number(draft.selectedPlanId);
-        dispatchWithoutEdit({
-          type: 'RESTORE_DRAFT',
-          payload: {
-            title: draft.workoutTitle,
-            exercises: draft.exercises,
-            existingLogId: draft.existingLogId,
-            selectedDay: Number.isInteger(selectedDay) ? selectedDay : null,
-          },
-        });
-        AccessibilityInfo.announceForAccessibility('Draft restored.');
-        return;
-      }
-      if (existingLog) {
-        const parsed = parseWorkoutContent(existingLog.content);
-        const exercises: WorkoutExercise[] =
-          parsed.kind === 'exercises'
-            ? parsed.exercises.map((e, i) => ({
-                id: String(i),
-                name: e.name,
-                tracking: e.tracking ?? 'weight-reps',
-                sets: e.sets.length
-                  ? e.sets.map((s, setIndex) => ({
-                      id: `${i}-set-${setIndex + 1}`,
-                      reps: s.reps,
-                      weight: s.weight,
-                      rpe: s.rpe,
-                      duration: s.duration ?? '',
-                      kind: s.kind ?? 'work',
-                      completed: s.completed,
-                    }))
-                  : [
-                      {
-                        id: `${i}-set-1`,
-                        reps: '',
-                        weight: '',
-                        rpe: '',
-                        duration: '',
-                        kind: 'work',
-                        completed: false,
-                      },
-                    ],
-              }))
-            : [];
-        dispatchWithoutEdit({
-          type: 'LOAD_EXISTING_LOG',
-          payload: {
-            logId: existingLog.id,
-            title: existingLog.title ?? '',
-            exercises,
-            selectedDay: parsed.kind === 'exercises' ? parsed.planDayNumber ?? null : null,
-          },
-        });
-        return;
-      }
-      const dayNumber = params.day ? Number(params.day) : plan?.days[0]?.day_number;
-      const day = plan?.days.find((d) => d.day_number === dayNumber) ?? plan?.days[0];
-      if (day) loadDay(day.day_number);
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [existingLog, plan]);
-
-  const loadDay = useCallback(
-    (dayNumber: number, userInitiated = false) => {
-      const day = plan?.days.find((d) => d.day_number === dayNumber);
-      if (!day) return;
-      const action: WorkoutEditAction = {
-        type: 'LOAD_DEFAULT_PLAN',
-        payload: {
-          day: dayNumber,
-          title: day.focus ? `Day ${dayNumber} — ${day.focus}` : `Day ${dayNumber}`,
-          exercises: day.exercises.map(createDraftExerciseFromPlan),
-        },
-      };
-      if (userInitiated) dispatchEdit(action);
-      else dispatchWithoutEdit(action);
-      setIndex(0);
-    },
-    [dispatchEdit, dispatchWithoutEdit, plan],
-  );
-
-  // Debounced draft autosave.
-  useEffect(() => {
-    if (!state.isDirty || !state.exercises.length) return;
-    saveDraft({
-      workoutTitle: state.title,
-      exercises: state.exercises,
-      selectedPlanId: String(state.selectedDay ?? 'custom'),
-      existingLogId: state.existingLogId,
+    let active = true;
+    const unsubscribe = NetInfo.addEventListener((connection) => {
+      if (!connection.isConnected) return;
+      void flushOutbox(userId).then((count) => {
+        if (active && count > 0) void queryClient.invalidateQueries({ queryKey: ['workoutLogs'] });
+      }).catch(() => {});
     });
-  }, [state, saveDraft]);
+    return () => { active = false; unsubscribe(); };
+  }, [userId, queryClient]);
+  const current = state.exercises[Math.min(index, Math.max(0, state.exercises.length - 1))];
+  const day = session.plan?.days.find((entry) => entry.day_number === state.selectedDay);
+  const prescription = current ? findPrescription(day?.exercises ?? [], current.name) : undefined;
+  const history = current ? previous?.[current.name.toLowerCase().trim()] : undefined;
+  const compatibleHistory = history?.tracking === current?.tracking ? history : undefined;
+  const currentName = current?.name;
+  useEffect(() => { if (currentName) AccessibilityInfo.announceForAccessibility(`Exercise ${index + 1} of ${state.exercises.length}: ${currentName}`); }, [currentName, index, state.exercises.length]);
 
-  // Flush the outbox when connectivity returns.
-  useEffect(() => {
-    const unsub = NetInfo.addEventListener((s) => {
-      if (s.isConnected && user?.id) {
-        void flushOutbox(user.id).then((n) => {
-          if (n > 0) void queryClient.invalidateQueries({ queryKey: ['workoutLogs'] });
-        }).catch(() => {});
-      }
-    });
-    return unsub;
-  }, [queryClient, user?.id]);
+  const leave = (action: NavigationAction) => { pendingNavigation.current = action; setAllowExit(true); };
+  useEffect(() => { if (allowExit && pendingNavigation.current) navigation.dispatch(pendingNavigation.current); }, [allowExit, navigation]);
+  usePreventRemove(!allowExit && (state.isDirty || Boolean(newExercise.trim()) || session.deliveryState === 'sending'), ({ data }) => {
+    if (showingExit.current) return;
+    showingExit.current = true;
+    Alert.alert('Leave this workout?', 'Save your local changes to continue later, or discard only these local changes. Saved workouts stay in your history.', [
+      { text: 'Keep editing', style: 'cancel', onPress: () => { showingExit.current = false; } },
+      { text: 'Discard local changes', style: 'destructive', onPress: async () => {
+        showingExit.current = false;
+        if (session.deliveryState === 'sending') { setLocalError('Wait for the current save before discarding local changes.'); return; }
+        if (await session.discardDraft()) leave(data.action);
+      } },
+      { text: 'Save draft & exit', onPress: async () => {
+        showingExit.current = false;
+        if (newExercise.trim()) { edit({ type: 'ADD_EXERCISE', payload: { name: newExercise.trim() } }); setNewExercise(''); }
+        if (await session.flushDraft()) leave(data.action);
+      } },
+    ], { cancelable: true, onDismiss: () => { showingExit.current = false; } });
+  });
 
-  const currentPlanDay = plan?.days.find((d) => d.day_number === state.selectedDay);
-  const currentExercise = state.exercises[index];
-  const currentExerciseName = currentExercise?.name;
-  const planMeta = currentExercise
-    ? findPrescription(currentPlanDay?.exercises ?? [], currentExercise.name)
-    : undefined;
-
-  const completedCount = state.exercises.filter((ex) =>
-    ex.sets.some((s) => s.completed),
-  ).length;
-
-  useEffect(() => {
-    if (!currentExerciseName) return;
-    AccessibilityInfo.announceForAccessibility(
-      `Exercise ${index + 1} of ${state.exercises.length}: ${currentExerciseName}`,
-    );
-  }, [currentExerciseName, index, state.exercises.length]);
-
-  const close = () => {
-    if (!state.isDirty) {
-      router.back();
-      return;
-    }
-    Alert.alert('Leave this workout?', 'Save a draft to continue from this point later.', [
-      { text: 'Keep editing', style: 'cancel' },
-      {
-        text: 'Discard draft',
-        style: 'destructive',
-        onPress: async () => {
-          setSaveError(null);
-          const cleared = await runDraftMutationBeforeExit(clearDraft, router.back);
-          if (!cleared) {
-            setSaveError('Couldn’t discard your draft. Keep editing and try again.');
-          }
-        },
-      },
-      {
-        text: 'Save draft & exit',
-        onPress: async () => {
-          setSaveError(null);
-          const saved = await runDraftMutationBeforeExit(
-            () =>
-              saveDraftNow({
-                workoutTitle: state.title,
-                exercises: state.exercises,
-                selectedPlanId: String(state.selectedDay ?? 'custom'),
-                existingLogId: state.existingLogId,
-              }),
-            router.back,
-          );
-          if (!saved) {
-            const message = 'Couldn’t save your draft. Keep editing and try again.';
-            setSaveError(message);
-            AccessibilityInfo.announceForAccessibility(message);
-          }
-        },
-      },
+  const addExercise = () => {
+    if (!newExercise.trim()) return;
+    edit({ type: 'ADD_EXERCISE', payload: { name: newExercise.trim() } }); setNewExercise(''); setIndex(state.exercises.length); setOverview(false); Keyboard.dismiss();
+  };
+  const chooseDay = (dayNumber: number) => {
+    const next = session.plan?.days.find((entry) => entry.day_number === dayNumber); if (!next || dayNumber === state.selectedDay) return;
+    Alert.alert('Replace this session’s exercises?', 'Keep this draft to continue it later, or deliberately discard local entries and use this day. The saved server record is not deleted.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Keep current draft', onPress: () => { void session.flushDraft(); } },
+      { text: 'Replace local entries', style: 'destructive', onPress: async () => {
+        if (!(await session.discardDraft())) return;
+        edit({ type: 'LOAD_DEFAULT_PLAN', payload: { day: next.day_number, title: next.focus ? `Day ${next.day_number} — ${next.focus}` : `Day ${next.day_number}`, exercises: next.exercises.map(createDraftExerciseFromPlan) } }); setIndex(0); setSessionDetails(false);
+      } },
     ]);
   };
-
-  const save = async () => {
-    if (!user?.id) return;
-    if (!acquireWorkoutSave(savingRef)) return;
-
-    const submittedSnapshot = editSnapshotRef.current;
-    const submittedState = submittedSnapshot.state;
-    if (!submittedState.title.trim()) {
-      releaseWorkoutSave(savingRef);
-      setSaveError('Give this workout a title first.');
-      return;
-    }
-    setSaving(true);
-    setSaveError(null);
-
-    const content = serializeWorkoutContent({
-      planDayNumber: submittedState.selectedDay,
-      exercises: submittedState.exercises.map((ex) => ({
-        name: ex.name,
-        tracking: ex.tracking,
-        sets: ex.sets.map((s, i) => ({
-          setNumber: i + 1,
-          reps: s.reps,
-          weight: s.weight,
-          rpe: s.rpe,
-          completed: s.completed,
-          ...(ex.tracking === 'duration' ? { duration: s.duration } : {}),
-          kind: s.kind,
-        })),
-      })),
-    });
-    const payload = { user_id: user.id, date, title: submittedState.title.trim(), content };
-
-    // PR detection against the previous-session data.
-    const prs: string[] = [];
-    for (const ex of submittedState.exercises) {
-      const prev = previousData?.[ex.name.toLowerCase().trim()];
-      if (!prev?.length) continue;
-      const todayMax = maxWeightFor(
-        personalRecordSets(ex.sets).map((s, i) => ({ setNumber: i + 1, ...s })),
-      );
-      const prevMax = maxWeightFor(
-        personalRecordSets(prev).map((s, i) => ({ setNumber: i + 1, ...s })),
-      );
-      if (todayMax > 0 && todayMax > prevMax) prs.push(ex.name);
-    }
-
-    const parsedNow = parseWorkoutContent(content);
-    const exercisesNow = parsedNow.kind === 'exercises' ? parsedNow.exercises : [];
-    const result = {
-      volume: totalVolume(exercisesNow),
-      sets: countSets(exercisesNow),
-      minutes: Math.max(1, Math.round((Date.now() - openedAt.current) / 60000)),
-      prs,
-    };
-
-    let syncStatus: 'saved' | 'offline' = 'saved';
-    try {
-      try {
-        const saveResult = await saveWorkoutLog({
-          ...payload,
-          existingLogId: submittedState.existingLogId,
-        });
-        if (saveResult.status === 'synced') {
-          attachPersistedId(saveResult.logId);
-          void queryClient.invalidateQueries({ queryKey: ['workoutLogs'] });
-        } else {
-          syncStatus = 'offline';
-        }
-      } catch {
-        setSaveError('Couldn’t save or queue this workout. Your draft is still here — try again.');
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        return;
-      }
-
-      const finalization = await finalizeWorkoutSave({
-        savedGeneration: submittedSnapshot.generation,
-        getCurrentGeneration: () => editSnapshotRef.current.generation,
-        clearDraft,
-        repersistLatestDraft: () => {
-          const latest = editSnapshotRef.current.state;
-          return saveDraftNow({
-            workoutTitle: latest.title,
-            exercises: latest.exercises,
-            selectedPlanId: String(latest.selectedDay ?? 'custom'),
-            existingLogId: latest.existingLogId,
-          });
-        },
-      });
-      if (finalization !== 'finalized') {
-        const submittedStatus =
-          syncStatus === 'saved'
-            ? 'The submitted version was saved and synced.'
-            : 'The submitted version was saved here and is waiting to sync.';
-        const message =
-          finalization === 'edited'
-            ? `${submittedStatus} Newer edits are still open — save again when ready.`
-            : finalization === 'cleanup-failed'
-              ? `${submittedStatus} The local draft could not be cleared, so it remains open for a safe retry.`
-              : `${submittedStatus} The latest draft could not be secured locally. Keep this screen open and try again.`;
-        setSaveError(message);
-        AccessibilityInfo.announceForAccessibility(message);
-        return;
-      }
-
-      dispatchWithoutEdit({ type: 'MARK_CLEAN' });
-      void Haptics.notificationAsync(
-        syncStatus === 'saved'
-          ? Haptics.NotificationFeedbackType.Success
-          : Haptics.NotificationFeedbackType.Warning,
-      );
-      if (prs.length) {
-        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        setTimeout(() => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 90);
-      }
-      AccessibilityInfo.announceForAccessibility(
-        `${syncStatus === 'saved' ? 'Workout saved and synced.' : 'Workout saved here, waiting to sync.'} ${result.volume} kilograms total volume.${prs.length ? ` New personal record on ${prs.join(', ')}.` : ''}`,
-      );
-      setSummary({ result, syncStatus });
-    } finally {
-      releaseWorkoutSave(savingRef);
-      setSaving(false);
-    }
+  const finish = () => { Keyboard.dismiss(); setResult(reviewWorkout(state)); setSubmittedReview(false); setReview(true); };
+  const nextUnfinishedIndex = current ? findNextUnfinishedExerciseIndex(state.exercises, index) : -1;
+  const continueLabel = nextUnfinishedIndex >= 0 ? `Continue to ${state.exercises[nextUnfinishedIndex].name}` : 'Review workout';
+  const continueWorkout = () => {
+    Keyboard.dismiss();
+    if (nextUnfinishedIndex >= 0) setIndex(nextUnfinishedIndex);
+    else finish();
   };
+  const save = async () => {
+    setSubmittedReview(true);
+    setResult(reviewWorkout(state));
+    setReceiptRevision((revision) => revision + 1);
+    await session.save();
+  };
+  const status = session.deliveryState;
 
-  // ── post-workout summary ────────────────────────────────────────────────
-  if (summary) {
-    return (
-      <Screen>
-        <WorkoutSummary
-          result={summary.result}
-          syncStatus={summary.syncStatus}
-          onDone={() => router.back()}
-        />
-      </Screen>
-    );
-  }
+  if (session.recovery) return <WorkoutRecovery {...session.recovery} sending={status === 'sending'} error={session.error} onClose={() => router.back()} onReload={session.retry} onRetry={(id) => { void session.recoverSavedVersions(id).then((target) => { if (target) router.setParams({ logId: target.logId, outboxId: target.outboxId ?? '' }); }); }} />;
 
-  return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Screen archetype="editor">
-        <View style={{ gap: spacing.base }}>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm }}>
-            {/* Explicit close: the stack's back-swipe is disabled on this route. */}
-            <Pressable
-              onPress={close}
-              hitSlop={12}
-              accessibilityRole="button"
-              accessibilityLabel="Close workout logger"
-              style={{ minWidth: HIT_SLOP_MIN, minHeight: HIT_SLOP_MIN, justifyContent: 'center' }}
-            >
-              <X size={iconSize.lg} color={colors.foreground} strokeWidth={2} />
-            </Pressable>
-            <View style={{ flex: 1, gap: spacing.xs }}>
-              <Text variant="h2">{format(parseLocalDate(date), 'EEE d MMM')}</Text>
-              <Text variant="bodySm" tone="muted" numeric>
-                {elapsedLabel(elapsedSeconds)} elapsed ·{' '}
-                {state.exercises.length
-                  ? `Exercise ${index + 1} of ${state.exercises.length}`
-                  : 'No exercises'}
-              </Text>
-              {state.isDirty ? (
-                <StatusPill
-                  status={draftStatus}
-                  label={draftStatus === 'idle' ? 'Draft has changes' : undefined}
-                />
-              ) : null}
-            </View>
-            <Pressable
-              testID="logger-finish"
-              onPress={() => void save()}
-              disabled={saving}
-              accessibilityRole="button"
-              accessibilityLabel={state.existingLogId ? 'Save workout changes' : 'Finish workout'}
-              accessibilityState={{ disabled: saving, busy: saving }}
-              style={{ minWidth: HIT_SLOP_MIN, minHeight: HIT_SLOP_MIN, justifyContent: 'center' }}
-            >
-              <Text variant="bodySm" tone="primary">
-                {state.existingLogId ? 'Save' : 'Finish'}
-              </Text>
-            </Pressable>
+  if (session.entry.kind !== 'ready') return <Screen>
+    <Button label="Close workout" variant="ghost" onPress={() => router.back()} />
+    {session.entry.kind === 'loading' ? <SkeletonCard lines={4} /> : session.entry.kind === 'choose-log' ? <View style={{ gap: spacing.base }}>
+      <Text variant="h1">Choose your workout</Text><Text variant="bodySm" tone="muted">{outboxId ? 'Choose which saved workout should receive the recovered content. Review it before retrying the save.' : 'There is more than one saved workout for this date.'}</Text>
+      {session.entry.ids.map((id) => <Button key={id} label={session.records?.find((row) => row.id === id)?.title || 'Open workout'} variant="secondary" onPress={() => { void session.selectLog(id).then((target) => { if (target) router.setParams({ logId: target.logId, outboxId: target.outboxId ?? '' }); }); }} />)}
+      {session.error ? <Text variant="bodySm" tone="destructive" accessibilityLiveRegion="polite">{session.error}</Text> : null}
+    </View> : <View style={{ gap: spacing.base }}><Text variant="h1">Couldn’t open this workout</Text><Text variant="bodySm" tone="muted">{session.entry.reason === 'missing-log' ? 'This workout is missing or no longer available to your account. Choose a record from Training History.' : session.entry.reason === 'draft-unreadable' ? 'Your saved local workout could not be read. Retry without replacing it.' : 'Workout data is unavailable. Your saved work has not been replaced.'}</Text><Button label="Retry loading workout" onPress={session.retry} /><Button label="Back to history" variant="secondary" onPress={() => router.replace('/(app)/(tabs)/logs')} /></View>}
+  </Screen>;
+
+  if (session.legacyText !== undefined) return <Screen><Button label="Close workout" variant="ghost" onPress={() => router.back()} /><Text variant="h1">{state.title}</Text><Card><Text>{session.legacyText}</Text><Text variant="bodySm" tone="muted">This historical note is preserved in Logs. Structured set editing is unavailable for this note.</Text></Card></Screen>;
+
+  if (review) return <Screen><WorkoutSummary result={result} syncStatus={!submittedReview || status === 'idle' ? 'review' : status} receiptRevision={receiptRevision} error={session.error} onEdit={() => setReview(false)} onSave={() => void save()} onDone={() => router.back()} /></Screen>;
+  const dock = <RestDock prescribedSeconds={prescription?.restSeconds} preference={rest.preference} onPreferenceChange={rest.change} preferenceError={rest.error} />;
+  return <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <Screen archetype={inlineFooter ? 'child' : 'editor'} footerHeight={inlineFooter ? 0 : footerHeight}>
+      <View style={{ gap: spacing.base }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm }}>
+          <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Close workout logger" style={({ pressed }) => ({ minHeight: HIT_SLOP_MIN, minWidth: HIT_SLOP_MIN, justifyContent: 'center', alignItems: 'center', borderRadius: 999, backgroundColor: pressed ? colors.pressed : 'transparent' })}><X size={iconSize.lg} color={colors.foreground} /></Pressable>
+          <View style={{ flex: 1, minWidth: 100 }}><Text variant="h2">{format(parseLocalDate(date), 'EEE d MMM')}</Text><Text variant="bodySm" tone="muted">{state.existingLogId ? 'Editing saved workout' : 'Your session'}</Text></View>
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', flexWrap: 'wrap', gap: spacing.xs, ...(compactHeader ? { width: '100%' as const } : {}) }}>
+          <Pressable ref={overviewTrigger} testID="workout-overview" accessibilityRole="button" accessibilityLabel="Open workout overview" onPress={() => setOverview(true)} style={({ pressed }) => ({ minHeight: HIT_SLOP_MIN, justifyContent: 'center', paddingHorizontal: spacing.sm, borderRadius: radius.sm, backgroundColor: pressed ? colors.primarySoft : 'transparent' })}><Text variant="bodySm" tone="primary">Overview</Text></Pressable>
+          {state.exercises.length > 0 ? <Pressable testID="logger-finish-visible" accessibilityRole="button" accessibilityLabel="Finish workout" accessibilityHint="Review completed and incomplete sets before saving." onPress={finish} style={({ pressed }) => ({ minHeight: HIT_SLOP_MIN, justifyContent: 'center', paddingHorizontal: spacing.sm, borderRadius: radius.sm, backgroundColor: pressed ? colors.primarySoft : 'transparent' })}><Text variant="bodySm" tone="primary">Finish</Text></Pressable> : null}
           </View>
-
-          <Input
-            label="Workout title"
-            value={state.title}
-            onChangeText={(t) => dispatchEdit({ type: 'SET_TITLE', payload: t })}
-            placeholder="e.g. Push Day"
-          />
-
-          {plan?.days.length ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
-              {plan.days.map((d) => {
-                const active = d.day_number === state.selectedDay;
-                return (
-                  <PlanDayButton
-                    key={d.id}
-                    dayNumber={d.day_number}
-                    focus={d.focus}
-                    active={active}
-                    onPress={() => loadDay(d.day_number, true)}
-                  />
-                );
-              })}
-            </ScrollView>
-          ) : null}
-
-          {state.exercises.length ? (
-            <>
-              <Text variant="bodySm" tone="muted" numeric>
-                {completedCount} of {state.exercises.length} exercises
-              </Text>
-
-              {/* Visible prev/next — swipe is never the only way (§03.B.2). */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <Pressable
-                  onPress={() => setIndex((i) => Math.max(0, i - 1))}
-                  disabled={index === 0}
-                  accessibilityRole="button"
-                  accessibilityLabel="Previous exercise"
-                  accessibilityState={{ disabled: index === 0 }}
-                  style={{ minWidth: HIT_SLOP_MIN, minHeight: HIT_SLOP_MIN, alignItems: 'center', justifyContent: 'center', opacity: index === 0 ? 0.3 : 1 }}
-                >
-                  <ChevronLeft size={iconSize.lg} color={colors.foreground} strokeWidth={2} />
-                </Pressable>
-
-                <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'center', gap: spacing.xs }}>
-                  {state.exercises.map((ex, i) => {
-                    const done = ex.sets.some((s) => s.completed);
-                    return (
-                      <View
-                        key={ex.id}
-                        style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: 4,
-                          backgroundColor: done
-                            ? colors.success
-                            : i === index
-                              ? colors.primary
-                              : colors.borderStrong,
-                        }}
-                      />
-                    );
-                  })}
-                </View>
-
-                <Pressable
-                  onPress={() => setIndex((i) => Math.min(state.exercises.length - 1, i + 1))}
-                  disabled={index >= state.exercises.length - 1}
-                  accessibilityRole="button"
-                  accessibilityLabel="Next exercise"
-                  accessibilityState={{ disabled: index >= state.exercises.length - 1 }}
-                  style={{ minWidth: HIT_SLOP_MIN, minHeight: HIT_SLOP_MIN, alignItems: 'center', justifyContent: 'center', opacity: index >= state.exercises.length - 1 ? 0.3 : 1 }}
-                >
-                  <ChevronRight size={iconSize.lg} color={colors.foreground} strokeWidth={2} />
-                </Pressable>
-              </View>
-
-              {currentExercise ? (
-                <SwipeableSlide
-                  canPrev={index > 0}
-                  canNext={index < state.exercises.length - 1}
-                  onPrev={() => setIndex((i) => Math.max(0, i - 1))}
-                  onNext={() => setIndex((i) => Math.min(state.exercises.length - 1, i + 1))}
-                >
-                <ExerciseSlide
-                  exercise={currentExercise}
-                  prescription={planMeta}
-                  targetReps={planMeta?.reps}
-                  targetDuration={planMeta?.duration}
-                  previous={previousData?.[currentExercise.name.toLowerCase().trim()]}
-                  onUpdateSet={(setIdx, field, value) =>
-                    dispatchEdit({
-                      type: 'UPDATE_SET',
-                      payload: { exerciseIndex: index, setIndex: setIdx, field, value },
-                    })
-                  }
-                  onToggleSet={(setIdx) =>
-                    dispatchEdit({
-                      type: 'TOGGLE_SET',
-                      payload: { exerciseIndex: index, setIndex: setIdx },
-                    })
-                  }
-                  onAddSet={() =>
-                    dispatchEdit({ type: 'ADD_SET', payload: { exerciseIndex: index } })
-                  }
-                  onRemoveSet={(setIdx) =>
-                    dispatchEdit({
-                      type: 'REMOVE_SET',
-                      payload: { exerciseIndex: index, setIndex: setIdx },
-                    })
-                  }
-                  onSubstitute={(substitution) => {
-                    Alert.alert(
-                      `Use ${substitution.name}?`,
-                      `Entered sets for ${currentExercise.name} will be replaced. Your coach’s plan will not change.`,
-                      [
-                        { text: 'Keep current exercise', style: 'cancel' },
-                        {
-                          text: `Use ${substitution.name}`,
-                          style: 'destructive',
-                          onPress: () =>
-                            dispatchEdit({
-                              type: 'REPLACE_EXERCISE',
-                              payload: {
-                                exerciseIndex: index,
-                                exercise: createDraftExerciseFromPlan(substitution, index),
-                              },
-                            }),
-                        },
-                      ],
-                    );
-                  }}
-                />
-                </SwipeableSlide>
-              ) : null}
-
-              <RestTimer contextLabel={currentExercise?.name} />
-            </>
-          ) : (
-            <Card style={{ gap: spacing.sm }}>
-              <Text variant="bodySm" tone="muted">
-                No plan day loaded. Add exercises manually to log a free-form session.
-              </Text>
-            </Card>
-          )}
-
-          <Card style={{ gap: spacing.sm }}>
-            <Input
-              label="Add an exercise"
-              value={newExercise}
-              onChangeText={(value) => {
-                markNonReducerEdit();
-                setNewExercise(value);
-              }}
-              placeholder="e.g. Cable Fly"
-              returnKeyType="done"
-              onSubmitEditing={() => {
-                if (!newExercise.trim()) return;
-                dispatchEdit({ type: 'ADD_EXERCISE', payload: { name: newExercise.trim() } });
-                setNewExercise('');
-                setIndex(state.exercises.length);
-              }}
-            />
-            <Button
-              label="Add"
-              variant="secondary"
-              onPress={() => {
-                if (!newExercise.trim()) return;
-                dispatchEdit({ type: 'ADD_EXERCISE', payload: { name: newExercise.trim() } });
-                setNewExercise('');
-                setIndex(state.exercises.length);
-              }}
-            />
-          </Card>
-
         </View>
-      </Screen>
-
-      <StickyActionBar
-        status={saveError ?? undefined}
-        primaryLabel={state.existingLogId ? 'Save workout' : 'Finish and save'}
-        onPrimary={() => void save()}
-        primaryLoading={saving}
-      />
-    </KeyboardAvoidingView>
-  );
+        {state.isDirty ? session.draftState === 'error' ? <Text variant="bodySm" tone="destructive">Couldn’t save on this device. Keep this screen open.</Text> : session.draftState === 'clean' ? <Text variant="bodySm" tone="muted">Unsaved local changes</Text> : <RecordStatus value={session.draftState === 'writing' ? 'saving-local' : 'draft'} /> : status === 'queued' || status === 'blocked' || status === 'synced' ? <RecordStatus value={status} /> : null}
+        <Pressable accessibilityRole="button" accessibilityLabel={'Edit session details. ' + (state.title || 'Untitled workout')} accessibilityState={{ expanded: sessionDetails }}
+          onPress={() => { if (sessionDetails) Keyboard.dismiss(); setSessionDetails((open) => !open); }}
+          style={({ pressed }) => ({ minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: pressed ? colors.pressed : 'transparent' })}>
+          <Text variant="bodySm" tone="muted" style={{ flex: 1 }}>{state.title || 'Untitled workout'}</Text>
+          <Text variant="caption" tone="muted">{sessionDetails ? 'Close details' : 'Session details'}</Text>
+          <DisclosureChevron expanded={sessionDetails} size={16} color={colors.mutedForeground} />
+        </Pressable>
+        <MotionReveal revision={sessionDetails ? 1 : 0}>
+        {sessionDetails ? <View style={{ gap: spacing.base }}>
+          <Input label="Workout title" value={state.title} onChangeText={(value) => edit({ type: 'SET_TITLE', payload: value })} />
+          {session.plan?.days.length ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>{session.plan.days.map((entry) => <PlanDayButton key={entry.id} dayNumber={entry.day_number} focus={entry.focus} active={entry.day_number === state.selectedDay} onPress={() => chooseDay(entry.day_number)} />)}</ScrollView> : null}
+        </View> : null}
+        </MotionReveal>
+        {current ? <>
+          <Text variant="label" tone="muted">EXERCISE {index + 1} OF {state.exercises.length}</Text>
+          <SwipeableSlide canPrev={index > 0} canNext={index < state.exercises.length - 1} onPrev={() => setIndex((value) => Math.max(0, value - 1))} onNext={() => setIndex((value) => Math.min(state.exercises.length - 1, value + 1))}>
+            <ExerciseSlide exercise={current} prescription={prescription} targetReps={prescription?.reps} targetDuration={prescription?.duration} previous={compatibleHistory?.sets} previousDate={compatibleHistory?.date}
+              onUpdateSet={(setId, field, value) => { const setIndex = current.sets.findIndex((set) => set.id === setId); if (setIndex >= 0) edit({ type: 'UPDATE_SET', payload: { exerciseIndex: index, setIndex, field, value } }); }}
+              onToggleSet={(setId) => { const setIndex = current.sets.findIndex((set) => set.id === setId); if (setIndex < 0) return; const completing = !current.sets[setIndex].completed; edit({ type: 'TOGGLE_SET', payload: { exerciseIndex: index, setIndex } }); Keyboard.dismiss(); const seconds = prescription?.restSeconds ?? rest.preference.seconds; if (completing && rest.preference.autoStart && seconds && seconds > 0) restActions.start(seconds, { haptic: false }); }}
+              onAddSet={() => edit({ type: 'ADD_SET', payload: { exerciseIndex: index } })}
+              onRemoveSet={(setIndex) => edit({ type: 'REMOVE_SET', payload: { exerciseIndex: index, setIndex } })}
+              onRestoreSet={(set, originalIndex) => edit({ type: 'RESTORE_SET', payload: { exerciseIndex: index, index: originalIndex, set } })}
+              onContinue={continueWorkout}
+              continueLabel={continueLabel}
+              onSubstitute={(replacement) => Alert.alert(`Use ${replacement.name}?`, `Replace entered sets for ${current.name} in this session?`, [{ text: 'Cancel', style: 'cancel' }, { text: 'Replace exercise', style: 'destructive', onPress: () => edit({ type: 'REPLACE_EXERCISE', payload: { exerciseIndex: index, exercise: createDraftExerciseFromPlan(replacement, index) } }) }])} />
+          </SwipeableSlide>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: spacing.sm }}>
+            <Button label="Previous exercise" icon={<ChevronLeft size={iconSize.sm} color={colors.primary} />} variant="ghost" disabled={index === 0} onPress={() => setIndex((value) => value - 1)} />
+            <Button label="Next exercise" icon={<ChevronRight size={iconSize.sm} color={colors.primary} />} variant="ghost" disabled={index >= state.exercises.length - 1} onPress={() => setIndex((value) => value + 1)} />
+          </View>
+        </> : <Card style={{ gap: spacing.base }}><Text variant="bodySm" tone="muted">No assigned workout is available yet. Add an exercise to start your session.</Text><Button testID="workout-empty-add" label="Add your first exercise" onPress={() => setOverview(true)} /></Card>}
+        {keyboardVisible ? <Button label="Done with keyboard" variant="secondary" onPress={Keyboard.dismiss} /> : null}
+        {inlineFooter ? <View testID="workout-rest-footer" style={{ gap: spacing.sm }}>{dock}{session.error || localError ? <Text variant="bodySm" tone="destructive">{session.error ?? localError}</Text> : null}</View> : null}
+      </View>
+    </Screen>
+    {!inlineFooter ? <WorkoutRestFooter onHeightChange={setFooterHeight}>{dock}{session.error || localError ? <Text variant="bodySm" tone="destructive">{session.error ?? localError}</Text> : null}</WorkoutRestFooter> : null}
+    <WorkoutOverviewSheet visible={overview} exercises={state.exercises} activeIndex={index} onClose={() => setOverview(false)} onSelect={setIndex}
+      onFinish={() => { setOverview(false); finish(); }} newExerciseName={newExercise} onNewExerciseNameChange={setNewExercise} onAddExercise={addExercise} returnFocusRef={overviewTrigger} />
+  </KeyboardAvoidingView>;
 }

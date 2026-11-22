@@ -1,0 +1,631 @@
+{
+  "kind": "Latest per-suite outcomes, combining the complete run with corrected-suite rerun; not a claim of one clean first run",
+  "updatedAt": "2026-09-17T15:54:40.740092+00:00",
+  "suites": 122,
+  "tests": 904,
+  "failures": 0,
+  "skipped": 0,
+  "initialRun": {
+    "suites": 122,
+    "failedSuites": 13,
+    "passedTests": 866,
+    "failedTests": 38
+  },
+  "correctionRun": {
+    "suites": 13,
+    "tests": 104,
+    "failures": 0
+  },
+  "results": [
+    {
+      "file": "src/__tests__/maestro-contract.test.ts",
+      "status": "passed",
+      "tests": 4
+    },
+    {
+      "file": "src/__tests__/oss-ledger.test.ts",
+      "status": "passed",
+      "tests": 11
+    },
+    {
+      "file": "src/__tests__/ui-contract-script.test.ts",
+      "status": "passed",
+      "tests": 7
+    },
+    {
+      "file": "src/__tests__/ui-validation-matrix.test.ts",
+      "status": "passed",
+      "tests": 6
+    },
+    {
+      "file": "src/components/charts/LineChart.test.tsx",
+      "status": "passed",
+      "tests": 3
+    },
+    {
+      "file": "src/components/charts/timeSeries.test.ts",
+      "status": "passed",
+      "tests": 4
+    },
+    {
+      "file": "src/components/checkin/CheckInFieldBlock.test.tsx",
+      "status": "passed",
+      "tests": 2
+    },
+    {
+      "file": "src/components/checkin/CheckInForm.test.tsx",
+      "status": "passed",
+      "tests": 17
+    },
+    {
+      "file": "src/components/checkin/CheckInRatingScale.test.tsx",
+      "status": "passed",
+      "tests": 7
+    },
+    {
+      "file": "src/components/checkin/CheckInStageHeader.test.tsx",
+      "status": "passed",
+      "tests": 1
+    },
+    {
+      "file": "src/components/checkin/CheckInSummarySection.test.tsx",
+      "status": "passed",
+      "tests": 2
+    },
+    {
+      "file": "src/components/checkin/checkin-presentation.test.ts",
+      "status": "passed",
+      "tests": 2
+    },
+    {
+      "file": "src/components/coach/CoachBadge.test.tsx",
+      "status": "passed",
+      "tests": 9
+    },
+    {
+      "file": "src/components/coach/CoachStatusCard.test.tsx",
+      "status": "passed",
+      "tests": 6
+    },
+    {
+      "file": "src/components/dashboard/ConsistencyGrid.test.tsx",
+      "status": "passed",
+      "tests": 4
+    },
+    {
+      "file": "src/components/dashboard/MetricCard.test.tsx",
+      "status": "passed",
+      "tests": 1
+    },
+    {
+      "file": "src/components/dashboard/StreakHero.test.tsx",
+      "status": "passed",
+      "tests": 1
+    },
+    {
+      "file": "src/components/dashboard/TodayActionCard.test.tsx",
+      "status": "passed",
+      "tests": 1
+    },
+    {
+      "file": "src/components/dashboard/WeekStrip.test.tsx",
+      "status": "passed",
+      "tests": 2
+    },
+    {
+      "file": "src/components/logger/CircularTimer.test.tsx",
+      "status": "passed",
+      "tests": 5
+    },
+    {
+      "file": "src/components/logger/CurrentSetEditor.test.tsx",
+      "status": "passed",
+      "tests": 4
+    },
+    {
+      "file": "src/components/logger/ExerciseSlide.test.tsx",
+      "status": "passed",
+      "tests": 7
+    },
+    {
+      "file": "src/components/logger/PlanDayButton.test.tsx",
+      "status": "passed",
+      "tests": 1
+    },
+    {
+      "file": "src/components/logger/PlateCalculatorSheet.test.tsx",
+      "status": "passed",
+      "tests": 5
+    },
+    {
+      "file": "src/components/logger/RestDock.test.tsx",
+      "status": "passed",
+      "tests": 1
+    },
+    {
+      "file": "src/components/logger/SetEditor.test.tsx",
+      "status": "passed",
+      "tests": 16
+    },
+    {
+      "file": "src/components/logger/WorkoutSummary.test.tsx",
+      "status": "passed",
+      "tests": 4
+    },
+    {
+      "file": "src/components/logger/swipeDecision.test.ts",
+      "status": "passed",
+      "tests": 19
+    },
+    {
+      "file": "src/components/logger/useRestTimer.test.tsx",
+      "status": "passed",
+      "tests": 25
+    },
+    {
+      "file": "src/components/measurements/MeasurementHistoryRow.test.tsx",
+      "status": "passed",
+      "tests": 2
+    },
+    {
+      "file": "src/components/measurements/MeasurementSheet.test.tsx",
+      "status": "passed",
+      "tests": 2
+    },
+    {
+      "file": "src/components/media/PhotoCaptureSheet.test.tsx",
+      "status": "passed",
+      "tests": 16
+    },
+    {
+      "file": "src/components/media/PhotoSlot.test.tsx",
+      "status": "passed",
+      "tests": 10
+    },
+    {
+      "file": "src/components/media/PhotoViewer.test.tsx",
+      "status": "passed",
+      "tests": 7
+    },
+    {
+      "file": "src/components/plans/ExercisePrescriptionSheet.test.tsx",
+      "status": "passed",
+      "tests": 3
+    },
+    {
+      "file": "src/components/plans/PlanDayCard.test.tsx",
+      "status": "passed",
+      "tests": 7
+    },
+    {
+      "file": "src/components/questionnaire/QuestionnaireWizard.test.tsx",
+      "status": "passed",
+      "tests": 7
+    },
+    {
+      "file": "src/components/ui/AdaptiveGrid.test.tsx",
+      "status": "passed",
+      "tests": 2
+    },
+    {
+      "file": "src/components/ui/AnimatedNumber.test.tsx",
+      "status": "passed",
+      "tests": 4
+    },
+    {
+      "file": "src/components/ui/Button.test.tsx",
+      "status": "passed",
+      "tests": 4
+    },
+    {
+      "file": "src/components/ui/Card.test.tsx",
+      "status": "passed",
+      "tests": 1
+    },
+    {
+      "file": "src/components/ui/Input.test.tsx",
+      "status": "passed",
+      "tests": 3
+    },
+    {
+      "file": "src/components/ui/ProgressBar.test.tsx",
+      "status": "passed",
+      "tests": 5
+    },
+    {
+      "file": "src/components/ui/RatingRow.test.tsx",
+      "status": "passed",
+      "tests": 2
+    },
+    {
+      "file": "src/components/ui/RecordStatus.test.tsx",
+      "status": "passed",
+      "tests": 2
+    },
+    {
+      "file": "src/components/ui/Screen.test.tsx",
+      "status": "passed",
+      "tests": 6
+    },
+    {
+      "file": "src/components/ui/SegmentedControl.test.tsx",
+      "status": "passed",
+      "tests": 4
+    },
+    {
+      "file": "src/components/ui/Sheet.test.tsx",
+      "status": "passed",
+      "tests": 11
+    },
+    {
+      "file": "src/components/ui/StatusPill.test.tsx",
+      "status": "passed",
+      "tests": 9
+    },
+    {
+      "file": "src/components/ui/StickyActionBar.test.tsx",
+      "status": "passed",
+      "tests": 1
+    },
+    {
+      "file": "src/contexts/AuthContext.test.tsx",
+      "status": "passed",
+      "tests": 6
+    },
+    {
+      "file": "src/features/checkin/CheckInJourney.integration.test.tsx",
+      "status": "passed",
+      "tests": 26
+    },
+    {
+      "file": "src/features/checkin/checkInExitGuard.test.ts",
+      "status": "passed",
+      "tests": 4
+    },
+    {
+      "file": "src/features/checkin/checkInIntent.test.ts",
+      "status": "passed",
+      "tests": 3
+    },
+    {
+      "file": "src/features/checkin/checkInOutbox.test.ts",
+      "status": "passed",
+      "tests": 6
+    },
+    {
+      "file": "src/features/checkin/components/CheckInPanel.test.tsx",
+      "status": "passed",
+      "tests": 1
+    },
+    {
+      "file": "src/features/checkin/components/HistoryCaption.test.tsx",
+      "status": "passed",
+      "tests": 2
+    },
+    {
+      "file": "src/features/checkin/components/NumericEntry.test.tsx",
+      "status": "passed",
+      "tests": 8
+    },
+    {
+      "file": "src/features/checkin/components/PreviousValueButton.test.tsx",
+      "status": "passed",
+      "tests": 2
+    },
+    {
+      "file": "src/features/checkin/components/TickRuler.accessibility.test.tsx",
+      "status": "passed",
+      "tests": 1
+    },
+    {
+      "file": "src/features/checkin/components/TickRuler.test.ts",
+      "status": "passed",
+      "tests": 6
+    },
+    {
+      "file": "src/features/checkin/config/fields.test.ts",
+      "status": "passed",
+      "tests": 11
+    },
+    {
+      "file": "src/features/checkin/dateHistory.test.ts",
+      "status": "passed",
+      "tests": 3
+    },
+    {
+      "file": "src/features/checkin/history.test.ts",
+      "status": "passed",
+      "tests": 4
+    },
+    {
+      "file": "src/features/checkin/model.test.ts",
+      "status": "passed",
+      "tests": 3
+    },
+    {
+      "file": "src/features/checkin/useCheckInEditor.test.tsx",
+      "status": "passed",
+      "tests": 15
+    },
+    {
+      "file": "src/features/home/RecentRecord.test.tsx",
+      "status": "passed",
+      "tests": 3
+    },
+    {
+      "file": "src/features/home/WeekRecordStrip.test.tsx",
+      "status": "passed",
+      "tests": 1
+    },
+    {
+      "file": "src/features/home/home-state.test.ts",
+      "status": "passed",
+      "tests": 4
+    },
+    {
+      "file": "src/features/home/selectors.test.ts",
+      "status": "passed",
+      "tests": 3
+    },
+    {
+      "file": "src/features/measurements/observations.test.ts",
+      "status": "passed",
+      "tests": 15
+    },
+    {
+      "file": "src/features/onboarding/routing.test.ts",
+      "status": "passed",
+      "tests": 4
+    },
+    {
+      "file": "src/features/onboarding/setup-model.test.ts",
+      "status": "passed",
+      "tests": 3
+    },
+    {
+      "file": "src/features/onboarding/useSetupController.test.ts",
+      "status": "passed",
+      "tests": 4
+    },
+    {
+      "file": "src/features/profile/profileSaveRecovery.test.ts",
+      "status": "passed",
+      "tests": 6
+    },
+    {
+      "file": "src/features/workout/useWorkoutSession.test.tsx",
+      "status": "passed",
+      "tests": 39
+    },
+    {
+      "file": "src/features/workout/workout-entry.test.ts",
+      "status": "passed",
+      "tests": 6
+    },
+    {
+      "file": "src/features/workout/workout-review.test.ts",
+      "status": "passed",
+      "tests": 1
+    },
+    {
+      "file": "src/features/workout/workoutRecovery.integration.test.tsx",
+      "status": "passed",
+      "tests": 6
+    },
+    {
+      "file": "src/features/workout/workoutReducer.test.ts",
+      "status": "passed",
+      "tests": 18
+    },
+    {
+      "file": "src/features/workout/workoutSave.test.ts",
+      "status": "passed",
+      "tests": 11
+    },
+    {
+      "file": "src/hooks/useCheckInDraft.test.ts",
+      "status": "passed",
+      "tests": 6
+    },
+    {
+      "file": "src/hooks/useCheckInMutation.test.tsx",
+      "status": "passed",
+      "tests": 3
+    },
+    {
+      "file": "src/hooks/useCoach.test.ts",
+      "status": "passed",
+      "tests": 7
+    },
+    {
+      "file": "src/hooks/useNotificationRouting.test.tsx",
+      "status": "passed",
+      "tests": 3
+    },
+    {
+      "file": "src/hooks/useOnboarding.test.tsx",
+      "status": "passed",
+      "tests": 1
+    },
+    {
+      "file": "src/hooks/usePlanProgress.test.ts",
+      "status": "passed",
+      "tests": 11
+    },
+    {
+      "file": "src/hooks/usePlans.test.ts",
+      "status": "passed",
+      "tests": 7
+    },
+    {
+      "file": "src/hooks/useReducedTransparency.test.ts",
+      "status": "passed",
+      "tests": 4
+    },
+    {
+      "file": "src/hooks/useResponsiveLayout.test.ts",
+      "status": "passed",
+      "tests": 1
+    },
+    {
+      "file": "src/hooks/useWeeklyFeedbackDraft.test.ts",
+      "status": "passed",
+      "tests": 18
+    },
+    {
+      "file": "src/hooks/useWorkoutDraft.test.ts",
+      "status": "passed",
+      "tests": 10
+    },
+    {
+      "file": "src/hooks/workoutDraftStorage.test.ts",
+      "status": "passed",
+      "tests": 4
+    },
+    {
+      "file": "src/lib/asyncOutbox.test.ts",
+      "status": "passed",
+      "tests": 19
+    },
+    {
+      "file": "src/lib/checkin-validation.test.ts",
+      "status": "passed",
+      "tests": 6
+    },
+    {
+      "file": "src/lib/consistency.test.ts",
+      "status": "passed",
+      "tests": 2
+    },
+    {
+      "file": "src/lib/dates.test.ts",
+      "status": "passed",
+      "tests": 14
+    },
+    {
+      "file": "src/lib/delivery-errors.test.ts",
+      "status": "passed",
+      "tests": 12
+    },
+    {
+      "file": "src/lib/measurement-validation.test.ts",
+      "status": "passed",
+      "tests": 12
+    },
+    {
+      "file": "src/lib/outbox.test.ts",
+      "status": "passed",
+      "tests": 50
+    },
+    {
+      "file": "src/lib/plate-calculator.test.ts",
+      "status": "passed",
+      "tests": 10
+    },
+    {
+      "file": "src/lib/profile-data.test.ts",
+      "status": "passed",
+      "tests": 3
+    },
+    {
+      "file": "src/lib/reminders.test.ts",
+      "status": "passed",
+      "tests": 6
+    },
+    {
+      "file": "src/lib/streak.test.ts",
+      "status": "passed",
+      "tests": 5
+    },
+    {
+      "file": "src/lib/today-action.test.ts",
+      "status": "passed",
+      "tests": 15
+    },
+    {
+      "file": "src/lib/weekly-feedback.test.ts",
+      "status": "passed",
+      "tests": 5
+    },
+    {
+      "file": "src/lib/workout-content.test.ts",
+      "status": "passed",
+      "tests": 16
+    },
+    {
+      "file": "src/lib/workoutPersistence.test.ts",
+      "status": "passed",
+      "tests": 4
+    },
+    {
+      "file": "src/screens/__tests__/logger.test.tsx",
+      "status": "passed",
+      "tests": 14
+    },
+    {
+      "file": "src/screens/__tests__/measurements.test.tsx",
+      "status": "passed",
+      "tests": 11
+    },
+    {
+      "file": "src/screens/__tests__/media.test.tsx",
+      "status": "passed",
+      "tests": 6
+    },
+    {
+      "file": "src/screens/__tests__/profile.test.tsx",
+      "status": "passed",
+      "tests": 30
+    },
+    {
+      "file": "src/screens/__tests__/settings.test.tsx",
+      "status": "passed",
+      "tests": 5
+    },
+    {
+      "file": "src/screens/__tests__/tabs/check-in.test.tsx",
+      "status": "passed",
+      "tests": 15
+    },
+    {
+      "file": "src/screens/__tests__/tabs/index.test.tsx",
+      "status": "passed",
+      "tests": 8
+    },
+    {
+      "file": "src/screens/__tests__/tabs/logs.test.tsx",
+      "status": "passed",
+      "tests": 9
+    },
+    {
+      "file": "src/screens/__tests__/tabs/more.test.tsx",
+      "status": "passed",
+      "tests": 3
+    },
+    {
+      "file": "src/screens/__tests__/tabs/plans.test.tsx",
+      "status": "passed",
+      "tests": 6
+    },
+    {
+      "file": "src/screens/__tests__/weekly-feedback.test.tsx",
+      "status": "passed",
+      "tests": 19
+    },
+    {
+      "file": "src/test/router-boundary.test.ts",
+      "status": "passed",
+      "tests": 1
+    },
+    {
+      "file": "src/theme/ThemeProvider.motion.test.tsx",
+      "status": "passed",
+      "tests": 4
+    },
+    {
+      "file": "src/theme/layout.test.ts",
+      "status": "passed",
+      "tests": 9
+    }
+  ]
+}

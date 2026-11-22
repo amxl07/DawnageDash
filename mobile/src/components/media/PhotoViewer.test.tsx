@@ -1,11 +1,18 @@
+import { Image as ExpoImage } from 'expo-image';
 import { AccessibilityInfo, findNodeHandle, Modal } from 'react-native';
 
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
-import { PhotoViewer, photoPositionForSourceIndex, type ViewerPhoto } from './PhotoViewer';
+import {
+  PhotoViewer,
+  focusPhotoTarget,
+  photoPositionForSourceIndex,
+  type ViewerPhoto,
+} from './PhotoViewer';
 
-const mockUseMotion = jest.fn(() => ({ reduced: false }));
+jest.mock('@/hooks/usePrivatePhotoUrl', () => ({ usePrivatePhotoUrl: (reference: string) => ({ url: reference, loading: false, refresh: jest.fn() }) }));
+
+const mockUseMotion = jest.fn(() => ({ reduced: false, duration: { micro: 160 } }));
 
 jest.mock('expo-image', () => ({ Image: 'ExpoImage' }));
 
@@ -79,10 +86,10 @@ const photos: ViewerPhoto[] = [
 describe('PhotoViewer', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseMotion.mockReturnValue({ reduced: false });
+    mockUseMotion.mockReturnValue({ reduced: false, duration: { micro: 160 } });
   });
 
-  it('waits for native modal presentation, then focuses and announces each position', () => {
+  it('waits for native modal presentation and lets focused images own position speech', () => {
     let renderer!: ReturnType<typeof create>;
     act(() => {
       renderer = create(<PhotoViewer photos={photos} startIndex={0} onClose={jest.fn()} />);
@@ -97,14 +104,7 @@ describe('PhotoViewer', () => {
 
     expect(findNodeHandle).toHaveBeenCalledTimes(1);
     expect(AccessibilityInfo.setAccessibilityFocus).toHaveBeenLastCalledWith(42);
-    expect(AccessibilityInfo.announceForAccessibility).toHaveBeenLastCalledWith(
-      'Front photo, Week 3, 1 of 2',
-    );
-    expect(
-      jest.mocked(AccessibilityInfo.setAccessibilityFocus).mock.invocationCallOrder[0],
-    ).toBeLessThan(
-      jest.mocked(AccessibilityInfo.announceForAccessibility).mock.invocationCallOrder[0],
-    );
+    expect(AccessibilityInfo.announceForAccessibility).not.toHaveBeenCalled();
     expect(renderer.root.findByProps({ accessibilityLabel: 'Front photo, Week 3, 1 of 2' }).props)
       .toMatchObject({ accessible: true, accessibilityRole: 'image' });
 
@@ -116,14 +116,58 @@ describe('PhotoViewer', () => {
 
     expect(findNodeHandle).toHaveBeenCalledTimes(2);
     expect(AccessibilityInfo.setAccessibilityFocus).toHaveBeenCalledTimes(2);
-    expect(AccessibilityInfo.announceForAccessibility).toHaveBeenLastCalledWith(
-      'Back photo, Week 3, 2 of 2',
+    expect(AccessibilityInfo.announceForAccessibility).not.toHaveBeenCalled();
+  });
+
+  it('uses DOM focus on web without asking React Native for a native handle', () => {
+    const focus = jest.fn();
+
+    expect(focusPhotoTarget({ focus }, 'web')).toBe(true);
+
+    expect(focus).toHaveBeenCalledTimes(1);
+    expect(findNodeHandle).not.toHaveBeenCalled();
+    expect(AccessibilityInfo.setAccessibilityFocus).not.toHaveBeenCalled();
+  });
+
+  it('announces the position only when the displayed image cannot receive focus', () => {
+    jest.mocked(findNodeHandle).mockReturnValueOnce(null);
+    let renderer!: ReturnType<typeof create>;
+    act(() => {
+      renderer = create(<PhotoViewer photos={photos} startIndex={0} onClose={jest.fn()} />);
+    });
+
+    act(() => renderer.root.findByType(Modal).props.onShow());
+
+    expect(AccessibilityInfo.setAccessibilityFocus).not.toHaveBeenCalled();
+    expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledTimes(1);
+    expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith(
+      'Front photo, Week 3, 1 of 2',
     );
-    expect(
-      jest.mocked(AccessibilityInfo.setAccessibilityFocus).mock.invocationCallOrder[1],
-    ).toBeLessThan(
-      jest.mocked(AccessibilityInfo.announceForAccessibility).mock.invocationCallOrder[1],
-    );
+  });
+
+  it('restores native accessibility focus to the source thumbnail after close', () => {
+    const sourceTarget = {} as never;
+    const onClose = jest.fn();
+    let renderer!: ReturnType<typeof create>;
+    act(() => {
+      renderer = create(
+        <PhotoViewer
+          photos={photos}
+          startIndex={0}
+          onClose={onClose}
+          returnFocusTarget={sourceTarget}
+        />,
+      );
+    });
+
+    act(() => {
+      renderer.root.findByProps({ accessibilityLabel: 'Close photo viewer' }).props.onPress();
+      renderer.unmount();
+    });
+
+    expect(findNodeHandle).toHaveBeenCalledWith(sourceTarget);
+    expect(AccessibilityInfo.setAccessibilityFocus).toHaveBeenCalledWith(42);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('gives the displayed image explicit dimensions and keeps pager dots decorative', () => {
@@ -132,30 +176,32 @@ describe('PhotoViewer', () => {
       renderer = create(<PhotoViewer photos={photos} startIndex={0} onClose={jest.fn()} />);
     });
 
-    const image = renderer.root.findByType('ExpoImage');
+    const image = renderer.root.findByType(ExpoImage);
     expect(image.props).toMatchObject({
       source: { uri: 'https://example.com/front.jpg' },
       contentFit: 'contain',
-      cachePolicy: 'memory-disk',
-      recyclingKey: 'viewer:https://example.com/front.jpg',
+      cachePolicy: 'none',
+      recyclingKey: 'https://example.com/front.jpg',
+      transition: 160,
     });
     expect(image.props.style).toEqual(expect.objectContaining({ width: '100%', height: '100%' }));
 
     const dots = renderer.root.findAll(
-      (node: { props: { testID?: string } }) => node.props.testID?.startsWith('photo-position-dot-'),
+      (node: { props: { testID?: string } }) => node.props.testID?.startsWith('photo-position-dot-') === true,
     );
     expect(new Set(dots.map((dot: { props: { testID?: string } }) => dot.props.testID)).size).toBe(2);
     expect(dots.every((dot: { props: { accessible?: boolean } }) => dot.props.accessible === false)).toBe(true);
   });
 
   it('removes the viewer fade when Reduced Motion is enabled', () => {
-    mockUseMotion.mockReturnValue({ reduced: true });
+    mockUseMotion.mockReturnValue({ reduced: true, duration: { micro: 160 } });
     let renderer!: ReturnType<typeof create>;
     act(() => {
       renderer = create(<PhotoViewer photos={photos} startIndex={0} onClose={jest.fn()} />);
     });
 
     expect(renderer.root.findByType(Modal).props.animationType).toBe('none');
+    expect(renderer.root.findByType(ExpoImage).props.transition).toBe(0);
   });
 
   it('maps a tapped source slot to its filtered viewer position', () => {

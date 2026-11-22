@@ -1,6 +1,8 @@
-import { useEffect } from 'react';
-import { View, type ViewStyle } from 'react-native';
+import { NavigationContext } from 'expo-router/react-navigation';
+import { useContext, useEffect, useState } from 'react';
+import { AppState, View, type ViewStyle } from 'react-native';
 import Animated, {
+  cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -15,14 +17,30 @@ type Props = { height?: ViewStyle['height']; width?: ViewStyle['width']; style?:
 export function Skeleton({ height = 16, width = '100%', style }: Props) {
   const { colors } = useTheme();
   const motion = useMotion();
+  const navigation = useContext(NavigationContext);
+  const [focused, setFocused] = useState(() => navigation?.isFocused() ?? true);
+  const [active, setActive] = useState(() => AppState.currentState !== 'background' && AppState.currentState !== 'inactive');
   const opacity = useSharedValue(motion.enabled ? 0.4 : 0.6);
 
   useEffect(() => {
-    if (!motion.enabled) return;
-    opacity.value = withRepeat(withTiming(0.85, { duration: 700 }), -1, true);
-  }, [motion.enabled, opacity]);
+    const app = AppState.addEventListener('change', (state) => setActive(state === 'active'));
+    const focus = navigation?.addListener('focus', () => setFocused(true));
+    const blur = navigation?.addListener('blur', () => setFocused(false));
+    // Re-read after subscribing in case navigation changed between render and effect.
+    setFocused(navigation?.isFocused() ?? true);
+    setActive(AppState.currentState !== 'background' && AppState.currentState !== 'inactive');
+    return () => { app.remove(); focus?.(); blur?.(); };
+  }, [navigation]);
 
-  const animated = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  useEffect(() => {
+    cancelAnimation(opacity);
+    opacity.set(motion.enabled && focused && active
+      ? withRepeat(withTiming(0.85, { duration: 700 }), -1, true)
+      : 0.6);
+    return () => cancelAnimation(opacity);
+  }, [active, focused, motion.enabled, opacity]);
+
+  const animated = useAnimatedStyle(() => ({ opacity: opacity.get() }));
 
   return (
     <Animated.View

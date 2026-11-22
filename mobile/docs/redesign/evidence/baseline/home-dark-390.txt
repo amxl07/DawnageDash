@@ -1,0 +1,72 @@
+2
+The method or property ExpoNotifications.getLastNotificationResponse is not available on web, are you sure you've linked all the native dependencies properly?
+Log 1 of 2
+Uncaught Error
+AccessibilityInfo.default.isReduceTransparencyEnabled is not a function
+Source
+
+  9 |
+
+let
+ receivedEvent
+=
+
+false
+;
+
+ 10 |
+>
+ 11 |
+
+void
+
+AccessibilityInfo
+.
+isReduceTransparencyEnabled()
+.
+then((initialPreference)
+=>
+ {
+
+    |
+
+^
+
+ 12 |
+
+if
+ (active
+&&
+
+!
+receivedEvent) {
+
+ 13 |
+         setReduced(initialPreference)
+;
+
+ 14 |
+       }
+src/hooks/useReducedTransparency.ts (11:28)
+Call Stack
+useEffect$argument_0
+src/hooks/useReducedTransparency.ts:11:28
+See 34 more frames
+Component Stack
+TabsLayout
+app/(app)/(tabs)/_layout.tsx:57:38
+RestTimerProvider
+src/components/logger/useRestTimer.ts:78:37
+AppLayout
+app/(app)/_layout.tsx:29:70
+RootNavigator
+app/_layout.tsx:34:38
+AuthProvider
+src/contexts/AuthContext.tsx:31:32
+ThemeProvider
+src/theme/ThemeProvider.tsx:24:33
+RootLayout
+app/_layout.tsx:55:44
+See 98 more frames
+Dismiss
+Minimize

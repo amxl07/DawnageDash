@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dawnage — implemented screen gallery</title>
+<style>
+  :root { color-scheme: dark; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0b0b0c; color: #f6f6f7; }
+  body { margin: 0 auto; max-width: 1600px; padding: 40px 24px; }
+  h1 { font-size: clamp(30px, 5vw, 52px); letter-spacing: -.04em; margin: 0 0 12px; }
+  p { color: #b8b8bf; max-width: 760px; line-height: 1.6; }
+  nav { display: flex; gap: 12px; flex-wrap: wrap; margin: 28px 0; }
+  label { display: flex; gap: 10px; align-items: center; color: #b8b8bf; }
+  select { font: inherit; color: #fff; background: #1b1b1e; border: 1px solid #47474e; border-radius: 10px; padding: 12px; }
+  main { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; align-items: start; }
+  figure { margin: 0; min-width: 0; }
+  figcaption { margin: 0 0 12px; font-weight: 600; font-size: 18px; }
+  img { display: block; width: 100%; max-width: 390px; height: auto; border: 1px solid #37373c; border-radius: 20px; background: #161618; }
+  a { color: #ff8d83; }
+</style>
+<h1>Dawnage, refined.</h1>
+<p>Actual implemented Expo web routes, captured with fictional records. Explore the account entry, setup, Home, daily check-in and workout logger in both themes and two phone sizes. These are browser layout captures; native device validation remains a release requirement.</p>
+<nav aria-label="Preview options">
+  <label>Appearance <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+  <label>Viewport <select id="size"><option value="phone">390 × 844</option><option value="compact">320 × 568</option></select></label>
+</nav>
+<main id="gallery" aria-live="polite"></main>
+<p><a href="implementation.md">Implementation and verification record</a> · <a href="README.md">Reproduce the captures</a></p>
+<script>
+  const screens = [['signin', 'Welcome back'], ['onboarding', 'A personal starting point'], ['onboarding-rhythm', 'Your daily rhythm'], ['onboarding-ready', 'Ready for your first day'], ['home', 'Your day, clearly'], ['checkin', 'Daily record'], ['workout', 'One set at a time']];
+  const theme = document.getElementById('theme');
+  const size = document.getElementById('size');
+  function render() {
+    const width = size.value === 'compact' ? 320 : 390;
+    const gallery = document.getElementById('gallery');
+    gallery.replaceChildren(...screens.map(([route, title]) => {
+      const figure = document.createElement('figure');
+      const caption = document.createElement('figcaption');
+      caption.textContent = title;
+      const link = document.createElement('a');
+      link.href = `local-web/${size.value}/${route}-${theme.value}-${width}.png`;
+      const image = document.createElement('img');
+      image.src = link.href;
+      image.alt = `${title}, ${theme.value} appearance, ${width} pixel viewport`;
+      image.width = width;
+      image.height = size.value === 'compact' ? 568 : 844;
+      link.append(image);
+      figure.append(caption, link);
+      return figure;
+    }));
+  }
+  theme.addEventListener('change', render);
+  size.addEventListener('change', render);
+  render();
+</script>
+</html>

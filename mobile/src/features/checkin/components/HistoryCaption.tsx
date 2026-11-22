@@ -1,0 +1,30 @@
+import Animated, { FadeIn } from 'react-native-reanimated';
+
+import { Text } from '@/components/ui';
+import { spacing, useMotion } from '@/theme';
+
+import { historyCaption, type HistoryStat } from '../history';
+
+type Props = {
+  value: number | null;
+  history: HistoryStat | undefined;
+  unit?: string;
+  precision?: number;
+};
+
+export function HistoryCaption({ value, history, unit, precision }: Props) {
+  const motion = useMotion();
+  if (value === null || !history || history.count < 3) return null;
+
+  const caption = historyCaption(history, { unit, precision });
+  return (
+    <Animated.View
+      entering={motion.enabled ? FadeIn.duration(motion.duration.feedback) : undefined}
+      style={{ marginTop: spacing.xs }}
+    >
+      <Text variant="bodySm" tone="muted" accessibilityLabel={caption + ', from ' + history.points.slice(-14)[0]?.date + ' to ' + history.points.at(-1)?.date + ', ' + Math.min(14, history.count) + ' earlier entries'}>
+        {caption}
+      </Text>
+    </Animated.View>
+  );
+}

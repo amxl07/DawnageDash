@@ -1,0 +1,53 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, create } from 'react-test-renderer';
+import { usePrivatePhotoUrl } from './usePrivatePhotoUrl';
+
+const owner = '11111111-1111-4111-8111-111111111111';
+const reference = `${owner}/2026-09-19/front_123.jpg`;
+let mockViewer: string | null = owner;
+let mockSign: () => Promise<unknown>;
+let mockFocus: (() => void) | undefined;
+jest.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: mockViewer ? { id: mockViewer } : null }) }));
+jest.mock('@/lib/env', () => ({ supabaseUrl: 'https://fixture.supabase.co' }));
+jest.mock('@/lib/supabase', () => ({ supabase: { storage: { from: () => ({ createSignedUrl: () => mockSign() }) } } }));
+jest.mock('expo-router', () => ({ useFocusEffect: (callback: () => void) => { mockFocus = callback; } }));
+
+it('hides URLs on expiry and account switch, ignores in-flight results, and renews on focus', async () => {
+  jest.useFakeTimers();
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const signedUrl = `https://fixture.supabase.co/storage/v1/object/sign/progress_photos/${reference}?token=fake`;
+  mockViewer = owner;
+  mockSign = async () => ({ data: { signedUrl }, error: null });
+  let state!: ReturnType<typeof usePrivatePhotoUrl>;
+  function Probe() { state = usePrivatePhotoUrl(reference, owner); return null; }
+  const tree = () => <QueryClientProvider client={client}><Probe /></QueryClientProvider>;
+  let renderer!: ReturnType<typeof create>;
+  const flush = async () => { await act(async () => { await Promise.resolve(); await jest.advanceTimersByTimeAsync(1); }); };
+  await act(async () => { renderer = create(tree()); });
+  await flush();
+  expect(state.url).toBe(signedUrl);
+  mockSign = async () => ({ data: null, error: { message: 'denied' } });
+  await act(async () => { await jest.advanceTimersByTimeAsync(301000); });
+  expect(state.url).toBeNull();
+  mockSign = async () => ({ data: { signedUrl }, error: null });
+  await act(async () => { mockFocus?.(); });
+  await flush();
+  expect(state.url).toBe(signedUrl);
+  let resolve!: (value: unknown) => void;
+  mockSign = () => new Promise((done) => { resolve = done; });
+  await act(async () => { mockFocus?.(); });
+  const resolveOldViewer = resolve;
+  mockViewer = '22222222-2222-4222-8222-222222222222';
+  await act(async () => { renderer.update(tree()); });
+  expect(state.url).toBeNull();
+  await act(async () => { resolveOldViewer({ data: { signedUrl }, error: null }); });
+  await flush();
+  expect(state.url).toBeNull();
+  mockViewer = null;
+  await act(async () => { renderer.update(tree()); resolve?.({ data: { signedUrl }, error: null }); });
+  await flush();
+  expect(state.url).toBeNull();
+  await act(async () => { renderer.unmount(); });
+  client.clear();
+  jest.useRealTimers();
+});

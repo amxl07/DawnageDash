@@ -1,5 +1,7 @@
-import { forwardRef, useState } from 'react';
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { forwardRef, useCallback, useState, type ComponentRef } from 'react';
 import {
+  Platform,
   Pressable,
   TextInput,
   View,
@@ -24,15 +26,24 @@ export type InputProps = Omit<TextInputProps, 'style'> & {
   containerStyle?: ViewStyle;
   /** Escape hatch for the inner TextInput (e.g. multiline min-height). */
   inputStyle?: StyleProp<TextStyle>;
+  /** Registers focus with a native Gorhom sheet while retaining the ordinary web input. */
+  sheetAware?: boolean;
 };
 
 export const Input = forwardRef<TextInput, InputProps>(function Input(
-  { label, icon: Icon, error, hint, password, containerStyle, inputStyle, ...rest },
+  { label, icon: Icon, error, hint, password, containerStyle, inputStyle, sheetAware = false, onFocus, onBlur, secureTextEntry, accessibilityLabel = label, accessibilityHint = hint, placeholderTextColor, ...rest },
   ref,
 ) {
   const { colors } = useTheme();
   const [focused, setFocused] = useState(false);
   const [reveal, setReveal] = useState(false);
+  const handleFocus: NonNullable<TextInputProps['onFocus']> = (event) => { setFocused(true); onFocus?.(event); };
+  const handleBlur: NonNullable<TextInputProps['onBlur']> = (event) => { setFocused(false); onBlur?.(event); };
+  const handleSheetRef = useCallback((node: ComponentRef<typeof BottomSheetTextInput> | null) => {
+    const textInput: TextInput | null = node ?? null;
+    if (typeof ref === 'function') ref(textInput);
+    else if (ref) ref.current = textInput;
+  }, [ref]);
 
   // The boundary is the affordance, so it must clear 3:1 (WCAG 1.4.11).
   const borderColor = error ? colors.destructive : focused ? colors.focusRing : colors.borderStrong;
@@ -50,7 +61,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
           gap: spacing.sm,
           minHeight: HIT_SLOP_MIN + 4,
           paddingHorizontal: spacing.md,
-          borderRadius: radius.md,
+          borderRadius: radius.input,
           borderWidth: focused ? 2 : 1,
           borderColor,
           backgroundColor: colors.elevated,
@@ -60,30 +71,41 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
           <Icon size={iconSize.md} color={colors.mutedForeground} strokeWidth={2} accessible={false} />
         ) : null}
 
-        <TextInput
-          ref={ref}
-          accessibilityLabel={label}
-          accessibilityHint={hint}
-          placeholderTextColor={colors.mutedForeground}
-          secureTextEntry={password ? !reveal : rest.secureTextEntry}
-          onFocus={(e) => {
-            setFocused(true);
-            rest.onFocus?.(e);
-          }}
-          onBlur={(e) => {
-            setFocused(false);
-            rest.onBlur?.(e);
-          }}
-          style={[type.body, { flex: 1, color: colors.foreground, paddingVertical: spacing.md }, inputStyle]}
+        {sheetAware && Platform.OS !== 'web' ? <BottomSheetTextInput
+          ref={handleSheetRef}
           {...rest}
-        />
+          accessibilityLabel={accessibilityLabel}
+          accessibilityHint={accessibilityHint}
+          placeholderTextColor={placeholderTextColor ?? colors.mutedForeground}
+          secureTextEntry={password ? !reveal : secureTextEntry}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          style={[type.body, { flex: 1, color: colors.foreground, paddingVertical: spacing.md }, inputStyle]}
+        /> : <TextInput
+          ref={ref}
+          {...rest}
+          accessibilityLabel={accessibilityLabel}
+          accessibilityHint={accessibilityHint}
+          placeholderTextColor={placeholderTextColor ?? colors.mutedForeground}
+          secureTextEntry={password ? !reveal : secureTextEntry}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          style={[type.body, { flex: 1, color: colors.foreground, paddingVertical: spacing.md }, inputStyle]}
+        />}
 
         {password ? (
           <Pressable
             onPress={() => setReveal((v) => !v)}
-            hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel={reveal ? 'Hide password' : 'Show password'}
+            style={({ pressed }) => ({
+              minWidth: HIT_SLOP_MIN,
+              minHeight: HIT_SLOP_MIN,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: radius.sm,
+              backgroundColor: pressed ? colors.pressed : 'transparent',
+            })}
           >
             {reveal ? (
               <EyeOff size={iconSize.md} color={colors.mutedForeground} strokeWidth={2} />

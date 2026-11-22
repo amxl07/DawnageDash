@@ -6,17 +6,28 @@ export const spacing = {
   sm: 8,
   md: 12,
   base: 16,
+  content: 20,
   lg: 24,
+  section: 28,
   xl: 32,
+  spacious: 40,
   '2xl': 48,
 } as const;
 
-export const radius = { sm: 8, md: 12, card: 20, pill: 999 } as const;
+export const radius = {
+  sm: 8,
+  input: 12,
+  md: 12,
+  button: 14,
+  card: 24,
+  sheet: 28,
+  pill: 999,
+} as const;
 
 export const iconSize = { sm: 16, md: 20, lg: 24, xl: 32 } as const;
 
 /** Minimum interactive target. Reach it with padding first, hitSlop second. */
-export const HIT_SLOP_MIN = 44;
+export const HIT_SLOP_MIN = Platform.select({ android: 48, default: 44 }) ?? 44;
 
 /** Tabular figures: any number that animates, aligns in a column, or sits in a
  *  table. Android support is inconsistent — always pair with a fixed minWidth. */
@@ -26,25 +37,40 @@ export const fonts = {
   interRegular: 'Inter_400Regular',
   interMedium: 'Inter_500Medium',
   interSemiBold: 'Inter_600SemiBold',
-  interBold: 'Inter_700Bold',
-  poppinsRegular: 'Poppins_400Regular',
-  poppinsSemiBold: 'Poppins_600SemiBold',
-  poppinsBold: 'Poppins_700Bold',
+} as const;
+
+const uiFont = {
+  regular: Platform.select({ ios: undefined, default: fonts.interRegular }),
+  medium: Platform.select({ ios: undefined, default: fonts.interMedium }),
+  semiBold: Platform.select({ ios: undefined, default: fonts.interSemiBold }),
 } as const;
 
 /** Type scale. Nothing a user must read drops below 14. */
 export const type = {
-  display: { fontFamily: fonts.poppinsBold, fontSize: 32, lineHeight: 38 },
-  metric: { fontFamily: fonts.poppinsBold, fontSize: 28, lineHeight: 34 },
-  h1: { fontFamily: fonts.interBold, fontSize: 24, lineHeight: 30 },
-  h2: { fontFamily: fonts.interSemiBold, fontSize: 18, lineHeight: 24 },
-  body: { fontFamily: fonts.interRegular, fontSize: 16, lineHeight: 24 },
-  bodySm: { fontFamily: fonts.interRegular, fontSize: 14, lineHeight: 20 },
+  display: { fontFamily: uiFont.semiBold, fontWeight: '600', fontSize: 34, lineHeight: 40, letterSpacing: -0.6 },
+  metric: { fontFamily: uiFont.semiBold, fontWeight: '600', fontSize: 44, lineHeight: 50, letterSpacing: -0.6 },
+  h1: { fontFamily: uiFont.semiBold, fontWeight: '600', fontSize: 28, lineHeight: 34, letterSpacing: -0.4 },
+  h2: { fontFamily: uiFont.semiBold, fontWeight: '600', fontSize: 21, lineHeight: 27, letterSpacing: -0.2 },
+  body: { fontFamily: uiFont.regular, fontWeight: '400', fontSize: 17, lineHeight: 24 },
+  bodySm: { fontFamily: uiFont.regular, fontWeight: '400', fontSize: 15, lineHeight: 21 },
   label: {
-    fontFamily: fonts.interSemiBold,
+    fontFamily: uiFont.medium,
+    fontWeight: '500',
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  caption: {
+    fontFamily: uiFont.regular,
+    fontWeight: '400',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  overline: {
+    fontFamily: uiFont.medium,
+    fontWeight: '500',
     fontSize: 12,
     lineHeight: 16,
-    letterSpacing: 0.6,
+    letterSpacing: 0.5,
     textTransform: 'uppercase' as const,
   },
 } satisfies Record<string, TextStyle>;
@@ -57,12 +83,12 @@ export const motion = {
   duration: { micro: 120, feedback: 160, enter: 200, exit: 160, value: 260, celebration: 500 },
   /** Cubic-bezier control points; feed to Easing.bezier(...). */
   easing: {
-    standard: [0.16, 1, 0.3, 1] as const,
+    standard: [0.23, 1, 0.32, 1] as const,
     exit: [0.4, 0, 1, 1] as const,
   },
   spring: {
     sheet: { damping: 20, stiffness: 90 },
-    press: { damping: 15, stiffness: 250 },
+    press: { duration: 120, dampingRatio: 1 },
   },
   pressScale: 0.97,
 } as const;
@@ -77,12 +103,13 @@ export const shadow = {
       ? {}
       : Platform.select({
           ios: {
-            shadowColor: '#000',
+            shadowColor: '#17243B',
             shadowOpacity: 0.06,
             shadowRadius: 12,
             shadowOffset: { width: 0, height: 2 },
           },
           android: { elevation: 2 },
+          web: { boxShadow: '0px 4px 20px rgba(23,36,59,0.045)' },
           default: {},
         }),
   sheet: (isDark: boolean) =>
@@ -90,12 +117,13 @@ export const shadow = {
       ? {}
       : Platform.select({
           ios: {
-            shadowColor: '#000',
+            shadowColor: '#17243B',
             shadowOpacity: 0.12,
             shadowRadius: 24,
             shadowOffset: { width: 0, height: 8 },
           },
           android: { elevation: 8 },
+          web: { boxShadow: '0px 8px 32px rgba(23,36,59,0.12)' },
           default: {},
         }),
 } as const;

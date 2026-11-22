@@ -1,4 +1,4 @@
-import type { CheckInStep, FormState } from '@/components/checkin/CheckInForm';
+import type { CheckInStep, FormState } from '@/features/checkin/model';
 
 type Errors = Partial<Record<keyof FormState, string>>;
 

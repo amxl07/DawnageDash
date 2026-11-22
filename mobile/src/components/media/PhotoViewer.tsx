@@ -1,7 +1,7 @@
-import { Image } from 'expo-image';
+import { PrivatePhoto } from './PrivatePhoto';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, findNodeHandle, Modal, Pressable, View } from 'react-native';
+import { AccessibilityInfo, findNodeHandle, Modal, Platform, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui';
@@ -10,9 +10,39 @@ import { HIT_SLOP_MIN, iconSize, spacing, useMotion, useTheme } from '@/theme';
 export type ViewerPhoto = {
   label: string;
   weekLabel: string;
+  /** Durable photo reference, resolved to a short-lived URL only by PrivatePhoto. */
   url: string;
   caption: string;
 };
+
+export type PhotoFocusTarget = View | { focus: () => void };
+
+/** RN Web throws when its host node is passed through findNodeHandle. */
+export function focusPhotoTarget(
+  target: PhotoFocusTarget | null | undefined,
+  platform: typeof Platform.OS = Platform.OS,
+): boolean {
+  if (!target) return false;
+  if (platform === 'web') {
+    const focus = (target as { focus?: () => void }).focus;
+    if (typeof focus !== 'function') return false;
+    try {
+      focus.call(target);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  try {
+    const handle = findNodeHandle(target as View);
+    if (handle == null) return false;
+    AccessibilityInfo.setAccessibilityFocus(handle);
+    return true;
+  } catch {
+    // The target can disappear while a modal is closing; focus is best-effort.
+    return false;
+  }
+}
 
 export function photoPositionForSourceIndex(
   sourceSlots: readonly { url: string | null }[],
@@ -29,10 +59,12 @@ export function PhotoViewer({
   photos,
   startIndex,
   onClose,
+  returnFocusTarget,
 }: {
   photos: ViewerPhoto[];
   startIndex: number;
   onClose: () => void;
+  returnFocusTarget?: PhotoFocusTarget | null;
 }) {
   const { colors } = useTheme();
   const motion = useMotion();
@@ -50,11 +82,18 @@ export function PhotoViewer({
 
   const focusAndAnnounce = useCallback(() => {
     if (!announcement) return;
-    const handle = findNodeHandle(photoRef.current);
-    if (handle != null) AccessibilityInfo.setAccessibilityFocus(handle);
-    AccessibilityInfo.announceForAccessibility(announcement);
+    if (!focusPhotoTarget(photoRef.current)) {
+      AccessibilityInfo.announceForAccessibility(announcement);
+    }
     focusedAnnouncementRef.current = announcement;
   }, [announcement]);
+
+  useEffect(
+    () => () => {
+      focusPhotoTarget(returnFocusTarget);
+    },
+    [returnFocusTarget],
+  );
 
   useEffect(() => {
     if (
@@ -97,7 +136,13 @@ export function PhotoViewer({
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Close photo viewer"
-            style={{ minWidth: HIT_SLOP_MIN, minHeight: HIT_SLOP_MIN, alignItems: 'flex-end', justifyContent: 'center' }}
+            style={({ pressed }) => ({
+              minWidth: HIT_SLOP_MIN,
+              minHeight: HIT_SLOP_MIN,
+              alignItems: 'flex-end',
+              justifyContent: 'center',
+              backgroundColor: pressed ? colors.pressed : 'transparent',
+            })}
           >
             <X size={iconSize.lg} color={colors.foreground} strokeWidth={2} />
           </Pressable>
@@ -106,16 +151,16 @@ export function PhotoViewer({
         <View
           ref={photoRef}
           accessible
+          focusable
           accessibilityRole="image"
           accessibilityLabel={announcement}
           style={{ flex: 1 }}
         >
-          <Image
-            source={{ uri: photo.url }}
+          <PrivatePhoto
+            reference={photo.url}
             style={{ width: '100%', height: '100%' }}
             contentFit="contain"
-            cachePolicy="memory-disk"
-            recyclingKey={`viewer:${photo.url}`}
+            transition={motion.reduced ? 0 : Math.min(160, motion.duration.micro)}
             accessible={false}
           />
         </View>
@@ -135,7 +180,13 @@ export function PhotoViewer({
             accessibilityRole="button"
             accessibilityLabel="Previous angle"
             accessibilityState={{ disabled: safeIndex === 0 }}
-            style={{ minWidth: HIT_SLOP_MIN, minHeight: HIT_SLOP_MIN, justifyContent: 'center', opacity: safeIndex === 0 ? 0.35 : 1 }}
+            style={({ pressed }) => ({
+              minWidth: HIT_SLOP_MIN,
+              minHeight: HIT_SLOP_MIN,
+              justifyContent: 'center',
+              opacity: safeIndex === 0 ? 0.35 : 1,
+              backgroundColor: pressed ? colors.pressed : 'transparent',
+            })}
           >
             <ChevronLeft size={iconSize.xl} color={colors.foreground} strokeWidth={2} />
           </Pressable>
@@ -172,7 +223,14 @@ export function PhotoViewer({
             accessibilityRole="button"
             accessibilityLabel="Next angle"
             accessibilityState={{ disabled: safeIndex === photos.length - 1 }}
-            style={{ minWidth: HIT_SLOP_MIN, minHeight: HIT_SLOP_MIN, alignItems: 'flex-end', justifyContent: 'center', opacity: safeIndex === photos.length - 1 ? 0.35 : 1 }}
+            style={({ pressed }) => ({
+              minWidth: HIT_SLOP_MIN,
+              minHeight: HIT_SLOP_MIN,
+              alignItems: 'flex-end',
+              justifyContent: 'center',
+              opacity: safeIndex === photos.length - 1 ? 0.35 : 1,
+              backgroundColor: pressed ? colors.pressed : 'transparent',
+            })}
           >
             <ChevronRight size={iconSize.xl} color={colors.foreground} strokeWidth={2} />
           </Pressable>

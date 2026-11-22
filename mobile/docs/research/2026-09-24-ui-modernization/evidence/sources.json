@@ -1,0 +1,568 @@
+{
+  "research_dates_local": [
+    "2026-09-23",
+    "2026-09-24"
+  ],
+  "timezone": "Asia/Kolkata",
+  "sources": [
+    {
+      "id": "apple-materials",
+      "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/materials.json",
+      "fetched_at": "2026-09-23T18:28:04.400239+00:00",
+      "status": 200,
+      "final_url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/materials.json",
+      "bytes": 76600,
+      "sha256": "597da170985715de4bd8446df12e3604595e634a790b5da0ce6673d2b2327ed5",
+      "title": "Materials",
+      "text_chars": 10933
+    },
+    {
+      "id": "apple-buttons",
+      "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/buttons.json",
+      "fetched_at": "2026-09-23T18:28:04.513940+00:00",
+      "status": 200,
+      "final_url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/buttons.json",
+      "bytes": 70324,
+      "sha256": "fb450f96dd7a201a0203852782252942ee6d72978e0baaec1cb4c400568fed91",
+      "title": "Buttons",
+      "text_chars": 15907
+    },
+    {
+      "id": "apple-tab-bars",
+      "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/tab-bars.json",
+      "fetched_at": "2026-09-23T18:28:04.514961+00:00",
+      "status": 200,
+      "final_url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/tab-bars.json",
+      "bytes": 53333,
+      "sha256": "b2f48f79d3f8a5bd00f2e3b462a19debd0a557ea0113ed8e573907bb06513f07",
+      "title": "Tab bars",
+      "text_chars": 8691
+    },
+    {
+      "id": "apple-toolbars",
+      "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/toolbars.json",
+      "fetched_at": "2026-09-23T18:28:04.515162+00:00",
+      "status": 200,
+      "final_url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/toolbars.json",
+      "bytes": 72799,
+      "sha256": "4f1147642ab0561dcb2d4b074be970a537e2072be41e061314d1e234b4cdc6f7",
+      "title": "Toolbars",
+      "text_chars": 14794
+    },
+    {
+      "id": "apple-segmented-controls",
+      "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/segmented-controls.json",
+      "fetched_at": "2026-09-23T18:28:04.515402+00:00",
+      "status": 200,
+      "final_url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/segmented-controls.json",
+      "bytes": 30736,
+      "sha256": "58316edb97f3e1b141e4c86d4671ebc994f5feb68576379f94f5f4be29537d88",
+      "title": "Segmented controls",
+      "text_chars": 5671
+    },
+    {
+      "id": "apple-sheets",
+      "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/sheets.json",
+      "fetched_at": "2026-09-23T18:28:04.515575+00:00",
+      "status": 200,
+      "final_url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/sheets.json",
+      "bytes": 56812,
+      "sha256": "3e1a1accb148d23db5a74907b56438de35cdafdb1aafcc12722c7097d7829459",
+      "title": "Sheets",
+      "text_chars": 10090
+    },
+    {
+      "id": "apple-menus",
+      "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/menus.json",
+      "fetched_at": "2026-09-23T18:28:04.515763+00:00",
+      "status": 200,
+      "final_url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/menus.json",
+      "bytes": 48890,
+      "sha256": "dff423968b85e717c175a1999897224e6157cd7ce2f5907d64bf93088532dcf1",
+      "title": "Menus",
+      "text_chars": 13657
+    },
+    {
+      "id": "apple-accessibility",
+      "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/accessibility.json",
+      "fetched_at": "2026-09-23T18:28:04.515940+00:00",
+      "status": 200,
+      "final_url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/accessibility.json",
+      "bytes": 85010,
+      "sha256": "be49ec0b34397f356a1e3fd8c7ad323713198515523947097913cb9c57da699b",
+      "title": "Accessibility",
+      "text_chars": 16740
+    },
+    {
+      "id": "apple-typography",
+      "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/typography.json",
+      "fetched_at": "2026-09-23T18:28:06.091511+00:00",
+      "status": 200,
+      "final_url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/typography.json",
+      "bytes": 281141,
+      "sha256": "85bf7dc78d41a6e5e16d4055f3bdadf7bac4f7d5cb2206514c8b82d5d24631ed",
+      "title": "Typography",
+      "text_chars": 32852
+    },
+    {
+      "id": "apple-adopting-glass",
+      "url": "https://developer.apple.com/tutorials/data/documentation/technologyoverviews/adopting-liquid-glass.json",
+      "fetched_at": "2026-09-23T18:28:06.093605+00:00",
+      "status": 200,
+      "final_url": "https://developer.apple.com/tutorials/data/documentation/technologyoverviews/adopting-liquid-glass.json",
+      "bytes": 151866,
+      "sha256": "30dcd1ca1011f1626aea5f5f1c4d2ed6581258aba8afed8226a3eed9b2fba846",
+      "title": "Adopting Liquid Glass",
+      "text_chars": 18589
+    },
+    {
+      "id": "apple-design-whats-new",
+      "url": "https://developer.apple.com/design/whats-new/",
+      "fetched_at": "2026-09-23T18:28:06.103842+00:00",
+      "status": 200,
+      "final_url": "https://developer.apple.com/design/whats-new/",
+      "bytes": 395652,
+      "sha256": "4b287e796ea9a53a70c44e90cf9806337ee5500e810da78ace5ab076d3a1d765",
+      "text_chars": 55660
+    },
+    {
+      "id": "apple-developer-news",
+      "url": "https://developer.apple.com/news/rss/news.rss",
+      "fetched_at": "2026-09-23T18:28:06.127692+00:00",
+      "status": 200,
+      "final_url": "https://developer.apple.com/news/rss/news.rss",
+      "bytes": 427604,
+      "sha256": "59409bc048d4f3e44ef533c7cf629552be43a512a4a219a52d6057ed303a3548",
+      "text_chars": 424468
+    },
+    {
+      "id": "expo-native-tabs",
+      "url": "https://raw.githubusercontent.com/expo/expo/main/docs/pages/router/advanced/native-tabs.mdx",
+      "fetched_at": "2026-09-23T18:28:06.569487+00:00",
+      "status": 200,
+      "final_url": "https://raw.githubusercontent.com/expo/expo/main/docs/pages/router/advanced/native-tabs.mdx",
+      "bytes": 59985,
+      "sha256": "d0fb4052c12896716f94402a9359ab07bc61a34de8c03e2ba27ea40819a49a9e",
+      "text_chars": 59947
+    },
+    {
+      "id": "expo-ui",
+      "url": "https://raw.githubusercontent.com/expo/expo/main/docs/pages/versions/unversioned/sdk/ui.mdx",
+      "fetched_at": "2026-09-23T18:28:06.624002+00:00",
+      "status": 404,
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "id": "expo-glass",
+      "url": "https://raw.githubusercontent.com/expo/expo/main/docs/pages/versions/unversioned/sdk/glass-effect.mdx",
+      "fetched_at": "2026-09-23T18:28:06.628503+00:00",
+      "status": 200,
+      "final_url": "https://raw.githubusercontent.com/expo/expo/main/docs/pages/versions/unversioned/sdk/glass-effect.mdx",
+      "bytes": 10426,
+      "sha256": "df6cf76b1e814cdb60c06281066cea486a6791b0db31bd4d04aafae2929ff228",
+      "text_chars": 10426
+    },
+    {
+      "id": "expo-ui-swiftui",
+      "url": "https://raw.githubusercontent.com/expo/expo/main/docs/pages/guides/expo-ui-swift-ui.mdx",
+      "fetched_at": "2026-09-23T18:28:06.630324+00:00",
+      "status": 404,
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "id": "expo-router-changes",
+      "url": "https://raw.githubusercontent.com/expo/expo/sdk-57/packages/expo-router/CHANGELOG.md",
+      "fetched_at": "2026-09-23T18:28:06.696453+00:00",
+      "status": 200,
+      "final_url": "https://raw.githubusercontent.com/expo/expo/sdk-57/packages/expo-router/CHANGELOG.md",
+      "bytes": 118066,
+      "sha256": "5b3049b6cceb8b10cb687440d6355bdff50610443e1e139763146cb21d25ac84",
+      "text_chars": 117077
+    },
+    {
+      "id": "expo-ui-changes",
+      "url": "https://raw.githubusercontent.com/expo/expo/sdk-57/packages/expo-ui/CHANGELOG.md",
+      "fetched_at": "2026-09-23T18:28:07.543920+00:00",
+      "status": 200,
+      "final_url": "https://raw.githubusercontent.com/expo/expo/sdk-57/packages/expo-ui/CHANGELOG.md",
+      "bytes": 115573,
+      "sha256": "001efd15787caedb3b06298ff7c8a78ae41d9e02efe309dde4110303a84749fb",
+      "text_chars": 114976
+    },
+    {
+      "id": "expo-sdk-registry",
+      "url": "https://registry.npmjs.org/expo/latest",
+      "fetched_at": "2026-09-23T18:28:07.544071+00:00",
+      "status": 200,
+      "final_url": "https://registry.npmjs.org/expo/latest",
+      "bytes": 4163,
+      "sha256": "72b7e1a16e9fb4e924dc0c1b3e528df40516d13ad9366d223d6147931c7cc70a",
+      "text_chars": 4163
+    },
+    {
+      "id": "expo-ui-registry",
+      "url": "https://registry.npmjs.org/@expo/ui/latest",
+      "fetched_at": "2026-09-23T18:28:07.690285+00:00",
+      "status": 200,
+      "final_url": "https://registry.npmjs.org/@expo/ui/latest",
+      "bytes": 4864,
+      "sha256": "86aebed53ccf268f7022a0a4ffdfaae4d857ee0512fbf70565b4053fe6dc84d3",
+      "text_chars": 4864
+    },
+    {
+      "id": "material-expressive",
+      "url": "https://m3.material.io/blog/building-with-m3-expressive",
+      "fetched_at": "2026-09-23T18:28:07.821809+00:00",
+      "status": 200,
+      "final_url": "https://m3.material.io/blog/building-with-m3-expressive",
+      "bytes": 62196,
+      "sha256": "af3535ed5c92626c72c7d22d559e1883a2874879381f385e758e224b75d5c421",
+      "text_chars": 67
+    },
+    {
+      "id": "android-expressive",
+      "url": "https://android-developers.googleblog.com/2025/05/material-3-expressive-design-language.html",
+      "fetched_at": "2026-09-23T18:28:08.105873+00:00",
+      "status": 404,
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "id": "oura-today",
+      "url": "https://support.ouraring.com/hc/en-us/articles/34121194976915-Meet-the-Oura-App",
+      "fetched_at": "2026-09-23T18:28:08.209348+00:00",
+      "status": 404,
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "id": "hevy-features",
+      "url": "https://www.hevyapp.com/features/",
+      "fetched_at": "2026-09-23T18:28:08.235367+00:00",
+      "status": 200,
+      "final_url": "https://www.hevyapp.com/features/",
+      "bytes": 191823,
+      "sha256": "0d00fdb17c32a918edf63fb84d2f148891811b5441be143192d257b91b8afea2",
+      "text_chars": 5689
+    },
+    {
+      "id": "apple-design-awards",
+      "url": "https://developer.apple.com/design/awards/",
+      "fetched_at": "2026-09-23T18:28:08.591713+00:00",
+      "status": 200,
+      "final_url": "https://developer.apple.com/design/awards/",
+      "bytes": 157830,
+      "sha256": "85017ded0fea3cd4be8a58c8813f6fb3a7e2f89360d04b5d7978372ae84d1312",
+      "text_chars": 25935
+    },
+    {
+      "id": "apple-fitness",
+      "url": "https://www.apple.com/apple-fitness-plus/",
+      "fetched_at": "2026-09-23T18:28:08.797814+00:00",
+      "status": 200,
+      "final_url": "https://www.apple.com/apple-fitness-plus/",
+      "bytes": 395367,
+      "sha256": "de48070ac34196f2318ab0415836f166de7e7d5834aef8ada71be8f572ed3931",
+      "text_chars": 15788
+    },
+    {
+      "id": "sf-symbols",
+      "url": "https://developer.apple.com/sf-symbols/",
+      "fetched_at": "2026-09-23T18:28:09.228615+00:00",
+      "status": 200,
+      "final_url": "https://developer.apple.com/sf-symbols/",
+      "bytes": 115034,
+      "sha256": "248409e0934f31195664fd31eab5622afc05f2ad02235c2b7e112cc9851a6f75",
+      "text_chars": 6835
+    },
+    {
+      "id": "apple-branding",
+      "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/branding.json",
+      "fetched_at": "2026-09-23T18:30:23.766779+00:00",
+      "status": 200,
+      "final_url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/branding.json",
+      "bytes": 21742,
+      "sha256": "2251b5c75eeaae25282ba10257cf26a3f5c92b01fb253f39010e610bcc8fce60",
+      "text_chars": 3729
+    },
+    {
+      "id": "apple-layout",
+      "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/layout.json",
+      "fetched_at": "2026-09-23T18:30:23.767668+00:00",
+      "status": 200,
+      "final_url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/layout.json",
+      "bytes": 84939,
+      "sha256": "d41f32ddf76c597f0edd54eac361fa294a8736cfc4ccc627d1709fe092ed7267",
+      "text_chars": 17517
+    },
+    {
+      "id": "apple-design-principles",
+      "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/design-principles.json",
+      "fetched_at": "2026-09-23T18:30:23.767961+00:00",
+      "status": 200,
+      "final_url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/design-principles.json",
+      "bytes": 26295,
+      "sha256": "69ea6425412bcb6410f8b6355e4d113c773731056e31b9ef730f07515045fa36",
+      "text_chars": 8867
+    },
+    {
+      "id": "apple-duo",
+      "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/designing-for-iphone-duo.json",
+      "fetched_at": "2026-09-23T18:30:23.768154+00:00",
+      "status": 200,
+      "final_url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/designing-for-iphone-duo.json",
+      "bytes": 77177,
+      "sha256": "71ec6a42224a2328d4e4f48e8e8b41db5912b84a935e463bd376f38b8f1ba7ad",
+      "text_chars": 14477
+    },
+    {
+      "id": "apple-scroll-views",
+      "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/scroll-views.json",
+      "fetched_at": "2026-09-23T18:30:23.768375+00:00",
+      "status": 200,
+      "final_url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/scroll-views.json",
+      "bytes": 43377,
+      "sha256": "fa99110bf671741536de552c96154c6b6fb447bdce754b9b55c3536b4deae8e8",
+      "text_chars": 11509
+    },
+    {
+      "id": "apple-sliders",
+      "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/sliders.json",
+      "fetched_at": "2026-09-23T18:30:23.768536+00:00",
+      "status": 200,
+      "final_url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/sliders.json",
+      "bytes": 27352,
+      "sha256": "d557c0acf0362a586460bed995d1fdc6a605117d5051d6d4dcbe42eeb27e273f",
+      "text_chars": 4846
+    },
+    {
+      "id": "apple-resources",
+      "url": "https://developer.apple.com/design/resources/",
+      "fetched_at": "2026-09-23T18:30:23.768691+00:00",
+      "status": 200,
+      "final_url": "https://developer.apple.com/design/resources/",
+      "bytes": 152321,
+      "sha256": "a6124e1da126c86216c8b025554f0a7824a15d179f08d4fc9b08e3c32e65c141",
+      "text_chars": 7380
+    },
+    {
+      "id": "apple-design-2026",
+      "url": "https://developer.apple.com/videos/play/wwdc2026/250/",
+      "fetched_at": "2026-09-23T18:30:23.768858+00:00",
+      "status": 200,
+      "final_url": "https://developer.apple.com/videos/play/wwdc2026/250/",
+      "bytes": 152181,
+      "sha256": "b3af08422dbd3ada448243e6add2df911a25bf39e0fab63d751dbbe3480cd19f",
+      "text_chars": 20970
+    },
+    {
+      "id": "apple-search-2026",
+      "url": "https://developer.apple.com/videos/play/wwdc2026/292/",
+      "fetched_at": "2026-09-23T18:30:31.912655+00:00",
+      "status": 200,
+      "final_url": "https://developer.apple.com/videos/play/wwdc2026/292/",
+      "bytes": 144878,
+      "sha256": "74bf7d1f7f51650de7d08d38de067a885f50ba43e0842e499420201cf7f83b95",
+      "text_chars": 18723
+    },
+    {
+      "id": "apple-submissions",
+      "url": "https://developer.apple.com/news/?id=k1mtkt1k",
+      "fetched_at": "2026-09-23T18:30:31.914730+00:00",
+      "status": 200,
+      "final_url": "https://developer.apple.com/news/?id=k1mtkt1k",
+      "bytes": 113477,
+      "sha256": "0f80ed39ca1a55dd7f6987e8f5a129047d8a45b725a0ae35961ce68b86a4e7ec",
+      "text_chars": 5049
+    },
+    {
+      "id": "expo-native-tabs-sdk57",
+      "url": "https://raw.githubusercontent.com/expo/expo/sdk-57/docs/pages/router/advanced/native-tabs.mdx",
+      "fetched_at": "2026-09-23T18:30:31.914958+00:00",
+      "status": 200,
+      "final_url": "https://raw.githubusercontent.com/expo/expo/sdk-57/docs/pages/router/advanced/native-tabs.mdx",
+      "bytes": 48434,
+      "sha256": "8d5da1997f9856b607af5140450813363a8fa169d4b2d4af1ef58c3cc89763b6",
+      "text_chars": 48420
+    },
+    {
+      "id": "expo-ui-sdk57",
+      "url": "https://raw.githubusercontent.com/expo/expo/sdk-57/docs/pages/versions/unversioned/sdk/ui/index.mdx",
+      "fetched_at": "2026-09-23T18:30:32.411249+00:00",
+      "status": 200,
+      "final_url": "https://raw.githubusercontent.com/expo/expo/sdk-57/docs/pages/versions/unversioned/sdk/ui/index.mdx",
+      "bytes": 1077,
+      "sha256": "f91fac30a32c46ab954518be3ca74ddf4fb7e8d8ee0a20cfdac3b8f4dec4a56d",
+      "text_chars": 1077
+    },
+    {
+      "id": "expo-ui-button-sdk57",
+      "url": "https://raw.githubusercontent.com/expo/expo/sdk-57/docs/pages/versions/unversioned/sdk/ui/swift-ui/button.mdx",
+      "fetched_at": "2026-09-23T18:30:32.770536+00:00",
+      "status": 200,
+      "final_url": "https://raw.githubusercontent.com/expo/expo/sdk-57/docs/pages/versions/unversioned/sdk/ui/swift-ui/button.mdx",
+      "bytes": 6898,
+      "sha256": "5835809c7aa44fbe603c2ad0a2401f52f746c9016e28a6e4e252b530dceff498",
+      "text_chars": 6894
+    },
+    {
+      "id": "expo-ui-host-sdk57",
+      "url": "https://raw.githubusercontent.com/expo/expo/sdk-57/docs/pages/versions/unversioned/sdk/ui/swift-ui/host.mdx",
+      "fetched_at": "2026-09-23T18:30:32.792317+00:00",
+      "status": 200,
+      "final_url": "https://raw.githubusercontent.com/expo/expo/sdk-57/docs/pages/versions/unversioned/sdk/ui/swift-ui/host.mdx",
+      "bytes": 6711,
+      "sha256": "3f373fa7dae97840c4321689cf36f6fbe42668773daf80f3ea411a2f219431d6",
+      "text_chars": 6709
+    },
+    {
+      "id": "expo-ui-community-sdk57",
+      "url": "https://raw.githubusercontent.com/expo/expo/sdk-57/docs/pages/versions/unversioned/sdk/ui/drop-in-replacements/segmented-control.mdx",
+      "fetched_at": "2026-09-23T18:30:32.833214+00:00",
+      "status": 404,
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "id": "material-blog",
+      "url": "https://design.google/library/expressive-material-design-google-research",
+      "fetched_at": "2026-09-23T18:30:32.875298+00:00",
+      "status": 200,
+      "final_url": "https://design.google/library/expressive-material-design-google-research",
+      "bytes": 151040,
+      "sha256": "44c4340e7ffe77c19ea5c0dee7f5b2ced24a22968613f5041f14458e81d80418",
+      "text_chars": 11851
+    },
+    {
+      "id": "android-material3",
+      "url": "https://developer.android.com/develop/ui/compose/designsystems/material3",
+      "fetched_at": "2026-09-23T18:30:32.954924+00:00",
+      "status": 200,
+      "final_url": "https://developer.android.com/develop/ui/compose/designsystems/material3",
+      "bytes": 470538,
+      "sha256": "20570ace60c7101ef26eac3245ccfbe7e6ef8caf193b8f9ce108cbef46292bea",
+      "text_chars": 36959
+    },
+    {
+      "id": "bevel",
+      "url": "https://www.bevel.health/",
+      "fetched_at": "2026-09-23T18:30:33.264761+00:00",
+      "status": 200,
+      "final_url": "https://www.bevel.health/",
+      "bytes": 239950,
+      "sha256": "f88002e2786efa713549f34facff24527a3f2c417638c1c161580fbc96b26cc1",
+      "text_chars": 6801
+    },
+    {
+      "id": "gentler",
+      "url": "https://gentler.app/",
+      "fetched_at": "2026-09-23T18:30:33.266348+00:00",
+      "status": 200,
+      "final_url": "https://gentlerstories.com/gentlerstreak",
+      "bytes": 877498,
+      "sha256": "de2f3e87c085514314248756b47f93af2becd0634a4a4245e8c0272e59e05c87",
+      "text_chars": 22577
+    },
+    {
+      "id": "oura",
+      "url": "https://ouraring.com/blog/oura-app-redesign/",
+      "fetched_at": "2026-09-23T18:30:33.266877+00:00",
+      "status": 404,
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "id": "oura-search",
+      "url": "https://support.ouraring.com/api/v2/help_center/en-us/articles/search.json?query=Today%20Vitals%20My%20Health&per_page=3",
+      "fetched_at": "2026-09-23T18:30:33.268806+00:00",
+      "status": 404,
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "id": "heroui-native",
+      "url": "https://registry.npmjs.org/heroui-native/latest",
+      "fetched_at": "2026-09-23T18:30:33.324835+00:00",
+      "status": 200,
+      "final_url": "https://registry.npmjs.org/heroui-native/latest",
+      "bytes": 5356,
+      "sha256": "5687a4f0a6e14542413766a81e759506f5c912079a3d2e7fc27b826ad4705bef",
+      "text_chars": 5356
+    },
+    {
+      "id": "tamagui",
+      "url": "https://registry.npmjs.org/tamagui/latest",
+      "fetched_at": "2026-09-23T18:30:33.797071+00:00",
+      "status": 200,
+      "final_url": "https://registry.npmjs.org/tamagui/latest",
+      "bytes": 5268,
+      "sha256": "571da9c4381765143128b7fba7e867d47d2a0a727239f76fea22fcf0f2bcc7a5",
+      "text_chars": 5268
+    },
+    {
+      "id": "react-native-paper",
+      "url": "https://registry.npmjs.org/react-native-paper/latest",
+      "fetched_at": "2026-09-23T18:30:33.806676+00:00",
+      "status": 200,
+      "final_url": "https://registry.npmjs.org/react-native-paper/latest",
+      "bytes": 4844,
+      "sha256": "c17b358a33ef42ee3d07546d6a0b4b80b3af5e9961f376e93c3c8639ea021226",
+      "text_chars": 4844
+    },
+    {
+      "id": "gluestack-core",
+      "url": "https://registry.npmjs.org/@gluestack-ui/core/latest",
+      "fetched_at": "2026-09-23T18:30:34.369573+00:00",
+      "status": 200,
+      "final_url": "https://registry.npmjs.org/@gluestack-ui/core/latest",
+      "bytes": 6619,
+      "sha256": "4022e6cb6288614aad23cefd47b6658161dd017b0705617465c0432ba4d5b7c7",
+      "text_chars": 6619
+    },
+    {
+      "id": "bottom-sheet-registry",
+      "url": "https://registry.npmjs.org/@gorhom/bottom-sheet/latest",
+      "fetched_at": "2026-09-23T18:30:34.369766+00:00",
+      "status": 200,
+      "final_url": "https://registry.npmjs.org/@gorhom/bottom-sheet/latest",
+      "bytes": 3431,
+      "sha256": "a2b5f86f63cec278026e709dfa9838d0bf3feee6c025fbd65adfba5beaef9405",
+      "text_chars": 3428
+    },
+    {
+      "id": "moonlitt-appstore",
+      "url": "https://itunes.apple.com/lookup?id=6444718902&country=us",
+      "status": 200,
+      "version": "2.9",
+      "release": "2026-09-10T18:28:02Z",
+      "screenshot": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/f0/28/64/f02864b3-2d1a-f83d-d0e5-a6b7cae73544/01.jpg/320x480bb.jpg",
+      "sha256": "bc419d0ac19cd30253ccf27a6d8a649560aad755dac584a7a8fe4caeb613cd53",
+      "fetched_at": "2026-09-23T18:32:14.260346+00:00"
+    },
+    {
+      "id": "outsiders-appstore",
+      "url": "https://itunes.apple.com/lookup?id=6751584800&country=us",
+      "status": 200,
+      "version": "1.8.1",
+      "release": "2026-09-23T07:47:31Z",
+      "screenshot": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/81/ab/19/81ab194e-a3e7-b9cf-8e4f-ddc58f9d3059/iphone_1@3x.png/320x480bb.jpg",
+      "sha256": "3b9d6a00886b808de0d85f1797055300f9e99eac96e36ccb2e8adbbf3c079785",
+      "fetched_at": "2026-09-23T18:32:15.122355+00:00"
+    },
+    {
+      "id": "tide-guide-appstore",
+      "url": "https://itunes.apple.com/lookup?id=1406371071&country=us",
+      "status": 200,
+      "version": "27.0.4",
+      "release": "2026-09-21T20:47:40Z",
+      "screenshot": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/01/c2/75/01c27506-18a1-afbc-6c51-18a45641f47b/App_Store_-_6.7_-_1.png/320x480bb.jpg",
+      "sha256": "6d78168e2e3c057174bd611946af13183e755c5dfb5c8e736601ff7af7489362",
+      "fetched_at": "2026-09-23T18:32:14.640464+00:00"
+    },
+    {
+      "id": "hevy-appstore",
+      "url": "https://itunes.apple.com/lookup?id=1458862350&country=us",
+      "status": 200,
+      "version": "3.1.15",
+      "release": "2026-09-21T13:26:40Z",
+      "screenshot": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/a5/65/23/a565237a-1107-085e-1071-57c537ce452a/4f85acc6-9488-4d7b-bbc5-96ef1b35a303_screenshot0__U00281_U0029.png/392x696bb.png",
+      "sha256": "0389b82929104d33d6cbbc335eac7964690efa4d44f75d215cd9461fc4fdc1db",
+      "fetched_at": "2026-09-23T18:32:14.639659+00:00"
+    }
+  ]
+}

@@ -1,0 +1,179 @@
+{
+  "platform": "Expo web / headless Chrome",
+  "source": "fictional intercepted data",
+  "sourceRevision": "a220ad8ca459bd57cad294508fdeeafb2d34a800",
+  "sourceDirty": false,
+  "nativeValidation": false,
+  "capturedAt": "2026-09-15T23:31:55.909Z",
+  "baseUrl": "http://127.0.0.1:8090",
+  "records": [
+    {
+      "screen": "signin",
+      "theme": "dark",
+      "width": 390,
+      "height": 844,
+      "file": "signin-dark-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 142
+    },
+    {
+      "screen": "signin",
+      "theme": "light",
+      "width": 390,
+      "height": 844,
+      "file": "signin-light-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 142
+    },
+    {
+      "screen": "onboarding",
+      "theme": "dark",
+      "width": 390,
+      "height": 844,
+      "file": "onboarding-dark-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 358
+    },
+    {
+      "screen": "onboarding",
+      "theme": "light",
+      "width": 390,
+      "height": 844,
+      "file": "onboarding-light-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 358
+    },
+    {
+      "screen": "onboarding-rhythm",
+      "theme": "dark",
+      "width": 390,
+      "height": 844,
+      "file": "onboarding-rhythm-dark-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 556
+    },
+    {
+      "screen": "onboarding-rhythm",
+      "theme": "light",
+      "width": 390,
+      "height": 844,
+      "file": "onboarding-rhythm-light-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 556
+    },
+    {
+      "screen": "onboarding-ready",
+      "theme": "dark",
+      "width": 390,
+      "height": 844,
+      "file": "onboarding-ready-dark-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 391
+    },
+    {
+      "screen": "onboarding-ready",
+      "theme": "light",
+      "width": 390,
+      "height": 844,
+      "file": "onboarding-ready-light-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 391
+    },
+    {
+      "screen": "home",
+      "theme": "dark",
+      "width": 390,
+      "height": 844,
+      "file": "home-dark-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 564
+    },
+    {
+      "screen": "home",
+      "theme": "light",
+      "width": 390,
+      "height": 844,
+      "file": "home-light-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 564
+    },
+    {
+      "screen": "checkin",
+      "theme": "dark",
+      "width": 390,
+      "height": 844,
+      "file": "checkin-dark-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 1076
+    },
+    {
+      "screen": "checkin",
+      "theme": "light",
+      "width": 390,
+      "height": 844,
+      "file": "checkin-light-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 1076
+    },
+    {
+      "screen": "workout",
+      "theme": "dark",
+      "width": 390,
+      "height": 844,
+      "file": "workout-dark-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 410
+    },
+    {
+      "screen": "workout",
+      "theme": "light",
+      "width": 390,
+      "height": 844,
+      "file": "workout-light-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 410
+    }
+  ]
+}

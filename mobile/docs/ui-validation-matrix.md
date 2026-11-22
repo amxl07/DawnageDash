@@ -1,3 +1,11 @@
+# Premium redesign verification — 2026-09-16
+
+The premium redesign has a separate [evidence record](redesign/evidence/README.md) and [contract handoff](redesign/evidence/contracts.md). Its starting app source is `8ec16a7`; the planning snapshot is `61fd7bd`. Local source tests, browser captures, JavaScript exports and native-device checks are recorded separately. Fictional capture fixtures are checked in under `src/testing`; no live account or secret is used by the browser harness.
+
+The previous matrix below is the **historical 2026-08-30 release record**. Its build IDs and blocked states must not be interpreted as results for the new source. Native device, accessibility-service, performance and external backend/coach-web gates still require their own evidence before a release decision.
+
+---
+
 # Dawnage mobile UI release validation matrix
 
 This matrix is the release record for one immutable mobile build. A source revision is not a build, and an automated source check is not physical-device, accessibility-service, or runtime-performance evidence.
@@ -111,3 +119,7 @@ Release is blocked while any required row is `Not run`, `Blocked`, or `Fail`, or
 - `E2E-IOS-MAESTRO-UNAVAILABLE`: Maestro, E2E credentials, and an approved installed iOS build/device were unavailable, so the iOS flows were not run.
 - `E2E-ANDROID-MAESTRO-UNAVAILABLE`: Maestro, E2E credentials, ADB, and an approved installed Android build/device were unavailable, so the Android flows were not run.
 - `PRIV-CROSS-ACCOUNT-UNVERIFIED`: no authorized linked-environment session or dedicated non-production accounts were available for the required cross-account denial test.
+
+### Guided daily flows follow-up
+
+The September 2026 check-in and workout simplification has a separate [implementation and verification record](guided-daily-flows.md). Its automated checks and browser journeys do not change the native release verdict or evidence requirements above.

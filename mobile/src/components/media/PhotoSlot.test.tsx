@@ -1,9 +1,11 @@
+import { Image as ExpoImage } from 'expo-image';
 import { StyleSheet, Text as NativeText } from 'react-native';
 
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
 import { PhotoSlot, type SlotState } from './PhotoSlot';
+
+jest.mock('@/hooks/usePrivatePhotoUrl', () => ({ usePrivatePhotoUrl: (reference: string) => ({ url: reference, loading: false, refresh: jest.fn() }) }));
 
 const MockNativeText = NativeText;
 
@@ -36,6 +38,7 @@ jest.mock('@/theme', () => ({
   iconSize: { lg: 24 },
   radius: { md: 12 },
   spacing: { xs: 4 },
+  useMotion: () => ({ reduced: false, duration: { micro: 160 } }),
   useTheme: () => ({
     colors: {
       borderStrong: '#888',
@@ -160,23 +163,24 @@ describe('PhotoSlot', () => {
       { onRetry, onRemove },
     );
 
-    const image = renderer.root.findByType('ExpoImage');
+    const image = renderer.root.findByType(ExpoImage);
     expect(image.props).toMatchObject({
       source: { uri: 'file://front.jpg' },
       contentFit: 'cover',
-      cachePolicy: 'memory-disk',
+      cachePolicy: 'none',
       recyclingKey: 'front:file://front.jpg',
+      transition: 160,
       accessible: false,
     });
     expect(StyleSheet.flatten(image.props.style)).toMatchObject({ width: '100%', height: '100%' });
 
     const retry = getByLabelText('Retry Front photo upload');
-    expect(StyleSheet.flatten(retry.props.style).minHeight).toBeGreaterThanOrEqual(44);
+    expect(StyleSheet.flatten(retry.props.style({ pressed: false })).minHeight).toBeGreaterThanOrEqual(44);
     act(() => retry.props.onPress());
     expect(onRetry).toHaveBeenCalledTimes(1);
 
     const remove = getByLabelText('Remove Front photo');
-    expect(StyleSheet.flatten(remove.props.style).minHeight).toBeGreaterThanOrEqual(44);
+    expect(StyleSheet.flatten(remove.props.style({ pressed: false })).minHeight).toBeGreaterThanOrEqual(44);
     act(() => remove.props.onPress());
     expect(onRemove).toHaveBeenCalledTimes(1);
   });
@@ -190,7 +194,7 @@ describe('PhotoSlot', () => {
     const thumbnail = empty.getByLabelText('Front photo, empty');
     const library = empty.getByLabelText('Choose Front photo from library');
     expect(thumbnail.props.accessibilityRole).toBe('button');
-    expect(StyleSheet.flatten(library.props.style).minHeight).toBeGreaterThanOrEqual(44);
+    expect(StyleSheet.flatten(library.props.style({ pressed: false })).minHeight).toBeGreaterThanOrEqual(44);
     act(() => thumbnail.props.onPress());
     act(() => library.props.onPress());
     expect(onChoose).toHaveBeenCalledTimes(1);
@@ -201,7 +205,7 @@ describe('PhotoSlot', () => {
       { onRemove },
     );
     const remove = uploaded.getByLabelText('Remove Front photo');
-    expect(StyleSheet.flatten(remove.props.style).minHeight).toBeGreaterThanOrEqual(44);
+    expect(StyleSheet.flatten(remove.props.style({ pressed: false })).minHeight).toBeGreaterThanOrEqual(44);
     act(() => remove.props.onPress());
     expect(onRemove).toHaveBeenCalledTimes(1);
   });

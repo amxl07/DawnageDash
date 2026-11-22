@@ -7,6 +7,8 @@ export type WeeklyField = {
   type: FieldType;
   options?: string[];
   placeholder?: string;
+  /** Display unit for saved answers in history. */
+  unit?: string;
   /** Prefill key from this week's daily check-in averages (mobile upgrade). */
   prefill?: 'steps' | 'water' | 'stress';
 };
@@ -41,7 +43,7 @@ export const WEEKLY_STEPS: WeeklyStep[] = [
       { key: 'enjoying_training', label: 'Are you enjoying your training?', type: 'radio', options: ['Yes', 'No'] },
       { key: 'missed_sessions', label: 'Did you miss any sessions?', type: 'radio', options: ['Yes', 'No'] },
       { key: 'joint_pain', label: 'Any joint pain?', type: 'radio', options: ['Yes', 'No'] },
-      { key: 'step_count', label: "What's your average step count this week?", type: 'number', prefill: 'steps' },
+      { key: 'step_count', label: "What's your average step count this week?", type: 'number', prefill: 'steps', unit: 'steps/day' },
       { key: 'training_questions', label: 'Any training questions?', type: 'textarea' },
     ],
   },
@@ -50,8 +52,8 @@ export const WEEKLY_STEPS: WeeklyStep[] = [
     description: 'Recovery, hydration and stress.',
     fields: [
       { key: 'recovery_issues', label: 'Any recovery issues?', type: 'radio', options: ['Yes', 'No'] },
-      { key: 'water_intake', label: 'Average daily water intake (litres)?', type: 'number', prefill: 'water' },
-      { key: 'stress_level', label: 'Stress level this week', type: 'scale', prefill: 'stress' },
+      { key: 'water_intake', label: 'Average daily water intake (litres)?', type: 'number', prefill: 'water', unit: 'litres/day' },
+      { key: 'stress_level', label: 'Stress level this week', type: 'scale', prefill: 'stress', unit: 'out of 10' },
       { key: 'overall_experience', label: 'How has your overall experience been?', type: 'textarea' },
     ],
   },

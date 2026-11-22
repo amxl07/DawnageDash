@@ -1,0 +1,15 @@
+appId: ${DAWNAGE_E2E_APP_ID}
+name: A queued daily record survives process restart
+---
+# Manual fixture: sign in to a dedicated test account, disconnect networking,
+# submit a valid record, and set DAWNAGE_E2E_QUEUED_DATE to its local YYYY-MM-DD.
+# Do not use the sign-in helper: clearState would erase the queue under test.
+- evalScript: "${ output.appScheme = DAWNAGE_E2E_APP_ID === 'com.dawnage.app.dev' ? 'dawnage-dev' : DAWNAGE_E2E_APP_ID === 'com.dawnage.app.preview' ? 'dawnage-preview' : DAWNAGE_E2E_APP_ID === 'com.dawnage.app' ? 'dawnage' : ''; if (!output.appScheme) throw new Error('Unsupported DAWNAGE_E2E_APP_ID'); }"
+- launchApp:
+    stopApp: false
+- openLink: ${output.appScheme}://check-in?date=${DAWNAGE_E2E_QUEUED_DATE}
+- assertVisible: "Saved on this device"
+- stopApp
+- launchApp
+- openLink: ${output.appScheme}://check-in?date=${DAWNAGE_E2E_QUEUED_DATE}
+- assertVisible: "Saved on this device"

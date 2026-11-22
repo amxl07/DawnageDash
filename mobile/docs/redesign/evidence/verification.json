@@ -1,0 +1,149 @@
+{
+  "applicationSourceRevision": "8267ea6490e31105f788c693fb8f73ab4f09387a",
+  "runtime": {
+    "expo": "54.0.37",
+    "reactNative": "0.81.5",
+    "react": "19.1.0"
+  },
+  "jest": {
+    "record": "checks/jest.json",
+    "suites": 116,
+    "tests": 837,
+    "exitCode": 0
+  },
+  "typecheck": {
+    "command": "node node_modules/typescript/bin/tsc --noEmit",
+    "scope": "whole mobile project",
+    "exitCode": 0
+  },
+  "eslint": {
+    "command": "node node_modules/eslint/bin/eslint.js .",
+    "scope": "whole mobile project",
+    "exitCode": 0,
+    "warnings": 0
+  },
+  "uiContracts": {
+    "command": "node scripts/verify-ui-contracts.mjs",
+    "sourceFiles": 186,
+    "exitCode": 0
+  },
+  "exports": {
+    "sourceRevision": "8267ea6490e31105f788c693fb8f73ab4f09387a",
+    "nativeBuild": false,
+    "configuration": "fictional export configuration; not a deployable production artifact",
+    "platforms": [
+      {
+        "platform": "web",
+        "command": [
+          "node",
+          "node_modules/expo/bin/cli",
+          "export",
+          "--platform",
+          "web",
+          "--output-dir",
+          "/tmp/dawnage-premium-final-export-8267ea6/web",
+          "--max-workers",
+          "1"
+        ],
+        "exitCode": 0,
+        "elapsedSeconds": 509.0,
+        "outputDirectory": "/tmp/dawnage-premium-final-export-8267ea6/web",
+        "log": "/tmp/premium-final-export-web.log",
+        "artifacts": [
+          {
+            "file": "_expo/static/js/web/index-bb780836552b353b3477315d104b2a91.js",
+            "bytes": 5850517
+          },
+          {
+            "file": "metadata.json",
+            "bytes": 49
+          }
+        ]
+      },
+      {
+        "platform": "ios",
+        "command": [
+          "node",
+          "node_modules/expo/bin/cli",
+          "export",
+          "--platform",
+          "ios",
+          "--output-dir",
+          "/tmp/dawnage-premium-final-export-8267ea6/ios",
+          "--max-workers",
+          "1"
+        ],
+        "exitCode": 0,
+        "elapsedSeconds": 219.5,
+        "outputDirectory": "/tmp/dawnage-premium-final-export-8267ea6/ios",
+        "log": "/tmp/premium-final-export-ios.log",
+        "artifacts": [
+          {
+            "file": "_expo/static/js/ios/index-0b6a7680a64ce2242944160bbe320052.hbc",
+            "bytes": 8763403
+          },
+          {
+            "file": "metadata.json",
+            "bytes": 4173
+          }
+        ]
+      },
+      {
+        "platform": "android",
+        "command": [
+          "node",
+          "node_modules/expo/bin/cli",
+          "export",
+          "--platform",
+          "android",
+          "--output-dir",
+          "/tmp/dawnage-premium-final-export-8267ea6/android",
+          "--max-workers",
+          "1"
+        ],
+        "exitCode": 0,
+        "elapsedSeconds": 282.1,
+        "outputDirectory": "/tmp/dawnage-premium-final-export-8267ea6/android",
+        "log": "/tmp/premium-final-export-android.log",
+        "artifacts": [
+          {
+            "file": "_expo/static/js/android/index-51bdc84630e34b8a6104c87d637e71cc.hbc",
+            "bytes": 8780704
+          },
+          {
+            "file": "metadata.json",
+            "bytes": 4181
+          }
+        ]
+      }
+    ]
+  },
+  "browserCaptures": [
+    {
+      "manifest": "local-web/phone/capture-manifest.json",
+      "sourceRevision": "a220ad8ca459bd57cad294508fdeeafb2d34a800",
+      "frames": 14,
+      "errors": 0,
+      "nativeValidation": false
+    },
+    {
+      "manifest": "local-web/compact/capture-manifest.json",
+      "sourceRevision": "a220ad8ca459bd57cad294508fdeeafb2d34a800",
+      "frames": 14,
+      "errors": 0,
+      "nativeValidation": false
+    }
+  ],
+  "maestro": {
+    "yamlFilesParsed": 9,
+    "nativeFlowsExecuted": false
+  },
+  "nativeBuildExecuted": false,
+  "remainingReleaseEvidence": [
+    "Physical iOS/Android keyboard, gestures, safe areas, accessibility and performance",
+    "Recruited usability tasks and 7\u201314 day diary pilot",
+    "Supported coach-web V2 and legacy reader/editor round trips",
+    "Progress-photo private storage migration and authorization checks",
+    "Installed-build or configured update-channel rollback rehearsal"
+  ]
+}

@@ -1,4 +1,4 @@
-import { Image } from 'expo-image';
+import { PrivatePhoto } from './PrivatePhoto';
 import { View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
@@ -28,11 +28,10 @@ export function PoseGuide({
   if (ghostUrl) {
     return (
       <View pointerEvents="none" style={{ ...StyleSheetAbsolute, opacity: 0.25 }}>
-        <Image
-          source={{ uri: ghostUrl }}
+        <PrivatePhoto
+          reference={ghostUrl}
           style={{ width: '100%', height: '100%' }}
           contentFit="cover"
-          cachePolicy="memory-disk"
           accessible={false}
         />
       </View>

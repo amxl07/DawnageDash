@@ -1,0 +1,5 @@
+Restored reporting identity: {
+  through: '2026-09-20',
+  prefill: { step_count: '8000', water_intake: '', stress_level: '' },
+  observationDates: { step_count: [ '2026-09-20' ], water_intake: [], stress_level: [] }
+}

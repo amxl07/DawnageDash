@@ -1,0 +1,14 @@
+PASS src/screens/__tests__/weekly-feedback.test.tsx
+PASS src/screens/__tests__/tabs/index.test.tsx
+PASS src/screens/__tests__/tabs/plans.test.tsx
+PASS src/hooks/useWeeklyFeedbackDraft.test.ts
+PASS src/lib/weekly-feedback.test.ts
+PASS src/features/weekly/selectors.test.ts
+
+Test Suites: 6 passed, 6 total
+Tests:       92 passed, 92 total
+Snapshots:   0 total
+Time:        9.911 s, estimated 13 s
+Ran all test suites within paths "src/screens/__tests__/weekly-feedback.test.tsx", "src/screens/__tests__/tabs/index.test.tsx", "src/screens/__tests__/tabs/plans.test.tsx", "src/features/weekly/selectors.test.ts", "src/hooks/useWeeklyFeedbackDraft.test.ts", "src/lib/weekly-feedback.test.ts".
+Verification directory cache: 31462 missing-path checks resolved; 708 directories read.
+Verification dependency cache: 5504 repeated reads; 2636 files; 16482762 bytes.

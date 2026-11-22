@@ -1,0 +1,15 @@
+Captured signin-dark-390.png
+Captured signin-light-390.png
+Captured onboarding-dark-390.png
+Captured onboarding-light-390.png
+Captured onboarding-rhythm-dark-390.png
+Captured onboarding-rhythm-light-390.png
+Captured onboarding-ready-dark-390.png
+Captured onboarding-ready-light-390.png
+Captured home-dark-390.png
+Captured home-light-390.png
+Captured checkin-dark-390.png
+Captured checkin-light-390.png
+Captured workout-dark-390.png
+{"code":-32602,"message":"Invalid InterceptionId."}
+Captured workout-light-390.png

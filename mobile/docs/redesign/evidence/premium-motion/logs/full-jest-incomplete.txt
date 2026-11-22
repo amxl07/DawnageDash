@@ -1,0 +1,102 @@
+PASS src/features/workout/useWorkoutSession.test.tsx (489.943 s)
+PASS src/lib/outbox.test.ts (171.592 s)
+FAIL src/screens/__tests__/profile.test.tsx (674.439 s)
+  ● ProfileScreen › keeps coach status and both profile sections visible
+
+    thrown: "Exceeded timeout of 5000 ms for a test.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+      220 |   });
+      221 |
+    > 222 |   it('keeps coach status and both profile sections visible', async () => {
+          |   ^
+      223 |     const renderer = await renderScreen();
+      224 |
+      225 |     expect(
+
+      at it (src/screens/__tests__/profile.test.tsx:222:3)
+      at Object.describe (src/screens/__tests__/profile.test.tsx:195:1)
+
+  ● ProfileScreen › guards navigation after a partial save with retry and leave-anyway actions
+
+    thrown: "Exceeded timeout of 5000 ms for a test.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+      427 |   });
+      428 |
+    > 429 |   it('guards navigation after a partial save with retry and leave-anyway actions', async () => {
+          |   ^
+      430 |     mockQuestionnaireRead
+      431 |       .mockResolvedValueOnce({ data: null, error: null })
+      432 |       .mockResolvedValueOnce({
+
+      at it (src/screens/__tests__/profile.test.tsx:429:3)
+      at Object.describe (src/screens/__tests__/profile.test.tsx:195:1)
+
+  ● ProfileScreen › blocks failed assessment hydration and retries without erasing real answers (Error: offline
+    at /Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/src/screens/__tests__/profile.test.tsx:471:12
+    at _dispatchDescribe (/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/node_modules/jest-circus/build/index.js:91:26)
+    at describe (/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/node_modules/jest-circus/build/index.js:55:5)
+    at Object.describe (/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/src/screens/__tests__/profile.test.tsx:195:1)
+    at Runtime._execModule (/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/node_modules/jest-runtime/build/index.js:1439:24)
+    at Runtime._loadModule (/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/node_modules/jest-runtime/build/index.js:1022:12)
+    at Runtime.requireModule (/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/node_modules/jest-runtime/build/index.js:882:12)
+    at jestAdapter (/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:77:13)
+    at runTestInternal (/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/node_modules/jest-runner/build/runTest.js:444:34))
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      474 |       : { data: { answers: '{broken' }, error: null });
+      475 |     const renderer = await renderScreen();
+    > 476 |     expect(visible(renderer, "Couldn't load your profile")).toBe(true);
+          |                                                             ^
+      477 |     expect(renderer.root.findAllByType(MockInput)).toHaveLength(0);
+      478 |     expect(mockUsersUpdate).not.toHaveBeenCalled();
+      479 |     mockQuestionnaireRead.mockResolvedValue({ data: assessmentRow, error: null });
+
+      at toBe (src/screens/__tests__/profile.test.tsx:476:61)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● ProfileScreen › blocks failed assessment hydration and retries without erasing real answers (malformed)
+
+    TypeError: Cannot read properties of undefined (reading 'props')
+
+      188 |   return renderer.root.findAllByType(MockInput).find((node) => node.props.label === label)!;
+      189 | }
+    > 190 | function edit(renderer: Renderer, label: string, value: string) { act(() => input(renderer, label).props.onChangeText(value)); }
+          |                                                                                                   ^
+      191 | async function press(renderer: Renderer, label: string) { await act(async () => { await renderer.root.findByProps({ accessibilityLabel: label }).props.onPress(); }); }
+      192 | function visible(renderer: Renderer, phrase: string) { return renderer.root.findAllByType(MockNativeText).some((node) => String(node.props.children).includes(phrase)); }
+      193 | function deferred<T>() { let resolve!: (value: T) => void; const promise = new Promise<T>((done) => { resolve = done; }); return { promise, resolve }; }
+
+      at src/screens/__tests__/profile.test.tsx:190:99
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:814:22)
+      at edit (src/screens/__tests__/profile.test.tsx:190:70)
+      at edit (src/screens/__tests__/profile.test.tsx:481:5)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● ProfileScreen › keeps an acknowledged assessment retry through unmount and uses only its overlap values
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "Strength"
+    Received: "new goal"
+
+      495 |     mockUsersRead.mockResolvedValue({ data: { ...mockProfile }, error: null });
+      496 |     renderer = await renderScreen();
+    > 497 |     expect(input(renderer, 'Goal').props.value).toBe('Strength');
+          |                                                 ^
+      498 |     expect(input(renderer, 'Full name').props.value).toBe('New server name');
+      499 |     mockQuestionnaireRead.mockResolvedValue({ data: { ...assessmentRow, answers: JSON.stringify({ q1: 'changed later', q88: 7 }) }, error: null });
+      500 |     await press(renderer, 'Retry assessment sync');
+
+      at Object.toBe (src/screens/__tests__/profile.test.tsx:497:49)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+

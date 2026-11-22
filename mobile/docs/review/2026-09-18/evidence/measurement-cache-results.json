@@ -1,0 +1,12 @@
+{
+  "harness": "Installed QueryClient and QueryObserver; exact shared query key and opposite order contracts; fictional rows, no network",
+  "beforeAscendingRefetch": [
+    "newer",
+    "older"
+  ],
+  "afterAscendingRefetch": [
+    "older",
+    "newer"
+  ],
+  "currentRowAssumedByScreen": "older"
+}

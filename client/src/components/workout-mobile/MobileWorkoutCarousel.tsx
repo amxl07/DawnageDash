@@ -160,9 +160,10 @@ export function MobileWorkoutCarousel({
               <button
                 key={plan.id}
                 type="button"
+                disabled={isSaving}
                 onClick={() => onPlanChange(plan.id)}
                 className={cn(
-                  "shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
+                  "shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
                   selectedPlanId === plan.id
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted text-muted-foreground"
@@ -223,6 +224,7 @@ export function MobileWorkoutCarousel({
                     }
                     previousData={previousData}
                     onUpdateSet={handleUpdateSet}
+                    disabled={isSaving}
                   />
                 </CarouselItem>
               ))}

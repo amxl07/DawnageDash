@@ -1,0 +1,134 @@
+{
+  "integration": {
+    "sourceRevision": "86f7ed6d7601f86f5f8d86aec618d2889434b973",
+    "patchBaseline": "61fd7bd",
+    "target": "/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash",
+    "changedMobileFilesVerified": 274,
+    "originalHeadPreserved": "8ec16a7ca5fdc560a5f7858cb1722329ba2c4df2",
+    "preexistingFilesPreserved": [
+      ".superpowers/sdd/2026-09-01-mobile-2-core/task-1-report.md",
+      "mobile/plans/08-checkin-ritual-design.md",
+      "mobile/plans/09-checkin-research-brief.md"
+    ],
+    "unrelatedDirectoryUntouched": "DawnageMobile/",
+    "patchSha256": "097c492d54c2b16c8abe546922f03c1d18f457c49c4e750d582481084edbc1ce"
+  },
+  "dependencyInstall": {
+    "command": [
+      "npm",
+      "install",
+      "--ignore-scripts",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "exitCode": 0,
+    "lockfileUnchanged": true,
+    "removedOnlyOwnedTemporaryLinks": [
+      "test-renderer",
+      "metro-runtime"
+    ],
+    "originalWorkspace": "/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile"
+  },
+  "installedPackages": {
+    "react": {
+      "version": "19.1.0",
+      "path": "/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/node_modules/react/package.json"
+    },
+    "react-native": {
+      "version": "0.81.5",
+      "path": "/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/node_modules/react-native/package.json"
+    },
+    "test-renderer": {
+      "version": "1.1.0",
+      "path": "/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/node_modules/test-renderer/package.json"
+    },
+    "react-test-renderer": {
+      "version": "19.1.0",
+      "path": "/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/node_modules/react-test-renderer/package.json"
+    },
+    "metro-runtime": {
+      "version": "0.83.3",
+      "path": "/Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/node_modules/metro-runtime/package.json"
+    }
+  },
+  "originalWorkspaceChecks": [
+    {
+      "name": "dependency-resolution",
+      "command": [
+        "node",
+        "-e",
+        "const fs=require('fs'); const names=['react','react-native','test-renderer','react-test-renderer','metro-runtime']; const result=Object.fromEntries(names.map(n=>{const path=require.resolve(n+'/package.json'); return [n,{version:JSON.parse(fs.readFileSync(path,'utf8')).version,path:fs.realpathSync(path)}]})); console.log(JSON.stringify(result,null,2));"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 0.1,
+      "log": "/tmp/premium-original-dependency-resolution.log"
+    },
+    {
+      "name": "renderer-recovery-smoke",
+      "command": [
+        "node",
+        "node_modules/jest/bin/jest.js",
+        "--runInBand",
+        "--no-watchman",
+        "--testTimeout=60000",
+        "--runTestsByPath",
+        "src/components/ui/Button.test.tsx",
+        "src/components/logger/SetEditor.test.tsx",
+        "src/features/workout/workoutRecovery.integration.test.tsx",
+        "--json",
+        "--outputFile=/tmp/premium-original-smoke-jest.json"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 294.9,
+      "log": "/tmp/premium-original-renderer-recovery-smoke.log"
+    },
+    {
+      "name": "expo-compatibility",
+      "command": [
+        "node",
+        "node_modules/expo/bin/cli",
+        "install",
+        "--check"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 13.1,
+      "log": "/tmp/premium-original-expo-compatibility.log"
+    }
+  ],
+  "checkEnvironment": {
+    "NODE_OPTIONS": "--max-old-space-size=1536",
+    "EXPO_NO_TELEMETRY": "1",
+    "EXPO_OFFLINE": "1",
+    "CI": "1"
+  },
+  "expoDependencyCheck": {
+    "mode": "offline",
+    "result": "Dependencies are up to date",
+    "limitation": "Expo warns that dependency validation is unreliable in offline mode; this does not verify current remote package recommendations."
+  },
+  "smokeJest": {
+    "suites": 3,
+    "tests": 24,
+    "failedTests": 0,
+    "suitesRun": [
+      {
+        "path": "src/components/logger/SetEditor.test.tsx",
+        "status": "passed",
+        "tests": 16
+      },
+      {
+        "path": "src/features/workout/workoutRecovery.integration.test.tsx",
+        "status": "passed",
+        "tests": 6
+      },
+      {
+        "path": "src/components/ui/Button.test.tsx",
+        "status": "passed",
+        "tests": 2
+      }
+    ]
+  },
+  "integrationMode": "Mobile-only patch applied to the requested original workspace; original branch head and preexisting work preserved.",
+  "backupBranch": "codex/mobile-premium-experience",
+  "backupWorktree": "/tmp/dawnage-premium-20260915"
+}

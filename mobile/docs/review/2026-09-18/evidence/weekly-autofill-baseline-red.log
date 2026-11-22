@@ -1,0 +1,26 @@
+Existing production weekly autofill: {"step_count":"2500","water_intake":"1.3","stress_level":"2"}
+node:assert:95
+  throw new AssertionError(obj);
+  ^
+
+AssertionError [ERR_ASSERTION]: Monday-to-today observed steps must exclude older/future/missing values
+
+'2500' !== '8000'
+
+    at Object.<anonymous> (/private/tmp/product-weekly-baseline.cjs:17:8)
+    at Module._compile (node:internal/modules/cjs/loader:1730:14)
+    at Object..js (node:internal/modules/cjs/loader:1895:10)
+    at Module.load (node:internal/modules/cjs/loader:1465:32)
+    at Function._load (node:internal/modules/cjs/loader:1282:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+    at node:internal/main/run_main_module:36:49 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: '2500',
+  expected: '8000',
+  operator: 'strictEqual'
+}
+
+Node.js v22.16.0

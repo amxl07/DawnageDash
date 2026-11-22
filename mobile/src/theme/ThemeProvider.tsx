@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { useColorScheme } from 'react-native';
+import { AccessibilityInfo, AppState, Platform, useColorScheme } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
 import { dark, light, type ColorScheme } from './colors';
@@ -20,9 +20,53 @@ type ThemeValue = {
 };
 
 const ThemeContext = createContext<ThemeValue | null>(null);
+const ReducedMotionContext = createContext<boolean | undefined>(undefined);
+
+/** One live owner; Reanimated's hook supplies only the initial native snapshot. */
+function useLiveReducedMotion() {
+  const initial = useReducedMotion();
+  const [reduced, setReduced] = useState(initial);
+
+  useEffect(() => {
+    let mounted = true;
+    let revision = 0;
+    const media = Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)')
+      : undefined;
+    const update = (value: boolean) => {
+      revision += 1;
+      if (mounted) setReduced(value);
+    };
+    const refresh = () => {
+      if (media) { update(media.matches); return; }
+      const request = ++revision;
+      void AccessibilityInfo.isReduceMotionEnabled().then((value) => {
+        if (mounted && request === revision) setReduced(value);
+      }).catch(() => { /* Retain the last known preference. */ });
+    };
+    const onMediaChange = (event: MediaQueryListEvent) => update(event.matches);
+    if (media?.addEventListener) media.addEventListener('change', onMediaChange);
+    else media?.addListener(onMediaChange);
+    const preferenceSubscription = media ? undefined : AccessibilityInfo.addEventListener('reduceMotionChanged', update);
+    const appSubscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refresh();
+    });
+    refresh();
+    return () => {
+      mounted = false;
+      revision += 1;
+      preferenceSubscription?.remove();
+      appSubscription.remove();
+      if (media?.removeEventListener) media.removeEventListener('change', onMediaChange);
+      else media?.removeListener(onMediaChange);
+    };
+  }, []);
+  return reduced;
+}
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const system = useColorScheme();
+  const reduced = useLiveReducedMotion();
   const [preference, setPreferenceState] = useState<ThemePreference>('system');
 
   useEffect(() => {
@@ -53,7 +97,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     [isDark, preference, setPreference],
   );
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={value}>
+      <ReducedMotionContext.Provider value={reduced}>{children}</ReducedMotionContext.Provider>
+    </ThemeContext.Provider>
+  );
 }
 
 export function useTheme(): ThemeValue {
@@ -76,7 +124,9 @@ export function useThemePreference() {
  * (e.g. the check-in celebration becomes a static checkmark).
  */
 export function useMotion() {
-  const reduced = useReducedMotion();
+  const snapshot = useReducedMotion();
+  const live = useContext(ReducedMotionContext);
+  const reduced = live ?? snapshot;
   return useMemo(() => {
     if (!reduced) return { ...motion, enabled: true, reduced: false };
     return {

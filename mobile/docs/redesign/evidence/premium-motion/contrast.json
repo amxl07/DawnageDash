@@ -1,0 +1,514 @@
+[
+  {
+    "scheme": "light",
+    "foreground": "foreground",
+    "background": "card",
+    "contrast": 15.53,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "foreground",
+    "background": "elevated",
+    "contrast": 14.73,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "foreground",
+    "background": "background",
+    "contrast": 14.33,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "mutedForeground",
+    "background": "card",
+    "contrast": 6.03,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "mutedForeground",
+    "background": "elevated",
+    "contrast": 5.72,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "mutedForeground",
+    "background": "background",
+    "contrast": 5.56,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "primary",
+    "background": "card",
+    "contrast": 5.74,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "primary",
+    "background": "elevated",
+    "contrast": 5.44,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "primary",
+    "background": "background",
+    "contrast": 5.29,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "success",
+    "background": "card",
+    "contrast": 5.47,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "success",
+    "background": "elevated",
+    "contrast": 5.19,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "success",
+    "background": "background",
+    "contrast": 5.05,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "gold",
+    "background": "card",
+    "contrast": 5.32,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "gold",
+    "background": "elevated",
+    "contrast": 5.05,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "gold",
+    "background": "background",
+    "contrast": 4.91,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "orange",
+    "background": "card",
+    "contrast": 4.9,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "orange",
+    "background": "elevated",
+    "contrast": 4.65,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "orange",
+    "background": "background",
+    "contrast": 4.52,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "destructive",
+    "background": "card",
+    "contrast": 5.75,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "destructive",
+    "background": "elevated",
+    "contrast": 5.45,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "destructive",
+    "background": "background",
+    "contrast": 5.3,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "borderStrong",
+    "background": "card",
+    "contrast": 3.41,
+    "target": 3,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "borderStrong",
+    "background": "elevated",
+    "contrast": 3.24,
+    "target": 3,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "borderStrong",
+    "background": "background",
+    "contrast": 3.15,
+    "target": 3,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "focusRing",
+    "background": "card",
+    "contrast": 5.74,
+    "target": 3,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "focusRing",
+    "background": "elevated",
+    "contrast": 5.44,
+    "target": 3,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "focusRing",
+    "background": "background",
+    "contrast": 5.29,
+    "target": 3,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "onPrimary",
+    "background": "primaryFill",
+    "contrast": 4.89,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "onPrimary",
+    "background": "primaryPressed",
+    "contrast": 6.61,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "primary",
+    "background": "primarySoft",
+    "contrast": 4.92,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "foreground",
+    "background": "pressed",
+    "contrast": 13.19,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "light",
+    "foreground": "mutedForeground",
+    "background": "pressed",
+    "contrast": 5.12,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "foreground",
+    "background": "card",
+    "contrast": 18.43,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "foreground",
+    "background": "elevated",
+    "contrast": 17.22,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "foreground",
+    "background": "background",
+    "contrast": 19.67,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "mutedForeground",
+    "background": "card",
+    "contrast": 7.18,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "mutedForeground",
+    "background": "elevated",
+    "contrast": 6.71,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "mutedForeground",
+    "background": "background",
+    "contrast": 7.66,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "primary",
+    "background": "card",
+    "contrast": 5.16,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "primary",
+    "background": "elevated",
+    "contrast": 4.82,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "primary",
+    "background": "background",
+    "contrast": 5.51,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "success",
+    "background": "card",
+    "contrast": 9.15,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "success",
+    "background": "elevated",
+    "contrast": 8.55,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "success",
+    "background": "background",
+    "contrast": 9.77,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "gold",
+    "background": "card",
+    "contrast": 11.7,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "gold",
+    "background": "elevated",
+    "contrast": 10.93,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "gold",
+    "background": "background",
+    "contrast": 12.49,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "orange",
+    "background": "card",
+    "contrast": 6.89,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "orange",
+    "background": "elevated",
+    "contrast": 6.44,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "orange",
+    "background": "background",
+    "contrast": 7.35,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "destructive",
+    "background": "card",
+    "contrast": 5.16,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "destructive",
+    "background": "elevated",
+    "contrast": 4.82,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "destructive",
+    "background": "background",
+    "contrast": 5.51,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "borderStrong",
+    "background": "card",
+    "contrast": 3.65,
+    "target": 3,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "borderStrong",
+    "background": "elevated",
+    "contrast": 3.41,
+    "target": 3,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "borderStrong",
+    "background": "background",
+    "contrast": 3.9,
+    "target": 3,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "focusRing",
+    "background": "card",
+    "contrast": 5.16,
+    "target": 3,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "focusRing",
+    "background": "elevated",
+    "contrast": 4.82,
+    "target": 3,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "focusRing",
+    "background": "background",
+    "contrast": 5.51,
+    "target": 3,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "onPrimary",
+    "background": "primaryFill",
+    "contrast": 4.93,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "onPrimary",
+    "background": "primaryPressed",
+    "contrast": 6.56,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "primary",
+    "background": "primarySoft",
+    "contrast": 4.59,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "foreground",
+    "background": "pressed",
+    "contrast": 15.12,
+    "target": 4.5,
+    "passes": true
+  },
+  {
+    "scheme": "dark",
+    "foreground": "mutedForeground",
+    "background": "pressed",
+    "contrast": 5.89,
+    "target": 4.5,
+    "passes": true
+  }
+]

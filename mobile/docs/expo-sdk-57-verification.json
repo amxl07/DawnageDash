@@ -1,0 +1,106 @@
+{
+  "recordedAt": "2026-09-16T14:41:08.445678+00:00",
+  "sourceRevision": "8ec16a7ca5fdc560a5f7858cb1722329ba2c4df2",
+  "sourceDirty": true,
+  "versions": {
+    "expo": "57.0.23",
+    "expo-router": "57.0.21",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-reanimated": "4.5.1",
+    "react-native-worklets": "0.10.1",
+    "typescript": "6.0.3"
+  },
+  "expoDoctor": {
+    "passed": 21,
+    "total": 21,
+    "exitCode": 0
+  },
+  "checks": {
+    "typecheck": {
+      "exit_code": 0,
+      "seconds": 38.5
+    },
+    "lint": {
+      "exit_code": 0,
+      "seconds": 142.9
+    },
+    "tests": {
+      "exit_code": 0,
+      "seconds": 190.0
+    }
+  },
+  "tests": {
+    "success": true,
+    "numPassedTestSuites": 116,
+    "numPassedTests": 837,
+    "numFailedTestSuites": 0,
+    "numFailedTests": 0
+  },
+  "uiContracts": {
+    "sourceFiles": 186,
+    "exitCode": 0
+  },
+  "exports": {
+    "ios": {
+      "exit_code": 0,
+      "seconds": 290.4
+    },
+    "android": {
+      "exit_code": 0,
+      "seconds": 247.4
+    },
+    "web": {
+      "exit_code": 0,
+      "seconds": 303.2
+    }
+  },
+  "nativeExportsIncludeHermesBytecode": true,
+  "expoGoManifest": {
+    "sdkVersion": "57.0.0",
+    "slug": "dawnage",
+    "runtimeVersion": "exposdk:57.0.0",
+    "platform": "ios",
+    "fixtureEnvironment": true
+  },
+  "browser": {
+    "bundle": "production web export",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "theme": "dark",
+    "fixtureData": true,
+    "visuallyReviewed": true,
+    "screens": [
+      {
+        "screen": "onboarding",
+        "errors": [],
+        "warnings": []
+      },
+      {
+        "screen": "home",
+        "errors": [],
+        "warnings": []
+      },
+      {
+        "screen": "checkin",
+        "errors": [],
+        "warnings": []
+      },
+      {
+        "screen": "workout",
+        "errors": [],
+        "warnings": []
+      }
+    ]
+  },
+  "reactCompiler": {
+    "enabled": false,
+    "separateAuditCommand": "npm run lint:compiler",
+    "existingAuditFindings": 105
+  },
+  "nativeDeviceValidation": false,
+  "nativeBuildRun": false,
+  "localArtifactsDirectory": "/tmp/dawnage-sdk57-research"
+}

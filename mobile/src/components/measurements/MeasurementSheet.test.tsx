@@ -1,6 +1,5 @@
 import { TextInput } from 'react-native';
 
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
 import type { BodyMeasurement } from '@/types/db';
@@ -167,4 +166,109 @@ describe('MeasurementSheet', () => {
     expect(mockMutateAsync.mock.calls[0]).toEqual(mockMutateAsync.mock.calls[1]);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+});
+
+it('preserves an open draft and its comparison when measurement data refetches', async () => {
+  jest.clearAllMocks();
+  mockMutateAsync.mockResolvedValue(undefined);
+  const onSaved = jest.fn();
+  const onClose = jest.fn();
+  let renderer!: ReturnType<typeof create>;
+  const renderSheet = (row: BodyMeasurement, visible = true) => <MeasurementSheet visible={visible} editing={null} previous={row} onSaved={onSaved} onClose={onClose} />;
+  await act(async () => { renderer = create(renderSheet(previous)); });
+  const input = () => renderer.root.find((node) => node.type === TextInput && node.props.accessibilityLabel === 'Waist (cm)');
+  act(() => input().props.onChangeText('82.5'));
+  const refreshed = { ...previous, id: 'newer', date: '2026-08-29', waist: 85 };
+  act(() => renderer.update(renderSheet(refreshed)));
+  expect(input().props.value).toBe('82.5');
+  await act(async () => { await renderer.root.findByProps({ accessibilityLabel: 'Save' }).props.onPress(); });
+  expect(onSaved).toHaveBeenCalledWith('Waist −7.5 cm since last time');
+  act(() => renderer.update(renderSheet(refreshed, false)));
+  act(() => renderer.update(renderSheet(refreshed)));
+  expect(input().props.value).toBe('85');
+});
+
+
+function deferredMeasurementSave() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
+it('keeps newer edits unsaved and open when an older snapshot finishes saving', async () => {
+  jest.clearAllMocks();
+  const pending = deferredMeasurementSave();
+  mockMutateAsync.mockReturnValueOnce(pending.promise).mockResolvedValueOnce(undefined);
+  const onSaved = jest.fn();
+  const onClose = jest.fn();
+  let renderer!: ReturnType<typeof create>;
+  await act(async () => { renderer = create(<MeasurementSheet visible editing={null} previous={previous} onSaved={onSaved} onClose={onClose} />); });
+  const waist = () => renderer.root.find((node) => node.type === TextInput && node.props.accessibilityLabel === 'Waist (cm)');
+  act(() => waist().props.onChangeText('82.5'));
+  let save!: Promise<void>;
+  act(() => { save = renderer.root.findByProps({ accessibilityLabel: 'Save' }).props.onPress(); });
+  act(() => waist().props.onChangeText('83'));
+  await act(async () => { pending.resolve(); await save; });
+  expect(waist().props.value).toBe('83');
+  expect(onSaved).not.toHaveBeenCalled();
+  expect(onClose).not.toHaveBeenCalled();
+  expect(renderer.root.findByProps({ children: 'Earlier values saved. Your latest changes still need saving.' })).toBeTruthy();
+  await act(async () => { await renderer.root.findByProps({ accessibilityLabel: 'Retry save' }).props.onPress(); });
+  expect(mockMutateAsync.mock.calls.map(([payload]) => payload.waist)).toEqual([82.5, 83]);
+  expect(onClose).toHaveBeenCalledTimes(1);
+  act(() => renderer.unmount());
+});
+
+it('ignores repeated keyboard and button submits synchronously while saving', async () => {
+  jest.clearAllMocks();
+  const pending = deferredMeasurementSave();
+  mockMutateAsync.mockReturnValue(pending.promise);
+  const onSaved = jest.fn();
+  const onClose = jest.fn();
+  let renderer!: ReturnType<typeof create>;
+  await act(async () => { renderer = create(<MeasurementSheet visible editing={null} previous={previous} onSaved={onSaved} onClose={onClose} />); });
+  const lastInput = renderer.root.find((node) => node.type === TextInput && node.props.accessibilityLabel === 'Arms (cm)');
+  const button = renderer.root.findByProps({ accessibilityLabel: 'Save' });
+  act(() => {
+    lastInput.props.onSubmitEditing();
+    lastInput.props.onSubmitEditing();
+    void button.props.onPress();
+  });
+  expect(mockMutateAsync).toHaveBeenCalledTimes(1);
+  await act(async () => { pending.resolve(); await pending.promise; });
+  expect(onSaved).toHaveBeenCalledTimes(1);
+  expect(onClose).toHaveBeenCalledTimes(1);
+  act(() => renderer.unmount());
+});
+
+it('blocks overlapping writes after reopening and keeps the new session draft', async () => {
+  jest.clearAllMocks();
+  const pending = deferredMeasurementSave();
+  mockMutateAsync.mockReturnValueOnce(pending.promise).mockResolvedValueOnce(undefined);
+  const onSaved = jest.fn();
+  const onClose = jest.fn();
+  let renderer!: ReturnType<typeof create>;
+  const sheet = (visible: boolean) => <MeasurementSheet visible={visible} editing={null} previous={previous} onSaved={onSaved} onClose={onClose} />;
+  await act(async () => { renderer = create(sheet(true)); });
+  let save!: Promise<void>;
+  act(() => { save = renderer.root.findByProps({ accessibilityLabel: 'Save' }).props.onPress(); });
+  act(() => renderer.update(sheet(false)));
+  act(() => renderer.update(sheet(true)));
+  const waist = () => renderer.root.find((node) => node.type === TextInput && node.props.accessibilityLabel === 'Waist (cm)');
+  act(() => waist().props.onChangeText('84'));
+  const lastInput = renderer.root.find((node) => node.type === TextInput && node.props.accessibilityLabel === 'Arms (cm)');
+  await act(async () => {
+    lastInput.props.onSubmitEditing();
+    await renderer.root.findByProps({ accessibilityLabel: 'Save' }).props.onPress();
+  });
+  expect(mockMutateAsync).toHaveBeenCalledTimes(1);
+  expect(onClose).not.toHaveBeenCalled();
+  await act(async () => { pending.resolve(); await save; });
+  expect(waist().props.value).toBe('84');
+  expect(onSaved).not.toHaveBeenCalled();
+  expect(onClose).not.toHaveBeenCalled();
+  await act(async () => { await renderer.root.findByProps({ accessibilityLabel: 'Save' }).props.onPress(); });
+  expect(mockMutateAsync).toHaveBeenLastCalledWith(expect.objectContaining({ waist: 84 }));
+  expect(onClose).toHaveBeenCalledTimes(1);
+  act(() => renderer.unmount());
 });

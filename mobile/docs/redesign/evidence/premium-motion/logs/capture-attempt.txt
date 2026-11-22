@@ -1,0 +1,8 @@
+file:///Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/scripts/capture-redesign.mjs:57
+if (!serverReady) throw new Error('The local Expo server did not become ready: ' + baseUrl);
+                        ^
+
+Error: The local Expo server did not become ready: http://localhost:8088
+    at file:///Users/manojthomas/Documents/DAWNAGE/DawnageAIDash/mobile/scripts/capture-redesign.mjs:57:25
+
+Node.js v22.16.0

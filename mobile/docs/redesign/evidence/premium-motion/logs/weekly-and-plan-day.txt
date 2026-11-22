@@ -1,0 +1,11 @@
+PASS src/screens/__tests__/weekly-feedback.test.tsx (206.955 s)
+PASS src/components/plans/PlanDayCard.test.tsx (8.752 s)
+
+Test Suites: 2 passed, 2 total
+Tests:       26 passed, 26 total
+Snapshots:   0 total
+Time:        252.404 s, estimated 794 s
+Ran all test suites within paths "src/screens/__tests__/weekly-feedback.test.tsx", "src/components/plans/PlanDayCard.test.tsx".
+Test results written to: ../../../../../../tmp/dawnage-premium-20260917/jest-weekly-final-results.json
+Verification directory cache: 21003 missing-path checks resolved; 621 directories read.
+Verification dependency cache: 1407 repeated reads; 2266 files; 14622504 bytes.

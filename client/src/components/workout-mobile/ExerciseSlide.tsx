@@ -29,6 +29,7 @@ interface ExerciseSlideProps {
   planMeta?: PlanMetadata;
   previousData?: PreviousExerciseData;
   onUpdateSet: (exerciseIndex: number, setIndex: number, field: keyof WorkoutSet, value: string) => void;
+  disabled?: boolean;
 }
 
 export function ExerciseSlide({
@@ -37,6 +38,7 @@ export function ExerciseSlide({
   planMeta,
   previousData,
   onUpdateSet,
+  disabled = false,
 }: ExerciseSlideProps) {
   const prevExercise = previousData?.[exercise.name.toLowerCase().trim()];
 
@@ -127,6 +129,7 @@ export function ExerciseSlide({
                   inputMode="decimal"
                   placeholder="0"
                   value={set.weight}
+                  disabled={disabled}
                   onChange={(e) =>
                     onUpdateSet(exerciseIndex, setIdx, "weight", e.target.value)
                   }
@@ -139,6 +142,7 @@ export function ExerciseSlide({
                   inputMode="decimal"
                   placeholder="0"
                   value={set.reps}
+                  disabled={disabled}
                   onChange={(e) =>
                     onUpdateSet(exerciseIndex, setIdx, "reps", e.target.value)
                   }

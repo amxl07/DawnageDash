@@ -1,0 +1,295 @@
+{
+  "platform": "Expo web / headless Chrome",
+  "source": "fictional intercepted data",
+  "sourceRevision": "8ec16a7ca5fdc560a5f7858cb1722329ba2c4df2",
+  "sourceDirty": true,
+  "nativeValidation": false,
+  "capturedAt": "2026-09-17T15:21:02.021Z",
+  "baseUrl": "http://localhost:8088",
+  "records": [
+    {
+      "screen": "signin",
+      "theme": "dark",
+      "motionPreference": "no-preference",
+      "width": 390,
+      "height": 844,
+      "file": "signin-dark-390.png",
+      "errors": [
+        "The expected populated screen did not become ready; frame rejected."
+      ],
+      "warnings": [],
+      "renderedTextLength": 0
+    },
+    {
+      "screen": "signin",
+      "theme": "light",
+      "motionPreference": "no-preference",
+      "width": 390,
+      "height": 844,
+      "file": "signin-light-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 142
+    },
+    {
+      "screen": "onboarding",
+      "theme": "dark",
+      "motionPreference": "no-preference",
+      "width": 390,
+      "height": 844,
+      "file": "onboarding-dark-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 358
+    },
+    {
+      "screen": "onboarding",
+      "theme": "light",
+      "motionPreference": "no-preference",
+      "width": 390,
+      "height": 844,
+      "file": "onboarding-light-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 358
+    },
+    {
+      "screen": "onboarding-rhythm",
+      "theme": "dark",
+      "motionPreference": "no-preference",
+      "width": 390,
+      "height": 844,
+      "file": "onboarding-rhythm-dark-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 556
+    },
+    {
+      "screen": "onboarding-rhythm",
+      "theme": "light",
+      "motionPreference": "no-preference",
+      "width": 390,
+      "height": 844,
+      "file": "onboarding-rhythm-light-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 556
+    },
+    {
+      "screen": "onboarding-ready",
+      "theme": "dark",
+      "motionPreference": "no-preference",
+      "width": 390,
+      "height": 844,
+      "file": "onboarding-ready-dark-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 391
+    },
+    {
+      "screen": "onboarding-ready",
+      "theme": "light",
+      "motionPreference": "no-preference",
+      "width": 390,
+      "height": 844,
+      "file": "onboarding-ready-light-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 391
+    },
+    {
+      "screen": "home",
+      "theme": "dark",
+      "motionPreference": "no-preference",
+      "width": 390,
+      "height": 844,
+      "file": "home-dark-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 609
+    },
+    {
+      "screen": "home",
+      "theme": "light",
+      "motionPreference": "no-preference",
+      "width": 390,
+      "height": 844,
+      "file": "home-light-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 609
+    },
+    {
+      "screen": "checkin",
+      "theme": "dark",
+      "motionPreference": "no-preference",
+      "width": 390,
+      "height": 844,
+      "file": "checkin-dark-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 259,
+      "journeyChecks": [
+        "Continue keeps an incomplete section open without submitting.",
+        "Optional weight commits before collapse and survives reopening.",
+        "Sleep quick choice replaces partially typed input.",
+        "Invalid numeric text blocks collapse; corrected values reach concise, readable review.",
+        "Review editing preserves the other sections and final submission sends the expected date and values."
+      ],
+      "checkpoints": [
+        "checkin-recovery-dark-390.png",
+        "checkin-adherence-dark-390.png",
+        "checkin-review-dark-390.png",
+        "checkin-saved-dark-390.png"
+      ],
+      "fixtureWrites": [
+        {
+          "table": "daily_check_ins",
+          "method": "POST",
+          "payload": {
+            "date": "2026-09-15",
+            "morning_weight": 72.6,
+            "sleep_hours": 8,
+            "workout_status": "rest_day",
+            "workout_performance": null,
+            "nutrition_score": 8,
+            "calorie_intake": null,
+            "water_liters": 2.25,
+            "daily_steps": 8200,
+            "protein": null,
+            "carbs": null,
+            "fats": null,
+            "energy_level": 7,
+            "hunger_level": 6,
+            "stress_level": 4,
+            "digestion": "none",
+            "notes": null,
+            "user_id": "00000000-0000-4000-8000-000000000001"
+          }
+        }
+      ]
+    },
+    {
+      "screen": "checkin",
+      "theme": "light",
+      "motionPreference": "no-preference",
+      "width": 390,
+      "height": 844,
+      "file": "checkin-light-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 259,
+      "journeyChecks": [
+        "Continue keeps an incomplete section open without submitting.",
+        "Optional weight commits before collapse and survives reopening.",
+        "Sleep quick choice replaces partially typed input.",
+        "Invalid numeric text blocks collapse; corrected values reach concise, readable review.",
+        "Review editing preserves the other sections and final submission sends the expected date and values."
+      ],
+      "checkpoints": [
+        "checkin-recovery-light-390.png",
+        "checkin-adherence-light-390.png",
+        "checkin-review-light-390.png",
+        "checkin-saved-light-390.png"
+      ],
+      "fixtureWrites": [
+        {
+          "table": "daily_check_ins",
+          "method": "POST",
+          "payload": {
+            "date": "2026-09-15",
+            "morning_weight": 72.6,
+            "sleep_hours": 8,
+            "workout_status": "rest_day",
+            "workout_performance": null,
+            "nutrition_score": 8,
+            "calorie_intake": null,
+            "water_liters": 2.25,
+            "daily_steps": 8200,
+            "protein": null,
+            "carbs": null,
+            "fats": null,
+            "energy_level": 7,
+            "hunger_level": 6,
+            "stress_level": 4,
+            "digestion": "none",
+            "notes": null,
+            "user_id": "00000000-0000-4000-8000-000000000001"
+          }
+        }
+      ]
+    },
+    {
+      "screen": "workout",
+      "theme": "dark",
+      "motionPreference": "no-preference",
+      "width": 390,
+      "height": 844,
+      "file": "workout-dark-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 338,
+      "journeyChecks": [
+        "3 sets advance to exercise completion without submitting the session.",
+        "A completed set remains editable; Continue selects the next unfinished exercise.",
+        "Overview adds an exercise and opens partial-workout review without saving or losing entries."
+      ],
+      "checkpoints": [
+        "workout-exercise-complete-dark-390.png",
+        "workout-next-exercise-dark-390.png",
+        "workout-overview-dark-390.png",
+        "workout-review-dark-390.png"
+      ],
+      "fixtureWrites": []
+    },
+    {
+      "screen": "workout",
+      "theme": "light",
+      "motionPreference": "no-preference",
+      "width": 390,
+      "height": 844,
+      "file": "workout-light-390.png",
+      "errors": [],
+      "warnings": [
+        "Received `%s` for a non-boolean attribute `%s`.\n\nIf you want to write it to the DOM, pass a string instead: %s=\"%s\" or %s={value.toString()}.\n\nIf you used to conditionally omit it with %s={condition && value}, pass %s={condition ? value : undefined} instead. false accessible accessible false accessible accessible accessible"
+      ],
+      "renderedTextLength": 338,
+      "journeyChecks": [
+        "3 sets advance to exercise completion without submitting the session.",
+        "A completed set remains editable; Continue selects the next unfinished exercise.",
+        "Overview adds an exercise and opens partial-workout review without saving or losing entries."
+      ],
+      "checkpoints": [
+        "workout-exercise-complete-light-390.png",
+        "workout-next-exercise-light-390.png",
+        "workout-overview-light-390.png",
+        "workout-review-light-390.png"
+      ],
+      "fixtureWrites": []
+    }
+  ]
+}

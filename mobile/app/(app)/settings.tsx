@@ -1,21 +1,23 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Bell } from 'lucide-react-native';
-import { useCallback, useEffect, useState } from 'react';
-import { Linking, Platform, Switch, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState, Linking, Platform, Switch, View } from 'react-native';
 
 import { Button, Card, OptionRow, PageHeader, Screen, Sheet, Text } from '@/components/ui';
 import {
   DEFAULT_SETTINGS,
-  cancelDaily,
-  cancelWeekly,
+  applyReminderSettings,
+  DAILY_ID,
+  WEEKLY_ID,
   hasPermission,
   listScheduled,
   loadSettings,
   requestPermission,
-  saveSettings,
-  scheduleDaily,
-  scheduleWeekly,
+  reconcile,
+  remindersAvailable,
+  reminderDelivery,
+  waitForReminderChanges,
   type ReminderSettings,
 } from '@/lib/reminders';
 import { useTheme, useThemePreference, type ThemePreference } from '@/theme';
@@ -36,33 +38,69 @@ export default function SettingsScreen() {
 
   const [settings, setSettings] = useState<ReminderSettings>(DEFAULT_SETTINGS);
   const [permissionDenied, setPermissionDenied] = useState(false);
+  const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
   const [showExplainer, setShowExplainer] = useState<null | 'daily' | 'weekly'>(null);
   const [picker, setPicker] = useState<null | 'daily' | 'weekly'>(null);
   const [dayPicker, setDayPicker] = useState(false);
-  const [scheduledCount, setScheduledCount] = useState(0);
+  const [scheduledCount, setScheduledCount] = useState<number | null>(null);
+  const [scheduled, setScheduled] = useState<Awaited<ReturnType<typeof listScheduled>> | null>(null);
+  const [reminderError, setReminderError] = useState<string | null>(null);
+  const [unavailable, setUnavailable] = useState(!remindersAvailable());
+  const updating = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const refreshGeneration = useRef(0);
+  const delivery = reminderDelivery(settings, scheduled);
+  const showPermissionDenied = permissionDenied || (permissionGranted === false && (settings.dailyEnabled || settings.weeklyEnabled));
+  const dailySwitchEnabled = settings.dailyEnabled && permissionGranted !== false;
+  const weeklySwitchEnabled = settings.weeklyEnabled && permissionGranted !== false;
 
-  const refreshScheduled = useCallback(() => {
-    void listScheduled().then((s) => setScheduledCount(s.length));
+  const refreshScheduled = useCallback((repair = false) => {
+    const generation = ++refreshGeneration.current;
+    void (async () => {
+      if (repair) await reconcile().catch(() => {});
+      else await waitForReminderChanges();
+      if (generation !== refreshGeneration.current) return;
+      const [schedule, permission] = await Promise.allSettled([listScheduled(), hasPermission()]);
+      if (generation !== refreshGeneration.current) return;
+      if (schedule.status === 'fulfilled') {
+        setScheduled(schedule.value);
+        setScheduledCount(schedule.value.filter((item) => item.identifier === DAILY_ID || item.identifier === WEEKLY_ID).length);
+      } else { setScheduled(null); setScheduledCount(null); }
+      if (permission.status === 'fulfilled') {
+        setPermissionGranted(permission.value);
+        if (permission.value) setPermissionDenied(false);
+      } else { setPermissionGranted(null); setScheduled(null); setScheduledCount(null); }
+    })();
   }, []);
 
   useEffect(() => {
-    void loadSettings().then(setSettings);
-    refreshScheduled();
+    void loadSettings().then((saved) => { setSettings(saved); setLoaded(true); }).catch(() => setReminderError('Your saved reminder preferences couldn’t load. Retry before changing them.'));
+  }, []);
+  useFocusEffect(useCallback(() => { refreshScheduled(true); }, [refreshScheduled]));
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => { if (state === 'active') refreshScheduled(true); });
+    return () => { subscription.remove(); refreshGeneration.current += 1; };
   }, [refreshScheduled]);
 
   const persist = async (next: ReminderSettings) => {
-    setSettings(next);
-    await saveSettings(next);
-    if (next.dailyEnabled) await scheduleDaily(next.dailyHour, next.dailyMinute);
-    else await cancelDaily();
-    if (next.weeklyEnabled) await scheduleWeekly(next.weeklyWeekday, next.weeklyHour, next.weeklyMinute);
-    else await cancelWeekly();
-    refreshScheduled();
+    if (updating.current || !loaded) return;
+    updating.current = true; setBusy(true); setReminderError(null);
+    refreshGeneration.current += 1;
+    try {
+      const applied = await applyReminderSettings(next);
+      setSettings(next);
+      if (!applied) setReminderError('Your preferences are saved. Some device schedules still need to be applied.');
+    } catch { setReminderError('We couldn’t save all reminder changes. Review the schedule and try again.'); }
+    finally { updating.current = false; setBusy(false); refreshScheduled(); }
   };
 
   /** Only ever ask when the user turns something ON — never on launch. */
   const enable = async (which: 'daily' | 'weekly') => {
-    const granted = (await hasPermission()) || (await requestPermission());
+    if (!remindersAvailable()) { setUnavailable(true); return; }
+    let granted = false;
+    try { granted = (await hasPermission()) || (await requestPermission()); }
+    catch { setReminderError('Reminder permissions are unavailable. Try again later.'); return; }
     if (!granted) {
       setPermissionDenied(true);
       return;
@@ -92,20 +130,32 @@ export default function SettingsScreen() {
 
         <Card style={{ gap: spacing.base }}>
           <Text variant="h2">Reminders</Text>
+          <Text variant="bodySm" tone="muted">Optional prompts, scheduled in this device’s local time.</Text>
+          {unavailable ? <Text variant="bodySm" tone="muted">Reminders aren’t available in this preview. Set them up on your device.</Text> : null}
+          {reminderError ? <Text variant="bodySm" tone="destructive" accessibilityLiveRegion="polite">{reminderError}</Text> : null}
+          {reminderError || delivery.daily === 'pending' || delivery.weekly === 'pending' ? <Button label="Retry reminder setup" variant="secondary" loading={busy} onPress={() => { void loadSettings().then((saved) => { setSettings(saved); setLoaded(true); setReminderError(null); if (loaded) return persist(saved); refreshScheduled(); }).catch(() => setReminderError('Saved preferences are still unavailable. Please try again.')); }} /> : null}
+          {!unavailable && scheduled === null ? <Button label="Refresh reminder status" variant="secondary" disabled={busy} onPress={() => refreshScheduled()} /> : null}
 
           <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: HIT_SLOP_MIN }}>
             <View style={{ flex: 1 }}>
               <Text>Daily check-in</Text>
               <Text variant="bodySm" tone="muted" numeric>
-                {settings.dailyEnabled ? fmtTime(settings.dailyHour, settings.dailyMinute) : 'Off'}
+                {settings.dailyEnabled ? (delivery.daily === 'scheduled' ? '' : 'Requested: ') + fmtTime(settings.dailyHour, settings.dailyMinute) : 'Off'}
               </Text>
+              <Text variant="caption" tone="muted">{delivery.daily === 'scheduled' ? 'Scheduled on this device' : delivery.daily === 'pending' ? 'Device schedule needs updating' : delivery.daily === 'unavailable' ? 'Device schedule unavailable' : 'No daily reminder scheduled'}</Text>
             </View>
             <Switch
-              value={settings.dailyEnabled}
-              onValueChange={(v) => toggle('daily', v)}
+              value={dailySwitchEnabled}
+              disabled={busy || unavailable || !loaded}
+              onValueChange={(value) =>
+                toggle(
+                  'daily',
+                  permissionGranted === false && settings.dailyEnabled ? false : value,
+                )
+              }
               accessibilityRole="switch"
               accessibilityLabel="Daily check-in reminder"
-              accessibilityState={{ checked: settings.dailyEnabled }}
+              accessibilityState={{ checked: dailySwitchEnabled }}
               trackColor={{ true: colors.primaryFill, false: colors.borderStrong }}
             />
           </View>
@@ -127,16 +177,23 @@ export default function SettingsScreen() {
               <Text>Weekly check-in</Text>
               <Text variant="bodySm" tone="muted" numeric>
                 {settings.weeklyEnabled
-                  ? `${WEEKDAYS[settings.weeklyWeekday - 1]}, ${fmtTime(settings.weeklyHour, settings.weeklyMinute)}`
+                  ? `${delivery.weekly === 'scheduled' ? '' : 'Requested: '}${WEEKDAYS[settings.weeklyWeekday - 1]}, ${fmtTime(settings.weeklyHour, settings.weeklyMinute)}`
                   : 'Off'}
               </Text>
+              <Text variant="caption" tone="muted">{delivery.weekly === 'scheduled' ? 'Scheduled on this device' : delivery.weekly === 'pending' ? 'Device schedule needs updating' : delivery.weekly === 'unavailable' ? 'Device schedule unavailable' : 'No weekly reminder scheduled'}</Text>
             </View>
             <Switch
-              value={settings.weeklyEnabled}
-              onValueChange={(v) => toggle('weekly', v)}
+              value={weeklySwitchEnabled}
+              disabled={busy || unavailable || !loaded}
+              onValueChange={(value) =>
+                toggle(
+                  'weekly',
+                  permissionGranted === false && settings.weeklyEnabled ? false : value,
+                )
+              }
               accessibilityRole="switch"
               accessibilityLabel="Weekly check-in reminder"
-              accessibilityState={{ checked: settings.weeklyEnabled }}
+              accessibilityState={{ checked: weeklySwitchEnabled }}
               trackColor={{ true: colors.primaryFill, false: colors.borderStrong }}
             />
           </View>
@@ -147,7 +204,7 @@ export default function SettingsScreen() {
             </View>
           ) : null}
 
-          {permissionDenied ? (
+          {showPermissionDenied ? (
             <View style={{ gap: spacing.sm }}>
               <Text variant="bodySm" tone="primary" accessibilityLiveRegion="polite">
                 Notifications are turned off for Dawnage, so reminders can&apos;t be scheduled.
@@ -161,7 +218,7 @@ export default function SettingsScreen() {
           ) : null}
 
           <Text variant="bodySm" tone="muted" numeric>
-            {scheduledCount} reminder{scheduledCount === 1 ? '' : 's'} scheduled on this device.
+            {scheduledCount === null ? 'Schedule status unavailable.' : scheduledCount + ' ' + (scheduledCount === 1 ? 'reminder' : 'reminders') + ' scheduled on this device.'}
           </Text>
         </Card>
 

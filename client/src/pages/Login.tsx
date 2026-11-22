@@ -147,7 +147,9 @@ export default function Login() {
 
         toast({
           title: "Success! Please check your email.",
-          description: "We've sent a verification link to your inbox.",
+          description: isCoachSignup
+            ? "We've sent a verification link. An admin will approve your coach access; until then you'll see the client view."
+            : "We've sent a verification link to your inbox.",
         });
 
         setShowVerificationMessage(true);

@@ -1,14 +1,13 @@
 import * as Haptics from 'expo-haptics';
 import { StyleSheet } from 'react-native';
-// @ts-expect-error react-test-renderer has no bundled declarations in this app.
 import { act, create } from 'react-test-renderer';
 
-import { SegmentedControl } from './SegmentedControl';
+import { SegmentedControlFallback as SegmentedControl } from './SegmentedControlFallback';
 
 jest.mock('@/theme', () => ({
   HIT_SLOP_MIN: 44,
   iconSize: { md: 20 },
-  radius: { md: 12 },
+  radius: { md: 12, pill: 999 },
   spacing: { xs: 4, sm: 8 },
   tabularNums: {},
   type: {
@@ -25,6 +24,9 @@ jest.mock('@/theme', () => ({
     colors: {
       primary: '#00a000',
       primaryFill: '#008000',
+      primarySoft: '#e8f5e8',
+      primaryPressed: '#006000',
+      pressed: '#e0e4e0',
       onPrimary: '#ffffff',
       mutedForeground: '#777777',
       borderStrong: '#222222',
@@ -37,8 +39,15 @@ jest.mock('@/theme', () => ({
   }),
 }));
 
+jest.mock('./AppSymbol', () => ({
+  AppSymbol: () => {
+    const { View } = jest.requireActual('react-native');
+    return <View />;
+  },
+}));
+
 function render(ui: React.ReactElement) {
-  let renderer: ReturnType<typeof create>;
+  let renderer!: ReturnType<typeof create>;
   act(() => {
     renderer = create(ui);
   });
@@ -59,7 +68,7 @@ function render(ui: React.ReactElement) {
 
 type RenderedNode = ReturnType<ReturnType<typeof create>['toJSON']>;
 
-function visibleStrings(node: RenderedNode): string[] {
+function visibleStrings(node: RenderedNode | string): string[] {
   if (node === null) return [];
   if (typeof node === 'string') return [node];
   if (Array.isArray(node)) return node.flatMap(visibleStrings);
@@ -100,6 +109,26 @@ describe('SegmentedControl', () => {
     press(getByRole('radio', 'Nutrition'));
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith('nutrition');
+  });
+
+  it('presents compact choices as one quiet segmented rail', () => {
+    const { getByRole } = render(
+      <SegmentedControl
+        label="Training view"
+        value="plan"
+        onChange={jest.fn()}
+        segments={[
+          { value: 'plan', label: 'Plan' },
+          { value: 'history', label: 'History' },
+        ]}
+      />,
+    );
+
+    expect(resolvedStyle(getByRole('radiogroup', 'Training view'))).toMatchObject({
+      backgroundColor: '#eeeeee',
+      borderRadius: 999,
+    });
+    expect(resolvedStyle(getByRole('radio', 'History'))).toMatchObject({ borderWidth: 0 });
   });
 
   it('emits one selection haptic only when the value changes', () => {
@@ -143,7 +172,7 @@ describe('SegmentedControl', () => {
     expect(getByRole('radio', 'Nutrition').props.accessibilityState).toMatchObject({ selected: true });
     expect(resolvedStyle(getByRole('radio', 'Nutrition'))).toMatchObject({
       backgroundColor: '#008000',
-      borderColor: '#00a000',
+      borderWidth: 0,
     });
     expect(root.findAll((node: { props: { pointerEvents?: string } }) => node.props.pointerEvents === 'none')).toHaveLength(0);
   });

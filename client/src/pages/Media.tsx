@@ -2,10 +2,11 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Image as ImageIcon, Calendar, Plus, Edit2, Download, AlertCircle } from "lucide-react";
+import { Image as ImageIcon, Plus, Edit2, AlertCircle } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { PrivatePhotoThumbnail } from "@/components/PrivatePhotoThumbnail";
 import { PhotosUploadDialog } from "@/components/PhotosUploadDialog";
 
 export default function Media() {
@@ -17,8 +18,8 @@ export default function Media() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   // Fetch photos
-  const { data: weeklyPhotos, isLoading } = useQuery({
-    queryKey: ['weeklyProgressPhotos', targetUserId],
+  const { data: weeklyPhotos, isLoading, isError, refetch } = useQuery({
+    queryKey: ['weeklyProgressPhotos', user?.id, targetUserId],
     queryFn: async () => {
       if (!targetUserId) return [];
 
@@ -31,7 +32,7 @@ export default function Media() {
       if (error) throw error;
       return data;
     },
-    enabled: !!targetUserId,
+    enabled: !!targetUserId && !!user?.id,
   });
 
   const handleLogPhotos = () => {
@@ -46,33 +47,6 @@ export default function Media() {
 
   const handleSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ['weeklyProgressPhotos'] });
-  };
-
-  const renderPhotoThumbnail = (url: string | null, label: string) => {
-    if (!url) {
-      return (
-        <div className="aspect-[3/4] bg-muted/30 rounded-lg flex flex-col items-center justify-center gap-2 border border-dashed border-muted">
-          <ImageIcon className="w-5 h-5 text-muted-foreground/40" />
-          <span className="text-[10px] text-muted-foreground uppercase">{label}</span>
-        </div>
-      );
-    }
-
-    return (
-      <div className="relative aspect-[3/4] rounded-lg overflow-hidden group border border-border">
-        <img src={url} alt={label} className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-          <a href={url} download target="_blank" rel="noreferrer">
-            <Button size="icon" variant="secondary" className="h-8 w-8 rounded-full">
-              <Download className="w-4 h-4" />
-            </Button>
-          </a>
-        </div>
-        <div className="absolute bottom-0 left-0 right-0 bg-black/60 py-1 px-2">
-          <span className="text-[10px] text-white font-medium uppercase">{label}</span>
-        </div>
-      </div>
-    );
   };
 
   if (isLoading) {
@@ -103,7 +77,9 @@ export default function Media() {
         )}
       </div>
 
-      {isEmpty ? (
+      {isError && <div role="alert">Photo history could not load. <Button onClick={() => void refetch()}>Retry</Button></div>}
+
+      {isEmpty && !isError ? (
         <div className="flex items-center justify-center min-h-[50vh]">
           <Card className="p-8 text-center max-w-md">
             <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
@@ -160,10 +136,10 @@ export default function Media() {
                 </div>
 
                 <div className="grid grid-cols-4 gap-2">
-                  {renderPhotoThumbnail(record.front_url, "Front")}
-                  {renderPhotoThumbnail(record.back_url, "Back")}
-                  {renderPhotoThumbnail(record.side_left_url, "Left")}
-                  {renderPhotoThumbnail(record.side_right_url, "Right")}
+                  <PrivatePhotoThumbnail reference={record.front_url} ownerId={record.user_id} label="Front" />
+                  <PrivatePhotoThumbnail reference={record.back_url} ownerId={record.user_id} label="Back" />
+                  <PrivatePhotoThumbnail reference={record.side_left_url} ownerId={record.user_id} label="Left" />
+                  <PrivatePhotoThumbnail reference={record.side_right_url} ownerId={record.user_id} label="Right" />
                 </div>
               </Card>
             );
@@ -172,6 +148,7 @@ export default function Media() {
       )}
 
       <PhotosUploadDialog
+        key={`${user?.id}:${selectedDate?.toISOString()}:${isDialogOpen}`}
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         selectedDate={selectedDate}

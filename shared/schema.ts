@@ -279,8 +279,8 @@ export type UserGoal = typeof userGoals.$inferSelect;
 export const onboardingQuestionnaire = pgTable("onboarding_questionnaire", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  answers: text("answers"), // JSON string of answers
-  completedSections: text("completed_sections"), // JSON string of completed section IDs
+  answers: text("answers"), // Flat JSON; immutable question IDs plus __assessment_catalog_version writer metadata.
+  completedSections: text("completed_sections"), // Completion history; shared/questionnaire computes current valid completion.
   status: varchar("status", { length: 20 }).default('in_progress'), // 'in_progress', 'completed'
 
   createdAt: timestamp("created_at").defaultNow(),
