@@ -9,7 +9,7 @@ DECLARE parts text[]; day date;
 BEGIN
   parts := string_to_array(object_name, '/');
   IF array_length(parts, 1) <> 3 OR parts[1] !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-    OR parts[2] !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' OR parts[3] !~ '^[a-z0-9_()-]+_[0-9]+[.]jpg$' THEN RETURN NULL; END IF;
+    OR parts[2] !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' OR parts[3] !~* '^[a-z0-9_()-]+_[0-9]+[.](jpe?g|png)$' THEN RETURN NULL; END IF;
   day := parts[2]::date;
   IF to_char(day, 'YYYY-MM-DD') <> parts[2] THEN RETURN NULL; END IF;
   RETURN parts[1]::uuid;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,10 @@ import { formatDisplayDate } from "@/lib/date-utils";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QuestionnaireWizard } from "@/components/QuestionnaireWizard";
+
+import { answerText, parseAnswers, changedAnswers } from '@/lib/questionnaire-data';
+import { saveProfilePatch } from '../../../shared/profile-save';
+import { saveAssessment } from '../../../shared/assessment-save';
 
 export default function Profile() {
   const { user, viewedUserId } = useAuth();
@@ -38,10 +42,20 @@ export default function Profile() {
     packageEndDate: "", // Calculated
   });
 
+  const baseline = useRef(formData);
+  const identity = useRef(targetUserId);
+  const epoch = useRef(0);
+  if (identity.current !== targetUserId) { identity.current = targetUserId; epoch.current++; }
+  const [loadError,setLoadError] = useState(false);
+  const [loadAttempt,setLoadAttempt] = useState(0);
+  const [ready,setReady] = useState(false);
   // Fetch user profile data from DB and questionnaire
   useEffect(() => {
     async function fetchProfile() {
       if (!targetUserId) return;
+      const generation = ++epoch.current;
+      const active = () => identity.current === targetUserId && epoch.current === generation;
+      setReady(false); setLoadError(false); setIsEditing(false); setIsLoading(false);
       try {
         // Fetch user data
         const { data, error } = await supabase
@@ -50,19 +64,19 @@ export default function Profile() {
           .eq('id', targetUserId)
           .single();
 
-        if (error) {
-          console.error("Error fetching profile:", error);
-          return;
-        }
+        if (!active()) return;
+        if (error || !data) throw error ?? new Error('Profile missing');
 
         // Fetch questionnaire data
-        const { data: questionnaireData } = await supabase
+        const { data: questionnaireData, error: assessmentError } = await supabase
           .from('onboarding_questionnaire')
           .select('answers')
           .eq('user_id', targetUserId)
           .maybeSingle();
 
-        const questionnaireAnswers = questionnaireData ? JSON.parse(questionnaireData.answers || '{}') : {};
+        if (!active()) return;
+        if (assessmentError) throw assessmentError;
+        const questionnaireAnswers = parseAnswers(questionnaireData?.answers);
 
         if (data) {
           const profileData = data.profile_data || {};
@@ -81,104 +95,60 @@ export default function Profile() {
           }
 
           // Sync logic: prefer questionnaire answers, fallback to profile_data
-          setFormData(prev => ({
-            ...prev,
+          const next = {
+            ...baseline.current,
             name: data.full_name || "",
             email: data.email || "",
             phone: data.phone_number || "",
             country: data.country || "",
             timezone: profileData.timezone || "",
-            goal: questionnaireAnswers.q14 || profileData.goal || "",
-            injuries: questionnaireAnswers.q56 || profileData.injuries || "",
-            allergies: questionnaireAnswers.q64 || profileData.allergies || "",
-            workoutDays: questionnaireAnswers.q33 || profileData.workoutDays || "",
+            goal: answerText(questionnaireAnswers,'q14',profileData.goal),
+            injuries: answerText(questionnaireAnswers,'q56',profileData.injuries),
+            allergies: answerText(questionnaireAnswers,'q64',profileData.allergies),
+            workoutDays: answerText(questionnaireAnswers,'q33',profileData.workoutDays),
             medicalCondition: profileData.medicalCondition || "",
             startDate: formatDisplayDate(pkgStart),
             packageEndDate: endDateStr,
-          }));
+          };
+          baseline.current = next; setFormData(next); setReady(true);
         }
       } catch (err) {
-        console.error("Fetch profile exception:", err);
+        if (active()) setLoadError(true);
       }
     }
 
-    fetchProfile();
-  }, [targetUserId]);
+    void fetchProfile();
+    return () => { epoch.current++; };
+  }, [targetUserId,loadAttempt]);
 
   const handleSave = async () => {
-    if (!targetUserId) return;
+    if (!targetUserId || !ready || isLoading) return;
+    const userId = targetUserId; const generation = epoch.current;
+    const active = () => identity.current === userId && epoch.current === generation;
+    const snapshot = {...formData};
+    const overlap = (form: typeof formData) => ({q14:form.goal,q56:form.injuries,q64:form.allergies,q33:form.workoutDays});
+    const extra = (form: typeof formData) => ({timezone:form.timezone,goal:form.goal,injuries:form.injuries,allergies:form.allergies,workoutDays:form.workoutDays,medicalCondition:form.medicalCondition});
     setIsLoading(true);
-
     try {
-      // Only update Auth User Metadata if we are the user acting on ourselves
-      if (!viewedUserId) {
-        const { error: authError } = await supabase.auth.updateUser({
-          data: { full_name: formData.name }
-        });
-        if (authError) throw authError;
+      // Fail closed before either row is changed if assessment cannot be read.
+      const {error:assessmentReadError} = await supabase.from('onboarding_questionnaire').select('id, answers, completed_sections').eq('user_id',userId).maybeSingle();
+      if (!active()) return; if(assessmentReadError) throw assessmentReadError;
+      if (!viewedUserId && snapshot.name !== baseline.current.name) {
+        const {error} = await supabase.auth.updateUser({data:{full_name:snapshot.name}});
+        if (!active()) return; if(error) throw error;
       }
-
-      // Collect extra fields for profile_data
-      const profileData = {
-        // region is replaced by country column
-        timezone: formData.timezone,
-        goal: formData.goal,
-        injuries: formData.injuries,
-        allergies: formData.allergies,
-        workoutDays: formData.workoutDays,
-        medicalCondition: formData.medicalCondition,
-      };
-
-      // Update users table
-      const { error: dbError } = await supabase
-        .from('users')
-        .update({
-          full_name: formData.name,
-          phone_number: formData.phone,
-          country: formData.country,
-          profile_data: profileData
-        })
-        .eq('id', targetUserId);
-
-      if (dbError) throw dbError;
-
-      // Sync changes back to questionnaire
-      const { data: existingQuestionnaire } = await supabase
-        .from('onboarding_questionnaire')
-        .select('answers')
-        .eq('user_id', targetUserId)
-        .maybeSingle();
-
-      if (existingQuestionnaire) {
-        const answers = JSON.parse(existingQuestionnaire.answers || '{}');
-        answers.q14 = formData.goal;
-        answers.q56 = formData.injuries;
-        answers.q64 = formData.allergies;
-        answers.q33 = formData.workoutDays;
-
-        const { error: questionnaireError } = await supabase
-          .from('onboarding_questionnaire')
-          .update({ answers: JSON.stringify(answers) })
-          .eq('user_id', targetUserId);
-
-        if (questionnaireError) throw questionnaireError;
-      }
-
-      toast({
-        title: "Success",
-        description: "Profile updated successfully!",
-      });
-      setIsEditing(false);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update profile",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+      const patch = changedAnswers({full_name:baseline.current.name,phone_number:baseline.current.phone,country:baseline.current.country},{full_name:snapshot.name,phone_number:snapshot.phone,country:snapshot.country});
+      await saveProfilePatch(supabase,userId,patch,changedAnswers(extra(baseline.current),extra(snapshot)),active);
+      if (!active()) return;
+      await saveAssessment(supabase,userId,changedAnswers(overlap(baseline.current),overlap(snapshot)),[],active,{create:false});
+      if (!active()) return;
+      baseline.current=snapshot; setIsEditing(false); toast({title:'Saved',description:'Profile saved to your account.'});
+    } catch { if(active()) toast({title:'Could not finish saving',description:'Your edits are still here. Retry to finish updating your profile and assessment.',variant:'destructive'}); }
+    finally { if(active()) setIsLoading(false); }
   };
+
+  if (loadError) return <Card className="p-6"><p>Could not load your profile.</p><Button onClick={()=>setLoadAttempt(n=>n+1)}>Retry</Button></Card>;
+  if (!ready) return <p>Loading profile…</p>;
 
   return (
     <div className="space-y-8 max-w-4xl">

@@ -17,7 +17,7 @@ WITH refs AS (
 ), classified AS (
  SELECT CASE
    WHEN reference LIKE current_setting('photo_privacy.project_url') || '/storage/v1/object/public/progress_photos/%' THEN 'same-project legacy (full validation during migration)'
-   WHEN reference ~ '^[0-9a-f-]{36}/[0-9]{4}-[0-9]{2}-[0-9]{2}/[a-z0-9_()-]+_[0-9]+[.]jpg$' THEN 'path (full validation during migration)'
+   WHEN reference ~* '^[0-9a-f-]{36}/[0-9]{4}-[0-9]{2}-[0-9]{2}/[a-z0-9_()-]+_[0-9]+[.](jpe?g|png)$' THEN 'path (full validation during migration)'
    ELSE 'UNKNOWN: operator review required' END AS category
  FROM refs
 ) SELECT category,count(*) FROM classified GROUP BY category;

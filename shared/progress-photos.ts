@@ -24,7 +24,7 @@ export function canonicalPhotoReference(reference: string, projectUrl: string, o
   }
   const parts = path.split('/');
   if (parts.length !== 3 || !uuid.test(parts[0]) || !validDate(parts[1]) ||
-      !/^[a-z0-9_()-]+_[0-9]+\.jpg$/.test(parts[2]) || (ownerId && parts[0] !== ownerId)) {
+      !/^[a-z0-9_()-]+_[0-9]+\.(jpe?g|png)$/i.test(parts[2]) || (ownerId && parts[0] !== ownerId)) {
     throw new Error('Unrecognized photo reference');
   }
   return path;

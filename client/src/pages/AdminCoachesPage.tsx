@@ -92,6 +92,23 @@ export default function AdminCoachesPage() {
     }
   }, [queryClient, toast]);
 
+  // Coach sign-ups start as clients; an admin approves them here (server enforces this).
+  const handleApproveCoach = useCallback(async (user: { id: string; full_name?: string | null; profile_data?: Record<string, unknown> | null }) => {
+    try {
+      const { requested_role: _requested, ...profileData } = user.profile_data ?? {};
+      const { error } = await supabase
+        .from('users')
+        .update({ role: 'coach', profile_data: profileData })
+        .eq('id', user.id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['admin-coaches'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-all-clients'] });
+      toast({ title: "Coach approved", description: `${user.full_name || 'This user'} now has coach access. Ask them to sign out and back in.` });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  }, [queryClient, toast]);
+
   const { data: coaches, isLoading: coachesLoading } = useQuery({
     queryKey: ["admin-coaches"],
     queryFn: fetchAllCoaches,
@@ -306,6 +323,7 @@ export default function AdminCoachesPage() {
     : 0;
 
   const isLoading = coachesLoading || clientsLoading;
+  const coachRequests = (clients || []).filter((c: any) => c.profile_data?.requested_role === 'coach');
 
   if (isLoading) {
     return (
@@ -326,6 +344,27 @@ export default function AdminCoachesPage() {
           Monitor all coaches and their client management metrics
         </p>
       </div>
+
+      {coachRequests.length > 0 && (
+        <Card className="rounded-2xl border-primary/40">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4" /> Coach requests ({coachRequests.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {coachRequests.map((request: any) => (
+              <div key={request.id} className="flex items-center justify-between gap-3 rounded-xl border p-3">
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{request.full_name || 'Unnamed'}</p>
+                  <p className="text-sm text-muted-foreground truncate">{request.email}</p>
+                </div>
+                <Button size="sm" onClick={() => handleApproveCoach(request)}>Make coach</Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">

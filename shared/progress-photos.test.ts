@@ -13,6 +13,14 @@ test('accepts existing mobile/web paths and converts only same-project legacy pu
   assert.equal(canonicalPhotoReference(legacy.replace('(left)', '%28left%29'), project, owner), path);
 });
 
+test('accepts the .jpeg/.png/.JPG photos already stored by older uploads', () => {
+  for (const name of ['front_view_123.jpeg', 'side_(left)_123.png', 'back_123.JPG']) {
+    const stored = `${owner}/2026-02-15/${name}`;
+    assert.equal(canonicalPhotoReference(`${project}/storage/v1/object/public/progress_photos/${stored}`, project, owner), stored);
+  }
+  assert.throws(() => canonicalPhotoReference(path.replace('.jpg', '.gif'), project, owner));
+});
+
 test('rejects foreign, signed, mismatched-owner, malformed and normalized-away traversal references', () => {
   for (const value of [legacy.replace('fixture.', 'other.'), legacy.replace('/public/', '/sign/'),
     legacy + '?token=secret', legacy + '#fragment', `//fixture.supabase.co/${path}`,
