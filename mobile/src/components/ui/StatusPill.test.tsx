@@ -64,9 +64,9 @@ function render(status: React.ComponentProps<typeof StatusPill>['status'], label
 describe('StatusPill', () => {
   it.each([
     ['saving', 'Saving…', LoaderCircle],
-    ['saved', 'Saved on this device', CircleCheck],
+    ['saved', 'Draft saved on this device.', CircleCheck],
     ['offline', 'Saved here · waiting to sync', CloudOff],
-    ['error', 'Couldn’t save draft', CircleAlert],
+    ['error', 'Couldn’t save', CircleAlert],
   ] as const)('renders %s as an icon-and-text polite status', (status, label, icon) => {
     const renderer = render(status);
     const statusNode = renderer.root.findByProps({ role: 'status' });
@@ -126,7 +126,7 @@ describe('StatusPill', () => {
     const compositeStatus = renderer.root.findByProps({ testID: 'composite-status' });
     expect(compositeStatus.parent?.type).toBe('View');
     expect(renderer.root.findByProps({ role: 'status' }).props.accessibilityLabel).toBe(
-      'Saved on this device',
+      'Draft saved on this device.',
     );
     const primaryAction = renderer.root.findAllByProps({ testID: 'checkin-next' }).find(
       (node: { props: { accessibilityRole?: string } }) =>
@@ -138,7 +138,7 @@ describe('StatusPill', () => {
     });
   });
 
-  it('places a tab-hosted action bar above the navigation bar without duplicating the safe area', () => {
+  it('places a focused editor footer at the screen edge and owns its safe area once', () => {
     const previousExpoOS = process.env.EXPO_OS;
     process.env.EXPO_OS = 'ios';
 
@@ -157,8 +157,8 @@ describe('StatusPill', () => {
     });
 
     expect(StyleSheet.flatten(actionBar?.props.style)).toMatchObject({
-      bottom: 90,
-      paddingBottom: 8,
+      bottom: 0,
+      paddingBottom: 42,
     });
 
     process.env.EXPO_OS = previousExpoOS;

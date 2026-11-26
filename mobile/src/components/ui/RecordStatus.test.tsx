@@ -42,7 +42,7 @@ describe('RecordStatus', () => {
     const retry = jest.fn();
     const view = await render(<RecordStatus value="blocked" onRetry={retry} />);
 
-    expect(view.queryByText('Saved and synced')).toBeNull();
+    expect(view.queryByText('Saved')).toBeNull();
     expect(view.getByRole('status')).toBeTruthy();
     fireEvent.press(view.getByRole('button', { name: 'Retry save' }));
 
@@ -56,6 +56,6 @@ describe('RecordStatus', () => {
     expect(announce).not.toHaveBeenCalled();
     await view.rerender(<RecordStatus value="synced" />);
 
-    expect(announce).toHaveBeenCalledWith('Saved and synced');
+    expect(announce).toHaveBeenCalledWith('Saved');
   });
 });

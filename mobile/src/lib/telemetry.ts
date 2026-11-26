@@ -11,11 +11,18 @@ export function initializeTelemetry(): void {
   try {
     Sentry.init({
       dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
-      enableNative: false,
+      // Native crashes and app-killing JS errors must reach us in production.
+      // Expo Go has no native module; the SDK skips native there by itself.
+      enableNative: true,
+      enableNativeCrashHandling: true,
       defaultIntegrations: false,
+      integrations: [Sentry.reactNativeErrorHandlersIntegration({ onerror: true, onunhandledrejection: true })],
       enableAutoSessionTracking: false,
+      enableAutoPerformanceTracing: false,
       sendDefaultPii: false,
       tracesSampleRate: 0,
+      // No breadcrumbs, JS or native: request URLs can carry account IDs.
+      maxBreadcrumbs: 0,
       beforeBreadcrumb: () => null,
       beforeSend: (event) => sanitizeTelemetryEvent(event as unknown as Record<string, unknown>) as typeof event | null,
     });

@@ -1,13 +1,16 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import { act, fireEvent, render } from '@testing-library/react-native';
-import { Keyboard, Platform } from 'react-native';
-import CheckInScreen from '../../../../app/(app)/(tabs)/check-in';
+import { AccessibilityInfo, Keyboard, Platform } from 'react-native';
+import CheckInScreen from '../../../../app/(app)/daily-check-in';
 import { EMPTY_FORM } from '@/features/checkin/model';
 
 let mockParams: Record<string, string> = {};
 let mockEditor: any;
 let mockProfile: any = { data: { package_start_date: '2026-09-01' }, isError: false };
 const mockNavigate = jest.fn();
+const mockBack = jest.fn();
+const mockReplace = jest.fn();
+let mockCanGoBack = true;
 const mockSetParams = jest.fn();
 const mockDispatch = jest.fn();
 let mockRemove: ((event: any) => void) | undefined;
@@ -15,14 +18,17 @@ const mockChangeDate = jest.fn(async () => true);
 const mockSubmit = jest.fn(async () => 'invalid');
 const mockFlush = jest.fn(async () => true);
 const mockNumericFlush = jest.fn(() => true);
-const mockNumericCommits = { flush: mockNumericFlush };
-const mockWebFocus = jest.fn();
+const mockNumericCommits = { flush: mockNumericFlush, subscribe: () => () => {} };
+const mockFieldFocus = jest.fn();
 const mockScrollIntoView = jest.fn();
 const mockMeasureLayout = jest.fn();
-const mockFieldNode = { focus: mockWebFocus, scrollIntoView: mockScrollIntoView, measureLayout: mockMeasureLayout };
+const mockFieldNode = { focus: mockFieldFocus, isFocused: () => false, scrollIntoView: mockScrollIntoView, measureLayout: mockMeasureLayout };
+const mockScrollContentNode = { measureLayout: jest.fn() };
+const mockScrollTo = jest.fn();
+const mockScrollView = { getInnerViewNode: () => 101, scrollTo: mockScrollTo };
 let mockRegisterFields = false;
 jest.mock('lucide-react-native', () => ({ Check: () => null, Clock3: () => null, CircleAlert: () => null, ClipboardCheck: () => null }));
-jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: mockNavigate, setParams: mockSetParams }), useLocalSearchParams: () => mockParams }));
+jest.mock('expo-router', () => ({ useRouter: () => ({ canGoBack: () => mockCanGoBack, back: mockBack, replace: mockReplace, navigate: mockNavigate, setParams: mockSetParams }), useLocalSearchParams: () => mockParams }));
 jest.mock('expo-router/react-navigation', () => ({ useNavigation: () => ({ dispatch: mockDispatch }), usePreventRemove: (_enabled: boolean, callback: (event: any) => void) => { mockRemove = callback; }, useFocusEffect: (callback: () => void) => { require('react').useEffect(callback, [callback]); } }));
 jest.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'u' } }) }));
 jest.mock('@/hooks/usePlans', () => ({ useUserProfile: () => mockProfile, useWorkoutPlan: () => ({ data: { source: 'none', days: [] } }) }));
@@ -51,20 +57,32 @@ jest.mock('@/components/checkin/CheckInForm', () => ({ CheckInForm: ({ step, for
     <MockText>{`Energy ${form.energyLevel ?? 'empty'}`}</MockText>
     {focusField ? <MockText>{`Focus ${focusField}`}</MockText> : null}
     {Object.keys(errors).map((field) => <MockText key={field}>{`Error ${field}`}</MockText>)}
-    <MockButton label="Answer readiness" onPress={() => setForm((current: any) => ({ ...current, energyLevel: 7, stressLevel: 3 }))} />
+    <MockButton label="Answer readiness" onPress={() => setForm((current: any) => ({ ...current, morningWeight: 72.4, energyLevel: 7, sleepHours: 7 }))} />
     {step === 'finish' ? <MockButton label="Edit recovery" onPress={() => onEditSection?.('recovery')} /> : null}
   </>;
 } }));
 jest.mock('@/components/ui', () => {
   const React = require('react'); const { Text, View, Pressable } = require('react-native');
   const Button = ({ label, onPress, testID, disabled }: any) => <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} testID={testID} disabled={disabled}><Text>{label}</Text></Pressable>;
-  return { Text, Button, Card: View, Screen: React.forwardRef(function MockScreen({ children }: any, _ref: unknown) { return <View>{children}</View>; }), ErrorState: ({ title, message, onRetry }: any) => <View><Text>{title}</Text><Text>{message}</Text><Button label="Retry" onPress={onRetry} /></View>, SkeletonCard: () => <Text>Loading record</Text>, RecordStatus: ({ value }: any) => <Text>{value}</Text>, StickyActionBar: ({ primaryLabel, onPrimary, primaryTestID, secondaryLabel, onSecondary }: any) => <View testID="sticky-action-bar"><Button testID={primaryTestID} label={primaryLabel} onPress={onPrimary} /><Button label={secondaryLabel} onPress={onSecondary} /></View>, Sheet: ({ visible, children }: any) => visible ? <View>{children}</View> : null, SheetScrollView: View };
+  const Screen = React.forwardRef(function MockScreen({ children, contentRef }: any, ref: unknown) {
+    React.useImperativeHandle(ref, () => mockScrollView);
+    React.useImperativeHandle(contentRef, () => mockScrollContentNode);
+    return <View>{children}</View>;
+  });
+  return { Text, Button, Card: View, Screen, ErrorState: ({ title, message, onRetry }: any) => <View><Text>{title}</Text><Text>{message}</Text><Button label="Retry" onPress={onRetry} /></View>, SkeletonCard: () => <Text>Loading record</Text>, RecordStatus: ({ value }: any) => <Text>{value}</Text>, StickyActionBar: ({ primaryLabel, onPrimary, primaryTestID, secondaryLabel, onSecondary }: any) => <View testID="sticky-action-bar"><Button testID={primaryTestID} label={primaryLabel} onPress={onPrimary} /><Button label={secondaryLabel} onPress={onSecondary} /></View>, Sheet: ({ visible, children }: any) => visible ? <View>{children}</View> : null, SheetScrollView: View };
 });
-jest.mock('@/theme', () => ({ spacing: { xs: 4, sm: 8, md: 12, base: 16, lg: 24 }, useMotion: () => ({ enabled: false }), useTheme: () => ({ colors: {} }) }));
+jest.mock('@/theme', () => ({
+  // Preserve real geometry without loading the storage-backed ThemeProvider.
+  ...jest.requireActual('@/theme/tokens'),
+  ...jest.requireActual('@/theme/layout'),
+  useMotion: () => ({ enabled: false }),
+  useTheme: () => ({ colors: {} }),
+}));
 const { Text: MockText, Button: MockButton } = require('@/components/ui');
 
 beforeEach(() => {
-  jest.clearAllMocks(); mockParams = {}; mockRegisterFields = false;
+  jest.clearAllMocks(); mockParams = {}; mockRegisterFields = false; mockCanGoBack = true;
+  mockMeasureLayout.mockReset();
   mockProfile = { data: { package_start_date: '2026-09-01' }, isError: false };
   mockNumericFlush.mockReset().mockReturnValue(true);
   mockFlush.mockReset().mockResolvedValue(true);
@@ -116,7 +134,7 @@ it('mounts one persisted section, validates locally, preserves answers on Back, 
   expect(mockEditor.setStep).not.toHaveBeenCalledWith(1);
   expect(mockEditor.setStep).toHaveBeenLastCalledWith(0);
   expect(screen.getByText('Error energyLevel')).toBeTruthy();
-  expect(screen.getByText('Error stressLevel')).toBeTruthy();
+  expect(screen.getByText('Error sleepHours')).toBeTruthy();
 
   mockEditor.updateForm.mockImplementation((updater: any) => { mockEditor.form = updater(mockEditor.form); });
   await fireEvent.press(screen.getByRole('button', { name: 'Answer readiness' }));
@@ -126,7 +144,7 @@ it('mounts one persisted section, validates locally, preserves answers on Back, 
   expect(mockEditor.setStep).toHaveBeenLastCalledWith(1);
 
   mockEditor.step = 1;
-  mockEditor.form = { ...mockEditor.form, sleepHours: 7, hungerLevel: 5, digestion: 'none' };
+  mockEditor.form = { ...mockEditor.form, stressLevel: 3, hungerLevel: 5, digestion: 'none' };
   await screen.rerender(<CheckInScreen />);
   expect(screen.getByText('Wizard recovery')).toBeTruthy();
   expect(screen.queryByText('Wizard readiness')).toBeNull();
@@ -155,8 +173,8 @@ it('uses inline review editing to return to the selected persisted section', asy
   expect(mockSubmit).not.toHaveBeenCalled();
 });
 
-it('reveals a hidden invalid optional field without invoking full submission', async () => {
-  mockEditor.form = { ...EMPTY_FORM, morningWeight: 500, energyLevel: 7, stressLevel: 3 };
+it('focuses an invalid required measurement without invoking full submission', async () => {
+  mockEditor.form = { ...EMPTY_FORM, morningWeight: 500, energyLevel: 7, sleepHours: 7 };
   const screen = await render(<CheckInScreen />);
 
   await fireEvent.press(screen.getByTestId('checkin-next'));
@@ -167,9 +185,43 @@ it('reveals a hidden invalid optional field without invoking full submission', a
   expect(mockEditor.setStep).toHaveBeenCalledWith(0);
 });
 
+it.each(['ios', 'android'] as const)('scrolls repeated invalid fields into view using a native content ref on %s', async (os) => {
+  mockRegisterFields = true;
+  mockEditor.form = { ...EMPTY_FORM, morningWeight: 500, energyLevel: 7, sleepHours: 7 };
+  const platform = jest.replaceProperty(Platform, 'OS', os);
+  const frame = jest.spyOn(global, 'requestAnimationFrame').mockImplementation((callback) => {
+    callback(0);
+    return 1;
+  });
+  const nodeHandle = jest.spyOn(require('react-native'), 'findNodeHandle').mockReturnValue(23);
+  const accessibilityFocus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
+  // Fabric rejects numeric handles as the relative measurement target. Only
+  // resolve the measurement when the screen supplies its actual content view.
+  mockMeasureLayout.mockImplementation((relativeTo, onSuccess) => {
+    if (relativeTo === mockScrollContentNode) onSuccess(0, 144, 200, 44);
+  });
+  try {
+    const screen = await render(<CheckInScreen />);
+
+    await fireEvent.press(screen.getByTestId('checkin-next'));
+    await fireEvent.press(screen.getByTestId('checkin-next'));
+
+    expect(mockScrollTo).toHaveBeenCalledTimes(2);
+    expect(mockScrollTo).toHaveBeenLastCalledWith({ y: 120, animated: false });
+    expect(mockFieldFocus).toHaveBeenCalledTimes(2);
+    expect(accessibilityFocus).toHaveBeenLastCalledWith(23);
+    expect(mockSubmit).not.toHaveBeenCalled();
+  } finally {
+    accessibilityFocus.mockRestore();
+    nodeHandle.mockRestore();
+    frame.mockRestore();
+    platform.restore();
+  }
+});
+
 it('focuses repeated invalid fields safely on web without native node lookup', async () => {
   mockRegisterFields = true;
-  mockEditor.form = { ...EMPTY_FORM, morningWeight: 500, energyLevel: 7, stressLevel: 3 };
+  mockEditor.form = { ...EMPTY_FORM, morningWeight: 500, energyLevel: 7, sleepHours: 7 };
   const platform = jest.replaceProperty(Platform, 'OS', 'web');
   const frame = jest.spyOn(global, 'requestAnimationFrame').mockImplementation((callback) => {
     callback(0);
@@ -181,7 +233,7 @@ it('focuses repeated invalid fields safely on web without native node lookup', a
     await fireEvent.press(screen.getByTestId('checkin-next'));
     await fireEvent.press(screen.getByTestId('checkin-next'));
 
-    expect(mockWebFocus).toHaveBeenCalledTimes(2);
+    expect(mockFieldFocus).toHaveBeenCalledTimes(2);
     expect(mockScrollIntoView).toHaveBeenCalledTimes(2);
     expect(mockMeasureLayout).not.toHaveBeenCalled();
   } finally {
@@ -192,13 +244,15 @@ it('focuses repeated invalid fields safely on web without native node lookup', a
 
 it('clears a corrected numeric warning on Continue but preserves storage warnings', async () => {
   mockNumericFlush.mockReturnValueOnce(false).mockReturnValue(true);
-  mockEditor.form = { ...EMPTY_FORM, energyLevel: 7, stressLevel: 3 };
+  mockEditor.form = { ...EMPTY_FORM, morningWeight: 72.4, energyLevel: 7, sleepHours: 7 };
   const screen = await render(<CheckInScreen />);
 
   await fireEvent.press(screen.getByTestId('checkin-next'));
-  expect(screen.getByText('Correct the highlighted number or clear it before continuing.')).toBeTruthy();
+  expect(screen.getByText('Enter a valid number in the highlighted field.')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Retry saving' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Discard draft' })).toBeNull();
   await fireEvent.press(screen.getByTestId('checkin-next'));
-  expect(screen.queryByText('Correct the highlighted number or clear it before continuing.')).toBeNull();
+  expect(screen.queryByText('Enter a valid number in the highlighted field.')).toBeNull();
   expect(mockEditor.setStep).toHaveBeenCalledWith(1);
 
   mockFlush.mockResolvedValueOnce(false);
@@ -274,4 +328,31 @@ it('keeps a synced receipt as proof of program start while history is refreshing
   const view = await render(<CheckInScreen />);
   expect(view.queryByText(/This check-in starts Day 1/)).toBeNull();
   expect(view.queryByRole('button', { name: 'Save check-in & start Day 1' })).toBeNull();
+});
+
+
+it('keeps Close on the editor after a failed save, then returns once after retry', async () => {
+  mockFlush.mockResolvedValueOnce(false).mockResolvedValue(true);
+  const screen = await render(<CheckInScreen />);
+  await fireEvent.press(screen.getByRole('button', { name: 'Close check-in' }));
+  expect(mockBack).not.toHaveBeenCalled();
+  await fireEvent.press(screen.getByRole('button', { name: 'Retry saving' }));
+  expect(mockBack).toHaveBeenCalledTimes(1);
+});
+it('returns a cold editor entry to the hub when there is no previous route', async () => {
+  mockCanGoBack = false;
+  const screen = await render(<CheckInScreen />);
+  await fireEvent.press(screen.getByRole('button', { name: 'Close check-in' }));
+  expect(mockReplace).toHaveBeenCalledWith('/(app)/(tabs)/check-in');
+  mockCanGoBack = true;
+});
+
+
+it.each(['loading', 'error'])('allows Close before editable state is available: %s', async (loadState) => {
+  mockEditor.loadState = loadState;
+  mockFlush.mockResolvedValue(false);
+  const screen = await render(<CheckInScreen />);
+  await fireEvent.press(screen.getByRole('button', { name: 'Close check-in' }));
+  expect(mockBack).toHaveBeenCalledTimes(1);
+  expect(mockFlush).not.toHaveBeenCalled();
 });

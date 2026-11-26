@@ -6,6 +6,9 @@ import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import type { WorkoutSet } from '@/features/workout/workoutReducer';
 import { ExerciseSlide } from './ExerciseSlide';
 
+// Exercise the React Native host contract here; the SwiftUI adapter has dedicated tests.
+jest.mock('@/components/ui/Button', () => ({ Button: jest.requireActual('@/components/ui/ButtonFallback').ButtonFallback }));
+
 jest.mock('@/hooks/useResponsiveLayout', () => ({
   useResponsiveLayout: jest.fn(),
 }));
@@ -105,6 +108,7 @@ describe('ExerciseSlide set completion', () => {
             substitutions: [],
           }}
           onUpdateSet={jest.fn()}
+          onCompleteSet={jest.fn(() => true)}
           onToggleSet={jest.fn()}
           onAddSet={jest.fn()}
           onRemoveSet={jest.fn()}
@@ -126,6 +130,7 @@ describe('ExerciseSlide set completion', () => {
   it('marks the first incomplete stable set current and forwards its toggle', () => {
     mockResponsiveLayout({ isCompact: true });
     const onToggleSet = jest.fn();
+    const onCompleteSet = jest.fn(() => true);
     let renderer!: ReturnType<typeof create>;
     act(() => {
       renderer = create(
@@ -139,11 +144,16 @@ describe('ExerciseSlide set completion', () => {
               { ...incompleteSet, id: 'squat-set-2' },
             ],
           }}
-          previous={[
-            { weight: '60', reps: '8', rpe: '7' },
-            { weight: '65', reps: '8', rpe: '8' },
-          ]}
+          history={[{
+            date: '2026-09-20',
+            tracking: 'weight-reps',
+            sets: [
+              { setNumber: 1, weight: '60', reps: '8', rpe: '7', kind: 'work', completed: true },
+              { setNumber: 2, weight: '65', reps: '8', rpe: '8', kind: 'work', completed: true },
+            ],
+          }]}
           onUpdateSet={jest.fn()}
+          onCompleteSet={onCompleteSet}
           onToggleSet={onToggleSet}
           onAddSet={jest.fn()}
           onRemoveSet={jest.fn()}
@@ -163,6 +173,7 @@ describe('ExerciseSlide set completion', () => {
     expect(currentEditor).toBeTruthy();
     expect(complete).toBeTruthy();
     act(() => complete.props.onPress());
-    expect(onToggleSet).toHaveBeenCalledWith('squat-set-2');
+    expect(onCompleteSet).toHaveBeenCalledWith('squat-set-2', { weight: '65', reps: '8' });
+    expect(onToggleSet).not.toHaveBeenCalled();
   });
 });

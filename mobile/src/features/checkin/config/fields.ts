@@ -27,9 +27,9 @@ export type CheckInFieldDef = {
  */
 export const CHECK_IN_FIELDS = [
   { id: 'morningWeight', payloadKey: 'morning_weight', section: 'readiness', label: 'Morning weight', control: 'ruler', unit: 'kg', min: 20, max: 400, step: 0.1, precision: 1, carryForward: true },
+  { id: 'sleepHours', payloadKey: 'sleep_hours', section: 'readiness', label: 'Sleep', control: 'ruler', unit: 'h', min: 0, max: 24, step: 0.5, precision: 1, carryForward: true },
   { id: 'energyLevel', payloadKey: 'energy_level', section: 'readiness', label: 'Energy', control: 'rating', min: 1, max: 10, step: 1, precision: 0, carryForward: false },
-  { id: 'stressLevel', payloadKey: 'stress_level', section: 'readiness', label: 'Stress', control: 'rating', min: 1, max: 10, step: 1, precision: 0, carryForward: false },
-  { id: 'sleepHours', payloadKey: 'sleep_hours', section: 'recovery', label: 'Sleep', control: 'ruler', unit: 'h', min: 0, max: 24, step: 0.5, precision: 1, carryForward: true },
+  { id: 'stressLevel', payloadKey: 'stress_level', section: 'recovery', label: 'Stress', control: 'rating', min: 1, max: 10, step: 1, precision: 0, carryForward: false },
   { id: 'hungerLevel', payloadKey: 'hunger_level', section: 'recovery', label: 'Hunger', control: 'rating', min: 1, max: 10, step: 1, precision: 0, carryForward: false },
   {
     id: 'digestion', payloadKey: 'digestion', section: 'recovery', label: 'Digestion', control: 'pills', carryForward: false,
@@ -57,7 +57,7 @@ export const CHECK_IN_FIELDS = [
   { id: 'protein', payloadKey: 'protein', section: 'adherence', label: 'Protein', control: 'number', unit: 'g', min: 0, step: 1, precision: 0, carryForward: true },
   { id: 'carbs', payloadKey: 'carbs', section: 'adherence', label: 'Carbs', control: 'number', unit: 'g', min: 0, step: 1, precision: 0, carryForward: true },
   { id: 'fats', payloadKey: 'fats', section: 'adherence', label: 'Fats', control: 'number', unit: 'g', min: 0, step: 1, precision: 0, carryForward: true },
-  { id: 'notes', payloadKey: 'notes', section: 'finish', label: 'Notes (optional)', control: 'text', carryForward: false },
+  { id: 'notes', payloadKey: 'notes', section: 'finish', label: 'Notes', control: 'text', carryForward: false },
 ] as const satisfies readonly CheckInFieldDef[];
 
 export type NumericHistoryFieldId = Extract<

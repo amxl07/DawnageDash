@@ -4,11 +4,13 @@ import { registerCheckInExitGuard } from '@/features/checkin/checkInExitGuard';
 import { useNotificationRouting } from './useNotificationRouting';
 
 const mockPush = jest.fn();
+const mockReplace = jest.fn();
 const mockLastResponse = jest.fn();
 let responseListener: ((response: any) => void) | undefined;
 let mockToday = '2026-09-16';
 
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
+const mockRouter = { push: mockPush, replace: mockReplace };
+jest.mock('expo-router', () => ({ useRouter: () => mockRouter }));
 jest.mock('expo-notifications', () => ({
   setNotificationHandler: jest.fn(),
   getLastNotificationResponseAsync: (...args: unknown[]) => mockLastResponse(...args),
@@ -34,7 +36,7 @@ it('opens a cold-start daily reminder for the local date handled', async () => {
   const view = await renderHook(() => useNotificationRouting(true));
 
   await waitFor(() => expect(mockPush).toHaveBeenCalledWith({
-    pathname: '/(app)/(tabs)/check-in',
+    pathname: '/(app)/daily-check-in',
     params: { date: '2026-09-16' },
   }));
   await view.unmount();
@@ -49,11 +51,12 @@ it('retains the live daily reminder date through a delayed editor exit', async (
   expect(mockPush).not.toHaveBeenCalled();
   mockToday = '2026-09-17';
   await act(async () => { replay?.(); });
-  expect(mockPush).toHaveBeenCalledWith({
-    pathname: '/(app)/(tabs)/check-in',
+  expect(mockReplace).toHaveBeenCalledWith({
+    pathname: '/(app)/daily-check-in',
     params: { date: '2026-09-16' },
   });
 
+  expect(mockPush).not.toHaveBeenCalled();
   unregister();
   await view.unmount();
 });
@@ -62,5 +65,28 @@ it('keeps weekly reminder routing unchanged', async () => {
   const view = await renderHook(() => useNotificationRouting(true));
   await act(async () => { responseListener?.(response('/weekly-feedback')); });
   expect(mockPush).toHaveBeenCalledWith('/(app)/weekly-feedback');
+  await view.unmount();
+});
+
+
+it('replaces a loading editor even before its persistence guard registers', async () => {
+  const view = await renderHook(() => useNotificationRouting(true, '/daily-check-in'));
+  await act(async () => { responseListener?.(response('/check-in')); });
+  expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(app)/daily-check-in', params: { date: '2026-09-16' } });
+  expect(mockPush).not.toHaveBeenCalled();
+  await view.unmount();
+});
+
+it('handles a pending cold-start response with the latest route after navigation', async () => {
+  let resolveResponse!: (value: ReturnType<typeof response>) => void;
+  mockLastResponse.mockReturnValue(new Promise((resolve) => { resolveResponse = resolve; }));
+  const view = await renderHook<void, { pathname: string }>(({ pathname }) => useNotificationRouting(true, pathname), { initialProps: { pathname: '/' } });
+  const originalListener = responseListener;
+  await view.rerender({ pathname: '/daily-check-in' });
+  await act(async () => { resolveResponse(response('/check-in')); });
+  await waitFor(() => expect(mockReplace).toHaveBeenCalledWith({ pathname: '/(app)/daily-check-in', params: { date: '2026-09-16' } }));
+  expect(mockLastResponse).toHaveBeenCalledTimes(1);
+  expect(responseListener).toBe(originalListener);
+  expect(mockPush).not.toHaveBeenCalled();
   await view.unmount();
 });

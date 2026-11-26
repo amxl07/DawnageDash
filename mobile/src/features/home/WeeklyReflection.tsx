@@ -26,10 +26,10 @@ export function WeeklyReflection({ today, history, draft, localReady, draftError
     if (hasWeeklySubmission(history.data, today)) return null;
   }
   const recovery = draft && history.state === 'ready' ? reconcileWeeklyDraft(draft, history.data, today) : { kind: 'editable' as const };
-  const action = recovery.kind === 'cleanup' ? 'Finish weekly cleanup'
+  const action = recovery.kind === 'cleanup' ? 'Remove sent check-in draft'
     : recovery.kind === 'conflict' ? 'Review saved weekly draft'
     : draft ? 'Resume weekly check-in' : 'Start weekly check-in';
-  const detail = recovery.kind === 'cleanup' ? 'Your report was sent. A matching draft still needs local cleanup.'
+  const detail = recovery.kind === 'cleanup' ? 'Your check-in was sent. Retry removing its saved draft from this device; this won’t send it again.'
     : recovery.kind === 'conflict' ? 'A report was already sent for this week. Your different saved answers have been kept for review.'
     : draft ? 'Your saved answers are ready to continue.' : `Share a reflection for ${reportingWindowLabel(weeklyReportingWindow(today))}.`;
   return (

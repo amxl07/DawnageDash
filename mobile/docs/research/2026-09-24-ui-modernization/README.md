@@ -6,7 +6,7 @@ Research conducted September 23–24, 2026 (Asia/Kolkata). Target: `mobile/`, in
 
 The app has already reached the current published Expo baseline. More package upgrades alone will not produce the change you want. The largest opportunity is how the installed capabilities are used.
 
-Read the [implementation plan](../../superpowers/plans/2026-09-24-native-ui-modernization.md) for sequencing, files, migration contracts, and acceptance checks. This document is the design specification and research rationale. **This delivery contains research and a plan; the app UI has not been changed.**
+Read the [implementation plan](../../superpowers/plans/2026-09-24-native-ui-modernization.md) for sequencing, files, migration contracts, and acceptance checks. This document is the design specification and research rationale. The research-only delivery has since been implemented. See the [implementation record](implementation.md) for changes, source/browser verification and remaining native device acceptance.
 
 ## 1. What is actually current
 
@@ -105,7 +105,7 @@ Priority: **P0** defines the new visual system; **P1** completes core workflows;
 | 11 | Heavy universal input shell | Grouped labelled field; stable focus treatment, inline error, correct keyboard | Keep RN input for keyboard-sensitive editors initially; native forms for simple settings groups after proof | P1 |
 | 12 | Date/history action as large button | Compact date control; native calendar/date picker where a date is actually being edited | Retain installed datetime picker; use existing history data list for record selection | P1 |
 | 13 | Many rest preset buttons | Current duration plus native preset picker/menu | `RestDurationPicker`, explicit selected value | P1 |
-| 14 | Five individually outlined readiness buttons | A cohesive discrete five-point scale with visible endpoints and selected value | Refine `CheckInRatingScale`; retain tap-to-select and adjustable accessibility | P0 |
+| 14 | Ten individually outlined readiness buttons | A cohesive discrete ten-point scale with visible endpoints and selected value | Refine `CheckInRatingScale`; retain tap-to-select and adjustable accessibility | P0 |
 | 15 | Large weight/repetition input cards | Compact task-specific numeric fields with units, previous-value hint, clear completion action | Refine `CurrentSetEditor`; preserve decimal input/commit rules | P1 |
 | 16 | Every group as a bordered/shadowed card | `Section`, `GroupedSurface`, `MetricSurface`, exceptional `HeroSurface` | Extend existing shared `Card` contract during migration | P0 |
 | 17 | Repeated standalone settings cards | Inset grouped list rows with separators and trailing values | Evolve `ListRow`, `OptionRow`; native Form only as a bounded non-nested scrolling surface | P1 |

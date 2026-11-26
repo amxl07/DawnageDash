@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import { fireEvent, render } from '@testing-library/react-native';
+import { Button } from '@/components/ui';
 import { EMPTY_FORM } from '../model';
 import { CheckInReceipt } from './CheckInReceipt';
 
@@ -28,8 +29,7 @@ it('keeps the reporting date and recorded values, with Home and Edit callbacks',
 
 it('uses the eligible contextual action without invoking Home or saving again', async () => {
   const onPress = jest.fn(), onHome = jest.fn();
-  const view = await render(<CheckInReceipt receipt={receipt} onHome={onHome} onEdit={jest.fn()} nextAction={{ label: 'View your training', detail: 'Your assigned plan is ready to view.', onPress }} />);
-  expect(view.getByText('Your assigned plan is ready to view.')).toBeTruthy();
+  const view = await render(<CheckInReceipt receipt={receipt} onHome={onHome} onEdit={jest.fn()} nextAction={<Button label="View your training" onPress={onPress} />} />);
   await fireEvent.press(view.getByRole('button', { name: 'View your training' }));
   expect(onPress).toHaveBeenCalledTimes(1);
   expect(onHome).not.toHaveBeenCalled();
@@ -37,6 +37,7 @@ it('uses the eligible contextual action without invoking Home or saving again', 
 
 it.each(['queued', 'synced'] as const)('distinguishes %s first-check-in delivery', async (status) => {
   const view = await render(<CheckInReceipt receipt={{ ...receipt, status }} firstCheckIn onHome={jest.fn()} onEdit={jest.fn()} />);
-  expect(view.getByText(status === 'synced' ? 'Your Day 1 is recorded.' : 'Your first check-in is waiting to sync.')).toBeTruthy();
-  if (status === 'queued') expect(view.queryByText('Your Day 1 is recorded.')).toBeNull();
+  expect(view.getByText(status === 'synced' ? 'Day 1 · Check-in saved' : 'Saved on this device')).toBeTruthy();
+  if (status === 'queued') expect(view.getByText(/Your first check-in is waiting to sync/)).toBeTruthy();
+  if (status === 'queued') expect(view.queryByText('Day 1 · Check-in saved')).toBeNull();
 });

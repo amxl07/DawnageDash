@@ -1,3 +1,4 @@
+import { HIT_SLOP_MIN } from '@/theme/tokens';
 import { Check } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -7,23 +8,22 @@ import { CurrentSetEditor } from '@/components/logger/CurrentSetEditor';
 import { PlateCalculatorSheet } from '@/components/logger/PlateCalculatorSheet';
 import { ExercisePrescriptionSheet } from '@/components/plans/ExercisePrescriptionSheet';
 import { Button, Text } from '@/components/ui';
-import { DisclosureChevron } from '@/components/ui/DisclosureChevron';
 import { MotionReveal } from '@/components/ui/MotionReveal';
+import { applySetSuggestion, canCompleteSet, deriveSetSuggestion, type HistoricalExercise, type SetSuggestionValues } from '@/features/workout/workoutSuggestions';
 import type { WorkoutSet } from '@/features/workout/workoutReducer';
 import type { DraftExercise } from '@/hooks/useWorkoutDraft';
 import type { PlanExercise } from '@/hooks/usePlans';
 import { iconSize, radius, spacing, useTheme } from '@/theme';
 
-type PreviousSet = { weight: string; reps: string; rpe: string; duration?: string; date?: string };
 type Editable = 'reps' | 'weight' | 'rpe' | 'duration';
 type Props = {
   exercise: DraftExercise;
   prescription?: PlanExercise;
   targetReps?: string;
   targetDuration?: string;
-  previous?: PreviousSet[];
-  previousDate?: string;
+  history?: HistoricalExercise[];
   onUpdateSet: (setId: string, field: Editable, value: string) => void;
+  onCompleteSet: (setId: string, suggestion: SetSuggestionValues) => boolean;
   onToggleSet: (setId: string) => void;
   onAddSet: () => void;
   onRemoveSet: (setIndex: number) => void;
@@ -33,16 +33,15 @@ type Props = {
   continueLabel?: string;
 };
 
-export function ExerciseSlide({ exercise, prescription, targetReps, targetDuration, previous, previousDate, onUpdateSet, onToggleSet, onAddSet, onRemoveSet, onRestoreSet, onSubstitute, onContinue, continueLabel = 'Continue' }: Props) {
+export function ExerciseSlide({ exercise, prescription, targetReps, targetDuration, history, onUpdateSet, onCompleteSet, onToggleSet, onAddSet, onRemoveSet, onRestoreSet, onSubstitute, onContinue, continueLabel = 'Continue' }: Props) {
   const { colors } = useTheme();
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [setsOpen, setSetsOpen] = useState(false);
   const [plateSetId, setPlateSetId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [removed, setRemoved] = useState<{ set: WorkoutSet; index: number } | null>(null);
   const [lastCompleted, setLastCompleted] = useState<{ id: string; label: string } | null>(null);
   const completionLock = useRef(new Set<string>());
-  useEffect(() => { setActiveId(null); setRemoved(null); setPlateSetId(null); setSetsOpen(false); setLastCompleted(null); completionLock.current.clear(); }, [exercise.id, exercise.name]);
+  useEffect(() => { setActiveId(null); setRemoved(null); setPlateSetId(null); setLastCompleted(null); completionLock.current.clear(); }, [exercise.id, exercise.name]);
   useEffect(() => {
     for (const id of completionLock.current) {
       const set = exercise.sets.find((entry) => entry.id === id);
@@ -56,6 +55,35 @@ export function ExerciseSlide({ exercise, prescription, targetReps, targetDurati
   const activeIndex = active ? exercise.sets.indexOf(active) : -1;
   const plateIndex = exercise.sets.findIndex((set) => set.id === plateSetId);
   const completed = exercise.sets.filter((set) => set.completed).length;
+  const suggestionFor = (setId: string) => deriveSetSuggestion({ exercise, setId, history, targetReps, targetDuration });
+  const completeOrToggle = (setId: string) => {
+    const capturedIndex = exercise.sets.findIndex((entry) => entry.id === setId);
+    const captured = exercise.sets[capturedIndex];
+    if (!captured) return false;
+    if (captured.completed) {
+      onToggleSet(setId);
+      completionLock.current.delete(setId);
+      setActiveId(setId);
+      setLastCompleted(null);
+      return true;
+    }
+    const suggestion = suggestionFor(setId);
+    if (!canCompleteSet(exercise.tracking, applySetSuggestion(captured, suggestion?.values))) {
+      setActiveId(setId);
+      return false;
+    }
+    if (completionLock.current.has(setId)) return false;
+    completionLock.current.add(setId);
+    const completedLabel = (captured.kind === 'warmup' ? 'Warm-up ' : 'Set ') + (capturedIndex + 1);
+    if (!onCompleteSet(setId, suggestion?.values ?? {})) {
+      completionLock.current.delete(setId);
+      return false;
+    }
+    setLastCompleted({ id: setId, label: completedLabel });
+    const next = [...exercise.sets.slice(capturedIndex + 1), ...exercise.sets.slice(0, capturedIndex)].find((entry) => !entry.completed && entry.id !== setId);
+    setActiveId(next?.id ?? null);
+    return true;
+  };
 
   return <>
     <View style={{ gap: spacing.base }}>
@@ -71,39 +99,21 @@ export function ExerciseSlide({ exercise, prescription, targetReps, targetDurati
 
       {allComplete && !active ? <View testID="exercise-complete" accessibilityLiveRegion="polite" style={{ gap: spacing.sm, padding: spacing.base, borderRadius: radius.card, borderLeftWidth: 3, borderLeftColor: colors.success, backgroundColor: colors.elevated }}>
         <Text variant="h2">Exercise complete</Text>
-        <Text variant="bodySm" tone="muted">All sets are complete. You can continue or open Sets to edit an entry.</Text>
         {onContinue ? <Button testID="workout-continue" label={continueLabel} onPress={onContinue} /> : null}
       </View> : null}
 
       <MotionReveal revision={active?.id ?? 'exercise-complete'} testID="current-set-handoff">
       {active ? <CurrentSetEditor exercise={exercise} setId={active.id} targetReps={targetReps} targetDuration={targetDuration}
-        previous={previous?.[activeIndex]} previousDate={previous?.[activeIndex]?.date ?? previousDate}
+        suggestion={suggestionFor(active.id)}
         onChange={(setId, patch) => { for (const [field, value] of Object.entries(patch)) if (['reps', 'weight', 'rpe', 'duration'].includes(field) && typeof value === 'string') onUpdateSet(setId, field as Editable, value); }}
-        onComplete={(setId) => {
-          const capturedIndex = exercise.sets.findIndex((entry) => entry.id === setId);
-          const captured = exercise.sets[capturedIndex];
-          if (!captured) return;
-          if (captured.completed) {
-            onToggleSet(setId);
-            setLastCompleted(null);
-            return;
-          }
-          if (completionLock.current.has(setId)) return;
-          completionLock.current.add(setId);
-          const completedLabel = (captured.kind === 'warmup' ? 'Warm-up ' : 'Set ') + (capturedIndex + 1);
-          setLastCompleted({ id: setId, label: completedLabel });
-          onToggleSet(setId);
-          if (!captured.completed) {
-            const next = [...exercise.sets.slice(capturedIndex + 1), ...exercise.sets.slice(0, capturedIndex)].find((entry) => !entry.completed && entry.id !== setId);
-            setActiveId(next?.id ?? null);
-          }
-        }}
+        onSuppressSuggestion={(field) => onUpdateSet(active.id, field, '')}
+        onComplete={completeOrToggle}
         onPlateCalculator={exercise.tracking === 'weight-reps' ? () => setPlateSetId(active.id) : undefined}
         onRemove={onRestoreSet && exercise.sets.length > 1 ? () => { setRemoved({ set: { ...active }, index: activeIndex }); onRemoveSet(activeIndex); } : undefined}
       /> : null}
       </MotionReveal>
       <MotionReveal revision={lastCompleted?.id ?? 'none'} testID="completed-set-handoff">
-        {lastCompleted ? <View accessibilityLiveRegion="polite" style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radius.sm, backgroundColor: colors.elevated }}>
+        {lastCompleted ? <View accessibilityLiveRegion="polite" style={{ minHeight: HIT_SLOP_MIN, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radius.sm, backgroundColor: colors.elevated }}>
           <Check size={iconSize.sm} color={colors.success} strokeWidth={2.3} accessible={false} />
           <Text variant="bodySm" style={{ flex: 1 }}>{lastCompleted.label} complete</Text>
           <Pressable
@@ -116,19 +126,15 @@ export function ExerciseSlide({ exercise, prescription, targetReps, targetDurati
               setActiveId(lastCompleted.id);
               setLastCompleted(null);
             }}
-            style={({ pressed }) => ({ minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.sm, borderRadius: radius.sm, backgroundColor: pressed ? colors.primarySoft : 'transparent' })}
+            style={({ pressed }) => ({ minHeight: HIT_SLOP_MIN, justifyContent: 'center', paddingHorizontal: spacing.sm, borderRadius: radius.sm, backgroundColor: pressed ? colors.primarySoft : 'transparent' })}
           ><Text variant="bodySm" tone="primary">Undo</Text></Pressable>
         </View> : null}
       </MotionReveal>
       {allComplete && active ? <Button label="Back to exercise summary" variant="ghost" onPress={() => setActiveId(null)} /> : null}
 
-      {exercise.sets.length > 0 ? <Pressable testID="workout-sets-toggle" accessibilityRole="button" accessibilityLabel={`Sets (${exercise.sets.length})`} accessibilityState={{ expanded: setsOpen }} onPress={() => setSetsOpen((open) => !open)}
-        style={({ pressed }) => ({ minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, borderRadius: radius.sm, backgroundColor: pressed ? colors.pressed : 'transparent' })}>
-        <Text variant="body" style={{ flex: 1 }}>Sets ({exercise.sets.length})</Text>
-        <Text variant="bodySm" tone="muted">{setsOpen ? 'Hide' : 'Manage'}</Text><DisclosureChevron expanded={setsOpen} />
-      </Pressable> : null}
-      {setsOpen ? <View style={{ gap: spacing.xs }}>
-        {exercise.sets.map((set, index) => set.id === active?.id ? null : <CompactSetRow key={set.id} set={set} index={index} tracking={exercise.tracking} onEdit={() => { setActiveId(set.id); setSetsOpen(false); }} onToggle={() => onToggleSet(set.id)} />)}
+      {exercise.sets.length > 0 ? <View style={{ gap: spacing.xs }}>
+        <Text variant="body">Sets ({exercise.sets.length})</Text>
+        {exercise.sets.map((set, index) => <CompactSetRow key={set.id} set={set} index={index} tracking={exercise.tracking} selected={set.id === active?.id} onEdit={() => setActiveId(set.id)} onToggle={() => completeOrToggle(set.id)} />)}
         <Button label="Add a set" variant="secondary" onPress={() => { setRemoved(null); onAddSet(); }} />
       </View> : null}
 

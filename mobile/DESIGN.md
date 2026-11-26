@@ -416,7 +416,7 @@ A 1–10 row of options. The anchor words sit under 1 and 10 (for example "Exhau
 A Gorhom bottom sheet on native and a modal on web. It has `card` surface, 28 top radius, the scrim behind it, a `border-strong` grabber, **and** a visible close button. Swipe-down is never the only way out. It opens with `motion.spring.sheet`.
 
 ### Navigation
-- **Tabs:** `expo-router/unstable-native-tabs`, a real UITabBar or Material bottom navigation. Labels and SF Symbol / Material icons; the selected tint is coral. In light mode the bar is `card` white with a `primary-soft` indicator; dark mode keeps the system's translucent material. The Check In tab shows a dot badge while today's check-in is missing.
+- **Tabs:** `expo-router/unstable-native-tabs`, a real UITabBar or Material bottom navigation. Labels and SF Symbol / Material icons; the selected tint is coral. The platform supplies the background and selection treatment; Reduce Transparency uses the theme's solid `card` background. The Check In tab shows a dot badge while today's check-in is missing.
 - **Headers:** `PageHeader` (title and back) on child screens; native headers where the stack provides them.
 - **Guarded editors** (check-in, logger) are stack screens above the tabs, with an explicit Close control. They intercept leaving while there are unsaved edits.
 
@@ -536,7 +536,7 @@ Auth screens: `login` (sign in, sign up and forgot password) and `reset-password
 - Route constants live in `src/features/coach/routes.ts` and `src/features/progress/routes.ts`, so moving a screen into the tab bar changes one constant.
 
 ### Home / Today **[Built; becomes "Today" in Phase 7]**
-- **Greeting:** "Hi, {first name}."
+- **Greeting:** "Good morning/afternoon/evening, {first name}." First use shows "Welcome, {first name}." The date, program day and coach context appear when available.
 - **One next action**, chosen by `resolveTodayAction` (`src/lib/today-action.ts`). The order of precedence is:
   1. resume a workout draft ("Pick up where you left off")
   2. continue a check-in draft
@@ -546,15 +546,12 @@ Auth screens: `login` (sign in, sign up and forgot password) and `reset-password
   6. "Your next session is ready", which opens the logger on the next unlogged plan day
   7. "Your day is recorded"
 - **Pending strip**, shown when records are waiting or blocked, with "Review check-in" and "Review workout".
-- **Next session card:** the plan day's focus, or "all sessions logged" once every day is done.
+- **This week:** the visible week strip, showing each day as No record, Draft saved, Waiting to sync, Saved and synced, or Needs attention. Tapping a day opens that day's check-in. The weekly recap follows it.
+- **Next session card:** the plan day's focus and session details, or "all sessions logged" once every day is done. The training section and plan shortcut remain visible.
 - **Weekly reflection:** the prompt to do the weekly check-in, or to resume its draft.
-- **Details:**
-  - "This week": the week strip, showing each day as No record, Draft saved, Waiting to sync, Saved and synced, or Needs attention. Tapping a day opens that day's check-in.
-  - The weekly recap.
+- **Progress & coaching details:**
   - "Your recent record", linking to Progress.
   - The assessment row, shown until the assessment is complete.
-  - "Day N of your program".
-  - The coach's name.
 - **Program welcome:** before the first check-in, Home explains that the first check-in starts Day 1. It shows a waiting variant if the client chose to wait for their coach.
 - Pull to refresh. Every block has its own loading, error and stale state, so one failed query never blanks the screen.
 
@@ -752,13 +749,13 @@ How it works:
   - The user's own `workout_plans` rows are shown first. If there are none, the global templates are used.
   - Day cards show the focus and the exercise prescriptions (sets × reps, rest, notes, demo link, substitutions).
   - Plan provenance reads "Updated 3 days ago", or "Coach update 3 days ago" with a "Plan updated" marker when the coach changed it. That change also drives Home's "Review your updated plan".
-  - A global template fallback is labelled "Training template · preview only".
+  - A global template fallback is labelled "Training template" and explains that it is available to preview until a tailored plan is assigned.
   - The plan is read-only for the client.
 - **History:** past workouts newest first, including drafts and records waiting to sync. Legacy logs are rendered safely.
 
 ### Nutrition tab **[Built]** (`src/features/nutrition/`)
 - The meal plan from `users.active_meal_plan`: Breakfast, Mid Morning Snack, Lunch, Evening Snack and Dinner, each with kcal and macros.
-- Supplements (name, serving, timing) and the coach's nutrition notes, in disclosures.
+- Supplements (name, serving, timing) and the coach's nutrition notes appear in visible sections.
 - Read-only today, with calm empty and error states ("No meal plan yet").
 - **[Planned · Phase 5]** A **Today** section where each meal is marked **Ate it / Swapped / Skipped**.
   - The log is stored on the device per user and date.
@@ -777,7 +774,7 @@ A Progress screen, which becomes a tab in Phase 7, built around "since you start
 
 ## Coach Connection
 
-The coach is Dawnage's moat: a real person, with rich daily data. Today the coach appears only as a name (Home, and "Coach details" in You).
+The coach is Dawnage's moat: a real person, with rich daily data. Home shows the coach's name, and You displays the existing coach status/contact card above the grouped destination lists.
 
 ### Coach thread **[Planned · Phase 2, owner gate for SQL]**
 - **Storage:** a private thread in the new table `coach_messages`, protected by RLS, with a mark-read RPC.

@@ -37,7 +37,7 @@ function homeData() {
   return {
     profile: ready(fixtureProfile), checkIns: ready([]), weeklyFeedback: ready([]),
     plan: ready({ days: fixturePlanDays, source: 'user' }), coach: ready({ kind: 'unassigned' }),
-    assessment: ready({ completed: 2, total: 10 }), loggedPlanDays: ready([1]),
+    assessment: ready({ completed: 2, total: 10 }), loggedPlanDays: ready([1]), workouts: ready([]),
     refresh: jest.fn(), refreshing: false,
   };
 }
@@ -51,7 +51,7 @@ it('keeps the daily action available when weekly history fails', async () => {
   mockData.mockReturnValue({ ...homeData(), weeklyFeedback: { state: 'error', retry: jest.fn() } });
   const view = await render(<HomeScreen />);
   await fireEvent.press(view.getByTestId('home-today-action'));
-  expect(mockPush).toHaveBeenCalledWith({ pathname: '/(app)/(tabs)/check-in', params: { date: '2026-09-15' } });
+  expect(mockPush).toHaveBeenCalledWith({ pathname: '/(app)/daily-check-in', params: { date: '2026-09-15' } });
 });
 
 it('welcomes a waiting client without inventing Day 1 or empty progress', async () => {
@@ -61,7 +61,7 @@ it('welcomes a waiting client without inventing Day 1 or empty progress', async 
   expect(view.queryByText('This week')).toBeNull();
   expect(view.queryByText(/Day 1 of your program/)).toBeNull();
   await fireEvent.press(view.getByRole('button', { name: 'Start my first check-in' }));
-  expect(mockPush).toHaveBeenCalledWith({ pathname: '/(app)/(tabs)/check-in', params: { date: '2026-09-15' } });
+  expect(mockPush).toHaveBeenCalledWith({ pathname: '/(app)/daily-check-in', params: { date: '2026-09-15' } });
 });
 
 it('does not invite a second first check-in while the original is queued', async () => {
@@ -78,7 +78,7 @@ it('lets a waiting client practise and close the guide without starting a check-
   await fireEvent.press(view.getByRole('button', { name: 'How check-ins work' }));
   await fireEvent.press(view.getByTestId('practice-energy-8'));
   expect(view.getByTestId('practice-energy-8').props.accessibilityState.selected).toBe(true);
-  expect(view.getByText('TRY IT · NOTHING IS SAVED')).toBeTruthy();
+  expect(view.getByText('Practice — nothing is saved')).toBeTruthy();
   await fireEvent.press(view.getByRole('button', { name: 'Got it' }));
   expect(view.queryByTestId('practice-energy-8')).toBeNull();
   expect(mockPush).not.toHaveBeenCalled();
@@ -95,7 +95,7 @@ it('does not invite a new check-in while its records are unavailable', async () 
   mockData.mockReturnValue({ ...homeData(), checkIns: { state: 'error', retry: jest.fn() } });
   const view = await render(<HomeScreen />);
   expect(view.queryByTestId('home-today-action')).toBeNull();
-  expect(view.getByRole('button', { name: 'Retry: Your day is still here' })).toBeTruthy();
+  expect(view.getByRole('button', { name: "Retry: Couldn't load today's summary" })).toBeTruthy();
 });
 
 it('opens the actual next assigned session, not a scheduled-day guess', async () => {
@@ -109,7 +109,7 @@ it('labels a rejected queued record and opens its original date for correction',
   const view = await render(<HomeScreen />);
   expect(view.getByText('A saved record needs attention')).toBeTruthy();
   await fireEvent.press(view.getByRole('button', { name: 'Review check-in' }));
-  expect(mockPush).toHaveBeenCalledWith({ pathname: '/(app)/(tabs)/check-in', params: { date: '2026-09-14' } });
+  expect(mockPush).toHaveBeenCalledWith({ pathname: '/(app)/daily-check-in', params: { date: '2026-09-14' } });
 });
 
 it('keeps stale absence out of the primary action but accepts known presence', async () => {
@@ -119,7 +119,7 @@ it('keeps stale absence out of the primary action but accepts known presence', a
   mockData.mockReturnValue({ ...homeData(), checkIns: { ...ready([{ ...fixtureDailyCheckIn, date: '2026-09-15' }]), stale: true } });
   await view.rerender(<HomeScreen />);
   expect(view.getByTestId('home-today-action')).toBeTruthy();
-  expect(view.queryByText('Your daily check-in')).toBeNull();
+  expect(view.queryByText('Daily check-in')).toBeNull();
 });
 
 it('opens the blocked workout itself and does not advertise its day as new', async () => {
@@ -184,7 +184,7 @@ it('offers cleanup rather than Resume for a draft already confirmed in weekly hi
   mockData.mockReturnValue({ ...homeData(), weeklyFeedback: ready([{ ...form, id: 'sent', user_id: 'user-1', week_start_date: '2026-09-14', created_at: '2026-09-15T12:00:00Z' }]) });
   mockLocal.mockReturnValue({ data: { weeklyDraft: { form, step: 4 }, checkIns: [], workouts: [] }, refetch: jest.fn(), isError: false });
   const view = await render(<HomeScreen />);
-  expect(view.getByRole('button', { name: 'Finish weekly cleanup' })).toBeTruthy();
+  expect(view.getByRole('button', { name: 'Remove sent check-in draft' })).toBeTruthy();
   expect(view.queryByRole('button', { name: 'Resume weekly check-in' })).toBeNull();
 });
 
@@ -238,4 +238,83 @@ it('gives an available session one main action after the daily check-in is saved
   await fireEvent.press(view.getByTestId('home-today-action'));
   expect(mockPush).toHaveBeenCalledWith({ pathname: '/(app)/logger', params: { day: '2' } });
   expect(view.getByText(fixturePlanDays[1].focus!)).toBeTruthy();
+});
+
+it('opens progress from a dated weight summary without expanding details', async () => {
+  mockData.mockReturnValue({ ...homeData(), checkIns: ready([
+    { ...fixtureDailyCheckIn, date: '2026-09-10', morning_weight: 73 },
+    { ...fixtureDailyCheckIn, date: '2026-09-14', morning_weight: '72.4' },
+    { ...fixtureDailyCheckIn, date: '2026-09-15', morning_weight: null },
+  ]) });
+  const view = await render(<HomeScreen />);
+  expect(view.getByText('72.4 kg')).toBeTruthy();
+  expect(view.getByText(/Check-in ·.*Sep 14, 2026/)).toBeTruthy();
+  expect(view.getByText('1 weigh-in this week.')).toBeTruthy();
+  expect(view.queryByText(/kg across/)).toBeNull();
+  expect(view.queryByText('Your recent record')).toBeNull();
+  await fireEvent.press(view.getByRole('button', { name: 'View progress' }));
+  expect(mockPush).toHaveBeenCalledWith('/(app)/measurements');
+});
+
+it('keeps confirmed empty progress available without manufacturing a weight', async () => {
+  const view = await render(<HomeScreen />);
+  expect(view.getByText('No morning weight recorded yet.')).toBeTruthy();
+  await fireEvent.press(view.getByRole('button', { name: 'View progress' }));
+  expect(mockPush).toHaveBeenCalledWith('/(app)/measurements');
+});
+
+it('labels cached progress while retaining its original source date', async () => {
+  mockData.mockReturnValue({ ...homeData(), checkIns: { ...ready([
+    { ...fixtureDailyCheckIn, date: '2026-09-14', morning_weight: 72.4 },
+  ]), stale: true } });
+  const view = await render(<HomeScreen />);
+  expect(view.getByText('72.4 kg')).toBeTruthy();
+  expect(view.getByText(/Check-in ·.*Sep 14, 2026/)).toBeTruthy();
+  expect(view.getByText('Saved data · may be out of date.')).toBeTruthy();
+  expect(view.queryByText(/kg since/)).toBeNull();
+});
+
+it.each([
+  [{ state: 'loading' }, 'Loading progress…'],
+  [{ state: 'error', retry: jest.fn() }, 'Progress is unavailable. Pull down to retry.'],
+  [{ ...ready([]), stale: true }, 'Saved check-ins have no morning weight. Refresh to check for updates.'],
+  [{ ...ready([]), refreshing: true }, 'Checking for newer check-ins…'],
+])('does not treat unavailable or refreshing progress as confirmed absence (%j)', async (checkIns, message) => {
+  mockData.mockReturnValue({ ...homeData(), checkIns });
+  const view = await render(<HomeScreen />);
+  expect(view.getByText(message)).toBeTruthy();
+  expect(view.queryByText('No morning weight recorded yet.')).toBeNull();
+  expect(view.queryByText(/0 of .*saved/)).toBeNull();
+  expect(view.getByRole('button', { name: 'View progress' })).toBeTruthy();
+});
+
+it('places one dated recap below the weekly strip without duplicating its consistency or weight', async () => {
+  mockData.mockReturnValue({ ...homeData(), checkIns: ready([
+    { ...fixtureDailyCheckIn, date: '2026-09-14', morning_weight: 73 },
+    { ...fixtureDailyCheckIn, date: '2026-09-15', morning_weight: 72.4 },
+    { ...fixtureDailyCheckIn, date: '2026-09-16', morning_weight: 71 },
+  ]) });
+  const view = await render(<HomeScreen />);
+  expect(view.getAllByText('2 of 2 days saved')).toHaveLength(1);
+  expect(view.getByText('14 Sep–15 Sep 2026')).toBeTruthy();
+  expect(view.getAllByText('72.4 kg')).toHaveLength(1);
+  expect(view.getByText('−0.6 kg across 2 dates this week')).toBeTruthy();
+  expect(view.queryByTestId('home-progress-summary')).toBeNull();
+});
+
+it.each([
+  [{ ...ready([]), stale: true }, 'Saved check-ins may be out of date'],
+  [{ ...ready([]), refreshing: true }, 'Checking saved days…'],
+])('does not report zero check-in consistency from uncertain history (%j)', async (checkIns, label) => {
+  mockData.mockReturnValue({ ...homeData(), checkIns });
+  const view = await render(<HomeScreen />);
+  expect(view.getAllByText(label).length).toBeGreaterThan(0);
+  expect(view.queryByText(/0 of .*saved/)).toBeNull();
+});
+
+it('does not report zero check-in consistency when device records are unavailable', async () => {
+  mockLocal.mockReturnValue({ data: undefined, refetch: jest.fn(), isError: true });
+  const view = await render(<HomeScreen />);
+  expect(view.getByText('Waiting for device records')).toBeTruthy();
+  expect(view.queryByText(/0 of .*saved/)).toBeNull();
 });

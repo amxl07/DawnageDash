@@ -68,7 +68,7 @@ export function CheckInDateHistorySheet({
   );
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Check-in history">
+    <Sheet role="detail" visible={visible} onClose={onClose} title="Check-in history">
       <View style={{ paddingHorizontal: spacing.base, paddingVertical: spacing.sm }}>
         <Text variant="bodySm" tone="muted">
           Select a day to view or update its check-in.

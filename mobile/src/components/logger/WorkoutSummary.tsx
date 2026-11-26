@@ -20,25 +20,25 @@ type Props = {
 export function WorkoutSummary({ result, syncStatus, onDone, onEdit, onSave, error, receiptRevision = 0 }: Props) {
   const receipt = syncStatus === 'synced' || syncStatus === 'queued' || syncStatus === 'blocked';
   const title = syncStatus === 'synced'
-    ? 'Workout saved and synced'
+    ? 'Workout saved'
     : syncStatus === 'queued'
       ? 'Workout saved on this device'
       : syncStatus === 'blocked'
-        ? 'Workout needs attention'
-        : 'Review your workout';
+        ? 'Couldn’t sync workout'
+        : 'Review workout';
   return <View style={{ gap: spacing.lg, paddingTop: spacing.xl }}>
-    <CompletionHeader eyebrow={receipt ? 'Workout record' : 'Session review'} title={title} state={syncStatus}
+    <CompletionHeader showStatus={false} eyebrow="" title={title} state={syncStatus}
       revision={receipt ? receiptRevision : 0} testID="workout-receipt-reveal"
       detail={syncStatus === 'queued' ? 'Waiting to sync. Keep this device signed in so delivery can retry when a connection is available.'
-        : syncStatus === 'synced' ? 'Your session is saved to your account. You can return to it in Training History.'
+        : syncStatus === 'synced' ? undefined
         : syncStatus === 'blocked' ? 'Your recorded work is kept on this device. Review the issue below, then retry.'
-        : syncStatus === 'sending' ? 'Saving workout…' : 'Check the completed and incomplete work before saving.'} />
+        : syncStatus === 'sending' ? 'Saving workout…' : undefined} />
     <Card testID="workout-summary-metrics" style={{ gap: spacing.md, padding: 24, borderRadius: 24 }}>
       <View accessible accessibilityLabel={`Completed sets: ${result.sets}`} style={{ gap: spacing.xs }}>
         <Text variant="label" tone="muted">Completed sets</Text>
         <Text variant="metric" numeric>{result.sets}</Text>
       </View>
-      <CompletionValue label="Incomplete sets" value={String(result.incompleteSets)} />
+      {result.incompleteSets > 0 ? <CompletionValue label="Incomplete sets" value={String(result.incompleteSets)} /> : null}
       {result.volume > 0 ? <CompletionValue label="Volume" value={result.volume.toLocaleString()} detail="kg × reps · completed strength sets" /> : null}
     </Card>
     {result.incompleteSets > 0 ? <Text variant="bodySm" tone="muted">{result.incompleteSets} sets are still incomplete. {receipt ? 'This record includes only the work you entered. You can return to editing to add more.' : 'You can return to enter them or save this session as recorded.'}</Text> : null}

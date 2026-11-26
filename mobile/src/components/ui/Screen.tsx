@@ -1,8 +1,9 @@
-import { ScrollView, StyleSheet, View, type RefreshControlProps, type ViewStyle } from 'react-native';
-import { forwardRef, useImperativeHandle, useRef } from 'react';
+import { Platform, ScrollView, StyleSheet, View, type RefreshControlProps, type ViewStyle } from 'react-native';
+import { forwardRef, useImperativeHandle, useRef, type Ref } from 'react';
 import { useScrollToTop } from 'expo-router/react-navigation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useNativeHeader, useNativeTabs } from '@/components/navigation/NavigationChrome';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { screenContentPadding, spacing, useTheme, type ScreenArchetype } from '@/theme';
 
@@ -25,6 +26,8 @@ type Props = {
   refreshControl?: React.ReactElement<RefreshControlProps>;
   style?: ViewStyle;
   contentStyle?: ViewStyle;
+  /** Native content view at the scroll origin, for measuring descendant fields. */
+  contentRef?: Ref<View>;
   testID?: string;
 };
 
@@ -39,6 +42,7 @@ export const Screen = forwardRef<ScrollView, Props>(function Screen(
     refreshControl,
     style,
     contentStyle,
+    contentRef,
     testID,
   },
   ref,
@@ -53,10 +57,14 @@ export const Screen = forwardRef<ScrollView, Props>(function Screen(
   useScrollToTop(scrollRef);
   useImperativeHandle(ref, () => scrollRef.current as ScrollView, []);
 
+  const nativeTabs = useNativeTabs();
+  const nativeHeader = useNativeHeader();
+  const nativeRoot = nativeTabs && archetype === 'root';
+  const automatic = Platform.OS === 'ios' && scroll && nativeRoot;
   const archetypePadding = screenContentPadding(archetype, insets);
   const footerPadding = archetype === 'editor' && footerHeight > 0
     ? spacing.lg + footerHeight
-    : archetypePadding.paddingBottom + footerHeight;
+    : automatic ? spacing.lg : nativeRoot ? (Platform.OS === 'android' ? 0 : insets.bottom) + spacing.lg : Platform.OS === 'web' && archetype === 'root' ? spacing.lg : archetypePadding.paddingBottom + footerHeight;
 
   const container: ViewStyle = {
     flex: 1,
@@ -67,14 +75,15 @@ export const Screen = forwardRef<ScrollView, Props>(function Screen(
     width: '100%' as const,
     maxWidth: maxContentWidth,
     alignSelf: 'center' as const,
-    flexGrow: scroll ? undefined : 1,
-    paddingTop: includeTopSafeArea ? archetypePadding.paddingTop : spacing.base,
+    flex: scroll ? undefined : 1,
+    paddingTop: automatic || nativeHeader || !includeTopSafeArea ? spacing.base : archetypePadding.paddingTop,
     paddingBottom: footerPadding + bottomInset,
   };
 
   const body = (
-    // Web RefreshControl clones outer scroll styles; content owns the inset once.
-    <View style={{ paddingLeft: insets.left + horizontal, paddingRight: insets.right + horizontal, flexGrow: scroll ? undefined : 1 }}>
+    // Lists need a bounded flex chain; flexGrow alone lets their content exceed
+    // the viewport. Content owns the inset once, including with RefreshControl.
+    <View ref={contentRef} collapsable={contentRef ? false : undefined} style={{ paddingLeft: insets.left + horizontal, paddingRight: insets.right + horizontal, flex: scroll ? undefined : 1 }}>
       <View testID={testID} style={[content, contentStyle]}>
         {children}
       </View>
@@ -89,6 +98,7 @@ export const Screen = forwardRef<ScrollView, Props>(function Screen(
     <ScrollView
       ref={scrollRef}
       style={[container, style]}
+      contentInsetAdjustmentBehavior={automatic ? 'automatic' : 'never'}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
       refreshControl={refreshControl}

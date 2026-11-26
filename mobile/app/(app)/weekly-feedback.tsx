@@ -21,8 +21,8 @@ export default function WeeklyFeedbackScreen() {
   const router = useRouter();
   const listMotion = useListMotion();
   const {
-    user, firstName, submitted, isLoading, restored, ownsCurrentForm,
-    submissionCommitted, submitError, cleanupPending, retryCleanup, submitting,
+    user, submitted, isLoading, restored, ownsCurrentForm,
+    submissionCommitted, submitError, retryCleanup, submitting,
     started, weekNumber, start, history, isError, refetch, step, form, errors,
     scrollRef, errorSummaryRef, stepTitleRef, updateField, exitError, draftStatus,
     moveToStep, submit, continueForward, report, dailyRecordsError, retryDailyRecords,
@@ -34,13 +34,9 @@ export default function WeeklyFeedbackScreen() {
       <Screen>
         <View style={{ gap: spacing.lg, paddingTop: spacing.xl, alignItems: 'center' }}>
           <CheckCircle2 size={iconSize.xl} color={colors.success} strokeWidth={2} accessible={false} />
-          <Text variant="h1">{`Thanks, ${firstName}!`}</Text>
+          <Text variant="h1">Check-in submitted</Text>
           <Card style={{ gap: spacing.md }}>
             <CoachBadge caption="Sent to" />
-            <Text variant="bodySm" tone="muted">
-              Also upload your weigh-ins, measurements and progress pictures so your coach has the
-              full picture. You&apos;ll get detailed feedback within 48 hours.
-            </Text>
             <Button
               label="Add measurements"
               variant="secondary"
@@ -92,7 +88,7 @@ export default function WeeklyFeedbackScreen() {
           <Card style={{ gap: spacing.md }}>
             <Text variant="h2">Review saved draft</Text>
             <Text variant="bodySm">A report for this reporting week was already submitted. This draft has different answers, so sending it again is paused. Your saved answers have been kept.</Text>
-            <Text variant="bodySm" tone="muted">{`Draft reporting window: ${report.label}`}</Text>
+            <Text variant="bodySm" tone="muted">{`${report.label}`}</Text>
             {inferredReportDate ? <Text variant="bodySm" tone="muted">This older draft did not store its original reporting dates. Review the displayed week; your answers are unchanged.</Text> : null}
             <Button label="Keep draft and exit" variant="secondary" onPress={() => router.back()} />
             <Button label="Discard saved draft" variant="destructive" onPress={discardConflictingDraft} />
@@ -122,25 +118,22 @@ export default function WeeklyFeedbackScreen() {
           <View style={{ gap: spacing.lg }}>
             <PageHeader title="Weekly check-in" onBack={() => router.back()} />
             <Card style={{ gap: spacing.md }}>
-              <Text variant="h2">Your check-in was sent</Text>
+              <Text variant="h2">Check-in sent</Text>
               <Text
                 variant="bodySm"
                 tone="primary"
                 accessibilityRole="alert"
                 accessibilityLiveRegion="polite"
               >
-                {submitError ??
-                  'Check-in sent, but its saved draft could not be cleared from this device.'}
-              </Text>
-              <Text variant="bodySm" tone="muted">
-                Retry removes only the local draft. It will not submit your answers again.
+                {exitError ?? submitError ??
+                  'We couldn’t remove the saved draft from this device. Retrying won’t send it again.'}
               </Text>
             </Card>
           </View>
         </Screen>
         <StickyActionBar
-          status={<StatusPill status={submitting ? 'saving' : cleanupPending ? 'error' : 'saved'} label={submitting ? 'Clearing saved draft…' : 'Report sent · draft still on device'} />}
-          primaryLabel="Retry cleanup"
+          status={submitting ? <Text accessibilityLiveRegion="polite">Removing saved draft…</Text> : undefined}
+          primaryLabel="Retry"
           onPrimary={() => void retryCleanup()}
           primaryLoading={submitting}
         />
@@ -153,11 +146,8 @@ export default function WeeklyFeedbackScreen() {
       <View style={{ gap: spacing.lg, paddingBottom: history?.length ? spacing.sm : spacing.xl }}>
         <PageHeader title="Weekly check-in" onBack={() => router.back()} />
         <Card style={{ gap: spacing.md }}>
-          <Text variant="h2">Hi {firstName}! 👋</Text>
-          <Text variant="bodySm" tone="muted">
-            Ready for your Week {weekNumber} check-in? It takes a few minutes, and your coach reads
-            every word.
-          </Text>
+          <Text variant="h2">Week {weekNumber}</Text>
+          <Text variant="bodySm" tone="muted">{report.label}</Text>
           <Button
             label="Start"
             onPress={start}
@@ -233,9 +223,7 @@ export default function WeeklyFeedbackScreen() {
                   {current.title}
                 </Text>
               </View>
-              <Text variant="bodySm" tone="muted">
-                {current.description}
-              </Text>
+              {step > 0 ? <Text variant="bodySm" tone="muted">{current.description}</Text> : null}
             </View>
 
             {Object.keys(errors).length ? (
@@ -254,7 +242,7 @@ export default function WeeklyFeedbackScreen() {
             ) : null}
 
             <Text variant="bodySm" tone="muted">
-              {`Daily-record window: ${report.label} · device local dates. Only recorded values are averaged.`}
+              {`${report.label}`}
             </Text>
 
             {inferredReportDate ? <Text variant="bodySm" tone="muted">This older draft did not store its original reporting dates. Review the displayed week before submitting; your answers are unchanged.</Text> : null}

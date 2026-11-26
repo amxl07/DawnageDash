@@ -17,7 +17,9 @@ import { initializeTelemetry } from '@/lib/telemetry';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { isConfigured } from '@/lib/env';
 import { ThemeProvider, useTheme } from '@/theme';
+import { NativeControlGallery } from '@/testing/NativeControlGallery';
 import { MissingConfigScreen } from '@/components/MissingConfigScreen';
+import { NativeSurfaceBootstrap } from '@/features/native-surfaces/hooks';
 
 initializeTelemetry();
 
@@ -34,6 +36,7 @@ function RootNavigator() {
     void SystemUI.setBackgroundColorAsync(colors.background).catch(() => {});
   }, [colors.background]);
 
+  if (__DEV__ && process.env.EXPO_PUBLIC_UI_GALLERY === '1') return <NativeControlGallery />;
   if (!isConfigured) return <MissingConfigScreen />;
 
   return (
@@ -45,6 +48,7 @@ function RootNavigator() {
           contentStyle: { backgroundColor: colors.background },
         }}
       >
+        <Stack.Screen name="health-access" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(app)" />
       </Stack>
@@ -72,6 +76,7 @@ export default function RootLayout() {
         <ThemeProvider>
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
+              <NativeSurfaceBootstrap />
               <AppErrorBoundary>
                 <BottomSheetModalProvider>
                   <RootNavigator />

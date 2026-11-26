@@ -29,9 +29,9 @@ export function OptionRow({ label, selected, onPress, role = 'radio' }: Props) {
         paddingHorizontal: spacing.base,
         paddingVertical: spacing.md,
         borderRadius: radius.md,
-        borderWidth: selected ? 2 : 1,
-        borderColor: selected ? colors.primary : colors.borderStrong,
-        backgroundColor: pressed ? colors.pressed : selected ? colors.primarySoft : colors.card,
+        borderWidth: 1,
+        borderColor: selected ? colors.primary : 'transparent',
+        backgroundColor: pressed ? colors.pressed : selected ? colors.primarySoft : colors.elevated,
       })}
     >
       <Text style={{ flex: 1 }} tone={selected ? 'primary' : 'default'}>

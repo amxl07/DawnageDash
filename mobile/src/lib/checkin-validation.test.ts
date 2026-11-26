@@ -21,14 +21,29 @@ const EMPTY_FORM: FormState = {
   notes: '',
 };
 
+const COMPLETE_FORM: FormState = {
+  morningWeight: 72.4, sleepHours: 7, workoutStatus: 'rest_day', workoutPerformance: null,
+  nutritionScore: 7, calorieIntake: 2100, waterLiters: 2.5, dailySteps: 8000,
+  protein: 140, carbs: 220, fats: 60, energyLevel: 6, hungerLevel: 5,
+  stressLevel: 3, digestion: 'none', notes: 'Rest day; felt recovered.',
+};
+
 describe('validateCheckInStep', () => {
-  it('requires the minimum useful fields for each step', () => {
+  it('groups weight, sleep and energy before the separate day context', () => {
+    expect(Object.keys(validateCheckInStep('readiness', EMPTY_FORM)).sort())
+      .toEqual(['energyLevel', 'morningWeight', 'sleepHours']);
+    expect(Object.keys(validateCheckInStep('recovery', EMPTY_FORM)).sort())
+      .toEqual(['digestion', 'hungerLevel', 'stressLevel']);
+    expect(validateCheckIn({ ...COMPLETE_FORM, sleepHours: null }).step).toBe('readiness');
+    expect(validateCheckIn({ ...COMPLETE_FORM, stressLevel: null }).step).toBe('recovery');
+  });
+  it('requires every applicable field for each step', () => {
     expect(validateCheckInStep('readiness', EMPTY_FORM)).toMatchObject({
       energyLevel: 'Choose your energy level.',
-      stressLevel: 'Choose your stress level.',
+      sleepHours: 'Add your sleep hours.',
     });
     expect(validateCheckInStep('recovery', EMPTY_FORM)).toMatchObject({
-      sleepHours: 'Add your sleep hours.',
+      stressLevel: 'Choose your stress level.',
       hungerLevel: 'Choose your hunger level.',
       digestion: 'Choose your digestion status.',
     });
@@ -36,7 +51,35 @@ describe('validateCheckInStep', () => {
       workoutStatus: 'Choose today’s training status.',
       nutritionScore: 'Choose your nutrition score.',
     });
-    expect(validateCheckInStep('finish', EMPTY_FORM)).toEqual({});
+    expect(validateCheckInStep('finish', EMPTY_FORM)).toHaveProperty('notes');
+  });
+
+  it.each([
+    ['morningWeight', 'readiness'],
+    ['calorieIntake', 'adherence'], ['waterLiters', 'adherence'], ['dailySteps', 'adherence'],
+    ['protein', 'adherence'], ['carbs', 'adherence'], ['fats', 'adherence'],
+  ] as const)('blocks a missing %s at its step and at final submission', (field, step) => {
+    const form = { ...COMPLETE_FORM, [field]: null };
+    expect(validateCheckInStep(step, form)).toHaveProperty(field);
+    expect(validateCheckIn(form)).toMatchObject({ step, errors: { [field]: expect.any(String) } });
+  });
+
+  it.each(['', '  \n '])('blocks blank notes even in a restored review draft (%j)', (notes) => {
+    expect(validateCheckIn({ ...COMPLETE_FORM, notes })).toMatchObject({
+      step: 'finish', errors: { notes: expect.any(String) },
+    });
+  });
+
+  it('accepts explicitly recorded zero measurements without treating them as missing', () => {
+    expect(validateCheckIn({ ...COMPLETE_FORM, sleepHours: 0, calorieIntake: 0,
+      waterLiters: 0, dailySteps: 0, protein: 0, carbs: 0, fats: 0,
+    })).toEqual({ step: null, errors: {} });
+  });
+
+  it.each(['protein', 'carbs', 'fats'] as const)('rejects invalid %s in restored drafts', (field) => {
+    for (const value of [-1, NaN, Infinity]) {
+      expect(validateCheckIn({ ...COMPLETE_FORM, [field]: value }).errors).toHaveProperty(field);
+    }
   });
 
   it('requires performance only after training or cardio', () => {
@@ -44,6 +87,23 @@ describe('validateCheckInStep', () => {
       .toHaveProperty('workoutPerformance');
     expect(validateCheckInStep('adherence', { ...EMPTY_FORM, workoutStatus: 'rest_day' }))
       .not.toHaveProperty('workoutPerformance');
+  });
+
+  it.each([
+    ['energyLevel', 'readiness'], ['stressLevel', 'recovery'], ['hungerLevel', 'recovery'],
+    ['workoutPerformance', 'adherence'], ['nutritionScore', 'adherence'],
+  ] as const)('requires an exact integer from 1 to 10 for restored %s', (field, step) => {
+    const form = { ...COMPLETE_FORM, workoutStatus: 'done' as const, workoutPerformance: 7 };
+    for (const value of [0, 11, 1.5, 9.9, NaN, Infinity]) {
+      expect(validateCheckInStep(step, { ...form, [field]: value })).toHaveProperty(field);
+      expect(validateCheckIn({ ...form, [field]: value })).toMatchObject({
+        step, errors: { [field]: 'Choose a rating from 1 to 10.' },
+      });
+    }
+    for (const value of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+      expect(validateCheckIn({ ...form, [field]: value })).toEqual({ step: null, errors: {} });
+    }
+    expect(validateCheckIn({ ...form, [field]: null }).errors).toHaveProperty(field);
   });
 
   it('ignores stale performance when the selected workout does not need it', () => {
@@ -104,10 +164,10 @@ describe('validateCheckInStep', () => {
     expect(validateCheckInStep('readiness', form)).toMatchObject({
       morningWeight: 'Enter a weight between 20 and 400 kg.',
       energyLevel: 'Choose a rating from 1 to 10.',
-      stressLevel: 'Choose a rating from 1 to 10.',
+      sleepHours: 'Enter sleep between 0 and 24 hours.',
     });
     expect(validateCheckInStep('recovery', form)).toMatchObject({
-      sleepHours: 'Enter sleep between 0 and 24 hours.',
+      stressLevel: 'Choose a rating from 1 to 10.',
       hungerLevel: 'Choose a rating from 1 to 10.',
     });
     expect(validateCheckInStep('adherence', form)).toMatchObject({

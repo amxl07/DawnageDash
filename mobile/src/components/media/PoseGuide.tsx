@@ -2,8 +2,7 @@ import { PrivatePhoto } from './PrivatePhoto';
 import { View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
-import { Text } from '@/components/ui';
-import { spacing, useTheme } from '@/theme';
+import { useTheme } from '@/theme';
 import type { AngleKey } from '@/lib/photos';
 
 /**
@@ -59,9 +58,6 @@ export function PoseGuide({
           />
         )}
       </Svg>
-      <Text variant="bodySm" tone="muted" style={{ position: 'absolute', bottom: spacing.md }}>
-        Stand square to the camera
-      </Text>
     </View>
   );
 }

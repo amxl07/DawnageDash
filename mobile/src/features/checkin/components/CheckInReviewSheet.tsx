@@ -14,7 +14,7 @@ export function checkInAnswer(field: CheckInFieldDef, form: FormState): string {
 export function CheckInReviewSheet({ visible, date, form, onClose, onEdit, returnFocusRef }: {
   visible: boolean; date: string; form: FormState; onClose: () => void; onEdit: (field: keyof FormState) => void; returnFocusRef: RefObject<View | TextInput | null>;
 }) {
-  return <Sheet visible={visible} onClose={onClose} title="Review your record" returnFocusRef={returnFocusRef}>
+  return <Sheet role="detail" visible={visible} onClose={onClose} title="Review your record" returnFocusRef={returnFocusRef}>
     <SheetScrollView contentContainerStyle={{ padding: spacing.base, gap: spacing.base }}>
       <Text variant="bodySm" tone="muted">Reporting date · {date}</Text>
       {CHECK_IN_FIELDS.filter((field) => !('showsWhen' in field) || field.showsWhen.in.some((value) => value === form.workoutStatus)).map((field) => <View key={field.id} style={{ gap: spacing.xs }}>

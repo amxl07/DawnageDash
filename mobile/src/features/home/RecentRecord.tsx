@@ -1,3 +1,4 @@
+import { HIT_SLOP_MIN } from '@/theme/tokens';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -270,6 +271,6 @@ const styles = StyleSheet.create({
   },
   value: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', gap: 6 },
   chart: { minHeight: PLOT_HEIGHT, justifyContent: 'center' },
-  valuesButton: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.sm, borderRadius: 10 },
+  valuesButton: { alignSelf: 'flex-start', minHeight: HIT_SLOP_MIN, justifyContent: 'center', paddingHorizontal: spacing.sm, borderRadius: 10 },
   valuesList: { gap: spacing.xs },
 });

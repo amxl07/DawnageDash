@@ -379,7 +379,7 @@ describe('WeeklyFeedbackScreen', () => {
     mockCheckIns = [{ date: '2026-09-21', daily_steps: 1000, water_liters: 1, stress_level: 1 }];
     await act(async () => renderer.update(<WeeklyFeedbackScreen />));
     expect(JSON.stringify(renderer.toJSON())).toContain('14 Sep–20 Sep 2026');
-    expect(JSON.stringify(renderer.toJSON())).toContain('recorded 20 Sep 2026');
+    expect(JSON.stringify(renderer.toJSON())).toContain('Based on 1 recorded day');
     expect(renderer.root.findByProps({ accessibilityLabel: "What's your average step count this week?" }).props.value).toBe('8000');
     await press(renderer, 'Next');
     await press(renderer, 'Next');
@@ -408,10 +408,10 @@ describe('WeeklyFeedbackScreen', () => {
     mockHistoryQuery.data = [{ ...mockHistory[0], ...form, week_start_date: '2026-09-14' }];
     mockLoadDraft.mockResolvedValueOnce({ form, step: 4 });
     const renderer = await renderScreen();
-    expect(renderer.root.findByProps({ accessibilityLabel: 'Retry cleanup' })).toBeTruthy();
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Retry' })).toBeTruthy();
     expect(renderer.root.findAllByProps({ accessibilityLabel: 'Submit' })).toHaveLength(0);
     expect(mockClearDraft).not.toHaveBeenCalled();
-    await press(renderer, 'Retry cleanup');
+    await press(renderer, 'Retry');
     expect(mockClearDraft).toHaveBeenCalledTimes(1);
     expect(mockInsert).not.toHaveBeenCalled();
   });
@@ -495,7 +495,7 @@ describe('WeeklyFeedbackScreen', () => {
     await press(renderer, 'Next');
     expect(renderer.root.findByProps({ accessibilityLabel: "What's your average step count this week?" }).props.value).toBe('8000');
     expect(JSON.stringify(renderer.toJSON())).toContain('14 Sep–19 Sep 2026');
-    expect(JSON.stringify(renderer.toJSON())).toContain('1 observation');
+    expect(JSON.stringify(renderer.toJSON())).toContain('Based on 1 recorded day');
   });
 
   it('keeps empty weeks blank and preserves observed zero values', async () => {
@@ -867,7 +867,7 @@ describe('WeeklyFeedbackScreen', () => {
     });
     await act(async () => insert.resolve({ error: null }));
 
-    expect(renderer.root.findAllByProps({ children: 'Thanks, Noor!' })).toHaveLength(0);
+    expect(renderer.root.findAllByProps({ children: 'Check-in submitted' })).toHaveLength(0);
     expect(renderer.root.findByProps({ accessibilityLabel: 'Start' })).toBeTruthy();
     expect(mockDispatch).not.toHaveBeenCalled();
   });
@@ -905,8 +905,28 @@ describe('WeeklyFeedbackScreen', () => {
     expect(renderer.root.findByProps({ accessibilityLabel: 'Start' })).toBeTruthy();
   });
 
+  it('keeps a failed cleanup exit visible and never resubmits during recovery', async () => {
+    mockClearDraft.mockResolvedValueOnce(false).mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    const renderer = await renderScreen();
+    await press(renderer, 'Start');
+    for (let step = 0; step < 4; step += 1) await press(renderer, 'Next');
+    await press(renderer, 'Submit');
+    expect(mockInsert).toHaveBeenCalledTimes(1);
+    act(() => mockPreventRemoveCallback?.({ data: { action: { type: 'GO_BACK' } } }));
+    const retryExit = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2]?.find((action) => action.text === 'Retry & exit');
+    expect(retryExit).toBeTruthy();
+    await act(async () => { await retryExit?.onPress?.(); });
+    expect(mockDispatch).not.toHaveBeenCalled();
+    expect(renderer.root.findByProps({ children: 'Couldn’t remove the saved draft. Your check-in is sent. Retry won’t send it again.' })).toBeTruthy();
+    expect(mockInsert).toHaveBeenCalledTimes(1);
+    act(() => mockPreventRemoveCallback?.({ data: { action: { type: 'GO_BACK' } } }));
+    await act(async () => { await jest.mocked(Alert.alert).mock.calls.at(-1)?.[2]?.find((action) => action.text === 'Retry & exit')?.onPress?.(); });
+    expect(mockDispatch).toHaveBeenCalledTimes(1);
+    expect(mockInsert).toHaveBeenCalledTimes(1);
+  });
+
   it('retries only local cleanup after the server has accepted the submission', async () => {
-    mockClearDraft.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    mockClearDraft.mockResolvedValueOnce(false).mockResolvedValueOnce(false).mockResolvedValueOnce(true);
     const renderer = await renderScreen();
     await press(renderer, 'Start');
     await press(renderer, 'Next');
@@ -923,20 +943,23 @@ describe('WeeklyFeedbackScreen', () => {
     expect(mockInsert).toHaveBeenCalledTimes(1);
     expect(
       renderer.root.findByProps({
-        children: 'Check-in sent, but its saved draft could not be cleared from this device.',
+        children: 'We couldn’t remove the saved draft from this device. Retrying won’t send it again.',
       }),
     ).toBeTruthy();
-    expect(renderer.root.findByProps({ accessibilityLabel: 'Retry cleanup' })).toBeTruthy();
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Retry' })).toBeTruthy();
     expect(mockPreventRemoveEnabled).toBe(true);
 
-    await press(renderer, 'Retry cleanup');
+    await press(renderer, 'Retry');
+    expect(mockInsert).toHaveBeenCalledTimes(1);
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Retry' })).toBeTruthy();
+    await press(renderer, 'Retry');
     await act(async () => {
       await Promise.resolve();
       await Promise.resolve();
     });
 
-    expect(mockClearDraft).toHaveBeenCalledTimes(2);
+    expect(mockClearDraft).toHaveBeenCalledTimes(3);
     expect(mockInsert).toHaveBeenCalledTimes(1);
-    expect(renderer.root.findByProps({ children: 'Thanks, Maya!' })).toBeTruthy();
+    expect(renderer.root.findByProps({ children: 'Check-in submitted' })).toBeTruthy();
   });
 });

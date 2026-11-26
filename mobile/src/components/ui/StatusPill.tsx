@@ -15,9 +15,9 @@ import { Text } from './Text';
 const DEFAULT_LABEL: Record<SaveStatus, string> = {
   idle: '',
   saving: 'Saving…',
-  saved: 'Saved on this device',
+  saved: 'Draft saved on this device.',
   offline: 'Saved here · waiting to sync',
-  error: 'Couldn’t save draft',
+  error: 'Couldn’t save',
 };
 
 const STATUS_ICON: Record<SaveStatus, LucideIcon> = {

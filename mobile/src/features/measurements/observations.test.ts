@@ -3,6 +3,7 @@ import {
   buildMeasurementSeries,
   buildMeasurementChartSeries,
   measurementComparison,
+  filterMeasurementsByTimeframe,
   parseMeasurementObservation,
 } from './observations';
 
@@ -99,5 +100,38 @@ describe('measurement observations', () => {
       latest: { date: '2026-09-08', value: 82.5 },
       delta: -3.5,
     });
+  });
+
+  it('filters inclusive local calendar months without removing missing observations', () => {
+    const rows = [
+      row('future', '2026-10-01', 80),
+      row('today', '2026-09-24', 81),
+      row('gap', '2026-09-01', null),
+      row('boundary', '2026-08-24', 83),
+      row('outside', '2026-08-23', 85),
+    ];
+    expect(filterMeasurementsByTimeframe(rows, '1m', '2026-09-24').map((item) => item.id))
+      .toEqual(['today', 'gap', 'boundary']);
+    expect(measurementComparison(filterMeasurementsByTimeframe(rows, '1m', '2026-09-24'), 'waist'))
+      .toEqual({ baseline: { date: '2026-08-24', value: 83 }, latest: { date: '2026-09-24', value: 81 }, delta: -2 });
+  });
+
+  it.each([
+    ['1m', '2024-03-31', '2024-02-29', '2024-02-28'],
+    ['3m', '2026-05-31', '2026-02-28', '2026-02-27'],
+    ['6m', '2026-09-24', '2026-03-24', '2026-03-23'],
+  ] as const)('clamps %s to calendar-month boundaries, including leap years', (timeframe, today, boundary, outside) => {
+    expect(filterMeasurementsByTimeframe([
+      row('boundary', boundary, 82),
+      row('outside', outside, 83),
+    ], timeframe, today).map((item) => item.id)).toEqual(['boundary']);
+  });
+
+  it('keeps all past dated rows in All, excluding invalid and future dates', () => {
+    expect(filterMeasurementsByTimeframe([
+      row('old', '2020-01-01', 90),
+      row('invalid', '2026-02-30', 85),
+      row('future', '2026-09-25', 81),
+    ], 'all', '2026-09-24').map((item) => item.id)).toEqual(['old']);
   });
 });

@@ -25,7 +25,7 @@ import {
 } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  clearProfileSaveRecovery, markProfileRowSaved, prepareProfileSave, profileMatchesRecovery,
+  clearProfileSaveRecovery, markProfileRowSaved, prepareProfileSave, profileMatchesRecovery, restoreProfileForm,
   readProfileSaveRecovery, runProfileSaveOperation, waitForProfileSaveOperation,
   type ProfileForm, type ProfileSaveRecovery,
 } from '@/features/profile/profileSaveRecovery';
@@ -33,7 +33,9 @@ import { useUserProfile } from '@/hooks/usePlans';
 import type { UserProfile } from '@/hooks/usePlans';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { parseLocalDate } from '@/lib/dates';
-import { mergeProfileData } from '@/lib/profile-data';
+import { saveAssessment } from '../../../shared/assessment-save';
+import { changedAnswers, answerText } from '@/lib/questionnaire-data';
+import { saveProfilePatch } from '../../../shared/profile-save';
 import { supabase } from '@/lib/supabase';
 import { detectTimezone } from '@/lib/timezones';
 import { HIT_SLOP_MIN, iconSize, radius, spacing, useTheme } from '@/theme';
@@ -46,6 +48,7 @@ type ProfileRow = Pick<UserProfile, 'full_name' | 'phone_number' | 'country' | '
 const emptyForm = (): ProfileForm => ({ name: '', phone: '', country: '', timezone: detectTimezone(), goal: '', injuries: '', allergies: '', workoutDays: '', medicalCondition: '' });
 const sameForm = (a: ProfileForm, b: ProfileForm) => (Object.keys(a) as (keyof ProfileForm)[]).every((field) => a[field] === b[field]);
 const overlap = (form: ProfileForm): AssessmentOverlap => ({ q14: form.goal, q56: form.injuries, q64: form.allergies, q33: form.workoutDays });
+const profileFields = (form: ProfileForm) => ({ full_name: form.name, phone_number: form.phone, country: form.country });
 const profilePatch = (form: ProfileForm) => ({ timezone: form.timezone, goal: form.goal, injuries: form.injuries, allergies: form.allergies, workoutDays: form.workoutDays, medicalCondition: form.medicalCondition });
 const syncFailure = 'Profile details were saved, but assessment sync failed. Retry when connected.';
 
@@ -64,7 +67,7 @@ function hydrateForm(profile: ProfileRow, answers: Record<string, unknown>): Pro
   const answer = (id: string, fallback: unknown) => {
     const value = answers[id];
     if (value != null && typeof value !== 'string' && typeof value !== 'number') throw new Error('Assessment answer is invalid.');
-    return text(value ?? fallback);
+    return answerText(answers, id, fallback);
   };
   return {
     name: profile.full_name ?? '', phone: profile.phone_number ?? '', country: profile.country ?? '',
@@ -151,16 +154,13 @@ export default function ProfileScreen() {
         const canonical = entry ? await readCurrentProfile(userId) : source;
         if (!active()) return;
         let restored = entry;
-        if (entry?.phase === 'prepared' && profileMatchesRecovery(canonical, entry.form)) {
+        if (entry?.phase === 'prepared' && profileMatchesRecovery(canonical, entry.form, entry.profileDataPatch, entry.profileFieldsPatch)) {
           if (!await markProfileRowSaved(userId, entry.id)) throw new Error('Recovery changed. Reload your profile.');
           restored = { ...entry, phase: 'profile-saved' };
         }
         if (!active()) return;
         const saved = hydrateForm(canonical, answers);
-        const next = restored?.phase === 'prepared' ? restored.form : restored ? {
-          ...saved, goal: restored.form.goal, injuries: restored.form.injuries,
-          allergies: restored.form.allergies, workoutDays: restored.form.workoutDays,
-        } : saved;
+        const next = restored ? restoreProfileForm(saved, restored) : saved;
         baseline.current = restored?.phase === 'prepared' ? saved : next;
         formRef.current = next; recoveryRef.current = restored;
         setForm(next); setRecovery(restored); setDirty(restored?.phase === 'prepared');
@@ -183,32 +183,9 @@ export default function ProfileScreen() {
   };
 
   const syncAssessment = async (entry: ProfileSaveRecovery, active: () => boolean) => {
-    const { data: existing, error: readError } = await supabase
-      .from('onboarding_questionnaire')
-      .select('id, answers, completed_sections')
-      .eq('user_id', entry.userId)
-      .maybeSingle();
-    if (readError) throw readError;
-    if (!active()) return false;
-    if (!existing) return true; // Existing policy: Profile never creates an assessment.
-    const patch = overlap(entry.form);
-    const answers = mergeProfileData(parseAnswerRecord(existing.answers), patch);
-    const { data: savedAssessment, error: updateError } = await supabase
-      .from('onboarding_questionnaire')
-      .update({ answers: JSON.stringify(answers) })
-      .eq('user_id', entry.userId)
-      .eq('id', existing.id)
-      .select('id, user_id, answers')
-      .single();
-    if (updateError) throw updateError;
-    if (!savedAssessment || savedAssessment.id !== existing.id || savedAssessment.user_id !== entry.userId) {
-      throw new Error('Assessment save was not acknowledged.');
-    }
-    const savedAnswers = parseAnswerRecord(savedAssessment.answers);
-    if (!Object.entries(patch).every(([id, value]) => savedAnswers[id] === value)) {
-      throw new Error('Assessment save did not confirm the intended answers.');
-    }
-    return true;
+    // Older recovery journals predate narrow patches; preserve their explicit pending intent.
+    await saveAssessment(supabase, entry.userId, entry.assessmentPatch ?? overlap(entry.form), [], active, { create: false });
+    return active();
   };
 
   const save = async () => {
@@ -232,34 +209,42 @@ export default function ProfileScreen() {
           progress.stage = 'profile';
           const canonical = await readCurrentProfile(userId);
           if (!active()) return;
-          if (profileMatchesRecovery(canonical, entry.form)) entry = { ...entry, phase: 'profile-saved' };
+          if (profileMatchesRecovery(canonical, entry.form, entry.profileDataPatch, entry.profileFieldsPatch)) entry = { ...entry, phase: 'profile-saved' };
         }
         if (entry?.phase !== 'profile-saved') {
           progress.stage = 'prepare';
-          entry = await prepareProfileSave(userId, snapshot);
+          // Keep the recorded intent; diff later explicit edits against the restored
+          // editor, not against unrelated server facts that changed while away.
+          const intentBaseline = entry ? restoreProfileForm(baseline.current, { ...entry, phase: 'prepared' }) : baseline.current;
+          const pending = entry;
+          entry = await prepareProfileSave(userId, snapshot, {
+            assessmentPatch: { ...(pending ? pending.assessmentPatch ?? overlap(pending.form) : {}), ...changedAnswers(overlap(intentBaseline), overlap(snapshot)) },
+            profileDataPatch: { ...(pending ? pending.profileDataPatch ?? profilePatch(pending.form) : {}), ...changedAnswers(profilePatch(intentBaseline), profilePatch(snapshot)) },
+            profileFieldsPatch: { ...(pending ? pending.profileFieldsPatch ?? profileFields(pending.form) : {}), ...changedAnswers(profileFields(intentBaseline), profileFields(snapshot)) },
+          });
           if (!active()) return;
           recoveryRef.current = entry; setRecovery(entry);
           progress.stage = 'profile';
-          const { error: authError } = await supabase.auth.updateUser({ data: { full_name: snapshot.name } });
-          if (authError) throw authError;
-          if (!active()) return;
-          const latestProfile = await readCurrentProfile(userId);
-          if (!active()) return;
-          const { data: savedProfile, error: dbError } = await supabase.from('users').update({
-            full_name: snapshot.name, phone_number: snapshot.phone, country: snapshot.country,
-            profile_data: mergeProfileData(latestProfile.profile_data, profilePatch(snapshot)),
-          }).eq('id', userId).select('id, full_name, phone_number, country, profile_data').single();
-          if (dbError) throw dbError;
-          if (!savedProfile || savedProfile.id !== userId || !profileMatchesRecovery(savedProfile, entry.form)) {
-            throw new Error('Profile save did not confirm the intended details.');
+          if (!entry.profileFieldsPatch || Object.prototype.hasOwnProperty.call(entry.profileFieldsPatch,'full_name')) {
+            const { error: authError } = await supabase.auth.updateUser({ data: { full_name: snapshot.name } });
+            if (authError) throw authError;
+            if (!active()) return;
           }
+          const intent = entry;
+          await saveProfilePatch(supabase, userId, intent.profileFieldsPatch ?? profileFields(snapshot), intent.profileDataPatch ?? profilePatch(snapshot), active, async () => {
+            if (!active()) {
+              // Preserve an actual receipt for the old account without touching current UI.
+              entry = { ...intent, phase: 'profile-saved' };
+              if (!await markProfileRowSaved(userId, intent.id)) throw new Error('Recovery was superseded.');
+            }
+          });
           entry = { ...entry, phase: 'profile-saved' };
         }
         // Record acknowledgment for the originating account even after navigation/account change.
         progress.stage = 'mark';
         if (active()) {
           recoveryRef.current = entry; setRecovery(entry);
-          if (!alreadyAcknowledged) baseline.current = entry.form;
+          if (!alreadyAcknowledged) baseline.current = restoreProfileForm(baseline.current, { ...entry, phase: 'prepared' });
           setDirty(!sameForm(formRef.current, baseline.current));
         }
         if (!await markProfileRowSaved(userId, entry.id)) throw new Error('Recovery was superseded.');
@@ -314,13 +299,14 @@ export default function ProfileScreen() {
           { text: 'Leave anyway', onPress: finish },
         ]);
     };
-    if (dirty && (!recoveryRef.current || !sameForm(formRef.current, recoveryRef.current.form))) {
+    const recoverableForm = recoveryRef.current ? restoreProfileForm(baseline.current, recoveryRef.current) : baseline.current;
+    if (dirty && (!recoveryRef.current || !sameForm(formRef.current, recoverableForm))) {
       Alert.alert('Discard changes?', 'Only your unsaved edits will be discarded. Any pending saved update stays on this device.', [
         { text: 'Keep editing', style: 'cancel' },
         { text: 'Discard', style: 'destructive', onPress: () => {
           if (!current(account)) return;
-          const restored = recoveryRef.current?.form ?? baseline.current;
-          formRef.current = restored; setForm(restored); setDirty(false); durableExit();
+          const restored = recoveryRef.current ? restoreProfileForm(baseline.current, recoveryRef.current) : baseline.current;
+          formRef.current = restored; setForm(restored); setDirty(!sameForm(restored, baseline.current)); durableExit();
         } },
       ]);
     } else durableExit();
@@ -365,6 +351,7 @@ export default function ProfileScreen() {
 
       <SegmentedControl
         label="Profile section"
+        showLabel={false}
         value={tab}
         onChange={changeTab}
         segments={[

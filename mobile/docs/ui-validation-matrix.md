@@ -1,3 +1,7 @@
+# Native UI modernization — 2026-09-24
+
+The current implementation has a separate [phase, route and verification record](research/2026-09-24-ui-modernization/implementation.md). Historical release findings below describe their dated revisions, not the current source. Native binary/device acceptance remains distinct from automated tests and browser captures.
+
 # Premium redesign verification — 2026-09-16
 
 The premium redesign has a separate [evidence record](redesign/evidence/README.md) and [contract handoff](redesign/evidence/contracts.md). Its starting app source is `8ec16a7`; the planning snapshot is `61fd7bd`. Local source tests, browser captures, JavaScript exports and native-device checks are recorded separately. Fictional capture fixtures are checked in under `src/testing`; no live account or secret is used by the browser harness.

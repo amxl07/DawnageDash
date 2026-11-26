@@ -5,22 +5,25 @@ import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { Alert } from 'react-native';
 import { useWorkoutSession } from '@/features/workout/useWorkoutSession';
 import { initialWorkoutState } from '@/features/workout/workoutReducer';
+import { applyWorkoutEdit } from '@/features/workout/workoutSave';
 import LoggerScreen from '../../../app/(app)/logger';
 const mockRestStart = jest.fn();
+const mockRestReset = jest.fn();
 let mockRestPreference = { autoStart: false, seconds: null as number | null };
-jest.mock('expo-router/react-navigation', () => ({ usePreventRemove: jest.fn() }));
+let mockPreviousData: any;
+jest.mock('expo-router/react-navigation', () => ({ usePreventRemove: jest.fn(), useIsFocused: () => true }));
 jest.mock('@react-native-community/netinfo', () => ({ addEventListener: () => () => {} }));
-jest.mock('@tanstack/react-query', () => ({ useQuery: () => ({ data: {} }), useQueryClient: () => ({ invalidateQueries: jest.fn() }) }));
+jest.mock('@tanstack/react-query', () => ({ useQuery: () => ({ data: mockPreviousData }), useQueryClient: () => ({ invalidateQueries: jest.fn() }) }));
 jest.mock('expo-router', () => ({ useLocalSearchParams: jest.fn(), useNavigation: jest.fn(), useRouter: jest.fn() }));
 jest.mock('lucide-react-native', () => ({ Check: () => null, ChevronDown: () => null, ChevronLeft: () => null, ChevronRight: () => null, X: () => null }));
 jest.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'u' } }) }));
 jest.mock('@/features/workout/useWorkoutSession', () => ({ useWorkoutSession: jest.fn() }));
-jest.mock('@/components/logger/useRestTimer', () => ({ useRestTimerActions: () => ({ start: mockRestStart }) }));
+jest.mock('@/components/logger/useRestTimer', () => ({ useRestTimerActions: () => ({ start: mockRestStart, reset: mockRestReset }) }));
 jest.mock('@/components/logger/RestDock', () => ({ RestDock: () => null, WorkoutRestFooter: ({ children }: any) => { const { View } = require('react-native'); return <View testID="workout-rest-footer">{children}</View>; }, useRestPreference: () => ({ preference: mockRestPreference, change: jest.fn() }) }));
 jest.mock('@/components/logger/PlanDayButton', () => ({ PlanDayButton: () => null }));
 jest.mock('@/components/ui/DisclosureChevron', () => ({ DisclosureChevron: () => null }));
 jest.mock('@/components/ui/MotionReveal', () => ({ MotionReveal: ({ children }: any) => children }));
-jest.mock('@/components/logger/ExerciseSlide', () => ({ ExerciseSlide: ({ exercise, onToggleSet, onContinue, continueLabel }: any) => { const { Pressable, Text, View } = require('react-native'); const complete = exercise.sets.length > 0 && exercise.sets.every((set: any) => set.completed); return <View><Text>{exercise.name}</Text>{!complete && exercise.sets[0] ? <Pressable accessibilityRole="button" accessibilityLabel="Complete set" onPress={() => onToggleSet(exercise.sets[0].id)}><Text>Complete set</Text></Pressable> : null}{complete && onContinue ? <Pressable accessibilityRole="button" accessibilityLabel={continueLabel} onPress={onContinue}><Text>{continueLabel}</Text></Pressable> : null}</View>; } }));
+jest.mock('@/components/logger/ExerciseSlide', () => ({ ExerciseSlide: ({ exercise, onUpdateSet, onCompleteSet, onContinue, continueLabel }: any) => { const { Pressable, Text, View } = require('react-native'); const complete = exercise.sets.length > 0 && exercise.sets.every((set: any) => set.completed); return <View><Text>{exercise.name}</Text>{!complete && exercise.sets[0] ? <><Pressable accessibilityRole="button" accessibilityLabel="Complete set" onPress={() => onCompleteSet(exercise.sets[0].id, {})}><Text>Complete set</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Clear and complete rapidly" onPress={() => { onUpdateSet(exercise.sets[0].id, 'reps', ''); onCompleteSet(exercise.sets[0].id, {}); }}><Text>Clear and complete rapidly</Text></Pressable></> : null}{complete && onContinue ? <Pressable accessibilityRole="button" accessibilityLabel={continueLabel} onPress={onContinue}><Text>{continueLabel}</Text></Pressable> : null}</View>; } }));
 jest.mock('@/components/logger/SwipeableSlide', () => ({ SwipeableSlide: require('react-native').View }));
 jest.mock('@/components/logger/WorkoutSummary', () => ({ WorkoutSummary: ({ onSave, onEdit }: any) => { const { Pressable, Text } = require('react-native'); return <><Pressable accessibilityRole="button" accessibilityLabel="Save workout" onPress={onSave}><Text>Review workout</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Return to editing" onPress={onEdit} /></>; } }));
 jest.mock('@/components/ui', () => {
@@ -38,11 +41,12 @@ jest.mock('@/lib/outbox', () => ({ flushOutbox: jest.fn(), readOutbox: jest.fn()
 let session: any;
 beforeEach(() => {
   jest.clearAllMocks();
+  mockPreviousData = { byName: {}, names: [] };
   mockRestPreference = { autoStart: false, seconds: null };
   jest.mocked(useLocalSearchParams).mockReturnValue({ date: '2026-09-15' });
   jest.mocked(useRouter).mockReturnValue({ back: jest.fn(), replace: jest.fn(), setParams: jest.fn() } as never);
   jest.mocked(useNavigation).mockReturnValue({ dispatch: jest.fn() } as never);
-  session = { state: { ...initialWorkoutState, title: 'Draft', isDirty: true }, scope: { userId: 'u', date: '2026-09-15', logId: null }, entry: { kind: 'ready', source: 'draft' }, deliveryState: 'idle', draftState: 'saved', edit: jest.fn(), save: jest.fn(async () => 'synced'), flushDraft: jest.fn(async () => false), discardDraft: jest.fn(async () => false), plan: null };
+  session = { state: { ...initialWorkoutState, title: 'Draft', isDirty: true }, scope: { userId: 'u', date: '2026-09-15', logId: null }, entry: { kind: 'ready', source: 'draft' }, deliveryState: 'idle', draftState: 'saved', edit: jest.fn(() => true), save: jest.fn(async () => 'synced'), flushDraft: jest.fn(async () => false), discardDraft: jest.fn(async () => false), plan: null };
   jest.mocked(useWorkoutSession).mockImplementation(() => session);
 });
 it('rejects malformed and future route dates before mounting an editor', async () => {
@@ -66,8 +70,32 @@ it('auto-starts rest silently for the stable set completed by the user', async (
 
   await fireEvent.press(view.getByRole('button', { name: 'Complete set' }));
 
-  expect(session.edit).toHaveBeenCalledWith({ type: 'TOGGLE_SET', payload: { exerciseIndex: 0, setIndex: 0 } });
+  expect(session.edit).toHaveBeenCalledWith({ type: 'COMPLETE_SET', payload: { exerciseIndex: 0, setIndex: 0, suggestion: {} } });
   expect(mockRestStart).toHaveBeenCalledWith(90, { haptic: false });
+});
+
+it('does not start rest for a stale completion rejected by the latest cleared state, then accepts one corrected retry', async () => {
+  mockRestPreference = { autoStart: true, seconds: 90 };
+  session.state = { ...session.state, exercises: [workoutExercise('a', 'Squat', false)] };
+  let snapshot = { generation: 0, state: session.state };
+  session.edit = jest.fn((action) => {
+    const next = applyWorkoutEdit(snapshot, action);
+    const accepted = next !== snapshot;
+    snapshot = next;
+    session.state = next.state;
+    return accepted;
+  });
+  const view = await render(<LoggerScreen />);
+
+  await fireEvent.press(view.getByRole('button', { name: 'Clear and complete rapidly' }));
+  expect(snapshot.state.exercises[0].sets[0]).toMatchObject({ reps: '', completed: false });
+  expect(mockRestStart).not.toHaveBeenCalled();
+
+  await act(() => { session.edit({ type: 'UPDATE_SET', payload: { exerciseIndex: 0, setIndex: 0, field: 'reps', value: '8' } }); });
+  await fireEvent.press(view.getByRole('button', { name: 'Complete set' }));
+  await fireEvent.press(view.getByRole('button', { name: 'Complete set' }));
+  expect(snapshot.state.exercises[0].sets[0].completed).toBe(true);
+  expect(mockRestStart).toHaveBeenCalledTimes(1);
 });
 
 it('continues to the next unfinished exercise after the current one', async () => {
@@ -98,7 +126,7 @@ it('keeps Add exercise in Overview and exposes partial-workout review from the l
   session.state = { ...session.state, exercises: [workoutExercise('a', 'Squat', false)] };
   const view = await render(<LoggerScreen />);
   expect(view.getByTestId('workout-rest-footer')).toBeTruthy();
-  expect(view.queryByLabelText('Add an exercise')).toBeNull();
+  expect(view.queryByLabelText('Exercise name')).toBeNull();
   await fireEvent.press(view.getByRole('button', { name: 'Finish workout' }));
   expect(session.save).not.toHaveBeenCalled();
   expect(view.getByRole('button', { name: 'Save workout' })).toBeTruthy();
@@ -119,9 +147,17 @@ it('keeps Add exercise in Overview and exposes partial-workout review from the l
 });
 it('opens Overview from the clear empty-session action', async () => {
   const view = await render(<LoggerScreen />);
-  expect(view.queryByLabelText('Add an exercise')).toBeNull();
+  expect(view.queryByLabelText('Exercise name')).toBeNull();
   await fireEvent.press(view.getByTestId('workout-empty-add'));
   expect(view.getByTestId('workout-exercise-name')).toBeTruthy();
+});
+it('offers exercise names from the available plan and recent workout history', async () => {
+  session.plan = { days: [{ day_number: 1, exercises: [{ id: 'bench', name: 'Bench Press', sets: 3, reps: '8', warmupSets: 0, substitutions: [] }] }] };
+  mockPreviousData = { byName: {}, names: ['Cable Row'] };
+  const view = await render(<LoggerScreen />);
+  await fireEvent.press(view.getByTestId('workout-empty-add'));
+  expect(view.getByRole('button', { name: 'Add Bench Press from suggestions' })).toBeTruthy();
+  expect(view.getByRole('button', { name: 'Add Cable Row from suggestions' })).toBeTruthy();
 });
 it('keeps session details available without placing title editing ahead of each set', async () => {
   const view = await render(<LoggerScreen />);

@@ -1,3 +1,7 @@
+import { useLayoutEffect } from 'react';
+import { useNavigation } from 'expo-router';
+import { useNativeHeader, useNativeTabs } from '@/components/navigation/NavigationChrome';
+import { ToolbarAction } from './ToolbarAction';
 import { ArrowLeft } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
 
@@ -21,6 +25,9 @@ export function PageHeader({
   action,
 }: Props) {
   const { colors } = useTheme();
+  const nativeHeader = useNativeHeader();
+  const nativeTabs = useNativeTabs();
+  if (nativeHeader && !nativeTabs) return <NativePageHeader title={title} subtitle={subtitle} onBack={onBack} backLabel={backLabel} action={action} />;
 
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
@@ -53,4 +60,18 @@ export function PageHeader({
       {action}
     </View>
   );
+}
+
+
+function NativePageHeader({ title, subtitle, onBack, backLabel, action }: Props) {
+  const navigation = useNavigation();
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title,
+      headerRight: action ? () => action : undefined,
+      // Preserve any screen-owned guard rather than bypassing it with a system pop.
+      headerLeft: onBack ? () => <ToolbarAction symbol="back" label={backLabel ?? 'Back'} onPress={onBack} /> : undefined,
+    });
+  }, [action, backLabel, navigation, onBack, title]);
+  return subtitle ? <Text variant="bodySm" tone="muted">{subtitle}</Text> : null;
 }

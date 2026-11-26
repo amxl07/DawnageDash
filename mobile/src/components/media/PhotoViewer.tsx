@@ -139,9 +139,10 @@ export function PhotoViewer({
             style={({ pressed }) => ({
               minWidth: HIT_SLOP_MIN,
               minHeight: HIT_SLOP_MIN,
-              alignItems: 'flex-end',
+              alignItems: 'center',
+              borderRadius: 999,
               justifyContent: 'center',
-              backgroundColor: pressed ? colors.pressed : 'transparent',
+              backgroundColor: pressed ? colors.pressed : colors.elevated,
             })}
           >
             <X size={iconSize.lg} color={colors.foreground} strokeWidth={2} />
@@ -185,7 +186,7 @@ export function PhotoViewer({
               minHeight: HIT_SLOP_MIN,
               justifyContent: 'center',
               opacity: safeIndex === 0 ? 0.35 : 1,
-              backgroundColor: pressed ? colors.pressed : 'transparent',
+              backgroundColor: pressed ? colors.pressed : colors.elevated,
             })}
           >
             <ChevronLeft size={iconSize.xl} color={colors.foreground} strokeWidth={2} />
@@ -226,10 +227,11 @@ export function PhotoViewer({
             style={({ pressed }) => ({
               minWidth: HIT_SLOP_MIN,
               minHeight: HIT_SLOP_MIN,
-              alignItems: 'flex-end',
+              alignItems: 'center',
+              borderRadius: 999,
               justifyContent: 'center',
               opacity: safeIndex === photos.length - 1 ? 0.35 : 1,
-              backgroundColor: pressed ? colors.pressed : 'transparent',
+              backgroundColor: pressed ? colors.pressed : colors.elevated,
             })}
           >
             <ChevronRight size={iconSize.xl} color={colors.foreground} strokeWidth={2} />

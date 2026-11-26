@@ -36,6 +36,26 @@ it('waits for a late plan instead of permanently initializing a blank session', 
   plan = assigned; await view.rerender(undefined);
   expect(view.result.current.state.exercises[0].name).toBe('Bench');
 });
+it('returns synchronous acceptance from the latest owned set state and allows a corrected retry', async () => {
+  plan = assigned;
+  const view = await renderHook(() => useWorkoutSession(scope));
+  let accepted: boolean | undefined;
+
+  await act(() => { accepted = view.result.current.edit({ type: 'UPDATE_SET', payload: { exerciseIndex: 0, setIndex: 0, field: 'reps', value: '8' } }); });
+  expect(accepted).toBe(true);
+  await act(() => { accepted = view.result.current.edit({ type: 'UPDATE_SET', payload: { exerciseIndex: 0, setIndex: 0, field: 'reps', value: '' } }); });
+  expect(accepted).toBe(true);
+  await act(() => { accepted = view.result.current.edit({ type: 'COMPLETE_SET', payload: { exerciseIndex: 0, setIndex: 0, suggestion: { reps: '8' } } }); });
+  expect(accepted).toBe(false);
+  expect(view.result.current.state.exercises[0].sets[0]).toMatchObject({ reps: '', completed: false });
+
+  await act(() => { view.result.current.edit({ type: 'UPDATE_SET', payload: { exerciseIndex: 0, setIndex: 0, field: 'reps', value: '8' } }); });
+  await act(() => { accepted = view.result.current.edit({ type: 'COMPLETE_SET', payload: { exerciseIndex: 0, setIndex: 0, suggestion: {} } }); });
+  expect(accepted).toBe(true);
+  expect(view.result.current.state.exercises[0].sets[0].completed).toBe(true);
+  await act(() => { accepted = view.result.current.edit({ type: 'COMPLETE_SET', payload: { exerciseIndex: 0, setIndex: 0, suggestion: {} } }); });
+  expect(accepted).toBe(false);
+});
 it('does not seed from the plan while the server or draft is unresolved', async () => {
   plan = assigned; records = undefined; local = undefined;
   const view = await renderHook(() => useWorkoutSession(scope));

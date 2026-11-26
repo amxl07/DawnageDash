@@ -32,7 +32,7 @@ describe('resolveTodayAction', () => {
       checkInDraft: { date: '2026-09-10' },
     });
     expect(action.kind).toBe('resume-checkin');
-    expect(action.route).toEqual({ pathname: '/(app)/(tabs)/check-in', params: { date: '2026-09-10' } });
+    expect(action.route).toEqual({ pathname: '/(app)/daily-check-in', params: { date: '2026-09-10' } });
   });
 
   it('does not prompt for a duplicate check-in while today is queued', () => {
@@ -64,13 +64,13 @@ describe('resolveTodayAction', () => {
     ['saved', { checkedInToday: true, hasWorkoutPlan: false, planChanged: false }],
   ] as const)('opens the explicit current date for a %s check-in action', (_state, input) => {
     expect(resolveTodayAction({ today: '2026-09-16', ...input }).route).toEqual({
-      pathname: '/(app)/(tabs)/check-in',
+      pathname: '/(app)/daily-check-in',
       params: { date: '2026-09-16' },
     });
   });
 
   it('keeps a blocked historical record attached to its original date', () => {
-    const route = { pathname: '/(app)/(tabs)/check-in' as const, params: { date: '2026-09-10' } };
+    const route = { pathname: '/(app)/daily-check-in' as const, params: { date: '2026-09-10' } };
     expect(resolveTodayAction({
       today: '2026-09-16', checkedInToday: false, hasWorkoutPlan: false, planChanged: false,
       blockedRecord: { date: '2026-09-10', route },

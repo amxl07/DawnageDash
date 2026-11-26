@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Keyboard, StyleSheet } from 'react-native';
 import type { WorkoutExercise } from '@/features/workout/workoutReducer';
 import { CurrentSetEditor } from './CurrentSetEditor';
-jest.mock('lucide-react-native', () => ({ ChevronDown: () => null, ChevronUp: () => null, Copy: () => null, RotateCcw: () => null }));
+jest.mock('lucide-react-native', () => ({ ChevronDown: () => null, ChevronUp: () => null, Copy: () => null, Minus: () => null, Plus: () => null, RotateCcw: () => null }));
 jest.mock('@/components/ui/DisclosureChevron', () => ({ DisclosureChevron: () => null }));
 
 jest.mock('@/components/ui', () => {
@@ -40,14 +40,98 @@ it('copies only empty fields of the chosen set and allows Undo without completin
 
 it('keeps completion explicit and addresses the stable set identity', async () => {
   jest.clearAllMocks();
-  const complete = jest.fn();
-  const view = await render(<CurrentSetEditor exercise={exercise} setId="set-1" onChange={jest.fn()} onComplete={complete} />);
+  const complete = jest.fn(() => true);
+  const view = await render(<CurrentSetEditor exercise={exercise} setId="set-1" suggestion={{ values: { reps: '8' }, source: 'prescription' }} onChange={jest.fn()} onComplete={complete} />);
+  expect(view.getByRole('button', { name: 'Use target values for set 1' })).toBeTruthy();
   const button = view.getByRole('button', { name: 'Complete set' });
   await fireEvent.press(button);
   await fireEvent.press(button);
   expect(complete).toHaveBeenCalledTimes(1);
-  expect(complete).toHaveBeenCalledWith('set-1');
-  expect(Haptics.impactAsync).toHaveBeenCalledTimes(1);
+  expect(complete).toHaveBeenCalledWith('set-1', { reps: '8' });
+  // The control owns press feedback; completion must not emit a second impact.
+  expect(Haptics.impactAsync).not.toHaveBeenCalled();
+});
+
+it('releases its completion lock when the latest owned state rejects the request', async () => {
+  const complete = jest.fn(() => false);
+  const view = await render(<CurrentSetEditor exercise={{ ...exercise, sets: [{ ...exercise.sets[0], reps: '8' }] }} setId="set-1" onChange={jest.fn()} onComplete={complete} />);
+  const button = view.getByRole('button', { name: 'Complete set' });
+
+  await fireEvent.press(button);
+  await fireEvent.press(button);
+
+  expect(complete).toHaveBeenCalledTimes(2);
+});
+
+it('shows suggested values as placeholders and steps from them as explicit input', async () => {
+  const change = jest.fn();
+  const view = await render(
+    <CurrentSetEditor
+      exercise={{ ...exercise, sets: [{ ...exercise.sets[0], weight: '', reps: '' }] }}
+      setId="set-1"
+      suggestion={{ values: { weight: '62.5', reps: '8' }, source: 'history', date: '2026-09-12' }}
+      onChange={change}
+      onComplete={jest.fn()}
+    />,
+  );
+
+  expect(view.getByLabelText('Set 1 weight in kilograms').props.placeholder).toBe('62.5');
+  expect(view.getByLabelText('Set 1 repetitions').props.placeholder).toBe('8');
+  expect(view.getByText(/Last time · 12 Sep 2026/)).toBeTruthy();
+  await fireEvent.press(view.getByRole('button', { name: 'Increase set 1 weight by 2.5 kilograms' }));
+  expect(change).toHaveBeenCalledWith('set-1', { weight: '65' });
+  await fireEvent.press(view.getByRole('button', { name: 'Decrease set 1 repetitions by 1' }));
+  expect(change).toHaveBeenCalledWith('set-1', { reps: '7' });
+});
+
+it('lets a user explicitly keep suggested weight blank for bodyweight', async () => {
+  const suppress = jest.fn();
+  const view = await render(
+    <CurrentSetEditor
+      exercise={{ ...exercise, sets: [{ ...exercise.sets[0], weight: '', reps: '8' }] }}
+      setId="set-1"
+      suggestion={{ values: { weight: '60', reps: '10' }, source: 'history' }}
+      onChange={jest.fn()}
+      onSuppressSuggestion={suppress}
+      onComplete={jest.fn()}
+    />,
+  );
+
+  expect(view.queryByText('Leave blank for bodyweight.')).toBeNull();
+  await fireEvent.press(within(view.getByTestId('current-weight-entry')).getByRole('button', { name: 'Keep set 1 weight blank for bodyweight' }));
+  expect(suppress).toHaveBeenCalledWith('weight');
+});
+
+it('does not request completion while the required value is missing', async () => {
+  const complete = jest.fn();
+  const view = await render(
+    <CurrentSetEditor
+      exercise={{ ...exercise, sets: [{ ...exercise.sets[0], weight: '', reps: '' }] }}
+      setId="set-1"
+      onChange={jest.fn()}
+      onComplete={complete}
+    />,
+  );
+
+  await fireEvent.press(view.getByRole('button', { name: 'Complete set' }));
+  expect(complete).not.toHaveBeenCalled();
+  expect(view.getByText('Enter repetitions before completing this set.')).toBeTruthy();
+});
+
+it('identifies invalid weight separately from missing repetitions', async () => {
+  const complete = jest.fn();
+  const view = await render(
+    <CurrentSetEditor
+      exercise={{ ...exercise, sets: [{ ...exercise.sets[0], weight: 'heavy', reps: '8' }] }}
+      setId="set-1"
+      onChange={jest.fn()}
+      onComplete={complete}
+    />,
+  );
+
+  await fireEvent.press(view.getByRole('button', { name: 'Complete set' }));
+  expect(complete).not.toHaveBeenCalled();
+  expect(view.getByText('Enter a valid weight or leave it blank for bodyweight.')).toBeTruthy();
 });
 
 it('dismisses the numeric keyboard on submit without implicitly completing the set', async () => {
@@ -72,19 +156,41 @@ it('keeps number-field geometry stable while showing keyboard focus', async () =
   expect(focused.borderWidth).toBe(before.borderWidth);
 });
 
-it('separates the prescribed target from actual entries and keeps bodyweight help by weight', async () => {
+it('separates the prescribed target from actual entries without repeating the target suggestion', async () => {
   const view = await render(
     <CurrentSetEditor
       exercise={exercise}
       setId="set-1"
       targetReps="8–10"
+      suggestion={{ values: { reps: '8' }, source: 'prescription' }}
       onChange={jest.fn()}
       onComplete={jest.fn()}
     />,
   );
 
   expect(within(view.getByTestId('set-target')).getByText('8–10 reps')).toBeTruthy();
-  expect(within(view.getByTestId('set-actual')).getByText('Actual')).toBeTruthy();
-  expect(within(view.getByTestId('current-weight-entry')).getByText('Bodyweight? Leave weight blank.')).toBeTruthy();
-  expect(view.getByText('Complete set → rest → next set')).toBeTruthy();
+  expect(within(view.getByTestId('set-actual')).getByLabelText('Set 1 weight in kilograms')).toBeTruthy();
+  expect(view.queryByText(/Suggested from target/)).toBeNull();
+  expect(view.getByRole('button', { name: 'Use target values for set 1' })).toBeTruthy();
+  expect(within(view.getByTestId('current-weight-entry')).getByText('Leave blank for bodyweight.')).toBeTruthy();
+});
+
+it('copies and undoes a previous duration without changing other set data', async () => {
+  const complete = jest.fn();
+  function Probe() {
+    const [state, setState] = useState<WorkoutExercise>({
+      id: 'plank', name: 'Plank', tracking: 'duration',
+      sets: [{ id: 'plank-1', weight: '', reps: '', rpe: '', duration: '', kind: 'warmup', completed: false }],
+    });
+    return <CurrentSetEditor exercise={state} setId="plank-1" previous={{ weight: '80', reps: '10', duration: '45' }} targetDuration="60 seconds" onComplete={complete}
+      onChange={(id, patch) => setState((current) => ({ ...current, sets: current.sets.map((set) => set.id === id ? { ...set, ...patch } : set) }))} />;
+  }
+  const view = await render(<Probe />);
+  expect(within(view.getByTestId('set-target')).getByText('60 seconds')).toBeTruthy();
+  expect(view.getByText('Last time: 45 sec')).toBeTruthy();
+  await fireEvent.press(view.getByRole('button', { name: 'Copy previous values into empty fields of warm-up 1' }));
+  expect(view.getByLabelText('Warm-up 1 duration in seconds').props.value).toBe('45');
+  expect(complete).not.toHaveBeenCalled();
+  await fireEvent.press(view.getByRole('button', { name: 'Undo copied set values' }));
+  expect(view.getByLabelText('Warm-up 1 duration in seconds').props.value).toBe('');
 });

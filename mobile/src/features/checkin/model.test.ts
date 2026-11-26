@@ -19,7 +19,7 @@ it('preserves the exact sixteen-field payload and local reporting date', () => {
     stress_level: 4, digestion: 'none', notes: 'An ordinary day.',
   });
 });
-it('keeps optional absence and inapplicable workout performance null', () => {
+it('preserves unanswered draft fields and inapplicable workout performance as null', () => {
   expect(toPayload(EMPTY_FORM, row.date)).toEqual(expect.objectContaining({ morning_weight: null, protein: null, notes: null }));
   for (const workoutStatus of ['rest_day', 'no'] as const) {
     expect(toPayload({ ...EMPTY_FORM, workoutStatus, workoutPerformance: 8 }, row.date).workout_performance).toBeNull();

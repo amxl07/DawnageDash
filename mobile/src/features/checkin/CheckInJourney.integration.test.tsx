@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
-import CheckInScreen from '../../../app/(app)/(tabs)/check-in';
+import CheckInScreen from '../../../app/(app)/daily-check-in';
 import { EMPTY_FORM, toPayload } from './model';
 
-const valid = { ...EMPTY_FORM, morningWeight: 72.4, calorieIntake: 1800, sleepHours: 7, energyLevel: 5, stressLevel: 4, hungerLevel: 3, digestion: 'none' as const, workoutStatus: 'rest_day' as const, nutritionScore: 6 };
+const valid = { ...EMPTY_FORM, morningWeight: 72.4, calorieIntake: 1800, waterLiters: 2.5, dailySteps: 8000, protein: 140, carbs: 220, fats: 60, notes: 'Rest day; felt recovered.', sleepHours: 7, energyLevel: 5, stressLevel: 4, hungerLevel: 3, digestion: 'none' as const, workoutStatus: 'rest_day' as const, nutritionScore: 6 };
 const REVIEW_STEP = 3;
 let mockRows: any[] | undefined = [];
 let mockQueryError = false;
@@ -19,7 +19,8 @@ const mockSaveDraft = jest.fn();
 const mockRefetch = jest.fn();
 const mockNavigate = jest.fn();
 const mockSetParams = jest.fn();
-const mockRouter = { navigate: mockNavigate, setParams: mockSetParams };
+const mockBack = jest.fn();
+const mockRouter = { canGoBack: () => true, back: mockBack, replace: jest.fn(), navigate: mockNavigate, setParams: mockSetParams };
 const mockReadQueue = jest.fn(async () => mockQueue);
 
 jest.mock('lucide-react-native', () => ({ Check: () => null, Clock3: () => null, CircleAlert: () => null, ClipboardCheck: () => null }));
@@ -86,7 +87,7 @@ it.each(['Calories', 'Morning weight'])('keeps invalid %s text through draft cle
   await act(async () => { cleared.resolve(true); });
   expect(screen.queryByTestId('checkin-receipt')).toBeNull();
   expect(screen.getByLabelText(label).props.value).toBe('bad');
-  expect(screen.getByText('Number in progress · not saved yet')).toBeTruthy();
+  expect(screen.getByText('Unsaved entry')).toBeTruthy();
 });
 
 it.each(['Calories', 'Morning weight'])('keeps %s editing open when a queued receipt syncs in the background', async (label) => {
@@ -95,9 +96,11 @@ it.each(['Calories', 'Morning weight'])('keeps %s editing open when a queued rec
   await fireEvent.press(screen.getByRole('button', { name: 'Edit this record' })); await typeNumber(screen, label, label === 'Calories' ? '2345' : '75.4');
   mockQueue = []; mockRows = [{ ...toPayload(valid, '2026-09-14'), id: 'row', user_id: 'u' }];
   await screen.rerender(<CheckInScreen />);
-  await waitFor(() => expect(screen.getByText(/previously submitted version is synced/)).toBeTruthy());
+  expect(screen.getByText('Unsaved entry')).toBeTruthy();
   expect(screen.queryByTestId('checkin-receipt')).toBeNull();
   expect(screen.getByLabelText(label).props.value).toBe(label === 'Calories' ? '2345' : '75.4');
+  await fireEvent(screen.getByLabelText(label), 'blur');
+  await waitFor(() => expect(screen.getByText(/Editing a new draft · previous version saved/)).toBeTruthy());
 });
 
 it('does not close an explicitly reopened editor on a receipt-only refresh', async () => {
@@ -128,19 +131,25 @@ it('rechecks numeric text entered while an exit flush awaits storage', async () 
   await fireEvent.press(screen.getByRole('button', { name: 'Save draft and return Home' })); await typeNumber(screen, 'Calories', 'bad');
   await act(async () => { disk.resolve(true); });
   expect(mockNavigate).not.toHaveBeenCalled();
-  await typeNumber(screen, 'Calories', '2345'); await fireEvent.press(screen.getByRole('button', { name: 'Retry saving' }));
+  expect(screen.queryByRole('button', { name: 'Retry saving' })).toBeNull();
+  await typeNumber(screen, 'Calories', '2345'); await fireEvent.press(screen.getByRole('button', { name: 'Continue leaving' }));
   await waitFor(() => expect(mockNavigate).toHaveBeenCalledTimes(1));
   expect(mockNow).toHaveBeenLastCalledWith(expect.objectContaining({ calorieIntake: 2345 }), REVIEW_STEP);
 });
 
-it.each(['Retry saving', 'Discard draft'])('replays an invalid-text date selection after %s', async (action) => {
+it('replays an invalid-text date selection only after explicit continuation', async () => {
   mockQueue = [queued('2026-09-10')];
   const screen = await render(<CheckInScreen />); await screen.findByLabelText('Calories'); await typeNumber(screen, 'Calories', 'bad');
   await fireEvent.press(screen.getByRole('button', { name: 'History' }));
   await fireEvent.press(screen.getByRole('button', { name: /10 September.*waiting to sync/ }));
   expect(mockSetParams).not.toHaveBeenCalledWith(expect.objectContaining({ date: '2026-09-10' }));
-  if (action === 'Retry saving') await typeNumber(screen, 'Calories', '2345');
-  await fireEvent.press(screen.getByRole('button', { name: action }));
+  expect(screen.queryByRole('button', { name: 'Retry saving' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Discard draft' })).toBeNull();
+  await typeNumber(screen, 'Calories', '2345');
+  await fireEvent(screen.getByLabelText('Calories'), 'blur');
+  expect(screen.queryByText('Enter a valid number in the highlighted field.')).toBeNull();
+  expect(mockSetParams).not.toHaveBeenCalledWith(expect.objectContaining({ date: '2026-09-10' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Continue to selected day' }));
   await waitFor(() => expect(mockSetParams).toHaveBeenCalledWith(expect.objectContaining({ date: '2026-09-10' })));
 });
 
@@ -149,6 +158,24 @@ it('makes first-use queued and blocked backfills selectable without server histo
   const screen = await render(<CheckInScreen />);
   await screen.findByRole('button', { name: /10 September.*waiting to sync/ });
   expect(screen.getByRole('button', { name: /1 August.*needs attention/ }).props.accessibilityState.disabled).toBe(false);
+});
+
+it('keeps an acknowledged previous version saved when a newer submission is blocked', async () => {
+  mockDraft = null;
+  mockRows = [{ ...toPayload(valid, '2026-09-14'), id: 'row', user_id: 'u' }];
+  mockSave.mockResolvedValueOnce({ status: 'blocked', failure: { kind: 'permission', retryable: false, code: '42501' } });
+  const screen = await render(<CheckInScreen />);
+  await screen.findByTestId('checkin-receipt');
+  await fireEvent.press(screen.getByRole('button', { name: 'Edit this record' }));
+  await typeNumber(screen, 'Calories', '2345');
+  await fireEvent(screen.getByLabelText('Calories'), 'blur');
+  for (let step = 0; step < REVIEW_STEP; step += 1) await fireEvent.press(screen.getByTestId('checkin-next'));
+  await fireEvent.press(screen.getByTestId('checkin-save'));
+  await screen.findByRole('button', { name: 'Retry sync' });
+  expect(screen.getByLabelText('Calories').props.value).toBe('2345');
+  expect(screen.getByText('Editing a new draft · previous version saved')).toBeTruthy();
+  expect(screen.queryByText(/previous version couldn’t sync/)).toBeNull();
+  expect(screen.getByText(/does not currently have permission/)).toBeTruthy();
 });
 
 it.each([['Calories', '2345', 'calorieIntake', 2345], ['Morning weight', '75.4', 'morningWeight', 75.4]] as const)('re-persists valid %s typed during asynchronous cleanup', async (label, text, key, expected) => {
@@ -189,15 +216,32 @@ it('does not apply an older date when another selection supersedes its disk wait
   await act(async () => { disk.resolve(true); });
   expect(mockSetParams).not.toHaveBeenCalledWith(expect.objectContaining({ date: '2026-09-10' }));
 });
-it('cancels a blocked date and explicitly resets invalid staged text on discard', async () => {
+it('cancels a date blocked by invalid input without discarding the typed text', async () => {
   mockQueue = [queued('2026-09-10')]; const screen = await render(<CheckInScreen />); await screen.findByLabelText('Calories');
   await typeNumber(screen, 'Calories', 'bad'); await fireEvent.press(screen.getByRole('button', { name: 'History' }));
   await fireEvent.press(screen.getByRole('button', { name: /10 September.*waiting to sync/ }));
   await fireEvent.press(screen.getByRole('button', { name: 'Stay on this day' }));
-  await fireEvent.press(screen.getByTestId('checkin-save')); await fireEvent.press(screen.getByRole('button', { name: 'Discard draft' }));
-  expect(screen.getByLabelText('Calories').props.value).toBe('');
-  expect(screen.queryByText('Number in progress · not saved yet')).toBeNull();
+  expect(screen.getByLabelText('Calories').props.value).toBe('bad');
+  expect(screen.queryByRole('button', { name: 'Continue to selected day' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Discard draft' })).toBeNull();
+  expect(mockClear).not.toHaveBeenCalled();
   expect(mockSetParams).not.toHaveBeenCalledWith(expect.objectContaining({ date: '2026-09-10' }));
+});
+
+it('clears a corrected numeric error on commit without presenting storage recovery', async () => {
+  const screen = await render(<CheckInScreen />);
+  await screen.findByLabelText('Calories');
+  await typeNumber(screen, 'Calories', 'bad');
+  await fireEvent.press(screen.getByTestId('checkin-save'));
+  expect(screen.getByText('Enter a valid number in the highlighted field.')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Retry saving' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Discard draft' })).toBeNull();
+  expect(mockSave).not.toHaveBeenCalled();
+  await typeNumber(screen, 'Calories', '2200');
+  await fireEvent(screen.getByLabelText('Calories'), 'blur');
+  expect(screen.queryByText('Enter a valid number in the highlighted field.')).toBeNull();
+  expect(screen.getByLabelText('Calories').props.value).toBe('2200');
+  expect(mockSave).not.toHaveBeenCalled();
 });
 
 
@@ -215,23 +259,33 @@ it('shows an actionable blocked reconnect outcome without losing the mounted rec
   mockDraft = null; mockQueue = [queued('2026-09-14')];
   const screen = await render(<CheckInScreen />);
   await screen.findByTestId('checkin-receipt');
+  await fireEvent.press(screen.getByRole('button', { name: 'Edit this record' }));
+  await typeNumber(screen, 'Calories', '2345');
+  await fireEvent(screen.getByLabelText('Calories'), 'blur');
+  await screen.findByText('Editing a new draft · previous version waiting to sync');
   mockQueue = [queued('2026-09-14', true)];
 
   await act(async () => { mockDeliveryListener?.({ userId: 'u', date: '2026-09-14', revision: 1, status: 'blocked', failure: { kind: 'permission', retryable: false, code: '42501' } }); });
   await screen.findByRole('button', { name: 'Retry sync' });
   expect(screen.getByText(/does not currently have permission/)).toBeTruthy();
-  expect(screen.getByLabelText('Calories').props.value).toBe('1800');
+  expect(screen.getByLabelText('Calories').props.value).toBe('2345');
+  expect(screen.getByText('Editing a new draft · previous version couldn’t sync')).toBeTruthy();
+  expect(screen.queryByText(/previous version waiting to sync/)).toBeNull();
+  await typeNumber(screen, 'Calories', '2400');
+  expect(screen.getByText('Unsaved entry')).toBeTruthy();
+  expect(screen.queryByText(/Editing a new draft/)).toBeNull();
 });
 
 it.each([['Calories', '2345', 'calorieIntake', 2345], ['Morning weight', '75.4', 'morningWeight', 75.4]] as const)('does not discard %s typed after deliberate discard began', async (label, text, key, expected) => {
   const clearing = deferred<boolean>(); mockClear.mockReturnValueOnce(clearing.promise);
-  const screen = await render(<CheckInScreen />); await screen.findByLabelText('Calories'); await typeNumber(screen, label, 'bad');
+  mockNow.mockResolvedValueOnce(false);
+  const screen = await render(<CheckInScreen />); await screen.findByLabelText('Calories'); await typeNumber(screen, label, label === 'Calories' ? '2150' : '73.5');
   await fireEvent.press(screen.getByRole('button', { name: 'Save draft and return Home' }));
   await fireEvent.press(screen.getByRole('button', { name: 'Discard draft' })); await waitFor(() => expect(mockClear).toHaveBeenCalled());
   await typeNumber(screen, label, text); await act(async () => { clearing.resolve(true); });
   expect(mockNavigate).not.toHaveBeenCalled();
   expect(screen.getByLabelText(label).props.value).toBe(text);
-  expect(screen.getByText('Number in progress · not saved yet')).toBeTruthy();
+  expect(screen.getByText('Unsaved entry')).toBeTruthy();
   await fireEvent.press(screen.getByRole('button', { name: 'Retry saving' }));
   await waitFor(() => expect(mockNavigate).toHaveBeenCalledTimes(1));
   expect(mockNow).toHaveBeenLastCalledWith(expect.objectContaining({ [key]: expected }), REVIEW_STEP);
@@ -246,4 +300,28 @@ it('does not close a reopened different day when an older reporting-day submit c
   await screen.findByTestId('checkin-receipt'); await fireEvent.press(screen.getByRole('button', { name: 'Edit this record' }));
   await act(async () => { saved.resolve({ status: 'synced', updated: false }); });
   expect(screen.queryByTestId('checkin-receipt')).toBeNull(); expect(screen.getByLabelText('Calories')).toBeTruthy();
+});
+
+
+it('commits the last typed number before the explicit Close returns to the hub', async () => {
+  const screen = await render(<CheckInScreen />);
+  await waitFor(() => expect(screen.getByLabelText('Calories')).toBeTruthy());
+  await typeNumber(screen, 'Calories', '2190');
+  await fireEvent.press(screen.getByRole('button', { name: 'Close check-in' }));
+  await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1));
+  expect(mockNow).toHaveBeenCalled();
+});
+
+it('retries submission after its durable write fails instead of only saving a draft', async () => {
+  mockSave.mockRejectedValueOnce(new Error('Device storage unavailable'));
+  const screen = await render(<CheckInScreen />);
+  await screen.findByLabelText('Calories');
+  await fireEvent.press(screen.getByTestId('checkin-save'));
+  await screen.findByRole('button', { name: 'Retry saving' });
+  expect(mockSave).toHaveBeenCalledTimes(1);
+  expect(screen.queryByTestId('checkin-receipt')).toBeNull();
+  await fireEvent.press(screen.getByRole('button', { name: 'Retry saving' }));
+  await waitFor(() => expect(mockSave).toHaveBeenCalledTimes(2));
+  await screen.findByTestId('checkin-receipt');
+  expect(screen.getByText('Check-in saved')).toBeTruthy();
 });

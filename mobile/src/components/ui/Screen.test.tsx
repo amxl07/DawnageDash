@@ -1,9 +1,11 @@
-import { StyleSheet, Text } from 'react-native';
+import { createRef } from 'react';
+import { Platform, StyleSheet, Text, type View } from 'react-native';
 import { useScrollToTop } from 'expo-router/react-navigation';
 
 import { act, create, type ReactTestInstance } from 'react-test-renderer';
 
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+import { NativeTabsContext, NativeHeaderContext } from '@/components/navigation/NavigationChrome';
 import { Screen } from './Screen';
 
 jest.mock('react-native-safe-area-context', () => ({
@@ -85,6 +87,17 @@ describe('Screen', () => {
     expect(mockUseScrollToTop.mock.calls[0][0].current).toBeTruthy();
   });
 
+  it('exposes an unflattened native content view for field measurements', () => {
+    const contentRef = createRef<View>();
+    render(<Screen contentRef={contentRef}><Text>Required field</Text></Screen>);
+
+    expect(contentRef.current?.measureLayout).toEqual(expect.any(Function));
+    expect(contentRef.current?.props.collapsable).toBe(false);
+    // This outer content view starts at the scroll origin, before the inner
+    // view's safe-area padding and responsive centering.
+    expect(StyleSheet.flatten(contentRef.current?.props.style)).toMatchObject({ paddingLeft: 16, paddingRight: 16 });
+  });
+
   it('keeps scroll-to-top registration unconditional for non-scrolling screens', () => {
     render(<Screen scroll={false}><Text>Static content</Text></Screen>);
 
@@ -136,4 +149,25 @@ describe('Screen', () => {
 
     expectToHaveStyle(getByTestId('screen-content'), { paddingBottom: 172 });
   });
+});
+
+
+it('lets native tab scrolling own its system insets exactly once', () => {
+  mockedUseResponsiveLayout.mockReturnValue({ width: 390, height: 844, fontScale: 1, mode: 'regular', isCompact: false, isWide: false, horizontal: 20, maxContentWidth: undefined });
+  const view = render(<NativeTabsContext value={true}><Screen archetype="root" testID="native-root"><Text>Content</Text></Screen></NativeTabsContext>);
+  expectToHaveStyle(view.getByTestId('native-root'), { paddingTop: 16, paddingBottom: 24 });
+});
+it('does not reserve a second top inset below an opaque native stack header', () => {
+  const view = render(<NativeHeaderContext value={true}><Screen testID="native-detail"><Text>Detail</Text></Screen></NativeHeaderContext>);
+  expectToHaveStyle(view.getByTestId('native-detail'), { paddingTop: 16 });
+});
+
+// NativeTabs wraps Android content in the native tab height, including its bottom inset.
+it('leaves Android bottom tab clearance to the native wrapper', () => {
+  const previous = Platform.OS;
+  Platform.OS = 'android';
+  try {
+    const view = render(<NativeTabsContext value={true}><Screen archetype="root" testID="android-root"><Text>Content</Text></Screen></NativeTabsContext>);
+    expectToHaveStyle(view.getByTestId('android-root'), { paddingTop: 63, paddingBottom: 24 });
+  } finally { Platform.OS = previous; }
 });

@@ -1,10 +1,14 @@
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
+import { useState } from 'react';
 import {
   Camera,
+  FileText,
   LogOut,
   MessageSquareText,
   Ruler,
   Settings,
+  Trash2,
   User,
   type LucideIcon,
 } from 'lucide-react-native';
@@ -13,17 +17,18 @@ import { Alert, Pressable, View } from 'react-native';
 import { CoachStatusCard } from '@/components/coach/CoachStatusCard';
 import { Card, ListRow, Screen, SkeletonCard, Text } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
+import { deleteAccount } from '@/features/account/deleteAccount';
 import { useCoach } from '@/hooks/useCoach';
+import { privacyPolicyUrl } from '@/lib/env';
 import { HIT_SLOP_MIN, iconSize, spacing, useTheme } from '@/theme';
 
-type Row = { icon: LucideIcon; label: string; href: string; hint: string };
+type Row = { icon: LucideIcon; label: string; href: string; hint?: string };
 
 const COACHING_ROWS: Row[] = [
   {
     icon: MessageSquareText,
-    label: 'Weekly feedback',
+    label: 'Weekly check-in',
     href: '/(app)/weekly-feedback',
-    hint: 'Your weekly check-in',
   },
 ];
 
@@ -32,18 +37,16 @@ const PROGRESS_ROWS: Row[] = [
     icon: Ruler,
     label: 'Measurements',
     href: '/(app)/measurements',
-    hint: 'Track body measurements',
   },
   {
     icon: Camera,
     label: 'Progress photos',
     href: '/(app)/media',
-    hint: 'Compare your weekly photos',
   },
 ];
 
 const ACCOUNT_ROWS: Row[] = [
-  { icon: User, label: 'Profile', href: '/(app)/profile', hint: 'Personal details' },
+  { icon: User, label: 'Profile', href: '/(app)/profile' },
   { icon: Settings, label: 'Settings', href: '/(app)/settings', hint: 'Reminders and theme' },
 ];
 
@@ -60,10 +63,32 @@ export default function MoreScreen() {
     ]);
   };
 
+  const [deleting, setDeleting] = useState(false);
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      'Delete your account?',
+      'This permanently deletes your profile, check-ins, measurements, workouts and progress photos. Your coach will no longer see them. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete account',
+          style: 'destructive',
+          onPress: () => {
+            setDeleting(true);
+            deleteAccount(signOut).catch((error: Error) => {
+              setDeleting(false);
+              Alert.alert('Account not deleted', error.message);
+            });
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <Screen archetype="root">
       <Text variant="h1" style={{ marginBottom: spacing.base }}>
-        More
+        You
       </Text>
 
       {coachLookup ? <CoachStatusCard lookup={coachLookup} /> : <SkeletonCard lines={2} />}
@@ -112,6 +137,14 @@ export default function MoreScreen() {
               onPress={() => router.push(row.href as never)}
             />
           ))}
+          {privacyPolicyUrl ? (
+            <ListRow
+              icon={FileText}
+              title="Privacy policy"
+              divider
+              onPress={() => void WebBrowser.openBrowserAsync(privacyPolicyUrl)}
+            />
+          ) : null}
         </Card>
       </View>
 
@@ -132,6 +165,26 @@ export default function MoreScreen() {
         >
           <LogOut size={iconSize.md} color={colors.primary} strokeWidth={2} accessible={false} />
           <Text tone="primary">Sign out</Text>
+        </Pressable>
+        <Pressable
+          onPress={confirmDeleteAccount}
+          disabled={deleting}
+          accessibilityRole="button"
+          accessibilityLabel="Delete account"
+          accessibilityState={{ disabled: deleting, busy: deleting }}
+          style={({ pressed }) => ({
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: spacing.sm,
+            minHeight: HIT_SLOP_MIN,
+            borderRadius: spacing.sm,
+            opacity: deleting ? 0.5 : 1,
+            backgroundColor: pressed ? colors.pressed : 'transparent',
+          })}
+        >
+          <Trash2 size={iconSize.md} color={colors.destructive} strokeWidth={2} accessible={false} />
+          <Text tone="destructive">{deleting ? 'Deleting account…' : 'Delete account'}</Text>
         </Pressable>
       </View>
     </Screen>

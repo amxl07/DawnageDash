@@ -30,6 +30,7 @@ const Profile = lazy(() => import("@/pages/Profile"));
 const WorkoutLogs = lazy(() => import("@/pages/WorkoutLogs"));
 const Login = lazy(() => import("@/pages/Login"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const Privacy = lazy(() => import("@/pages/Privacy"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 function PageLoader() {
@@ -49,6 +50,7 @@ function Router() {
       <Switch>
         <Route path="/login" component={Login} />
         <Route path="/reset-password" component={ResetPassword} />
+        <Route path="/privacy" component={Privacy} />
         <Route path="/">
           <ProtectedRoute>
             {role === 'admin' && !viewedCoachId ? (

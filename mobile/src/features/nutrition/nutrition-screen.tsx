@@ -1,9 +1,12 @@
 import { Utensils } from 'lucide-react-native';
 import { View } from 'react-native';
 
+import { Section } from '@/components/ui/Section';
 import { Card, EmptyState, ErrorState, Screen, SkeletonCard, Text } from '@/components/ui';
-import { parseSupplements, useMealPlan, useUserProfile } from '@/hooks/usePlans';
+import { useMealPlan, useUserProfile } from '@/hooks/usePlans';
+import { readSupplements } from '@/lib/supplements';
 import { spacing, useTheme } from '@/theme';
+import { MealPlanDetails } from './MealPlanDetails';
 
 export function NutritionScreen() {
   const { colors } = useTheme();
@@ -14,7 +17,8 @@ export function NutritionScreen() {
     isError: mealIsError,
     refetch: refetchMeal,
   } = useMealPlan();
-  const supplements = parseSupplements(profile?.supplements_data ?? null);
+  const supplementResult = readSupplements(profile?.supplements_data ?? null);
+  const supplements = supplementResult.kind === 'ready' ? supplementResult.items : [];
   const showNutritionExtras = Boolean(profile) && (!mealIsError || Boolean(meal)) && !mealLoading;
 
   return (
@@ -31,9 +35,16 @@ export function NutritionScreen() {
           ) : null}
           {isError ? (
             <ErrorState
-              title="Nutrition notes couldn’t load"
+              title="Nutrition notes and supplements couldn’t load"
               onRetry={() => void refetch()}
               retryLabel="Retry profile"
+            />
+          ) : null}
+          {profile && !isError && supplementResult.kind === 'invalid' ? (
+            <ErrorState
+              title="Supplements couldn’t be read"
+              onRetry={() => void refetch()}
+              retryLabel="Retry supplements"
             />
           ) : null}
 
@@ -44,46 +55,26 @@ export function NutritionScreen() {
               <EmptyState
                 icon={Utensils}
                 title="No meal plan yet"
-                message="No meal plan has been assigned yet. Please contact your coach."
+                message="Your meals will appear here when assigned."
               />
             </Card>
           ) : (
             <>
               <Card style={{ gap: spacing.xs }}>
-                <Text variant="label" tone="muted">Daily target</Text>
-                <Text variant="h2" numeric>{meal.pointer.calories} kcal · {meal.pointer.dietType}</Text>
+                <Text variant="label" tone="muted">Prescribed daily target</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', gap: spacing.sm }}>
+                  <Text variant="metric" numeric>{Number.isFinite(meal.pointer.calories) ? meal.pointer.calories : 'Not listed'}</Text>
+                  {Number.isFinite(meal.pointer.calories) ? <Text variant="bodySm" tone="muted">kcal / day</Text> : null}
+                </View>
+                <Text variant="bodySm" tone="muted">{meal.pointer.dietType}</Text>
               </Card>
-              {meal.meals.map((item) => (
-                <Card key={item.meal_type} style={{ gap: spacing.sm }}>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: spacing.sm }}>
-                    <Text variant="h2">{item.meal_type}</Text>
-                    {item.calories ? <Text variant="bodySm" tone="muted" numeric>{item.calories} kcal</Text> : null}
-                  </View>
-                  {item.description ? <Text variant="bodySm">{item.description}</Text> : null}
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
-                    {([['P', item.protein], ['C', item.carbs], ['F', item.fats]] as const).map(
-                      ([key, value]) => value !== null ? (
-                        <Text key={key} variant="bodySm" tone="muted" numeric>{key} {value}g</Text>
-                      ) : null,
-                    )}
-                  </View>
-                </Card>
-              ))}
-              {meal.meals.length ? (
-                <Card>
-                  <Text variant="bodySm" tone="muted" numeric>
-                    Daily total {meal.meals.reduce((sum, item) => sum + (item.calories ?? 0), 0)} kcal ·{' '}
-                    {meal.meals.reduce((sum, item) => sum + (item.protein ?? 0), 0)}g protein
-                  </Text>
-                </Card>
-              ) : null}
+              <MealPlanDetails meals={meal.meals} targetCalories={meal.pointer.calories} />
             </>
           )}
 
-          {showNutritionExtras ? (
-            <Card style={{ gap: spacing.md }}>
-              <Text variant="h2">Supplements</Text>
-              {supplements.length ? supplements.map((supplement, index) => (
+          {showNutritionExtras && supplements.length > 0 ? (
+            <Section title="Supplements">
+              {supplements.map((supplement, index) => (
                 <View
                   key={supplement.id ?? index}
                   style={{
@@ -98,27 +89,15 @@ export function NutritionScreen() {
                     {supplement.serving}{supplement.timing ? ` · ${supplement.timing}` : ''}
                   </Text>
                 </View>
-              )) : <Text variant="bodySm" tone="muted">Nothing has been prescribed yet.</Text>}
-            </Card>
+              ))}
+            </Section>
           ) : null}
 
-          {showNutritionExtras && (profile?.nutrition_note || profile?.cardio_note || profile?.steps_note) ? (
-            <Card style={{ gap: spacing.md }}>
-              <Text variant="h2">Coach notes</Text>
+          {showNutritionExtras && profile?.nutrition_note ? (
+            <Section title="Coach notes">
               {profile.nutrition_note ? <Text variant="bodySm">{profile.nutrition_note}</Text> : null}
-              {profile.cardio_note ? (
-                <View style={{ gap: spacing.xs }}>
-                  <Text variant="label" tone="muted">Cardio</Text>
-                  <Text variant="bodySm">{profile.cardio_note}</Text>
-                </View>
-              ) : null}
-              {profile.steps_note ? (
-                <View style={{ gap: spacing.xs }}>
-                  <Text variant="label" tone="muted">Steps</Text>
-                  <Text variant="bodySm">{profile.steps_note}</Text>
-                </View>
-              ) : null}
-            </Card>
+
+            </Section>
           ) : null}
         </View>
       </View>

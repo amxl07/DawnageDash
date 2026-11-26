@@ -69,3 +69,7 @@ describe('historyCaption', () => {
   });
 });
 
+
+it('reports a constant history value once with its unit', () => {
+  expect(historyCaption({ points: [], min14: 3, max14: 3, lastValue: 3, count: 8 }, { unit: 'L' })).toBe('Recently: 3 L');
+});

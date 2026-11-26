@@ -74,6 +74,8 @@ export type RestTimerState = {
 export type RestTimerActions = Pick<RestTimerState, 'start' | 'toggle' | 'reset' | 'skip' | 'extend'>;
 const RestTimerActionsContext = createContext<RestTimerActions | null>(null);
 const RestTimerContext = createContext<RestTimerState | null>(null);
+export type RestTimerClock = { endsAt: number | null; pausedRemainingMs: number | null };
+const RestTimerClockContext = createContext<RestTimerClock | null>(null);
 
 /**
  * Owns one rest-timer run above navigation so screen and consumer remounts do
@@ -330,6 +332,7 @@ export function RestTimerProvider({ children, userId }: { children: ReactNode; u
   // This value excludes countdown state. Set editors can start rest without
   // subscribing their entire route to every one-second display change.
   const actions = useMemo(() => ({ start, toggle, reset, skip, extend }), [start, toggle, reset, skip, extend]);
+  const clock = useMemo<RestTimerClock>(() => ({ endsAt, pausedRemainingMs }), [endsAt, pausedRemainingMs]);
 
   const value = useMemo<RestTimerState>(() => {
     const progress = duration > 0 ? 1 - remaining / duration : 0;
@@ -348,7 +351,14 @@ export function RestTimerProvider({ children, userId }: { children: ReactNode; u
     };
   }, [complete, duration, remaining, reset, running, skip, start, toggle, extend, pausedRemainingMs]);
 
-  return createElement(RestTimerActionsContext.Provider, { value: actions }, createElement(RestTimerContext.Provider, { value }, children));
+  return createElement(RestTimerClockContext.Provider, { value: clock }, createElement(RestTimerActionsContext.Provider, { value: actions }, createElement(RestTimerContext.Provider, { value }, children)));
+}
+
+/** Absolute timestamps only; never subscribes native surfaces to display ticks. */
+export function useRestTimerClock(): RestTimerClock {
+  const clock = useContext(RestTimerClockContext);
+  if (!clock) throw new Error('useRestTimerClock must be used inside <RestTimerProvider>');
+  return clock;
 }
 
 export function useRestTimer(): RestTimerState {

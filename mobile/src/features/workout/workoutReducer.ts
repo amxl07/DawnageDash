@@ -1,3 +1,5 @@
+import { applySetSuggestion, canCompleteSet, type SetSuggestionValues } from './workoutSuggestions';
+
 export type WorkoutSet = {
   id: string;
   reps: string;
@@ -6,7 +8,11 @@ export type WorkoutSet = {
   duration: string;
   kind: 'warmup' | 'work';
   completed: boolean;
+  /** Local draft intent. Omitted from persisted workout content. */
+  explicitFields?: WorkoutSetField[];
 };
+
+export type WorkoutSetField = 'reps' | 'weight' | 'rpe' | 'duration';
 
 export type WorkoutExercise = {
   id: string;
@@ -88,11 +94,19 @@ export type WorkoutAction =
       payload: {
         exerciseIndex: number;
         setIndex: number;
-        field: 'reps' | 'weight' | 'rpe' | 'duration';
+        field: WorkoutSetField;
         value: string;
       };
     }
   | { type: 'TOGGLE_SET'; payload: { exerciseIndex: number; setIndex: number } }
+  | {
+      type: 'COMPLETE_SET';
+      payload: {
+        exerciseIndex: number;
+        setIndex: number;
+        suggestion?: SetSuggestionValues;
+      };
+    }
   | { type: 'ADD_SET'; payload: { exerciseIndex: number } }
   | { type: 'REMOVE_SET'; payload: { exerciseIndex: number; setIndex: number } }
   | { type: 'RESTORE_SET'; payload: { exerciseIndex: number; index: number; set: WorkoutSet } }
@@ -134,6 +148,9 @@ export function normalizeDraftExercise(
         : fallbackId;
     usedSetIds.add(setId);
 
+    const explicitFields = set.explicitFields?.filter(
+      (field): field is WorkoutSetField => ['reps', 'weight', 'rpe', 'duration'].includes(field),
+    );
     return {
       id: setId,
       reps: set.reps,
@@ -142,6 +159,7 @@ export function normalizeDraftExercise(
       duration: set.duration ?? '',
       kind: set.kind ?? 'work',
       completed: set.completed ?? Boolean(set.reps.trim() && set.weight.trim()),
+      ...(explicitFields?.length ? { explicitFields: [...new Set(explicitFields)] } : {}),
     };
   });
 
@@ -218,7 +236,11 @@ export function workoutReducer(state: WorkoutState, action: WorkoutAction): Work
           ...exercise,
           sets: exercise.sets.map((set, index) =>
             index === action.payload.setIndex
-              ? { ...set, [action.payload.field]: action.payload.value }
+              ? {
+                  ...set,
+                  [action.payload.field]: action.payload.value,
+                  explicitFields: [...new Set([...(set.explicitFields ?? []), action.payload.field])],
+                }
               : set,
           ),
         })),
@@ -235,6 +257,23 @@ export function workoutReducer(state: WorkoutState, action: WorkoutAction): Work
         })),
         isDirty: true,
       };
+    case 'COMPLETE_SET': {
+      const exercise = state.exercises[action.payload.exerciseIndex];
+      const set = exercise?.sets[action.payload.setIndex];
+      if (!exercise || !set || set.completed) return state;
+      const completed = applySetSuggestion(set, action.payload.suggestion);
+      if (!canCompleteSet(exercise.tracking, completed)) return state;
+      return {
+        ...state,
+        exercises: updateExercise(state, action.payload.exerciseIndex, (entry) => ({
+          ...entry,
+          sets: entry.sets.map((candidate, index) =>
+            index === action.payload.setIndex ? { ...completed, completed: true } : candidate,
+          ),
+        })),
+        isDirty: true,
+      };
+    }
     case 'ADD_SET':
       return {
         ...state,

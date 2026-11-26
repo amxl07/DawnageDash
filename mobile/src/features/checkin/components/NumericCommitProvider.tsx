@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useRef } from 'react';
 
 export type NumericCommitOptions = { preserveEditing?: boolean };
 type Commit = (options?: NumericCommitOptions) => boolean;
-type Adapter = { read: () => number | null; replace: (value: number | null) => void };
+type Adapter = { read: () => number | null; replace: (value: number | null) => void; focus?: () => void };
 type EditEvent = { pending: number; edited: boolean };
 type Entry = { commit: Commit; adapter?: Adapter };
 type NumericCommits = {
@@ -14,6 +14,8 @@ type NumericCommits = {
   flush: (options?: NumericCommitOptions) => boolean;
   replace: (id: string, value: number | null) => { applied: true; previous: number | null } | { applied: false } | null;
   reset: (values: Record<string, number | null>) => void;
+  canMove: (id: string, direction: -1 | 1) => boolean;
+  move: (id: string, direction: -1 | 1) => 'moved' | 'end' | 'invalid';
 };
 const Context = createContext<NumericCommits | null>(null);
 
@@ -72,7 +74,22 @@ export function NumericCommitProvider({ children }: { children: React.ReactNode 
     pending.current.clear();
     notify(false);
   }, [notify]);
-  const value = useMemo(() => ({ register, subscribe, stage, settle, hasPending, flush, replace, reset }), [register, subscribe, stage, settle, hasPending, flush, replace, reset]);
+  const neighbor = useCallback((id: string, direction: -1 | 1) => {
+    const focusable = [...entries.current].filter(([, entry]) => entry.adapter?.focus);
+    const index = focusable.findIndex(([key]) => key === id);
+    return index < 0 ? undefined : focusable[index + direction]?.[1];
+  }, []);
+  const canMove = useCallback((id: string, direction: -1 | 1) => Boolean(neighbor(id, direction)), [neighbor]);
+  const move = useCallback((id: string, direction: -1 | 1) => {
+    const current = entries.current.get(id);
+    if (!current) return 'end' as const;
+    if (!current.commit()) return 'invalid' as const;
+    const next = neighbor(id, direction);
+    if (!next) return 'end' as const;
+    next.adapter?.focus?.();
+    return 'moved' as const;
+  }, [neighbor]);
+  const value = useMemo(() => ({ register, subscribe, stage, settle, hasPending, flush, replace, reset, canMove, move }), [register, subscribe, stage, settle, hasPending, flush, replace, reset, canMove, move]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 export function useNumericCommits() { return useContext(Context); }

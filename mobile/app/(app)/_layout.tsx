@@ -1,8 +1,9 @@
 import { Redirect, Stack, usePathname } from 'expo-router';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Platform, View } from 'react-native';
 import { useState } from 'react';
 
 import { ClientOnlyGate } from '@/components/auth/ClientOnlyGate';
+import { NativeHeaderContext } from '@/components/navigation/NavigationChrome';
 import { RestTimerProvider } from '@/components/logger/useRestTimer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotificationRouting } from '@/hooks/useNotificationRouting';
@@ -12,6 +13,7 @@ import { Button, Screen, Text } from '@/components/ui';
 import { resolveAppGate } from '@/features/onboarding/routing';
 import { setupDestination, hydrateSetup } from '@/features/onboarding/setup-model';
 import { useUserProfile } from '@/hooks/usePlans';
+import { NativeWorkoutRestBridge } from '@/features/native-surfaces/hooks';
 
 function CompletedSetupRedirect() {
   const profile = useUserProfile();
@@ -61,7 +63,7 @@ export default function AppLayout() {
   const { step, isLoading: onboardingLoading, isError: onboardingError, refetch } = useOnboarding();
   const gate = resolveAppGate({ loading, recovery: passwordRecoveryPending, session: Boolean(session), role, setupLoading: onboardingLoading, setupError: onboardingError, step });
   // Only route notifications once the user is actually in the app.
-  useNotificationRouting(gate === 'home');
+  useNotificationRouting(gate === 'home', pathname);
 
   if (gate === 'loading') return <Booting />;
   if (gate === 'password-recovery') return <Redirect href="/(auth)/reset-password" />;
@@ -76,18 +78,23 @@ export default function AppLayout() {
   if (step < 3 && !onOnboarding) return <Redirect href="/(app)/onboarding" />;
   if (step >= 3 && onOnboarding) return <CompletedSetupRedirect />;
 
+  const nativeHeader = Platform.OS !== 'web' && ['/settings', '/profile', '/measurements', '/media', '/weekly-feedback', '/questionnaire'].includes(pathname);
   return (
+    <NativeHeaderContext value={nativeHeader}>
     <RestTimerProvider key={session.user.id} userId={session.user.id}>
+      <NativeWorkoutRestBridge userId={session.user.id} />
       <Stack
-        screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
+        screenOptions={{ headerShown: Platform.OS !== 'web', headerTintColor: colors.foreground, headerStyle: { backgroundColor: colors.background }, headerShadowVisible: false, contentStyle: { backgroundColor: colors.background } }}
       >
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{ gestureEnabled: false, headerShown: false }} />
         {/* The exercise carousel owns horizontal pans, so the interactive
             back-swipe must be off or swiping between exercises pops the screen.
             The header X is the way out. */}
-        <Stack.Screen name="logger" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="daily-check-in" options={{ gestureEnabled: false, headerShown: false }} />
+        <Stack.Screen name="logger" options={{ gestureEnabled: false, headerShown: false }} />
       </Stack>
     </RestTimerProvider>
+    </NativeHeaderContext>
   );
 }

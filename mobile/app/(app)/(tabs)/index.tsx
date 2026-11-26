@@ -6,6 +6,8 @@ import { Button, Card, Screen, SkeletonCard, Text } from '@/components/ui';
 import { HomeProblem, HomeSectionHeading, TodayBrief } from '@/features/home/TodayBrief';
 import { HomeDetails } from '@/features/home/HomeDetails';
 import { NextSessionCard } from '@/features/home/NextSessionCard';
+import { WeeklyRecap } from '@/features/home/weekly-recap-card';
+import { weekConsistencyLabel } from '@/features/home/weekly-recap';
 import { RecentRecord } from '@/features/home/RecentRecord';
 import { WeeklyReflection } from '@/features/home/WeeklyReflection';
 import { WeekRecordStrip } from '@/features/home/WeekRecordStrip';
@@ -67,7 +69,7 @@ export default function HomeScreen() {
     ...(local.data?.checkInDraft ? [{ date: local.data.checkInDraft.date, state: 'draft' as const }] : []),
     ...(local.data?.checkIns.map((item) => ({ date: item.payload.date, state: isBlocked(item) ? 'blocked' as const : 'queued' as const })) ?? []),
   ]);
-  const openCheckIn = (date: string) => router.push({ pathname: '/(app)/(tabs)/check-in', params: { date } });
+  const openCheckIn = (date: string) => router.push({ pathname: '/(app)/daily-check-in', params: { date } });
   const openTraining = () => router.push({ pathname: '/(app)/(tabs)/plans', params: { view: 'plan' } });
   const refresh = () => { data.refresh(); void local.refetch(); };
   const weeklyIsOptional = !local.data?.weeklyDraft && !local.data?.weeklyDraftError && data.weeklyFeedback.state === 'ready' && !data.weeklyFeedback.stale;
@@ -100,6 +102,19 @@ export default function HomeScreen() {
         {data.profile.state === 'error' ? <HomeProblem title="Your profile couldn't load" message="Your other records are still available." onRetry={data.profile.retry} /> : data.profile.state === 'ready' && data.profile.stale ? <HomeProblem title="Showing your saved profile" message="Refresh to check for changes." onRetry={data.profile.retry} /> : null}
         {local.isError && action ? <HomeProblem title="Some device records couldn't load" message="Your saved work has been kept. Retry before starting another record." onRetry={() => { void local.refetch(); }} /> : null}
 
+        {showDailySummary ? <>
+          <View style={styles.section}>
+            <HomeSectionHeading title="This week" action="History" onPress={() => router.push({ pathname: '/(app)/(tabs)/check-in', params: { history: '1' } })} />
+            {data.checkIns.state === 'loading' ? <SkeletonCard lines={2} /> : data.checkIns.state === 'error' ?
+              <HomeProblem title="Your records couldn't load" message="Try again to see this week's check-ins." onRetry={data.checkIns.retry} /> : <>
+                <WeekRecordStrip days={week} today={today} onSelect={openCheckIn}
+                  summary={weekConsistencyLabel(data.checkIns, week, today, Boolean(local.data) && !local.isError && !local.isFetching)} />
+                {data.checkIns.stale ? <Text variant="bodySm" tone="muted">Showing saved information. Pull down to refresh.</Text> : null}
+              </>}
+          </View>
+          <WeeklyRecap history={data.checkIns} workouts={data.workouts} today={today} onOpen={() => router.push('/(app)/measurements')} />
+        </> : null}
+
         {!sessionInHero ? <View testID="home-training-section" style={styles.section}>
           <HomeSectionHeading title="Your training" action="Your plan" onPress={openTraining} />
           {data.plan.state === 'loading' ? <SkeletonCard lines={3} /> : data.plan.state === 'error' ?
@@ -121,15 +136,6 @@ export default function HomeScreen() {
           {pendingDays.length && nextSession ? <Text variant="bodySm" tone="muted">A session is saved on this device and waiting for delivery.</Text> : null}
         </View> : <Button variant="ghost" label="View training plan" onPress={openTraining} />}
 
-        {showDailySummary ? <View style={styles.section}>
-          <HomeSectionHeading title="This week" action="History" onPress={() => router.push({ pathname: '/(app)/(tabs)/check-in', params: { history: '1' } })} />
-          {data.checkIns.state === 'loading' ? <SkeletonCard lines={2} /> : data.checkIns.state === 'error' ?
-            <HomeProblem title="Your records couldn't load" message="Try again to see this week's check-ins." onRetry={data.checkIns.retry} /> : <>
-              <WeekRecordStrip days={week} today={today} onSelect={openCheckIn} />
-              {data.checkIns.stale ? <Text variant="bodySm" tone="muted">Showing saved information. Pull down to refresh.</Text> : null}
-            </>}
-        </View> : null}
-
         {!weeklyIsOptional ? weeklyReflection : null}
 
         <HomeDetails>
@@ -137,7 +143,7 @@ export default function HomeScreen() {
           {data.checkIns.state === 'ready' && rows.length ? <View style={styles.section}>
             <HomeSectionHeading title="Your recent record" action="Progress" onPress={() => router.push('/(app)/measurements')} />
             <RecentRecord summary={recentRecordSummary(rows, today)} />
-          </View> : <Button variant="secondary" label="View progress" onPress={() => router.push('/(app)/measurements')} />}
+          </View> : !showDailySummary ? <Button variant="secondary" label="View progress" onPress={() => router.push('/(app)/measurements')} /> : null}
 
           {data.assessment.state === 'ready' && data.assessment.data.completed < data.assessment.data.total ?
             <Pressable onPress={() => router.push({ pathname: '/(app)/profile', params: { assessment: '1' } })} accessibilityRole="button" accessibilityLabel="Continue your coaching assessment" style={[styles.assessment, { borderColor: colors.border }]}>
@@ -156,8 +162,8 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  section: { gap: spacing.base },
-  quietCard: { gap: spacing.md, padding: 24, borderRadius: 24 },
+  section: { gap: spacing.md },
+  quietCard: { gap: spacing.md, padding: spacing.content, borderRadius: 24 },
   pending: { borderTopWidth: 1, borderBottomWidth: 1, paddingVertical: 20, gap: spacing.sm },
   assessment: { borderTopWidth: 1, paddingVertical: 24, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
 });

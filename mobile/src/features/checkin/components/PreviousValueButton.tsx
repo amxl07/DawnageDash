@@ -1,10 +1,12 @@
 import * as Haptics from 'expo-haptics';
+import { format } from 'date-fns';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { Text } from '@/components/ui';
 import { useNumericCommits } from './NumericCommitProvider';
 import { HIT_SLOP_MIN, radius, spacing, useTheme } from '@/theme';
+import { isDateKeyStrict, parseLocalDate } from '@/lib/dates';
 
 type Props = {
   label: string;
@@ -29,6 +31,7 @@ export function PreviousValueButton({ label, value, unit, onApply, date, current
   if (value === null) return null;
 
   const formatted = formatPreviousValue(value, unit);
+  const sourceDate = date && isDateKeyStrict(date) ? format(parseLocalDate(date), 'd MMM yy') : date;
   return <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm }}>
     <Pressable
       onPress={() => {
@@ -49,15 +52,13 @@ export function PreviousValueButton({ label, value, unit, onApply, date, current
         flexShrink: 1,
         alignSelf: 'flex-start',
         justifyContent: 'center',
-        paddingHorizontal: spacing.md,
+        paddingHorizontal: spacing.xs,
         paddingVertical: spacing.sm,
-        borderRadius: radius.pill,
-        borderWidth: 1,
-        borderColor: colors.borderStrong,
+        borderRadius: radius.sm,
         backgroundColor: pressed ? colors.pressed : 'transparent',
       })}
     >
-      <Text variant="bodySm" tone="muted" style={{ flexShrink: 1 }}>{(copied ? 'Copied' : 'Use previous') + (date ? ' · ' + date : '') + ' · ' + formatted}</Text>
+      <Text variant="bodySm" tone="muted" style={{ flexShrink: 1 }}>{(copied ? 'Copied ' : 'Use ') + formatted + (sourceDate ? ' · ' + sourceDate : '')}</Text>
     </Pressable>
     {copied && onRestore ? <Pressable accessibilityRole="button" accessibilityLabel={'Undo copied ' + label} onPress={() => { const transaction = commits?.replace(label, previous.current); if (transaction && !transaction.applied) return; onRestore(previous.current); setCopied(false); }} style={({ pressed }) => ({ minHeight: 48, paddingHorizontal: spacing.md, justifyContent: 'center', borderRadius: radius.sm, backgroundColor: pressed ? colors.primarySoft : 'transparent' })}>
       <Text variant="bodySm" tone="primary">Undo</Text>

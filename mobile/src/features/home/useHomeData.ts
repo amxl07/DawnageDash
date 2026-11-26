@@ -8,10 +8,10 @@ import { useDailyCheckIns } from '@/hooks/useDashboardData';
 import { useUserProfile, useWorkoutPlan } from '@/hooks/usePlans';
 import { weeklyReportingWindow } from '@/features/weekly/selectors';
 import { useWeeklyFeedbackHistory } from '@/features/weekly/useWeeklyFeedbackHistory';
-import { questionnaireSections } from '@/lib/questionnaire-data';
+import { questionnaireSections, parseAnswers, validCompletedSections } from '@/lib/questionnaire-data';
 import { supabase } from '@/lib/supabase';
 import { parseWorkoutContent } from '@/lib/workout-content';
-import type { HomeData, HomeSection } from './types';
+import type { HomeData, HomeSection, HomeWorkoutRecord } from './types';
 import { homePlanSection } from './home-state';
 
 function section<T>(query: UseQueryResult<T>): HomeSection<T> {
@@ -34,29 +34,34 @@ export function useHomeData(today: string): HomeData {
   const assessment = useQuery({
     queryKey: ['homeAssessment', user?.id], enabled: Boolean(user?.id),
     queryFn: async () => {
-      const { data, error } = await supabase.from('onboarding_questionnaire').select('completed_sections').eq('user_id', user!.id).maybeSingle();
+      const { data, error } = await supabase.from('onboarding_questionnaire').select('answers, completed_sections').eq('user_id', user!.id).maybeSingle();
       if (error) throw error;
       const completed: unknown = data?.completed_sections ? JSON.parse(data.completed_sections) : [];
       if (!Array.isArray(completed)) throw new Error('Assessment progress is unavailable');
       const ids = new Set(questionnaireSections.map((entry) => entry.id));
-      return { completed: new Set(completed.filter((id): id is string => typeof id === 'string' && ids.has(id))).size, total: ids.size };
+      return { completed: validCompletedSections(parseAnswers(data?.answers), completed.filter((id): id is string => typeof id === 'string'), questionnaireSections).length, total: ids.size };
     },
   });
-  const loggedPlanDays = useQuery({
-    queryKey: ['workoutLogs', user?.id, 'home-week', weekStart, today], enabled: Boolean(user?.id),
-    queryFn: async () => {
-      const { data, error } = await supabase.from('workout_logs').select('content').eq('user_id', user!.id).gte('date', weekStart).lte('date', today);
+  const workouts = useQuery({
+    queryKey: ['workoutLogs', user?.id, 'home-week-records', weekStart, today], enabled: Boolean(user?.id),
+    queryFn: async (): Promise<HomeWorkoutRecord[]> => {
+      const { data, error } = await supabase.from('workout_logs').select('id,date,content').eq('user_id', user!.id).gte('date', weekStart).lte('date', today);
       if (error) throw error;
-      const days = new Set<number>();
-      for (const row of data ?? []) {
-        const parsed = parseWorkoutContent(row.content);
-        if (parsed.kind === 'exercises' && parsed.version === 2 && parsed.planDayNumber && parsed.planDayNumber > 0) days.add(parsed.planDayNumber);
-      }
-      return [...days];
+      return data ?? [];
     },
   });
+  const workoutSection = section(workouts);
+  // A partially logged plan day still advances the existing next-session
+  // selector. The recap applies its stricter completion rule separately.
+  const loggedDays = new Set<number>();
+  for (const row of workouts.data ?? []) {
+    const parsed = parseWorkoutContent(row.content);
+    if (parsed.kind === 'exercises' && parsed.version === 2 && parsed.planDayNumber && parsed.planDayNumber > 0) loggedDays.add(parsed.planDayNumber);
+  }
+  const loggedPlanDays: HomeData['loggedPlanDays'] = workoutSection.state === 'ready'
+    ? { ...workoutSection, data: [...loggedDays] } : workoutSection;
   const refetches = useRef<(() => void)[]>([]);
-  refetches.current = [profile, checkIns, plan, coach, assessment, loggedPlanDays, weeklyFeedback].map((query) => () => { void query.refetch(); });
+  refetches.current = [profile, checkIns, plan, coach, assessment, workouts, weeklyFeedback].map((query) => () => { void query.refetch(); });
   const refresh = useCallback(() => refetches.current.forEach((refetch) => refetch()), []);
   const firstFocus = useRef(true);
   useFocusEffect(useCallback(() => {
@@ -67,7 +72,7 @@ export function useHomeData(today: string): HomeData {
     profile: section(profile), checkIns: section(checkIns), coach: section(coach),
     plan: homePlanSection(section(profile), section(plan)),
     weeklyFeedback: section(weeklyFeedback),
-    assessment: section(assessment), loggedPlanDays: section(loggedPlanDays), refresh,
-    refreshing: checkIns.isRefetching || plan.isRefetching || profile.isRefetching,
+    assessment: section(assessment), loggedPlanDays, workouts: workoutSection, refresh,
+    refreshing: checkIns.isRefetching || plan.isRefetching || profile.isRefetching || workouts.isRefetching,
   };
 }

@@ -16,7 +16,6 @@ export function HomeDetails({ children }: { children: ReactNode }) {
       style={({ pressed }) => ({ minHeight: 72, paddingVertical: spacing.base, flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: pressed ? colors.pressed : 'transparent', borderRadius: 12 })}>
       <View style={{ flex: 1, gap: spacing.xs }}>
         <Text variant="label">Progress & coaching</Text>
-        <Text variant="bodySm" tone="muted">Your recent records and coaching profile</Text>
       </View>
       <DisclosureChevron expanded={expanded} />
     </Pressable>

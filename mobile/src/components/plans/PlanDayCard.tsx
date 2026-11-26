@@ -66,11 +66,12 @@ export function PlanDayCard({ day, status, onStart, onShowDetails, testID }: Pro
             <Text variant="h2">Day {day.day_number}</Text>
             <View
               style={{
-                borderWidth: 1,
+                borderWidth: 0,
                 borderColor:
                   status === 'today' || status === 'active'
                     ? colors.primary
                     : colors.borderStrong,
+                backgroundColor: status === 'today' || status === 'active' ? colors.primarySoft : colors.elevated,
                 borderRadius: radius.pill,
                 paddingHorizontal: spacing.sm,
                 paddingVertical: spacing.xs,

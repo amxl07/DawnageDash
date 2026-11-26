@@ -112,6 +112,14 @@ describe('iOS Button adapter', () => {
     ]));
   });
 
+  it('keeps regular secondary actions at the minimum native target size', async () => {
+    const view = await render(<Button label="Review details" variant="secondary" testID="review" />);
+    expect(view.getByTestId('native-review').props.nativeModifiers).toEqual(expect.arrayContaining([
+      { name: 'frame', value: { minHeight: 44 } },
+      { name: 'accessibilityLabel', value: 'Review details' },
+    ]));
+  });
+
   it('keeps custom React Native icon content on the fallback renderer', async () => {
     const view = await render(
       <Button label="Add measurement" icon={<RNText>custom icon</RNText>} testID="add" />,

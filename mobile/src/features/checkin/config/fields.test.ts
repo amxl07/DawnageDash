@@ -4,9 +4,9 @@ describe('daily check-in registry', () => {
   it('preserves every production field in the established section order', () => {
     expect(CHECK_IN_FIELDS.map((field) => field.id)).toEqual([
       'morningWeight',
+      'sleepHours',
       'energyLevel',
       'stressLevel',
-      'sleepHours',
       'hungerLevel',
       'digestion',
       'workoutStatus',

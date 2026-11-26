@@ -226,18 +226,11 @@ export default function LoginScreen() {
                 <Mail size={iconSize.xl} color={colors.primary} strokeWidth={2} accessible={false} />
               </View>
               <View style={{ gap: spacing.sm }}>
-                <Text variant="overline" tone="primary">One quick step</Text>
                 <Text variant="h1" accessibilityRole="header">Verify your email</Text>
                 <Text variant="body" tone="muted">
-                  We sent a verification link to <Text>{sent.email}</Text>.
+                  Open the link sent to <Text>{sent.email}</Text>, then return here.
                 </Text>
               </View>
-              <Card elevated style={{ gap: spacing.sm }}>
-                <Text variant="label">What happens next</Text>
-                <Text variant="bodySm" tone="muted">
-                  Open the link in your email, then return to Dawnage. If verification signs you in automatically, we&apos;ll continue for you; otherwise, sign in here.
-                </Text>
-              </Card>
               {resendMessage ? (
                 <Text
                   variant="bodySm"
@@ -263,13 +256,11 @@ export default function LoginScreen() {
                   disabled={loading}
                   onPress={() => switchMode('signUp')}
                 />
+                <Text variant="bodySm" tone="muted">A different email starts a new account request; it won&apos;t change this pending account.</Text>
                 <Button label="Back to sign in" variant="ghost" disabled={loading} onPress={() => switchMode('signIn')} />
               </View>
               <Text variant="caption" tone="muted" style={{ textAlign: 'center' }}>
-                Still waiting? Check spam or promotions before requesting another link.
-              </Text>
-              <Text variant="caption" tone="muted" style={{ textAlign: 'center' }}>
-                Using a different email starts a new account request; it won&apos;t edit this pending account.
+                Still waiting? Check spam or promotions.
               </Text>
             </MotionReveal>
           </View>
@@ -299,12 +290,8 @@ export default function LoginScreen() {
     );
   }
 
-  const heading = mode === 'forgot' ? 'Reset your password.' : mode === 'signUp' ? 'Start with clarity.' : 'Welcome back.';
-  const subheading = mode === 'forgot'
-    ? "Enter your email and we'll send a secure reset link."
-    : mode === 'signUp'
-      ? 'Create your private account. You decide when your program begins.'
-      : 'Check in, train, and stay connected to your coach.';
+  const heading = mode === 'forgot' ? 'Reset your password.' : mode === 'signUp' ? 'Create your account.' : 'Welcome back.';
+
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -317,11 +304,8 @@ export default function LoginScreen() {
 
           <MotionReveal revision={mode} style={{ gap: spacing.xl }}>
             <View style={{ gap: spacing.sm, marginTop: spacing.xl }}>
-              <Text variant="overline" tone="primary">
-                {mode === 'signUp' ? 'YOUR DAWNAGE ACCOUNT' : mode === 'forgot' ? 'ACCOUNT RECOVERY' : 'DAWNAGE DAILY'}
-              </Text>
               <Text variant="display" accessibilityRole="header" style={{ letterSpacing: -1 }}>{heading}</Text>
-              <Text variant="body" tone="muted">{subheading}</Text>
+              {mode === 'forgot' ? <Text variant="body" tone="muted">Enter your email and we’ll send a reset link.</Text> : null}
             </View>
 
             {mode === 'signUp' ? (
@@ -421,11 +405,6 @@ export default function LoginScreen() {
                 loading={loading}
               />
 
-              {mode === 'signUp' ? (
-                <Text variant="caption" tone="muted" style={{ textAlign: 'center' }}>
-                  Add or change your phone number and country anytime in Profile.
-                </Text>
-              ) : null}
 
               <Button
                 testID={mode === 'signIn' ? 'login-create-account' : undefined}

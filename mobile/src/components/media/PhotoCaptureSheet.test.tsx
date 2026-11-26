@@ -204,7 +204,7 @@ describe('PhotoCaptureSheet', () => {
   it('states the exact upload and coaching-team context before the photo slots', () => {
     const { renderer } = renderSheet();
     const copy =
-      'Photos upload to Dawnage only after you tap Save photos. They are used for progress review with your coaching team. You can leave any angle empty and return later.';
+      'Photos upload when you tap Save photos or retry an upload, and are shared with your coaching team for progress review. Any angles are optional.';
     const textNodes = renderer.root.findAllByType(NativeText);
     const copyIndex = textNodes.findIndex((node: { props: { children?: unknown } }) => node.props.children === copy);
     const frontIndex = textNodes.findIndex((node: { props: { children?: unknown } }) => node.props.children === 'Front');
@@ -266,9 +266,7 @@ describe('PhotoCaptureSheet', () => {
 
     expect(getByLabelText('Front photo, uploaded')).toBeTruthy();
     expect(renderer.root.findByProps({ accessibilityLabel: 'Retry save' })).toBeTruthy();
-    expect(renderer.root.findByProps({ testID: 'save-status' }).props.children).toBe(
-      'Photo set not saved',
-    );
+    expect(renderer.root.findAllByType(NativeText).some((node) => node.props.children === "Couldn't save. Check your connection and try again.")).toBe(true);
     expect(onClose).not.toHaveBeenCalled();
 
     await act(async () => {
@@ -437,7 +435,8 @@ describe('PhotoCaptureSheet', () => {
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce({ objectPath: 'user-1/2026-08-30/back_123.jpg', bytes: 1000 });
     const onClose = jest.fn();
-    const { getByLabelText } = renderSheet({ onClose });
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    const { renderer, getByLabelText } = renderSheet({ onClose });
 
     await act(async () => {
       await getByLabelText('Choose Front photo from library').props.onPress();
@@ -469,6 +468,15 @@ describe('PhotoCaptureSheet', () => {
       side_right_url: null,
     });
     expect(onClose).not.toHaveBeenCalled();
+    act(() => renderer.root.findByProps({ testID: 'photo-capture-sheet' }).props.onTouchEnd());
+    expect(alert.mock.calls.at(-1)?.[1]).toBe('Saved photos will stay saved. Unsaved photo changes will be discarded.');
+    act(() => alert.mock.calls.at(-1)?.[2]?.find((action) => action.text === 'Keep editing')?.onPress?.());
+    expect(getByLabelText('Left photo, upload failed')).toBeTruthy();
+    expect(onClose).not.toHaveBeenCalled();
+    act(() => renderer.root.findByProps({ testID: 'photo-capture-sheet' }).props.onTouchEnd());
+    act(() => alert.mock.calls.at(-1)?.[2]?.find((action) => action.text === 'Discard')?.onPress?.());
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(mockMutateAsync).toHaveBeenCalledTimes(1);
   });
 
   it('uses a synchronous guard to ignore same-tick duplicate saves', async () => {

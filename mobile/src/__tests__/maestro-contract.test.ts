@@ -112,11 +112,11 @@ describe('Maestro release smoke contract', () => {
     const selectorsBySource = {
       "app/(auth)/login.tsx": ['login-email', 'login-password', 'login-create-account'],
       'src/features/home/TodayBrief.tsx': ['home-today-action'],
-      "app/(app)/(tabs)/check-in.tsx": ['checkin-next', 'checkin-save'],
+      'src/features/checkin/CheckInEditorScreen.tsx': ['checkin-next', 'checkin-save'],
       'src/features/training/training-plan.tsx': ['plan-current-day'],
       "app/(app)/logger.tsx": ['workout-overview', 'workout-rest-footer'],
       'src/components/logger/WorkoutOverviewSheet.tsx': ['logger-finish', 'workout-add-exercise', 'workout-exercise-name'],
-      'src/components/logger/ExerciseSlide.tsx': ['workout-sets-toggle', 'workout-continue'],
+      'src/components/logger/ExerciseSlide.tsx': ['workout-continue'],
       "app/(app)/measurements.tsx": ['measurement-add'],
       "app/(app)/media.tsx": ['photo-add-current-week'],
       'src/components/checkin/CheckInForm.tsx': [
@@ -178,11 +178,11 @@ describe('Maestro release smoke contract', () => {
     expect(checkInCommands).toContainEqual({ tapOn: { id: 'checkin-stress-rating-5' } });
     expect(checkInCommands).toContainEqual({ tapOn: { id: 'checkin-next' } });
     expect(checkInCommands).toContainEqual({ tapOn: '8 h' });
-    expect(workoutCommands).toContainEqual({ tapOn: { id: 'workout-sets-toggle' } });
+    expect(workoutCommands).not.toContainEqual({ tapOn: { id: 'workout-sets-toggle' } });
     expect(workoutCommands).toContainEqual({ tapOn: { id: 'workout-overview' } });
     expect(workoutCommands).toContainEqual({ tapOn: { id: 'logger-finish' } });
     expect(JSON.stringify(workoutCommands)).toContain('Training plan and workout history');
-    expect(JSON.stringify(progressCommands)).toContain('More options');
+    expect(JSON.stringify(progressCommands)).toContain('You, profile and settings');
     expect(progress).toContain("^Photos upload to Dawnage only after you tap Save photos\\..*");
     expect(progress).toMatch(/Close Add measurements/);
     expect(progress).not.toContain('tapOn: "Cancel"');

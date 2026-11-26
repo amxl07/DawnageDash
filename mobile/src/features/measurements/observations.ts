@@ -1,9 +1,24 @@
 import type { DatedValue, Series } from '@/components/charts/types';
-import { isDateKeyStrict } from '@/lib/dates';
+import { subMonths } from 'date-fns';
+import { isDateKeyStrict, localDateString, parseLocalDate } from '@/lib/dates';
 import type { MeasurementField } from '@/lib/measurement-validation';
 import type { BodyMeasurement, Numeric } from '@/types/db';
 
 export type MeasurementPoint = DatedValue;
+export type MeasurementTimeframe = 'all' | '1m' | '3m' | '6m';
+
+/** Inclusive device-local calendar months, never a fixed number of elapsed hours. */
+export function filterMeasurementsByTimeframe(
+  rows: BodyMeasurement[],
+  timeframe: MeasurementTimeframe,
+  today = localDateString(),
+): BodyMeasurement[] {
+  const months = { '1m': 1, '3m': 3, '6m': 6 } as const;
+  const start = timeframe === 'all'
+    ? null
+    : localDateString(subMonths(parseLocalDate(today), months[timeframe]));
+  return rows.filter((row) => isDateKeyStrict(row.date) && row.date <= today && (!start || row.date >= start));
+}
 
 export type MeasurementComparison = {
   baseline: { date: string; value: number } | null;

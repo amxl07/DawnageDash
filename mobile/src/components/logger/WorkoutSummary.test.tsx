@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- Jest mock factories load native primitives lazily. */
 import { fireEvent, render } from '@testing-library/react-native';
+import { AccessibilityInfo } from 'react-native';
 import { WorkoutSummary } from './WorkoutSummary';
 jest.mock('lucide-react-native', () => ({ Check: () => null, Clock3: () => null, CircleAlert: () => null, ClipboardCheck: () => null }));
 jest.mock('@/components/ui', () => { const { Text } = require('react-native'); return { Text, RecordStatus: ({ value }: { value: string }) => <Text>{value}</Text> }; });
@@ -13,8 +14,9 @@ const result = { volume: 400, sets: 3, incompleteSets: 2, excludedSets: 1 };
 it('reviews complete and incomplete work with validated units before saving', async () => {
   const save = jest.fn();
   const view = await render(<WorkoutSummary result={result} syncStatus="review" onDone={() => {}} onSave={save} onEdit={() => {}} />);
-  expect(view.getByText('Review your workout')).toBeTruthy();
-  expect(view.getByText('Incomplete sets')).toBeTruthy();
+  expect(view.getByText('Review workout')).toBeTruthy();
+  expect(view.getByLabelText('Incomplete sets: 2')).toBeTruthy();
+  expect(view.getByText(/2 sets are still incomplete/)).toBeTruthy();
   expect(view.getByLabelText('Volume: 400 kg × reps · completed strength sets')).toBeTruthy();
   expect(view.queryByText('Duration')).toBeNull();
   expect(view.queryByText('Personal records')).toBeNull();
@@ -25,7 +27,7 @@ it('reviews complete and incomplete work with validated units before saving', as
 it('keeps blocked recovery and return-to-edit available', async () => {
   const edit = jest.fn();
   const view = await render(<WorkoutSummary result={result} syncStatus="blocked" onDone={() => {}} onSave={() => {}} onEdit={edit} />);
-  expect(view.getByText('blocked')).toBeTruthy();
+  expect(view.getByText('Couldn’t sync workout')).toBeTruthy();
   expect(view.getByRole('button', { name: 'Retry save' })).toBeTruthy();
   expect(view.queryByRole('button', { name: 'Done' })).toBeNull();
   await fireEvent.press(view.getByRole('button', { name: 'Return to editing' }));
@@ -33,15 +35,13 @@ it('keeps blocked recovery and return-to-edit available', async () => {
 });
 it('labels a queued receipt truthfully and offers Done', async () => {
   const view = await render(<WorkoutSummary result={result} syncStatus="queued" onDone={() => {}} onSave={() => {}} onEdit={() => {}} />);
-  expect(view.getByText('queued')).toBeTruthy();
-  expect(view.queryByText('synced')).toBeNull();
   expect(view.getByText('Workout saved on this device')).toBeTruthy();
   expect(view.getByText(/Waiting to sync/)).toBeTruthy();
   expect(view.getByRole('button', { name: 'Done' })).toBeTruthy();
 });
 it('does not describe a blocked workout as saved', async () => {
   const view = await render(<WorkoutSummary result={result} syncStatus="blocked" onDone={() => {}} onSave={() => {}} onEdit={() => {}} />);
-  expect(view.getByText('Workout needs attention')).toBeTruthy();
+  expect(view.getByText('Couldn’t sync workout')).toBeTruthy();
   expect(view.queryByText('Workout saved')).toBeNull();
 });
 
@@ -65,6 +65,7 @@ it('keeps duration or bodyweight completion free of a zero volume score', async 
   const view = await render(<WorkoutSummary result={{ volume: 0, sets: 5, incompleteSets: 0, excludedSets: 0 }} syncStatus="synced" onDone={jest.fn()} onEdit={jest.fn()} onSave={jest.fn()} />);
   expect(view.getByLabelText('Completed sets: 5')).toBeTruthy();
   expect(view.queryByText('Volume')).toBeNull();
+  expect(view.queryByText('Incomplete sets')).toBeNull();
   expect(view.queryByText(/cannot be included in volume/)).toBeNull();
 });
 
@@ -75,4 +76,14 @@ it('keeps failed delivery actionable and exposes the error', async () => {
   expect(view.getByText(/cannot be included in volume/)).toBeTruthy();
   await fireEvent.press(view.getByRole('button', { name: 'Retry save' }));
   expect(save).toHaveBeenCalledTimes(1);
+});
+
+it('announces acknowledgment when the receipt heading replaces the status pill', async () => {
+  const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => {});
+  const props = { result, onDone: jest.fn(), onSave: jest.fn(), onEdit: jest.fn() };
+  const view = await render(<WorkoutSummary {...props} syncStatus="queued" />);
+  expect(announce).not.toHaveBeenCalled();
+  await view.rerender(<WorkoutSummary {...props} syncStatus="synced" />);
+  expect(announce).toHaveBeenCalledWith('Workout saved');
+  announce.mockRestore();
 });

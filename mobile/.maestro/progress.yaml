@@ -2,9 +2,25 @@ appId: ${DAWNAGE_E2E_APP_ID}
 name: Measurements and photo permission entry points
 ---
 - runFlow: helpers/sign-in.yaml
-- tapOn: "More options"
+- tapOn: "You, profile and settings"
 - tapOn: "Measurements"
 - assertVisible: "Measurements"
+- tapOn: "Metric: Waist"
+- tapOn: "Chest"
+- assertVisible: "Metric: Chest"
+- scrollUntilVisible:
+    element: "Compare measurements"
+    direction: DOWN
+- tapOn: "Compare measurements"
+- tapOn: "Hips"
+- assertVisible: "Compare: Hips"
+- tapOn: "Compare: Hips"
+- tapOn: "No comparison"
+- assertVisible: "Compare measurements"
+- scrollUntilVisible:
+    element:
+      id: "measurement-add"
+    direction: DOWN
 - tapOn:
     id: "measurement-add"
 - assertVisible: "Add measurements"

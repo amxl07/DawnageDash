@@ -61,8 +61,6 @@ name: Workout draft and timer survive interruption
 - extendedWaitUntil:
     visible: "Edit session details.*"
     timeout: 10000
-- tapOn:
-    id: "workout-sets-toggle"
 - assertVisible:
     text: "Mark (set|warm-up) 1 incomplete"
 

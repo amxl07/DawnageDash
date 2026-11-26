@@ -25,9 +25,6 @@ export function ProgramWelcome({ waiting, coach, onStart }: { waiting: boolean; 
         <Text variant="display" accessibilityRole="header">{waiting ? 'Ready when\nyou are.' : 'Make today\nyour Day 1.'}</Text>
         <Text tone="muted">{waiting ? 'Wait for your coach’s guidance, or choose to begin with a check-in today.' : 'A few honest answers about your day. A starting point to build on.'}</Text>
       </View>
-      <View style={{ borderLeftWidth: 2, borderColor: colors.primary, paddingLeft: 12 }}>
-        <Text variant="bodySm">Your first submitted check-in starts your program. Opening it or saving a draft does not.</Text>
-      </View>
       {waiting ? guideAction : null}
       <Button testID="home-today-action" label="Start my first check-in" variant={waiting ? 'secondary' : 'primary'} onPress={onStart} />
       {!waiting ? guideAction : null}

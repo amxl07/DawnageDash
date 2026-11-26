@@ -5,6 +5,9 @@ import { act, create } from 'react-test-renderer';
 import type { PlanDay } from '@/hooks/usePlans';
 import { PlanDayCard } from './PlanDayCard';
 
+// Exercise the React Native host contract here; the SwiftUI adapter has dedicated tests.
+jest.mock('@/components/ui/Button', () => ({ Button: jest.requireActual('@/components/ui/ButtonFallback').ButtonFallback }));
+
 jest.mock('expo-web-browser', () => ({ openBrowserAsync: jest.fn(async () => undefined) }));
 jest.mock('lucide-react-native', () => ({ ChevronDown: 'ChevronDown', Play: 'Play' }));
 jest.mock('@/components/ui/DisclosureChevron', () => {

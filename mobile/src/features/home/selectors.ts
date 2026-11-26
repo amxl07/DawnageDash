@@ -26,6 +26,23 @@ function reportedNumber(value: Numeric): number | null {
   return Number.isFinite(result) ? result : null;
 }
 
+/** Compare real reporting dates; missing or invalid weights are never endpoints. */
+export function recentWeightSummary(rows: DailyCheckIn[], today: string) {
+  const observations = rows
+    .filter((row) => isDateKeyStrict(row.date) && row.date <= today)
+    .flatMap((row) => {
+      const value = reportedNumber(row.morning_weight);
+      // Match the supported range of the daily check-in weight field.
+      return value === null || value < 20 || value > 400 ? [] : [{ date: row.date, value }];
+    })
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const latest = observations[0];
+  return latest ? {
+    latest,
+    previous: observations.find((point) => point.date < latest.date) ?? null,
+  } : null;
+}
+
 export function recentRecordSummary(rows: DailyCheckIn[], today: string): RecentRecordSummary {
   const window = calendarDaysEnding(today, 7);
   const chartWindow = calendarDaysEnding(today, 14);

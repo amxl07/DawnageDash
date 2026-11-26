@@ -147,6 +147,108 @@ describe('workoutReducer', () => {
     expect(stateWithTwoSets.exercises[0].sets[0].completed).toBe(false);
   });
 
+  it('confirms suggestions and completion atomically without overwriting typed values', () => {
+    const next = workoutReducer(stateWithTwoSets, {
+      type: 'COMPLETE_SET',
+      payload: {
+        exerciseIndex: 0,
+        setIndex: 1,
+        suggestion: { weight: '60', reps: '10' },
+      },
+    });
+
+    expect(next.exercises[0].sets[1]).toMatchObject({
+      weight: '62.5',
+      reps: '9',
+      rpe: '8',
+      completed: true,
+    });
+    expect(stateWithTwoSets.exercises[0].sets[1].completed).toBe(false);
+  });
+
+  it('fills empty suggested values and completes in one reducer transition', () => {
+    const emptyState: WorkoutState = {
+      ...stateWithTwoSets,
+      exercises: [{ ...squat, sets: [{ ...squat.sets[0], weight: '', reps: '', completed: false }] }],
+    };
+
+    const next = workoutReducer(emptyState, {
+      type: 'COMPLETE_SET',
+      payload: { exerciseIndex: 0, setIndex: 0, suggestion: { weight: '62.5', reps: '8' } },
+    });
+
+    expect(next.exercises[0].sets[0]).toMatchObject({ weight: '62.5', reps: '8', completed: true });
+    expect(next.isDirty).toBe(true);
+  });
+
+  it('requires a valid repetition or duration while allowing bodyweight to remain blank', () => {
+    const strengthState: WorkoutState = {
+      ...stateWithTwoSets,
+      exercises: [{ ...squat, sets: [{ ...squat.sets[0], weight: '', reps: '', completed: false }] }],
+    };
+    const invalidStrength = workoutReducer(strengthState, {
+      type: 'COMPLETE_SET',
+      payload: { exerciseIndex: 0, setIndex: 0, suggestion: {} },
+    });
+    expect(invalidStrength).toBe(strengthState);
+
+    const bodyweight = workoutReducer(strengthState, {
+      type: 'COMPLETE_SET',
+      payload: { exerciseIndex: 0, setIndex: 0, suggestion: { reps: '12' } },
+    });
+    expect(bodyweight.exercises[0].sets[0]).toMatchObject({ weight: '', reps: '12', completed: true });
+
+    const durationState: WorkoutState = {
+      ...initialWorkoutState,
+      exercises: [{
+        id: 'plank', name: 'Plank', tracking: 'duration',
+        sets: [{ id: 'plank-1', weight: '', reps: '', rpe: '', duration: '', kind: 'work', completed: false }],
+      }],
+    };
+    expect(workoutReducer(durationState, {
+      type: 'COMPLETE_SET', payload: { exerciseIndex: 0, setIndex: 0, suggestion: { duration: 'nope' } },
+    })).toBe(durationState);
+    expect(workoutReducer(durationState, {
+      type: 'COMPLETE_SET', payload: { exerciseIndex: 0, setIndex: 0, suggestion: { duration: '90' } },
+    }).exercises[0].sets[0]).toMatchObject({ duration: '90', completed: true });
+  });
+
+  it.each([
+    { reps: '8.5', weight: '' },
+    { reps: '8', weight: '-1' },
+    { reps: '8', weight: 'heavy' },
+  ])('rejects invalid typed strength values %#', ({ reps, weight }) => {
+    const invalid: WorkoutState = {
+      ...stateWithTwoSets,
+      exercises: [{ ...squat, sets: [{ ...squat.sets[0], reps, weight, completed: false }] }],
+    };
+    expect(workoutReducer(invalid, {
+      type: 'COMPLETE_SET', payload: { exerciseIndex: 0, setIndex: 0, suggestion: {} },
+    })).toBe(invalid);
+  });
+
+  it('preserves an explicit blank weight through completion and draft restoration', () => {
+    const empty: WorkoutState = {
+      ...stateWithTwoSets,
+      exercises: [{ ...squat, sets: [{ ...squat.sets[0], weight: '', reps: '', completed: false }] }],
+    };
+    const cleared = workoutReducer(empty, {
+      type: 'UPDATE_SET', payload: { exerciseIndex: 0, setIndex: 0, field: 'weight', value: '' },
+    });
+    const completed = workoutReducer(cleared, {
+      type: 'COMPLETE_SET', payload: { exerciseIndex: 0, setIndex: 0, suggestion: { weight: '60', reps: '10' } },
+    });
+    expect(completed.exercises[0].sets[0]).toMatchObject({
+      weight: '', reps: '10', completed: true, explicitFields: ['weight'],
+    });
+
+    const restored = workoutReducer(initialWorkoutState, {
+      type: 'RESTORE_DRAFT',
+      payload: { title: 'Bodyweight', existingLogId: null, exercises: completed.exercises },
+    });
+    expect(restored.exercises[0].sets[0].explicitFields).toEqual(['weight']);
+  });
+
   it('loads a plan day as clean and clears stale log identity', () => {
     const next = workoutReducer(
       { ...stateWithTwoSets, existingLogId: 'old-log', selectedDay: 1, isDirty: true },

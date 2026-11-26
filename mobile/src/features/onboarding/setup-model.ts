@@ -14,7 +14,7 @@ export function hydrateSetup(data: Record<string, unknown> | null | undefined, f
 }
 
 export function setupDestination(preference: StartPreference | null) {
-  return preference === 'start_now' ? '/(app)/(tabs)/check-in' as const : '/(app)/(tabs)' as const;
+  return preference === 'start_now' ? '/(app)/daily-check-in' as const : '/(app)/(tabs)' as const;
 }
 
 export function nextSetupMilestone(acknowledged: number, stage: SetupStageIndex): number {

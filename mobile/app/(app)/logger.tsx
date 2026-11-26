@@ -19,18 +19,20 @@ import { DisclosureChevron } from '@/components/ui/DisclosureChevron';
 import { MotionReveal } from '@/components/ui/MotionReveal';
 import { useAuth } from '@/contexts/AuthContext';
 import { createDraftExerciseFromPlan } from '@/features/workout/workoutReducer';
+import { buildExerciseHistory, collectPlanExerciseNames, normalizeExerciseName, type SetSuggestionValues } from '@/features/workout/workoutSuggestions';
 import { useWorkoutSession } from '@/features/workout/useWorkoutSession';
 import { reviewWorkout } from '@/features/workout/workout-review';
+import { useWorkoutActivity } from '@/features/native-surfaces/hooks';
+import { workoutIsLive } from '@/features/native-surfaces/model';
 import type { PlanExercise } from '@/hooks/usePlans';
 import { isDateKeyStrict, localDateString, parseLocalDate } from '@/lib/dates';
 import { flushOutbox } from '@/lib/outbox';
 import { supabase } from '@/lib/supabase';
-import { parseWorkoutContent, type LoggedSet } from '@/lib/workout-content';
 import { HIT_SLOP_MIN, iconSize, radius, spacing, useTheme } from '@/theme';
 
 function findPrescription(exercises: PlanExercise[], name: string): PlanExercise | undefined {
   for (const exercise of exercises) {
-    if (exercise.name.toLowerCase().trim() === name.toLowerCase().trim()) return exercise;
+    if (normalizeExerciseName(exercise.name) === normalizeExerciseName(name)) return exercise;
     const match = findPrescription(exercise.substitutions, name); if (match) return match;
   }
 }
@@ -55,7 +57,7 @@ export default function LoggerScreen() {
   const frozenToday = useRef(localDateString()).current;
   const date = params.date ?? frozenToday;
   if (typeof date !== 'string' || !isDateKeyStrict(date) || date > localDateString()) {
-    return <Screen><Text variant="h1">This workout date is unavailable</Text><Text variant="bodySm" tone="muted">Open a workout for today or a previous reporting date.</Text><Button label="Back to history" onPress={() => router.replace('/(app)/(tabs)/logs')} /></Screen>;
+    return <Screen><Text variant="h1">This workout date is unavailable</Text><Text variant="bodySm" tone="muted">Open a workout for today or a previous reporting date.</Text><Button label="Back to history" onPress={() => router.replace('/(app)/logs')} /></Screen>;
   }
   if (!user?.id) return <Screen><Text>Sign in to open your workout.</Text></Screen>;
   const logId = typeof params.logId === 'string' && params.logId ? params.logId : null;
@@ -73,6 +75,7 @@ function WorkoutEditor({ userId, date, logId, outboxId, initialDay }: { userId: 
   const restActions = useRestTimerActions();
   const rest = useRestPreference(userId);
   const [index, setIndex] = useState(0);
+  const activity = useWorkoutActivity({ userId, date, exerciseIndex: index, exercises: state.exercises, eligible: workoutIsLive({ date, today: localDateString(), ready: session.entry.kind === 'ready' && !session.recovery, existingLogId: state.existingLogId, outboxId, delivery: session.deliveryState, source: session.entry.kind === 'ready' ? session.entry.source : null }) });
   const [newExercise, setNewExercise] = useState('');
   const [overview, setOverview] = useState(false);
   const [sessionDetails, setSessionDetails] = useState(false);
@@ -95,15 +98,7 @@ function WorkoutEditor({ userId, date, logId, outboxId, initialDay }: { userId: 
     queryFn: async () => {
       const { data, error } = await supabase.from('workout_logs').select('date, content').eq('user_id', userId).lt('date', date).order('date', { ascending: false }).limit(10);
       if (error) throw error;
-      const result: Record<string, { date: string; tracking: string; sets: LoggedSet[] }> = {};
-      for (const log of data ?? []) {
-        const parsed = parseWorkoutContent(log.content); if (parsed.kind !== 'exercises') continue;
-        for (const exercise of parsed.exercises) {
-          const key = exercise.name.trim().toLowerCase();
-          if (key && !result[key] && exercise.sets.length) result[key] = { date: log.date, tracking: exercise.tracking ?? 'weight-reps', sets: exercise.sets };
-        }
-      }
-      return result;
+      return buildExerciseHistory(data ?? []);
     }, retry: false,
   });
 
@@ -125,8 +120,12 @@ function WorkoutEditor({ userId, date, logId, outboxId, initialDay }: { userId: 
   const current = state.exercises[Math.min(index, Math.max(0, state.exercises.length - 1))];
   const day = session.plan?.days.find((entry) => entry.day_number === state.selectedDay);
   const prescription = current ? findPrescription(day?.exercises ?? [], current.name) : undefined;
-  const history = current ? previous?.[current.name.toLowerCase().trim()] : undefined;
-  const compatibleHistory = history?.tracking === current?.tracking ? history : undefined;
+  const history = current ? previous?.byName[normalizeExerciseName(current.name)] : undefined;
+  const exerciseSuggestions = [...collectPlanExerciseNames(session.plan?.days ?? []), ...(previous?.names ?? [])];
+  const localStatus = state.isDirty && session.draftState !== 'error'
+    ? session.draftState === 'writing' ? 'Saving on this device…'
+      : session.draftState === 'saved' ? 'Draft saved on this device.' : 'Unsaved local changes'
+    : null;
   const currentName = current?.name;
   useEffect(() => { if (currentName) AccessibilityInfo.announceForAccessibility(`Exercise ${index + 1} of ${state.exercises.length}: ${currentName}`); }, [currentName, index, state.exercises.length]);
 
@@ -140,7 +139,7 @@ function WorkoutEditor({ userId, date, logId, outboxId, initialDay }: { userId: 
       { text: 'Discard local changes', style: 'destructive', onPress: async () => {
         showingExit.current = false;
         if (session.deliveryState === 'sending') { setLocalError('Wait for the current save before discarding local changes.'); return; }
-        if (await session.discardDraft()) leave(data.action);
+        if (await session.discardDraft()) { activity.end(); restActions.reset(); leave(data.action); }
       } },
       { text: 'Save draft & exit', onPress: async () => {
         showingExit.current = false;
@@ -150,9 +149,10 @@ function WorkoutEditor({ userId, date, logId, outboxId, initialDay }: { userId: 
     ], { cancelable: true, onDismiss: () => { showingExit.current = false; } });
   });
 
-  const addExercise = () => {
-    if (!newExercise.trim()) return;
-    edit({ type: 'ADD_EXERCISE', payload: { name: newExercise.trim() } }); setNewExercise(''); setIndex(state.exercises.length); setOverview(false); Keyboard.dismiss();
+  const addExercise = (suggestedName?: string) => {
+    const name = suggestedName?.trim() || newExercise.trim();
+    if (!name) return;
+    edit({ type: 'ADD_EXERCISE', payload: { name } }); setNewExercise(''); setIndex(state.exercises.length); setOverview(false); Keyboard.dismiss();
   };
   const chooseDay = (dayNumber: number) => {
     const next = session.plan?.days.find((entry) => entry.day_number === dayNumber); if (!next || dayNumber === state.selectedDay) return;
@@ -161,11 +161,12 @@ function WorkoutEditor({ userId, date, logId, outboxId, initialDay }: { userId: 
       { text: 'Keep current draft', onPress: () => { void session.flushDraft(); } },
       { text: 'Replace local entries', style: 'destructive', onPress: async () => {
         if (!(await session.discardDraft())) return;
+        activity.replace(); restActions.reset();
         edit({ type: 'LOAD_DEFAULT_PLAN', payload: { day: next.day_number, title: next.focus ? `Day ${next.day_number} — ${next.focus}` : `Day ${next.day_number}`, exercises: next.exercises.map(createDraftExerciseFromPlan) } }); setIndex(0); setSessionDetails(false);
       } },
     ]);
   };
-  const finish = () => { Keyboard.dismiss(); setResult(reviewWorkout(state)); setSubmittedReview(false); setReview(true); };
+  const finish = () => { activity.end(); restActions.reset(); Keyboard.dismiss(); setResult(reviewWorkout(state)); setSubmittedReview(false); setReview(true); };
   const nextUnfinishedIndex = current ? findNextUnfinishedExerciseIndex(state.exercises, index) : -1;
   const continueLabel = nextUnfinishedIndex >= 0 ? `Continue to ${state.exercises[nextUnfinishedIndex].name}` : 'Review workout';
   const continueWorkout = () => {
@@ -174,6 +175,7 @@ function WorkoutEditor({ userId, date, logId, outboxId, initialDay }: { userId: 
     else finish();
   };
   const save = async () => {
+    activity.end(); restActions.reset();
     setSubmittedReview(true);
     setResult(reviewWorkout(state));
     setReceiptRevision((revision) => revision + 1);
@@ -189,25 +191,26 @@ function WorkoutEditor({ userId, date, logId, outboxId, initialDay }: { userId: 
       <Text variant="h1">Choose your workout</Text><Text variant="bodySm" tone="muted">{outboxId ? 'Choose which saved workout should receive the recovered content. Review it before retrying the save.' : 'There is more than one saved workout for this date.'}</Text>
       {session.entry.ids.map((id) => <Button key={id} label={session.records?.find((row) => row.id === id)?.title || 'Open workout'} variant="secondary" onPress={() => { void session.selectLog(id).then((target) => { if (target) router.setParams({ logId: target.logId, outboxId: target.outboxId ?? '' }); }); }} />)}
       {session.error ? <Text variant="bodySm" tone="destructive" accessibilityLiveRegion="polite">{session.error}</Text> : null}
-    </View> : <View style={{ gap: spacing.base }}><Text variant="h1">Couldn’t open this workout</Text><Text variant="bodySm" tone="muted">{session.entry.reason === 'missing-log' ? 'This workout is missing or no longer available to your account. Choose a record from Training History.' : session.entry.reason === 'draft-unreadable' ? 'Your saved local workout could not be read. Retry without replacing it.' : 'Workout data is unavailable. Your saved work has not been replaced.'}</Text><Button label="Retry loading workout" onPress={session.retry} /><Button label="Back to history" variant="secondary" onPress={() => router.replace('/(app)/(tabs)/logs')} /></View>}
+    </View> : <View style={{ gap: spacing.base }}><Text variant="h1">Couldn’t open this workout</Text><Text variant="bodySm" tone="muted">{session.entry.reason === 'missing-log' ? 'This workout is missing or no longer available to your account. Choose a record from Training History.' : session.entry.reason === 'draft-unreadable' ? 'Your saved local workout could not be read. Retry without replacing it.' : 'Workout data is unavailable. Your saved work has not been replaced.'}</Text><Button label="Retry loading workout" onPress={session.retry} /><Button label="Back to history" variant="secondary" onPress={() => router.replace('/(app)/logs')} /></View>}
   </Screen>;
 
-  if (session.legacyText !== undefined) return <Screen><Button label="Close workout" variant="ghost" onPress={() => router.back()} /><Text variant="h1">{state.title}</Text><Card><Text>{session.legacyText}</Text><Text variant="bodySm" tone="muted">This historical note is preserved in Logs. Structured set editing is unavailable for this note.</Text></Card></Screen>;
+  if (session.legacyText !== undefined) return <Screen><Button label="Close workout" variant="ghost" onPress={() => router.back()} /><Text variant="h1">{state.title}</Text><Card><Text>{session.legacyText}</Text><Text variant="bodySm" tone="muted">This historical note is preserved in Training history. Structured set editing is unavailable for this note.</Text></Card></Screen>;
 
-  if (review) return <Screen><WorkoutSummary result={result} syncStatus={!submittedReview || status === 'idle' ? 'review' : status} receiptRevision={receiptRevision} error={session.error} onEdit={() => setReview(false)} onSave={() => void save()} onDone={() => router.back()} /></Screen>;
+  if (review) return <Screen><WorkoutSummary result={result} syncStatus={!submittedReview || status === 'idle' ? 'review' : status} receiptRevision={receiptRevision} error={session.error} onEdit={() => { activity.resume(); setReview(false); }} onSave={() => void save()} onDone={() => router.back()} /></Screen>;
   const dock = <RestDock prescribedSeconds={prescription?.restSeconds} preference={rest.preference} onPreferenceChange={rest.change} preferenceError={rest.error} />;
   return <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <Screen archetype={inlineFooter ? 'child' : 'editor'} footerHeight={inlineFooter ? 0 : footerHeight}>
       <View style={{ gap: spacing.base }}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm }}>
           <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Close workout logger" style={({ pressed }) => ({ minHeight: HIT_SLOP_MIN, minWidth: HIT_SLOP_MIN, justifyContent: 'center', alignItems: 'center', borderRadius: 999, backgroundColor: pressed ? colors.pressed : 'transparent' })}><X size={iconSize.lg} color={colors.foreground} /></Pressable>
-          <View style={{ flex: 1, minWidth: 100 }}><Text variant="h2">{format(parseLocalDate(date), 'EEE d MMM')}</Text><Text variant="bodySm" tone="muted">{state.existingLogId ? 'Editing saved workout' : 'Your session'}</Text></View>
+          <View style={{ flex: 1, minWidth: 100 }}><Text variant="h2">{format(parseLocalDate(date), 'EEE d MMM')}</Text></View>
           <View style={{ flexDirection: 'row', justifyContent: 'flex-end', flexWrap: 'wrap', gap: spacing.xs, ...(compactHeader ? { width: '100%' as const } : {}) }}>
           <Pressable ref={overviewTrigger} testID="workout-overview" accessibilityRole="button" accessibilityLabel="Open workout overview" onPress={() => setOverview(true)} style={({ pressed }) => ({ minHeight: HIT_SLOP_MIN, justifyContent: 'center', paddingHorizontal: spacing.sm, borderRadius: radius.sm, backgroundColor: pressed ? colors.primarySoft : 'transparent' })}><Text variant="bodySm" tone="primary">Overview</Text></Pressable>
           {state.exercises.length > 0 ? <Pressable testID="logger-finish-visible" accessibilityRole="button" accessibilityLabel="Finish workout" accessibilityHint="Review completed and incomplete sets before saving." onPress={finish} style={({ pressed }) => ({ minHeight: HIT_SLOP_MIN, justifyContent: 'center', paddingHorizontal: spacing.sm, borderRadius: radius.sm, backgroundColor: pressed ? colors.primarySoft : 'transparent' })}><Text variant="bodySm" tone="primary">Finish</Text></Pressable> : null}
           </View>
         </View>
-        {state.isDirty ? session.draftState === 'error' ? <Text variant="bodySm" tone="destructive">Couldn’t save on this device. Keep this screen open.</Text> : session.draftState === 'clean' ? <Text variant="bodySm" tone="muted">Unsaved local changes</Text> : <RecordStatus value={session.draftState === 'writing' ? 'saving-local' : 'draft'} /> : status === 'queued' || status === 'blocked' || status === 'synced' ? <RecordStatus value={status} /> : null}
+        {localStatus ? <Text variant="bodySm" tone="muted" accessibilityLiveRegion="polite">{localStatus}</Text> : null}
+        {state.isDirty && session.draftState === 'error' ? <Text variant="bodySm" tone="destructive">Couldn’t save. Keep this screen open and retry.</Text> : !state.isDirty && (status === 'queued' || status === 'blocked' || status === 'synced') ? <RecordStatus value={status} /> : null}
         <Pressable accessibilityRole="button" accessibilityLabel={'Edit session details. ' + (state.title || 'Untitled workout')} accessibilityState={{ expanded: sessionDetails }}
           onPress={() => { if (sessionDetails) Keyboard.dismiss(); setSessionDetails((open) => !open); }}
           style={({ pressed }) => ({ minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: pressed ? colors.pressed : 'transparent' })}>
@@ -224,9 +227,10 @@ function WorkoutEditor({ userId, date, logId, outboxId, initialDay }: { userId: 
         {current ? <>
           <Text variant="label" tone="muted">EXERCISE {index + 1} OF {state.exercises.length}</Text>
           <SwipeableSlide canPrev={index > 0} canNext={index < state.exercises.length - 1} onPrev={() => setIndex((value) => Math.max(0, value - 1))} onNext={() => setIndex((value) => Math.min(state.exercises.length - 1, value + 1))}>
-            <ExerciseSlide exercise={current} prescription={prescription} targetReps={prescription?.reps} targetDuration={prescription?.duration} previous={compatibleHistory?.sets} previousDate={compatibleHistory?.date}
+            <ExerciseSlide exercise={current} prescription={prescription} targetReps={prescription?.reps} targetDuration={prescription?.duration} history={history}
               onUpdateSet={(setId, field, value) => { const setIndex = current.sets.findIndex((set) => set.id === setId); if (setIndex >= 0) edit({ type: 'UPDATE_SET', payload: { exerciseIndex: index, setIndex, field, value } }); }}
-              onToggleSet={(setId) => { const setIndex = current.sets.findIndex((set) => set.id === setId); if (setIndex < 0) return; const completing = !current.sets[setIndex].completed; edit({ type: 'TOGGLE_SET', payload: { exerciseIndex: index, setIndex } }); Keyboard.dismiss(); const seconds = prescription?.restSeconds ?? rest.preference.seconds; if (completing && rest.preference.autoStart && seconds && seconds > 0) restActions.start(seconds, { haptic: false }); }}
+              onCompleteSet={(setId, suggestion: SetSuggestionValues) => { const setIndex = current.sets.findIndex((set) => set.id === setId); if (setIndex < 0) return false; const accepted = edit({ type: 'COMPLETE_SET', payload: { exerciseIndex: index, setIndex, suggestion } }); if (!accepted) return false; Keyboard.dismiss(); const seconds = prescription?.restSeconds ?? rest.preference.seconds; if (rest.preference.autoStart && seconds && seconds > 0) restActions.start(seconds, { haptic: false }); return true; }}
+              onToggleSet={(setId) => { const setIndex = current.sets.findIndex((set) => set.id === setId); if (setIndex < 0) return; edit({ type: 'TOGGLE_SET', payload: { exerciseIndex: index, setIndex } }); Keyboard.dismiss(); }}
               onAddSet={() => edit({ type: 'ADD_SET', payload: { exerciseIndex: index } })}
               onRemoveSet={(setIndex) => edit({ type: 'REMOVE_SET', payload: { exerciseIndex: index, setIndex } })}
               onRestoreSet={(set, originalIndex) => edit({ type: 'RESTORE_SET', payload: { exerciseIndex: index, index: originalIndex, set } })}
@@ -245,6 +249,6 @@ function WorkoutEditor({ userId, date, logId, outboxId, initialDay }: { userId: 
     </Screen>
     {!inlineFooter ? <WorkoutRestFooter onHeightChange={setFooterHeight}>{dock}{session.error || localError ? <Text variant="bodySm" tone="destructive">{session.error ?? localError}</Text> : null}</WorkoutRestFooter> : null}
     <WorkoutOverviewSheet visible={overview} exercises={state.exercises} activeIndex={index} onClose={() => setOverview(false)} onSelect={setIndex}
-      onFinish={() => { setOverview(false); finish(); }} newExerciseName={newExercise} onNewExerciseNameChange={setNewExercise} onAddExercise={addExercise} returnFocusRef={overviewTrigger} />
+      onFinish={() => { setOverview(false); finish(); }} newExerciseName={newExercise} onNewExerciseNameChange={setNewExercise} onAddExercise={addExercise} exerciseSuggestions={exerciseSuggestions} returnFocusRef={overviewTrigger} />
   </KeyboardAvoidingView>;
 }

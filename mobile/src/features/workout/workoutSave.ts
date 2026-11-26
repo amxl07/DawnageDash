@@ -1,8 +1,10 @@
 import {
   workoutReducer,
   type WorkoutAction,
+  type WorkoutExercise,
   type WorkoutState,
 } from './workoutReducer';
+import { serializeWorkoutContent } from '@/lib/workout-content';
 
 export type WorkoutEditAction = Extract<
   WorkoutAction,
@@ -12,6 +14,7 @@ export type WorkoutEditAction = Extract<
       | 'SET_TITLE'
       | 'UPDATE_SET'
       | 'TOGGLE_SET'
+      | 'COMPLETE_SET'
       | 'ADD_SET'
       | 'REMOVE_SET'
       | 'RESTORE_SET'
@@ -24,6 +27,23 @@ export type WorkoutEditSnapshot = {
   generation: number;
   state: WorkoutState;
 };
+
+export function serializeWorkoutExercises(
+  exercises: WorkoutExercise[],
+  selectedDay: number | null,
+): string {
+  return serializeWorkoutContent({
+    planDayNumber: selectedDay,
+    exercises: exercises.map((exercise) => ({
+      name: exercise.name,
+      tracking: exercise.tracking,
+      sets: exercise.sets.map(({ id: _id, explicitFields: _explicitFields, ...set }, index) => ({
+        ...set,
+        setNumber: index + 1,
+      })),
+    })),
+  });
+}
 
 type SaveLock = { current: boolean };
 
@@ -43,6 +63,7 @@ export function applyWorkoutEdit(
   action: WorkoutEditAction,
 ): WorkoutEditSnapshot {
   const nextState = workoutReducer(current.state, action);
+  if (nextState === current.state) return current;
   return {
     generation: current.generation + 1,
     state: nextState.isDirty ? nextState : { ...nextState, isDirty: true },

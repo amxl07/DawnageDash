@@ -101,11 +101,11 @@ describe('PlateCalculatorSheet', () => {
   it('shows validation instead of a calculation for an invalid target or bar', () => {
     const { byLabel, text, onUse } = renderSheet('not-a-number');
 
-    expect(text()).toContain('Enter a finite nonnegative target load.');
+    expect(text()).toContain('Enter a target load of 0 kg or more.');
     expect(byLabel('Use this load').props.accessibilityState).toEqual({ disabled: true });
     act(() => byLabel('Custom bar').props.onPress());
     act(() => byLabel('Custom bar weight in kilograms').props.onChangeText('-5'));
-    expect(text()).toContain('Enter a finite nonnegative bar weight.');
+    expect(text()).toContain('Enter a bar weight of 0 kg or more.');
     expect(onUse).not.toHaveBeenCalled();
   });
 

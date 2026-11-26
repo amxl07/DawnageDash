@@ -10,6 +10,9 @@ export type ProfileSaveRecovery = {
   userId: string;
   phase: 'prepared' | 'profile-saved';
   form: ProfileForm;
+  assessmentPatch?: Record<string, unknown>;
+  profileDataPatch?: Record<string, unknown>;
+  profileFieldsPatch?: Record<string, unknown>;
 };
 
 const fields: (keyof ProfileForm)[] = ['name', 'phone', 'country', 'timezone', 'goal', 'injuries', 'allergies', 'workoutDays', 'medicalCondition'];
@@ -55,8 +58,8 @@ export async function waitForProfileSaveOperation(userId: string): Promise<void>
 }
 
 /** Acknowledged before changing either remote row. This journal has no draft TTL. */
-export function prepareProfileSave(userId: string, form: ProfileForm): Promise<ProfileSaveRecovery> {
-  const entry: ProfileSaveRecovery = { version: 1, id: Date.now() + ':' + ++sequence + ':' + Math.random().toString(36).slice(2), userId, phase: 'prepared', form: { ...form } };
+export function prepareProfileSave(userId: string, form: ProfileForm, patches: Pick<ProfileSaveRecovery, 'assessmentPatch' | 'profileDataPatch' | 'profileFieldsPatch'> = {}): Promise<ProfileSaveRecovery> {
+  const entry: ProfileSaveRecovery = { version: 1, id: Date.now() + ':' + ++sequence + ':' + Math.random().toString(36).slice(2), userId, phase: 'prepared', form: { ...form }, ...patches };
   return serialized(userId, async () => {
     await AsyncStorage.setItem(key(userId), JSON.stringify(entry));
     return entry;
@@ -86,7 +89,27 @@ export function clearProfileSaveRecovery(userId: string, id: string): Promise<bo
 export function profileMatchesRecovery(profile: {
   full_name: string | null; phone_number: string | null; country: string | null;
   profile_data: Record<string, unknown> | null;
-}, form: ProfileForm): boolean {
-  if ((profile.full_name ?? '') !== form.name || (profile.phone_number ?? '') !== form.phone || (profile.country ?? '') !== form.country) return false;
-  return ['timezone', 'goal', 'injuries', 'allergies', 'workoutDays', 'medicalCondition'].every((field) => (profile.profile_data?.[field] ?? '') === form[field as keyof ProfileForm]);
+}, form: ProfileForm, dataPatch?: Record<string, unknown>, fieldsPatch?: Record<string, unknown>): boolean {
+  const expected = fieldsPatch ?? { full_name: form.name, phone_number: form.phone, country: form.country };
+  if (!Object.entries(expected).every(([key,value]) => ((profile as unknown as Record<string, unknown>)[key] ?? '') === value)) return false;
+  return (dataPatch ? Object.keys(dataPatch) : ['timezone', 'goal', 'injuries', 'allergies', 'workoutDays', 'medicalCondition']).every((field) => (profile.profile_data?.[field] ?? '') === form[field as keyof ProfileForm]);
+}
+
+/** Restore only fields owned by a narrow journal over current canonical facts.
+ * Older journals lack masks and retain their original explicit full-form intent.
+ */
+export function restoreProfileForm(saved: ProfileForm, entry: ProfileSaveRecovery): ProfileForm {
+  if (entry.phase === 'prepared' && (!entry.profileFieldsPatch || !entry.profileDataPatch || !entry.assessmentPatch)) return { ...entry.form };
+  const next = { ...saved };
+  const assign = (patch: Record<string, unknown> | undefined, mapping: Record<string, keyof ProfileForm>) => {
+    for (const [key, field] of Object.entries(mapping)) {
+      if (!patch || Object.prototype.hasOwnProperty.call(patch, key)) next[field] = entry.form[field];
+    }
+  };
+  if (entry.phase === 'prepared') {
+    assign(entry.profileFieldsPatch, { full_name: 'name', phone_number: 'phone', country: 'country' });
+    assign(entry.profileDataPatch, { timezone: 'timezone', goal: 'goal', injuries: 'injuries', allergies: 'allergies', workoutDays: 'workoutDays', medicalCondition: 'medicalCondition' });
+  }
+  assign(entry.assessmentPatch, { q14: 'goal', q56: 'injuries', q64: 'allergies', q33: 'workoutDays' });
+  return next;
 }

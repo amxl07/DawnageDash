@@ -8,7 +8,7 @@ import { HIT_SLOP_MIN, iconSize, radius, spacing, useTheme } from '@/theme';
 
 type Props = {
   question: Question;
-  value: string | number | undefined;
+  value: unknown;
   onChange: (v: string | number) => void;
   error?: string;
 };
@@ -56,11 +56,10 @@ export function QuestionField({ question: q, value, onChange, error }: Props) {
           </Text>
         ) : null}
 
-        <Sheet
+        <Sheet role="choice"
           visible={selectOpen}
           onClose={() => setSelectOpen(false)}
           title={q.text}
-          heightRatio={0.6}
         >
           <View style={{ padding: spacing.base, gap: spacing.sm }}>
             {(q.options ?? []).map((opt) => (
@@ -109,6 +108,7 @@ export function QuestionField({ question: q, value, onChange, error }: Props) {
         <Text variant="label" tone="muted">
           {label}
         </Text>
+        {q.description ? <Text variant="bodySm" tone="muted">{q.description}</Text> : null}
         <RatingRow
           label={q.text}
           min={q.min ?? 1}

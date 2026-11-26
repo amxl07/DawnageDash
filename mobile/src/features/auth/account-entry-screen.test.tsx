@@ -122,7 +122,7 @@ it('ignores a resend response after returning to signup with a different email',
       await Promise.resolve();
     });
 
-    expect(view.getByText('Start with clarity.')).toBeTruthy();
+    expect(view.getByText('Create your account.')).toBeTruthy();
     expect(view.queryByText('A new verification email is on its way.')).toBeNull();
   } finally {
     jest.useRealTimers();
@@ -155,7 +155,7 @@ it('keeps account entry locked until an in-flight signup finishes', async () => 
   const switchToSignIn = view.getByRole('button', { name: 'Already have an account? Sign in' });
   expect(switchToSignIn.props.accessibilityState.disabled).toBe(true);
   await fireEvent.press(switchToSignIn);
-  expect(view.getByText('Start with clarity.')).toBeTruthy();
+  expect(view.getByText('Create your account.')).toBeTruthy();
   expect(mockSignIn).not.toHaveBeenCalled();
   expect(mockSignUp).toHaveBeenCalledTimes(1);
 

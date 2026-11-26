@@ -1,3 +1,4 @@
+import { HIT_SLOP_MIN } from '@/theme/tokens';
 import { PrivatePhoto } from '@/components/media/PrivatePhoto';
 import { format } from 'date-fns';
 import { useRouter } from 'expo-router';
@@ -105,7 +106,7 @@ const WeekCard = memo(function WeekCard({
           accessibilityRole="button"
           accessibilityLabel={`Edit week ${weekNumber} photos`}
           style={({ pressed }) => ({
-            minHeight: 44,
+            minHeight: HIT_SLOP_MIN,
             justifyContent: 'center',
             borderRadius: radius.sm,
             paddingHorizontal: spacing.xs,
@@ -165,7 +166,7 @@ const WeekCard = memo(function WeekCard({
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
         <Text variant="bodySm" tone={count === 4 ? 'muted' : 'gold'} style={{ flex: 1 }}>
-          {count === 4 ? 'All 4 angles' : `${count}/4 photos — add the rest when you can`}
+          {`${count} photos`}
         </Text>
         {canCompare ? (
           <Pressable
@@ -178,7 +179,7 @@ const WeekCard = memo(function WeekCard({
               flexDirection: 'row',
               alignItems: 'center',
               gap: spacing.xs,
-              minHeight: 44,
+              minHeight: HIT_SLOP_MIN,
               borderRadius: radius.sm,
               paddingHorizontal: spacing.xs,
               backgroundColor: pressed ? colors.pressed : 'transparent',
@@ -317,7 +318,7 @@ function MediaContent() {
       ) : null}
       <Button
         testID="photo-add-current-week"
-        label="Add this week's photos"
+        label={rows?.length ? "Add this week's photos" : 'Add your first set'}
         icon={<Plus size={iconSize.md} color={colors.onPrimary} strokeWidth={2.5} />}
         onPress={() => {
           setEditDate(localDateString());
@@ -355,11 +356,6 @@ function MediaContent() {
               icon={Camera}
               title="No progress photos yet"
               message="Choose only the angles you want. Nothing uploads until you tap Save photos; your first saved set becomes the baseline."
-              actionLabel="Add your first set"
-              onAction={() => {
-                setEditDate(localDateString());
-                setSheetOpen(true);
-              }}
             />
           }
           showsVerticalScrollIndicator={false}

@@ -21,7 +21,7 @@ export function resolveTodayAction(input: {
   blockedRecord?: { date: string; route: Href } | null;
   nextPlanDay?: number | null;
 }): TodayAction {
-  const todayCheckIn: Href = { pathname: '/(app)/(tabs)/check-in', params: { date: input.today } };
+  const todayCheckIn: Href = { pathname: '/(app)/daily-check-in', params: { date: input.today } };
   const labelDate = (date: string) => {
     const value = new Date(date + 'T12:00:00');
     return Number.isFinite(value.getTime())
@@ -37,9 +37,9 @@ export function resolveTodayAction(input: {
   }
   if (input.checkInDraft) {
     return {
-      kind: 'resume-checkin', title: 'A moment to finish your day',
+      kind: 'resume-checkin', title: 'Continue your check-in',
       detail: 'Continue your record for ' + labelDate(input.checkInDraft.date) + '.',
-      route: { pathname: '/(app)/(tabs)/check-in', params: { date: input.checkInDraft.date } },
+      route: { pathname: '/(app)/daily-check-in', params: { date: input.checkInDraft.date } },
     };
   }
   if (input.blockedRecord) {
@@ -51,8 +51,8 @@ export function resolveTodayAction(input: {
   if (!input.checkedInToday && !input.queuedCheckInToday) {
     return {
       kind: 'check-in',
-      title: 'Your daily check-in',
-      detail: 'Take a moment to reflect. Build a clear record of your day.',
+      title: 'Daily check-in',
+      detail: '',
       route: todayCheckIn,
     };
   }
@@ -80,7 +80,7 @@ export function resolveTodayAction(input: {
   return {
     kind: 'review-progress',
     title: input.queuedCheckInToday ? 'Your record is waiting to sync' : 'Your day is recorded',
-    detail: input.queuedCheckInToday ? 'Saved on this device. You can review it while delivery is pending.' : 'Revisit your record whenever you need to.',
+    detail: input.queuedCheckInToday ? 'Saved on this device. You can review it while delivery is pending.' : '',
     route: todayCheckIn,
   };
 }

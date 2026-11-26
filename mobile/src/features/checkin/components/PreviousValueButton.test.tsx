@@ -33,7 +33,7 @@ it('shows the exact prior value in a visible accessible action', () => {
     accessibilityLabel: 'Use previous Morning weight value, 72.6 kg',
   });
   expect(renderer.root.findByProps({ variant: 'bodySm', tone: 'muted' }).props.children)
-    .toEqual('Use previous · 72.6 kg');
+    .toEqual('Use 72.6 kg');
   expect(action.props.accessibilityLabel).toBe('Use previous Morning weight value, 72.6 kg');
   act(() => action.props.onPress());
   expect(onApply).toHaveBeenCalledWith(72.6);

@@ -59,7 +59,7 @@ export function TimezonePicker({
   }, [zones, search]);
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Select timezone" returnFocusRef={returnFocusRef}>
+    <Sheet role="choice" heightRatio={0.85} visible={visible} onClose={onClose} title="Select timezone" returnFocusRef={returnFocusRef}>
       <View
         style={{
           flexDirection: 'row',

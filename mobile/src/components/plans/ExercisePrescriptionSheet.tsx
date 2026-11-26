@@ -34,11 +34,11 @@ export function ExercisePrescriptionSheet({
   const target = targetLabel(exercise);
 
   return (
-    <Sheet visible={visible} onClose={onClose} title={exercise.name}>
+    <Sheet role="detail" visible={visible} onClose={onClose} title={exercise.name}>
       <SheetScrollView contentContainerStyle={{ padding: spacing.base, gap: spacing.base }}>
         <View style={{ gap: spacing.sm }}>
           <Text variant="label" tone="muted">
-            Prescription
+            Targets
           </Text>
           <Text variant="bodySm">
             {countLabel(workSets, 'work set', 'work sets')}

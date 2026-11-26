@@ -83,7 +83,7 @@ function NextSessionCard({
       <Pressable
         onPress={() => setOpen((value) => !value)}
         accessibilityRole="button"
-        accessibilityLabel={`${open ? 'Hide' : 'View'} full prescription for Day ${day.day_number}`}
+        accessibilityLabel={`${open ? 'Hide' : 'View'} exercises for Day ${day.day_number}`}
         accessibilityState={{ expanded: open }}
         style={({ pressed }) => ({
           minHeight: 48,
@@ -95,7 +95,7 @@ function NextSessionCard({
           backgroundColor: pressed ? colors.pressed : 'transparent',
         })}
       >
-        <Text variant="bodySm" tone="primary">{open ? 'Hide prescription' : 'View full prescription'}</Text>
+        <Text variant="bodySm" tone="primary">{open ? 'Hide exercises' : 'View exercises'}</Text>
         <DisclosureChevron expanded={open} size={iconSize.md} color={colors.mutedForeground} />
       </Pressable>
       <MotionReveal revision={open ? 'open' : 'closed'}>
@@ -243,12 +243,12 @@ export function TrainingPlan({ header }: { header: ReactNode }) {
                 <EmptyState
                   icon={ClipboardList}
                   title="No workout plan yet"
-                  message="No workout plan has been assigned yet. Please contact your coach."
+                  message="Your sessions will appear here when assigned."
                 />
               </Card>
             ) : (
               <View style={{ gap: spacing.md }}>
-                <Card style={{ gap: spacing.xs }}>
+                <View style={{ gap: spacing.xs, paddingVertical: spacing.sm }}>
                   <Text variant="label" tone="muted">
                     {plan?.source === 'template' ? 'Training template' : 'Assigned plan'}
                   </Text>
@@ -266,14 +266,14 @@ export function TrainingPlan({ header }: { header: ReactNode }) {
                   {updatedAt && plan?.source === 'user' ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                       <Text variant="bodySm" tone={hasChanged ? 'primary' : 'muted'}>
-                        {hasChanged ? 'Updated by your coach' : 'Last updated'} {relativeDays(updatedAt)}
+                        {hasChanged ? 'Coach update' : 'Updated'} {relativeDays(updatedAt)}
                       </Text>
                       {hasChanged ? (
                         <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary }} />
                       ) : null}
                     </View>
                   ) : null}
-                </Card>
+                </View>
 
                 {focusedDay ? (
                   <View testID="plan-current-day">
@@ -302,32 +302,31 @@ export function TrainingPlan({ header }: { header: ReactNode }) {
                   <Card>
                     <EmptyState
                       icon={ClipboardList}
-                      title="Plan assigned, but no days found"
-                      message="Your coach may still be setting this up. Please check with them."
+                      title="No sessions in this plan"
+                      message="Check with your coach for the session details."
                     />
                   </Card>
                 )}
-
-                {profile?.training_note || profile?.cardio_note || profile?.steps_note ? (
-                  <Card style={{ gap: spacing.md }}>
-                    <Text variant="h2">Coach notes</Text>
-                    {profile.training_note ? <Text variant="bodySm">{profile.training_note}</Text> : null}
-                    {profile.cardio_note ? (
-                      <View style={{ gap: spacing.xs }}>
-                        <Text variant="label" tone="muted">Cardio</Text>
-                        <Text variant="bodySm">{profile.cardio_note}</Text>
-                      </View>
-                    ) : null}
-                    {profile.steps_note ? (
-                      <View style={{ gap: spacing.xs }}>
-                        <Text variant="label" tone="muted">Steps</Text>
-                        <Text variant="bodySm">{profile.steps_note}</Text>
-                      </View>
-                    ) : null}
-                  </Card>
-                ) : null}
               </View>
             )}
+            {profile?.training_note || profile?.cardio_note || profile?.steps_note ? (
+              <Card style={{ gap: spacing.md }}>
+                <Text variant="h2">Coach notes</Text>
+                {profile.training_note ? <Text variant="bodySm">{profile.training_note}</Text> : null}
+                {profile.cardio_note ? (
+                  <View style={{ gap: spacing.xs }}>
+                    <Text variant="label" tone="muted">Cardio</Text>
+                    <Text variant="bodySm">{profile.cardio_note}</Text>
+                  </View>
+                ) : null}
+                {profile.steps_note ? (
+                  <View style={{ gap: spacing.xs }}>
+                    <Text variant="label" tone="muted">Steps</Text>
+                    <Text variant="bodySm">{profile.steps_note}</Text>
+                  </View>
+                ) : null}
+              </Card>
+            ) : null}
           </View>
         </View>
       </Screen>

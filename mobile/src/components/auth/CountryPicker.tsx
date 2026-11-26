@@ -64,7 +64,7 @@ export function CountryPicker({
   }, [search]);
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Select country">
+    <Sheet role="choice" heightRatio={0.85} visible={visible} onClose={onClose} title="Select country">
       <View
         style={{
           flexDirection: 'row',

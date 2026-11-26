@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
 import type { ComponentProps } from 'react';
+import { Button } from '@/components/ui';
 
 import { isBlocked } from '@/features/home/home-state';
 import { useHomeDate } from '@/features/home/useHomeDate';
@@ -13,12 +14,13 @@ type Props = Omit<ComponentProps<typeof CheckInReceipt>, 'nextAction'>;
 export function CheckInCompletion(props: Props) {
   const today = useHomeDate();
   // Historical and queued receipts do not need another set of plan/local reads.
-  return props.receipt.status === 'synced' && props.receipt.date === today
-    ? <CurrentCompletion {...props} today={today} />
-    : <CheckInReceipt {...props} />;
+  // Keep the receipt mounted so its delivery transition can be announced.
+  return <CheckInReceipt {...props} nextAction={props.receipt.status === 'synced' && props.receipt.date === today
+    ? <CurrentCompletionAction {...props} today={today} />
+    : undefined} />;
 }
 
-function CurrentCompletion({ today, ...props }: Props & { today: string }) {
+function CurrentCompletionAction({ today, ...props }: Props & { today: string }) {
   const router = useRouter();
   const profile = useUserProfile();
   const plan = useWorkoutPlan();
@@ -35,8 +37,7 @@ function CurrentCompletion({ today, ...props }: Props & { today: string }) {
     hasRecovery: Boolean(local.data?.workoutDraft || local.data?.workouts.length
       || local.data?.checkInDraft || local.data?.checkIns.some(isBlocked)),
   });
-  return <CheckInReceipt {...props} nextAction={destination === 'training' ? {
-    label: 'View your training', detail: 'Your assigned plan is here when you are ready.',
-    onPress: () => router.navigate({ pathname: '/(app)/(tabs)/plans', params: { view: 'plan' } }),
-  } : undefined} />;
+  return <Button label={destination === 'training' ? 'View your training' : 'Back to Home'}
+    onPress={destination === 'training' ? () => router.navigate({ pathname: '/(app)/(tabs)/plans', params: { view: 'plan' } }) : props.onHome}
+    style={{ minHeight: 48 }} />;
 }

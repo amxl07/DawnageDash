@@ -43,9 +43,8 @@ export function weeklyAutofill(rows: readonly WeeklyObservation[], today: string
 export function weeklyObservationHint(report: ReturnType<typeof weeklyAutofill>, key: string) {
   const observation = report.observations[key as WeeklyPrefillKey];
   if (!observation) return undefined;
-  if (!observation.count) return `No daily observations available for ${report.label}. You can enter your own answer.`;
-  const dates = [...new Set(observation.dates)].map((date) => reportingWindowLabel({ from: date, to: date })).join(', ');
-  return `Daily records: ${observation.count} observation${observation.count === 1 ? '' : 's'}, recorded ${dates}. Edit if needed.`;
+  if (!observation.count) return `No recorded values for this week. Enter your own answer.`;
+  return `Based on ${observation.count} recorded day${observation.count === 1 ? '' : 's'}. Edit if needed.`;
 }
 
 /** Legacy entries without a reporting week use their local submission date. */

@@ -3,7 +3,7 @@ import { type Href, useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 
-import { requestCheckInTabExit } from '@/features/checkin/checkInExitGuard';
+import { hasCheckInExitGuard, requestCheckInTabExit } from '@/features/checkin/checkInExitGuard';
 import { localDateString } from '@/lib/dates';
 import { reconcile } from '@/lib/reminders';
 
@@ -25,7 +25,7 @@ const ROUTES: Record<string, string> = {
 function notificationRoute(data: unknown): Href | null {
   const url = (data as { url?: string } | null)?.url;
   if (url === '/check-in') {
-    return { pathname: '/(app)/(tabs)/check-in', params: { date: localDateString() } };
+    return { pathname: '/(app)/daily-check-in', params: { date: localDateString() } };
   }
   return url && ROUTES[url] ? ROUTES[url] as Href : null;
 }
@@ -34,9 +34,11 @@ function notificationRoute(data: unknown): Href | null {
  * Routes a notification tap, from background AND from a cold start.
  * Also reconciles schedules on foreground — the OS can clear them.
  */
-export function useNotificationRouting(enabled: boolean) {
+export function useNotificationRouting(enabled: boolean, pathname?: string) {
   const router = useRouter();
   const handledColdStart = useRef(false);
+  const pathnameRef = useRef(pathname);
+  useEffect(() => { pathnameRef.current = pathname; }, [pathname]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -45,7 +47,12 @@ export function useNotificationRouting(enabled: boolean) {
     const go = (data: unknown) => {
       const target = notificationRoute(data);
       if (active && target) {
-        void requestCheckInTabExit(() => { if (active) router.push(target); });
+        const replaceEditor = pathnameRef.current === '/daily-check-in' || hasCheckInExitGuard();
+        void requestCheckInTabExit(() => {
+          if (!active) return;
+          if (replaceEditor) router.replace(target);
+          else router.push(target);
+        });
       }
     };
 

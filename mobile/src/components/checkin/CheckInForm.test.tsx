@@ -11,6 +11,7 @@ import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import type { CheckInHistory } from '@/features/checkin/history';
 import { NumericCommitProvider } from '@/features/checkin/components/NumericCommitProvider';
 import { NumericEntry } from '@/features/checkin/components/NumericEntry';
+import { validateCheckIn, validateCheckInStep } from '@/lib/checkin-validation';
 import type { DailyCheckIn } from '@/types/db';
 import { CheckInForm, EMPTY_FORM, toPayload, type CheckInStep, type FormState } from './CheckInForm';
 
@@ -328,7 +329,8 @@ describe('CheckInForm', () => {
   it('renders the real rating controls with exact values, modes, selection, and question order', () => {
     const readiness = renderForm('readiness');
     const energy = ratingOptions(readiness, 'Energy out of 10');
-    const stress = ratingOptions(readiness, 'Stress out of 10');
+    const recovery = renderForm('recovery');
+    const stress = ratingOptions(recovery, 'Stress out of 10');
 
     expect(energy.map((option) => option.props.accessibilityLabel))
       .toEqual(Array.from({ length: 10 }, (_, index) => `Energy out of 10, ${index + 1}${index === 0 ? ', Exhausted' : index === 9 ? ', Very energetic' : ''}`));
@@ -336,17 +338,17 @@ describe('CheckInForm', () => {
       .toEqual(Array.from({ length: 10 }, (_, index) => `Stress out of 10, ${index + 1}${index === 0 ? ', Relaxed' : index === 9 ? ', Very stressed' : ''}`));
     expect(ratingOption(readiness, 'checkin-energy-rating-7').props.accessibilityState)
       .toEqual({ selected: true, checked: true });
-    expect(ratingOption(readiness, 'checkin-stress-rating-3').props.accessibilityState)
+    expect(ratingOption(recovery, 'checkin-stress-rating-3').props.accessibilityState)
       .toEqual({ selected: true, checked: true });
     expect(readiness.root.findByProps({ testID: 'checkin-field-energy-complete' })).toBeTruthy();
-    expect(readiness.root.findByProps({ testID: 'checkin-field-stress-complete' })).toBeTruthy();
-    expectTextOrder(readiness, ['Energy', 'Stress', 'Optional weight']);
-
-    const recovery = renderForm('recovery');
+    expect(recovery.root.findByProps({ testID: 'checkin-field-stress-complete' })).toBeTruthy();
+    expectTextOrder(readiness, ['Morning weight', 'Sleep', 'Energy']);
+    expect(readiness.root.findAllByProps({ testID: 'checkin-field-stress' })).toHaveLength(0);
     expect(ratingOptions(recovery, 'Hunger out of 10')).toHaveLength(10);
     expect(recovery.root.findByProps({ testID: 'checkin-field-hunger-complete' })).toBeTruthy();
     expect(recovery.root.findByProps({ testID: 'checkin-field-digestion-complete' })).toBeTruthy();
-    expectTextOrder(recovery, ['Sleep', 'Hunger', 'Digestion']);
+    expectTextOrder(recovery, ['Stress', 'Hunger', 'Digestion']);
+    expect(recovery.root.findAllByType(NumericEntry).some(({ props }) => props.label === 'Sleep')).toBe(false);
 
     const adherence = renderForm('adherence');
     expect(ratingOptions(adherence, 'Workout performance out of 10')).toHaveLength(10);
@@ -358,7 +360,9 @@ describe('CheckInForm', () => {
       'Workout',
       'How did it go?',
       'Nutrition score',
-      'Optional measurements',
+      'Calories',
+      'Water',
+      'Steps',
     ]);
   });
 
@@ -368,11 +372,11 @@ describe('CheckInForm', () => {
     expect(readiness.root.findAllByProps({ testID: 'checkin-ruler-weight' })).toHaveLength(0);
 
     let current = COMPLETE_FORM;
-    const recovery = renderForm('recovery', current, (updater) => { current = updater(current); });
-    const sleep = recovery.root.findAllByType(NumericEntry).find(({ props }) => props.label === 'Sleep');
+    const morning = renderForm('readiness', current, (updater) => { current = updater(current); });
+    const sleep = morning.root.findAllByType(NumericEntry).find(({ props }) => props.label === 'Sleep');
     expect(sleep?.props.quickValues).toEqual([6, 7, 8, 9]);
-    expect(recovery.root.findAllByProps({ testID: 'checkin-ruler-sleep' })).toHaveLength(0);
-    act(() => recovery.root.findByProps({ accessibilityRole: 'button', accessibilityLabel: '9 h' }).props.onPress());
+    expect(morning.root.findAllByProps({ testID: 'checkin-ruler-sleep' })).toHaveLength(0);
+    act(() => morning.root.findByProps({ accessibilityRole: 'button', accessibilityLabel: '9 h' }).props.onPress());
     expect(current.sleepHours).toBe(9);
 
     const adherence = renderForm('adherence', COMPLETE_FORM, () => {}, { focusField: 'waterLiters' });
@@ -382,69 +386,63 @@ describe('CheckInForm', () => {
     expect(adherence.root.findAllByProps({ testID: 'checkin-ruler-water' })).toHaveLength(0);
   });
 
-  it('keeps optional measurements collapsed until requested and reveals hidden invalid fields', () => {
-    const readiness = renderForm('readiness');
-    const weightToggle = ratingOption(readiness, 'checkin-optional-weight');
-    expect(weightToggle.props.accessibilityLabel).toBe('Optional weight');
-    expect(weightToggle.props.accessibilityState).toEqual({ expanded: false });
-    expect(readiness.root.findAllByProps({ accessibilityLabel: 'Morning weight' })).toHaveLength(0);
-    act(() => weightToggle.props.onPress());
-    expect(readiness.root.findByProps({ accessibilityLabel: 'Morning weight' })).toBeTruthy();
-
-    const adherence = renderForm('adherence');
-    const measurementToggle = ratingOption(adherence, 'checkin-optional-details');
-    expect(measurementToggle.props.accessibilityLabel).toBe('Optional measurements');
-    expect(measurementToggle.props.accessibilityState).toEqual({ expanded: false });
-    expect(adherence.root.findAllByProps({ accessibilityLabel: 'Calories' })).toHaveLength(0);
-    act(() => measurementToggle.props.onPress());
-    expect(adherence.root.findByProps({ accessibilityLabel: 'Calories' })).toBeTruthy();
-
-    const invalid = renderForm('adherence', COMPLETE_FORM, () => {}, {
-      errors: { calorieIntake: 'Enter calories between 0 and 20,000.' },
-    });
-    expect(invalid.root.findByProps({ accessibilityLabel: 'Optional measurements' }).props.accessibilityState)
-      .toEqual({ expanded: true });
-    expect(invalid.root.findByProps({ accessibilityLabel: 'Calories' })).toBeTruthy();
-  });
-
-  it('refuses to collapse optional measurements while a pending number is invalid', () => {
-    const renderer = renderForm('adherence');
-    const toggle = renderer.root.findByProps({ accessibilityLabel: 'Optional measurements' });
-    act(() => toggle.props.onPress());
-    const calories = renderer.root.findByProps({ accessibilityLabel: 'Calories' });
-    act(() => {
-      calories.props.onFocus();
-      calories.props.onChangeText('bad');
-      toggle.props.onPress();
-    });
-
-    expect(renderer.root.findByProps({ accessibilityLabel: 'Optional measurements' }).props.accessibilityState)
-      .toEqual({ expanded: true });
-    expect(renderer.root.findByProps({ children: 'Enter a number or clear this field.' })).toBeTruthy();
-  });
-
-  it('reopens a collapsed invalid optional field for each repeated reveal request', () => {
-    const props = {
-      form: { ...COMPLETE_FORM, morningWeight: 500 },
-      setForm: () => {},
-      previous: null,
-      step: 'readiness' as const,
-      errors: { morningWeight: 'Enter a weight between 20 and 400 kg.' },
-      focusField: 'morningWeight' as const,
+  it('requires each unanswered rating and serializes exact selections across the complete form', () => {
+    let form: FormState = {
+      ...COMPLETE_FORM,
+      energyLevel: null, stressLevel: null, hungerLevel: null,
+      workoutPerformance: null, nutritionScore: null,
     };
-    let renderer!: ReturnType<typeof create>;
-    act(() => { renderer = create(
-      <NumericCommitProvider><CheckInForm {...props} focusRequest={1} /></NumericCommitProvider>,
-    ); });
-    expect(ratingOption(renderer, 'checkin-optional-weight').props.accessibilityState.expanded).toBe(true);
+    for (const [step, field, prefix, value] of [
+      ['readiness', 'energyLevel', 'checkin-energy-rating', 1],
+      ['recovery', 'stressLevel', 'checkin-stress-rating', 10],
+      ['recovery', 'hungerLevel', 'checkin-hunger-rating', 4],
+      ['adherence', 'workoutPerformance', 'checkin-workout-performance-rating', 7],
+      ['adherence', 'nutritionScore', 'checkin-nutrition-rating', 9],
+    ] as const) {
+      expect(validateCheckInStep(step, form)).toHaveProperty(field);
+      const renderer = renderForm(step, form, (updater) => { form = updater(form); });
+      expect(ratingOption(renderer, `${prefix}-${value}`).props.accessibilityState.checked).toBe(false);
+      act(() => ratingOption(renderer, `${prefix}-${value}`).props.onPress());
+      expect(form[field]).toBe(value);
+      expect(validateCheckInStep(step, form)).not.toHaveProperty(field);
+      act(() => renderer.unmount());
+    }
+    expect(validateCheckIn(form)).toEqual({ step: null, errors: {} });
+    expect(toPayload(form, '2026-09-14')).toMatchObject({
+      date: '2026-09-14', energy_level: 1, stress_level: 10, hunger_level: 4,
+      workout_performance: 7, nutrition_score: 9,
+    });
+  });
 
-    act(() => ratingOption(renderer, 'checkin-optional-weight').props.onPress());
-    expect(ratingOption(renderer, 'checkin-optional-weight').props.accessibilityState.expanded).toBe(false);
+  it('shows every required measurement immediately, including unanswered fields', () => {
+    const readiness = renderForm('readiness', { ...COMPLETE_FORM, morningWeight: null });
+    expect(readiness.root.findByProps({ accessibilityLabel: 'Morning weight' }).props.value).toBe('');
+    const adherence = renderForm('adherence', {
+      ...COMPLETE_FORM, calorieIntake: null, waterLiters: null, dailySteps: null,
+      protein: null, carbs: null, fats: null,
+    });
+    for (const label of ['Calories', 'Water', 'Steps', 'Protein', 'Carbs', 'Fats']) {
+      expect(adherence.root.findByProps({ accessibilityLabel: label }).props.value).toBe('');
+    }
+  });
 
-    act(() => renderer.update(
-      <NumericCommitProvider><CheckInForm {...props} focusRequest={2} /></NumericCommitProvider>,
-    ));
-    expect(ratingOption(renderer, 'checkin-optional-weight').props.accessibilityState.expanded).toBe(true);
+  it('keeps an invalid measurement editable and reports its error on blur', () => {
+    let current = COMPLETE_FORM;
+    const renderer = renderForm('adherence', current, (update) => { current = update(current); });
+    const calories = renderer.root.findByProps({ accessibilityLabel: 'Calories' });
+    act(() => { calories.props.onFocus(); calories.props.onChangeText('bad'); });
+    act(() => calories.props.onBlur());
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Calories' }).props.value).toBe('bad');
+    expect(renderer.root.findByProps({ children: 'Enter a number or clear this field.' })).toBeTruthy();
+    expect(current.calorieIntake).toBe(2200);
+  });
+
+  it('shows the required notes error beside the editable field', () => {
+    const renderer = renderForm('finish', { ...COMPLETE_FORM, notes: '' }, () => {}, {
+      errors: { notes: 'Add your notes.' },
+    });
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Notes' }).props.value).toBe('');
+    expect(renderer.root.findByProps({ children: 'Add your notes.' })).toBeTruthy();
   });
 
   it('shows neutral history only after an answer and exposes per-field carry-forward', () => {
@@ -464,6 +462,8 @@ describe('CheckInForm', () => {
     const answered = renderForm('readiness', COMPLETE_FORM, () => {}, {
       previous, history, showCarryForward: true, focusField: 'morningWeight',
     });
+    expect(JSON.stringify(answered.toJSON())).not.toContain('Recent range 71.9');
+    act(() => answered.root.findByProps({ accessibilityLabel: 'Recent history for Morning weight' }).props.onPress());
     expect(JSON.stringify(answered.toJSON())).toContain('Recent range 71.9');
     expect(answered.root.findByProps({
       accessibilityLabel: 'Use previous Morning weight value, 72.6 kg, from 2026-08-29',
@@ -477,7 +477,6 @@ describe('CheckInForm', () => {
 
   it('uses direct keypad inputs for calories and steps', () => {
     const renderer = renderForm('adherence');
-    act(() => ratingOption(renderer, 'checkin-optional-details').props.onPress());
     expect(renderer.root.findByProps({ accessibilityLabel: 'Calories' }).props.keyboardType)
       .toBe('number-pad');
     expect(renderer.root.findByProps({ accessibilityLabel: 'Steps' }).props.keyboardType)
@@ -575,13 +574,13 @@ describe('CheckInForm', () => {
     const onEditSection = jest.fn();
     const renderer = renderForm('finish', COMPLETE_FORM, () => {}, { onEditSection });
 
-    expect(renderer.root.findByProps({ accessibilityLabel: 'Notes (optional)' }).props.value)
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Notes' }).props.value)
       .toBe('Slept well');
     expectTextOrder(renderer, [
-      'Readiness and energy',
-      'Sleep and recovery',
+      'Morning',
+      'Your day',
       'Nutrition and adherence',
-      'Notes (optional)',
+      'Notes',
     ]);
     [
       'Weight: 74.2 kg',
@@ -603,8 +602,8 @@ describe('CheckInForm', () => {
       expect(renderer.root.findByProps({ accessibilityLabel }).props.accessible).toBe(true);
     });
     for (const [label, step] of [
-      ['Edit readiness', 'readiness'],
-      ['Edit recovery', 'recovery'],
+      ['Edit morning', 'readiness'],
+      ['Edit your day', 'recovery'],
       ['Edit adherence', 'adherence'],
     ] as const) {
       const action = ratingOption(renderer, `checkin-edit-${step}`);
@@ -618,8 +617,8 @@ describe('CheckInForm', () => {
       .toHaveLength(0);
   });
 
-  it('keeps review concise by omitting empty optional measurements while retaining zero values', () => {
-    const emptyOptional = renderForm('finish', {
+  it('shows missing required measurements in restored review drafts and retains explicit zeros', () => {
+    const incomplete = renderForm('finish', {
       ...COMPLETE_FORM,
       morningWeight: null,
       calorieIntake: null,
@@ -629,18 +628,18 @@ describe('CheckInForm', () => {
       carbs: null,
       fats: null,
     });
-    for (const label of ['Weight: Not recorded', 'Calories: Not recorded', 'Water: Not recorded', 'Steps: Not recorded']) {
-      expect(emptyOptional.root.findAllByProps({ accessibilityLabel: label })).toHaveLength(0);
+    for (const label of ['Weight: Not recorded', 'Calories: Not recorded', 'Water: Not recorded', 'Steps: Not recorded', 'Protein: Not recorded', 'Carbs: Not recorded', 'Fats: Not recorded']) {
+      expect(incomplete.root.findByProps({ accessibilityLabel: label })).toBeTruthy();
     }
 
-    const zeroOptional = renderForm('finish', {
+    const recordedZero = renderForm('finish', {
       ...COMPLETE_FORM,
       calorieIntake: 0,
       waterLiters: 0,
       dailySteps: 0,
     });
-    expect(zeroOptional.root.findByProps({ accessibilityLabel: 'Calories: 0 kcal' })).toBeTruthy();
-    expect(zeroOptional.root.findByProps({ accessibilityLabel: 'Water: 0 L' })).toBeTruthy();
-    expect(zeroOptional.root.findByProps({ accessibilityLabel: 'Steps: 0' })).toBeTruthy();
+    expect(recordedZero.root.findByProps({ accessibilityLabel: 'Calories: 0 kcal' })).toBeTruthy();
+    expect(recordedZero.root.findByProps({ accessibilityLabel: 'Water: 0 L' })).toBeTruthy();
+    expect(recordedZero.root.findByProps({ accessibilityLabel: 'Steps: 0' })).toBeTruthy();
   });
 });

@@ -29,6 +29,7 @@ export function TrainingScreen({ initialView, onViewChange }: Props) {
       <Text variant="h1">Training</Text>
       <SegmentedControl
         label="Training view"
+        showLabel={false}
         value={view}
         onChange={selectView}
         segments={[

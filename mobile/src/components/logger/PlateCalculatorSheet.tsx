@@ -44,11 +44,11 @@ export function PlateCalculatorSheet({
     const barText = barChoice === 'custom' ? customBarKg : barChoice;
     const barKg = finiteNonnegative(barText);
     if (barKg === null) {
-      return { error: 'Enter a finite nonnegative bar weight.' } as const;
+      return { error: 'Enter a bar weight of 0 kg or more.' } as const;
     }
     const target = finiteNonnegative(targetKg);
     if (target === null) {
-      return { error: 'Enter a finite nonnegative target load.' } as const;
+      return { error: 'Enter a target load of 0 kg or more.' } as const;
     }
     if (target < barKg) {
       return { error: 'Target load must be at least the bar weight.' } as const;
@@ -85,7 +85,7 @@ export function PlateCalculatorSheet({
   });
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Plate calculator">
+    <Sheet role="editor" visible={visible} onClose={onClose} title="Plate calculator">
       <SheetScrollView contentContainerStyle={{ padding: spacing.base, gap: spacing.base }}>
         <View style={{ gap: spacing.xs }}>
           <Text variant="label" tone="muted">

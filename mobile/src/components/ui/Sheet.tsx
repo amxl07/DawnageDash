@@ -9,13 +9,14 @@ import {
 } from '@gorhom/bottom-sheet';
 import { X } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
-import { AccessibilityInfo, BackHandler, findNodeHandle, Platform, Pressable, View, type TextInput } from 'react-native';
+import { AccessibilityInfo, BackHandler, findNodeHandle, Platform, Pressable, View, useWindowDimensions, type TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HIT_SLOP_MIN, iconSize, radius, spacing, useTheme } from '@/theme';
 import { Text } from './Text';
 
-function isWebFocusable(node: unknown): node is { focus: () => void } {
+type WebFocusable = { focus: (options?: { preventScroll: boolean }) => void };
+function isWebFocusable(node: unknown): node is WebFocusable {
   return typeof node === 'object' && node !== null && 'focus' in node && typeof node.focus === 'function';
 }
 
@@ -24,7 +25,9 @@ type Props = {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  /** Fraction of screen height the sheet occupies. */
+  /** Short choices fit content; details and editors have expandable detents. */
+  role?: 'choice' | 'detail' | 'editor';
+  /** Optional explicit height for long, virtualized choice collections. */
   heightRatio?: number;
   /** Disables gesture/backdrop dismissal while an owned operation cannot be interrupted. */
   dismissible?: boolean;
@@ -32,33 +35,21 @@ type Props = {
   returnFocusRef?: RefObject<View | TextInput | null>;
 };
 
-/**
- * Bottom sheet, built on @gorhom/bottom-sheet.
- *
- * Replaces a plain `Modal` with `animationType="slide"`. What that bought:
- * drag-to-dismiss, a real backdrop that fades with the drag, snap points, and —
- * the reason it was worth changing — keyboard handling. The measurement and
- * questionnaire sheets are forms, and a Modal has no notion of a keyboard
- * pushing its content.
- *
- * Pure JS on top of Reanimated + Gesture Handler, so it still runs in Expo Go;
- * nothing here forfeits the SDK 54 decision.
- *
- * Scrollable children MUST use the exports below (`SheetScrollView`,
- * `SheetFlatList`) rather than plain RN ones, or the inner scroll fights the
- * sheet's own pan gesture.
- */
+/** Sheet-aware inputs/scroll views retain keyboard, recovery and focus behavior. */
 export function Sheet({
   visible,
   onClose,
   title,
   children,
-  heightRatio = 0.85,
+  role = 'detail',
+  heightRatio,
   dismissible = true,
   returnFocusRef,
 }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
+  const fitsContent = role === 'choice' && heightRatio === undefined;
   const ref = useRef<BottomSheetModal>(null);
   const titleRef = useRef<View>(null);
   const hasFocusedTitle = useRef(false);
@@ -66,7 +57,7 @@ export function Sheet({
   const restoreFocusPending = useRef(false);
   const wasVisible = useRef(false);
 
-  const snapPoints = useMemo(() => [`${Math.round(heightRatio * 100)}%`], [heightRatio]);
+  const snapPoints = useMemo(() => heightRatio !== undefined ? [`${Math.round(heightRatio * 100)}%`] : role === 'editor' ? ['85%', '95%'] : ['65%', '90%'], [heightRatio, role]);
 
   useEffect(() => {
     if (!visible) {
@@ -93,7 +84,7 @@ export function Sheet({
     const trigger = returnFocusRef?.current;
     if (!trigger) return;
     if (Platform.OS === 'web') {
-      if (isWebFocusable(trigger)) trigger.focus();
+      if (isWebFocusable(trigger)) (trigger as WebFocusable).focus({ preventScroll: true });
       return;
     }
     const triggerHandle = findNodeHandle(trigger);
@@ -115,7 +106,9 @@ export function Sheet({
 
       hasFocusedTitle.current = true;
       if (Platform.OS === 'web') {
-        if (isWebFocusable(titleRef.current)) titleRef.current.focus();
+        // Browser focus can scroll Gorhom's overflow-hidden positioning viewport.
+        // Move accessibility focus without displacing the presented sheet.
+        if (isWebFocusable(titleRef.current)) (titleRef.current as WebFocusable).focus({ preventScroll: true });
         return;
       }
       const titleHandle = findNodeHandle(titleRef.current);
@@ -171,11 +164,9 @@ export function Sheet({
           justifyContent: 'space-between',
           paddingHorizontal: spacing.base,
           paddingBottom: spacing.md,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.border,
         }}
       >
-        <View ref={titleRef} accessibilityRole="header" tabIndex={Platform.OS === 'web' ? -1 : undefined}>
+        <View style={{ flex: 1, minWidth: 0 }} ref={titleRef} accessibilityRole="header" tabIndex={Platform.OS === 'web' ? -1 : undefined}>
           <Text variant="h2">{title}</Text>
         </View>
         {/* A visible close button is mandatory — dismissal is never
@@ -192,27 +183,30 @@ export function Sheet({
           style={({ pressed }) => ({
             minWidth: HIT_SLOP_MIN,
             minHeight: HIT_SLOP_MIN,
-            alignItems: 'flex-end',
+            alignItems: 'center',
             justifyContent: 'center',
-            borderRadius: radius.md,
-            backgroundColor: pressed ? colors.pressed : 'transparent',
+            borderRadius: radius.pill,
+            backgroundColor: pressed ? colors.pressed : colors.elevated,
           })}
         >
           <X size={iconSize.lg} color={colors.mutedForeground} strokeWidth={2} />
         </Pressable>
       </View>
     </View>
-  ), [colors.border, colors.borderStrong, colors.mutedForeground, colors.pressed, dismissible, onClose, title]);
+  ), [colors.elevated, colors.borderStrong, colors.mutedForeground, colors.pressed, dismissible, onClose, title]);
 
   return (
     <BottomSheetModal
       ref={ref}
-      snapPoints={snapPoints}
+      snapPoints={fitsContent ? undefined : snapPoints}
+      // Editors need their full scroll viewport immediately, including on short screens.
+      index={role === 'editor' && heightRatio === undefined ? 1 : 0}
       onChange={handleSheetChange}
       onDismiss={handleDismiss}
       backdropComponent={renderBackdrop}
       handleComponent={renderHandle}
-      enableDynamicSizing={false}
+      enableDynamicSizing={fitsContent}
+      maxDynamicContentSize={Math.max(240, height - insets.top - spacing.lg)}
       enablePanDownToClose={dismissible}
       backgroundStyle={{
         backgroundColor: colors.card,
@@ -223,7 +217,7 @@ export function Sheet({
       keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
     >
-      <View testID="sheet-content" style={{ flex: 1, paddingBottom: insets.bottom }}>{children}</View>
+      {fitsContent ? <BottomSheetScrollView testID="sheet-content" contentContainerStyle={{ paddingBottom: insets.bottom }}>{children}</BottomSheetScrollView> : <View testID="sheet-content" style={{ flex: 1, paddingBottom: insets.bottom }}>{children}</View>}
     </BottomSheetModal>
   );
 }

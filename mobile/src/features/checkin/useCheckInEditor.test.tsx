@@ -7,7 +7,7 @@ import { NumericEntry } from './components/NumericEntry';
 import { NumericCommitProvider, useNumericCommits } from './components/NumericCommitProvider';
 import { useCheckInEditor } from './useCheckInEditor';
 
-const validForm = { ...EMPTY_FORM, sleepHours: 7, energyLevel: 5, stressLevel: 4, hungerLevel: 3, digestion: 'none' as const, workoutStatus: 'rest_day' as const, nutritionScore: 6 };
+const validForm = { ...EMPTY_FORM, morningWeight: 72.4, calorieIntake: 2100, waterLiters: 2.5, dailySteps: 8000, protein: 140, carbs: 220, fats: 60, notes: 'Rest day; felt recovered.', sleepHours: 7, energyLevel: 5, stressLevel: 4, hungerLevel: 3, digestion: 'none' as const, workoutStatus: 'rest_day' as const, nutritionScore: 6 };
 let mockUser = 'u';
 let mockDraft: unknown;
 let mockRows: unknown[];
@@ -31,8 +31,8 @@ jest.mock('./checkInOutbox', () => ({
 jest.mock('./components/HistoryCaption', () => ({ HistoryCaption: () => null }));
 jest.mock('@/components/ui', () => {
   const React = require('react');
-  const { TextInput } = require('react-native');
-  return { Input: React.forwardRef(function MockInput({ label, ...props }: { label: string }, ref: unknown) { return <TextInput ref={ref} accessibilityLabel={label} {...props} />; }) };
+  const { TextInput, Text: NativeText } = require('react-native');
+  return { Text: NativeText, Input: React.forwardRef(function MockInput({ label, ...props }: { label: string }, ref: unknown) { return <TextInput ref={ref} accessibilityLabel={label} {...props} />; }) };
 });
 jest.mock('@/theme', () => ({
   spacing: { xs: 4 },
@@ -47,6 +47,20 @@ jest.mock('@/theme', () => ({
 }));
 function deferred<T>() { let resolve!: (value: T) => void; const promise = new Promise<T>((done) => { resolve = done; }); return { promise, resolve }; }
 beforeEach(() => { jest.clearAllMocks(); mockDeliveryListener = undefined; mockUser = 'u'; mockRows = []; mockDraft = { form: validForm, step: 0, savedAt: Date.now() }; mockSave.mockResolvedValue({ status: 'synced', updated: false }); mockLoad.mockImplementation(async () => mockDraft); mockNow.mockResolvedValue(true); mockClear.mockResolvedValue(true); mockOutbox.mockResolvedValue([]); });
+
+it('keeps an incomplete review draft saveable but blocks submission until its missing water is entered', async () => {
+  mockDraft = { form: { ...validForm, waterLiters: null }, step: 3, savedAt: Date.now() };
+  const { result } = await renderHook(() => useCheckInEditor('2026-09-14'));
+  await waitFor(() => expect(result.current.loadState).toBe('ready'));
+  await act(async () => { expect(await result.current.submit()).toBe('invalid'); });
+  expect(mockSave).not.toHaveBeenCalled();
+  expect(result.current.errors).toHaveProperty('waterLiters');
+  await act(async () => { expect(await result.current.flushDraft()).toBe(true); });
+  expect(result.current.form.waterLiters).toBeNull();
+  await act(async () => { result.current.setField('waterLiters', 0); });
+  await act(async () => { expect(await result.current.submit()).toBe('synced'); });
+  expect(mockSave).toHaveBeenCalledWith(expect.objectContaining({ water_liters: 0 }));
+});
 
 it('locks rapid submissions and preserves an edit made before acknowledgment', async () => {
   const pending = deferred<{ status: string; updated: boolean }>();

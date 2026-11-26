@@ -1,3 +1,4 @@
+import { HIT_SLOP_MIN } from '@/theme/tokens';
 import {
   CheckCircle2,
   CircleAlert,
@@ -25,9 +26,9 @@ const statusContent: Record<
   { text: string; icon: LucideIcon; tone: 'muted' | 'primary' | 'success' | 'destructive' }
 > = {
   'saving-local': { text: 'Saving on this device…', icon: LoaderCircle, tone: 'muted' },
-  draft: { text: 'Saved on this device', icon: FilePenLine, tone: 'muted' },
+  draft: { text: 'Draft saved on this device.', icon: FilePenLine, tone: 'muted' },
   queued: { text: 'Saved on this device. Waiting to sync.', icon: Clock3, tone: 'primary' },
-  synced: { text: 'Saved and synced', icon: CheckCircle2, tone: 'success' },
+  synced: { text: 'Saved', icon: CheckCircle2, tone: 'success' },
   blocked: { text: "Couldn't sync this record.", icon: CircleAlert, tone: 'destructive' },
 };
 
@@ -94,7 +95,7 @@ export function RecordStatus({ value, updatedAt, onRetry }: RecordStatusProps) {
           accessibilityLabel="Retry save"
           hitSlop={8}
           onPress={onRetry}
-          style={({ pressed }) => ({ minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.sm, borderRadius: radius.sm, backgroundColor: pressed ? colors.pressed : 'transparent' })}
+          style={({ pressed }) => ({ minHeight: HIT_SLOP_MIN, justifyContent: 'center', paddingHorizontal: spacing.sm, borderRadius: radius.sm, backgroundColor: pressed ? colors.pressed : 'transparent' })}
         >
           <Text variant="label" tone="primary">
             Retry

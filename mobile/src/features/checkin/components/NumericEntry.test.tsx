@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, Text as MockText, TextInput as MockTextInput, View as MockView } from 'react-native';
+import { Keyboard, Text as MockText, TextInput as MockTextInput } from 'react-native';
 import { act, create } from 'react-test-renderer';
 
 import { NumericEntry, normalizeNumericDraft } from './NumericEntry';
@@ -16,9 +16,7 @@ jest.mock('@/theme', () => ({
   radius: { pill: 999 },
   spacing: { xs: 4, sm: 8, md: 12 },
   useTheme: () => ({ colors: { borderStrong: '#334155', elevated: '#1e293b', primary: '#38bdf8', primaryFill: '#0369a1' } }),
-}));
-jest.mock('./HistoryCaption', () => ({
-  HistoryCaption: (props: { value: number | null }) => <MockView testID="history" {...props} />,
+  useMotion: () => ({ enabled: false }),
 }));
 
 describe('normalizeNumericDraft', () => {
@@ -55,7 +53,6 @@ it('keeps typing local and commits the numeric value on blur', () => {
   expect(onChange).not.toHaveBeenCalled();
   act(() => input.props.onBlur({}));
   expect(onChange).toHaveBeenCalledWith(2150);
-  expect(renderer.root.findAllByType(Pressable)).toHaveLength(0);
 });
 
 it('keeps a selected bounded decimal authoritative after a partial draft is flushed and blurred', () => {
@@ -152,4 +149,39 @@ it('keeps invalid text editable and prevents submission of the previous number',
   act(() => { expect(flush()).toBe(false); });
   expect(onChange).not.toHaveBeenCalled();
   expect(renderer.root.findByProps({ accessibilityLabel: 'Calories' }).props.value).toBe('wrong');
+});
+
+it('reveals the real historical range only when its history action is opened', () => {
+  const history = { count: 3, min14: 2, max14: 3, lastValue: 2.5, points: [
+    { date: '2026-09-01', value: 2 }, { date: '2026-09-02', value: 3 }, { date: '2026-09-03', value: 2.5 },
+  ] };
+  let tree!: ReturnType<typeof create>;
+  act(() => { tree = create(<NumericEntry label="Water" value={2.25} onChange={jest.fn()} precision={2} unit="L" history={history} />); });
+  expect(JSON.stringify(tree.toJSON())).not.toContain('Recent range 2–3 L');
+  const toggle = tree.root.findByProps({ accessibilityLabel: 'Recent history for Water' });
+  act(() => toggle.props.onPress());
+  expect(JSON.stringify(tree.toJSON())).toContain('Recent range 2–3 L');
+  expect(toggle.props.accessibilityState.expanded).toBe(true);
+  act(() => toggle.props.onPress());
+  expect(JSON.stringify(tree.toJSON())).not.toContain('Recent range 2–3 L');
+});
+
+it('keeps an invalid number open on Done and commits a corrected number before dismissal', () => {
+  const onChange = jest.fn();
+  const dismiss = jest.spyOn(Keyboard, 'dismiss').mockImplementation(() => {});
+  let tree!: ReturnType<typeof create>;
+  act(() => { tree = create(<NumericEntry label="Water" value={2} onChange={onChange} min={0} max={20} precision={2} unit="L" />); });
+  const input = tree.root.findByProps({ accessibilityLabel: 'Water' });
+  act(() => input.props.onChangeText('bad'));
+  act(() => tree.root.findByProps({ accessibilityLabel: 'Done editing Water' }).props.onPress());
+  expect(dismiss).not.toHaveBeenCalled();
+  expect(onChange).not.toHaveBeenCalled();
+  expect(input.props.value).toBe('bad');
+  expect(input.props.error).toBe('Enter a number or clear this field.');
+  act(() => input.props.onChangeText('2,75'));
+  act(() => tree.root.findByProps({ accessibilityLabel: 'Done editing Water' }).props.onPress());
+  expect(onChange).toHaveBeenLastCalledWith(2.75);
+  expect(dismiss).toHaveBeenCalledTimes(1);
+  expect(onChange.mock.invocationCallOrder[0]).toBeLessThan(dismiss.mock.invocationCallOrder[0]);
+  dismiss.mockRestore();
 });

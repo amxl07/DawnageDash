@@ -10,6 +10,9 @@ const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 export const supabaseUrl = url ?? '';
 export const supabaseAnonKey = anonKey ?? '';
 
+/** Public privacy policy page (required by both app stores). Set per EAS environment. */
+export const privacyPolicyUrl = process.env.EXPO_PUBLIC_PRIVACY_URL ?? '';
+
 export const isConfigured = Boolean(url && anonKey);
 
 export const missingEnvVars = [

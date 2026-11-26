@@ -1,4 +1,4 @@
-/** Spacing, radius, sizing, type and motion tokens. See plans/02-design-system.md. */
+/** Spacing, radius, sizing, type and motion tokens. Documented in DESIGN.md (keep in sync). */
 import { Platform, type TextStyle } from 'react-native';
 
 export const spacing = {
@@ -95,7 +95,8 @@ export const motion = {
 
 /**
  * Elevation. Dark separates surfaces by lifting their colour (shadows are
- * invisible on near-black); light separates them with a real shadow.
+ * invisible on near-black). Light works like iOS grouped lists: white on
+ * #F2F2F7 does the separating, so the card shadow is a faint neutral lift.
  */
 export const shadow = {
   card: (isDark: boolean) =>
@@ -103,13 +104,13 @@ export const shadow = {
       ? {}
       : Platform.select({
           ios: {
-            shadowColor: '#17243B',
-            shadowOpacity: 0.06,
-            shadowRadius: 12,
+            shadowColor: '#000000',
+            shadowOpacity: 0.04,
+            shadowRadius: 10,
             shadowOffset: { width: 0, height: 2 },
           },
-          android: { elevation: 2 },
-          web: { boxShadow: '0px 4px 20px rgba(23,36,59,0.045)' },
+          android: { elevation: 1 },
+          web: { boxShadow: '0px 2px 10px rgba(0,0,0,0.04)' },
           default: {},
         }),
   sheet: (isDark: boolean) =>
@@ -117,13 +118,13 @@ export const shadow = {
       ? {}
       : Platform.select({
           ios: {
-            shadowColor: '#17243B',
-            shadowOpacity: 0.12,
+            shadowColor: '#000000',
+            shadowOpacity: 0.1,
             shadowRadius: 24,
             shadowOffset: { width: 0, height: 8 },
           },
           android: { elevation: 8 },
-          web: { boxShadow: '0px 8px 32px rgba(23,36,59,0.12)' },
+          web: { boxShadow: '0px 8px 32px rgba(0,0,0,0.1)' },
           default: {},
         }),
 } as const;

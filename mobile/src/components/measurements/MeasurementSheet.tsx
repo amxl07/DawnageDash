@@ -123,7 +123,7 @@ export function MeasurementSheet({ visible, onClose, editing, previous, onSaved 
   );
 
   return (
-    <Sheet
+    <Sheet role="editor"
       visible={visible}
       onClose={onClose}
       title={editing ? `Edit ${format(parseLocalDate(date), 'd MMM yyyy')}` : 'Add measurements'}
@@ -135,8 +135,8 @@ export function MeasurementSheet({ visible, onClose, editing, previous, onSaved 
         >
           <Text variant="bodySm" tone="muted">
             {editing
-              ? 'Editing an existing entry — the date is locked.'
-              : `Recording for ${format(parseLocalDate(date), 'EEEE d MMMM')}. Values are prefilled from your last entry, so you only change what moved.`}
+              ? 'Entry date cannot be changed.'
+              : `${format(parseLocalDate(date), 'd MMM yyyy')}${comparison ? ' · Prefilled from your last entry. Review before saving.' : ''}`}
           </Text>
 
           {MEASUREMENT_FIELDS.map((f, i) => (

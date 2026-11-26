@@ -15,7 +15,7 @@ it('restores the explicit choice to wait without inferring it from a goal', () =
   expect(hydrateSetup({ start_preference: 'other' }, 'UTC').startPreference).toBeNull();
 });
 it('takes starters to check-in and waiting or legacy accounts to Home', () => {
-  expect(setupDestination('start_now')).toBe('/(app)/(tabs)/check-in');
+  expect(setupDestination('start_now')).toBe('/(app)/daily-check-in');
   expect(setupDestination('wait_for_coach')).toBe('/(app)/(tabs)');
   expect(setupDestination(null)).toBe('/(app)/(tabs)');
 });

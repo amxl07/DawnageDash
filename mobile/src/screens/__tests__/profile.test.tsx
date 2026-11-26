@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, create } from 'react-test-renderer';
 
 import ProfileScreen from '../../../app/(app)/profile';
-import { prepareProfileSave, readProfileSaveRecovery, type ProfileForm } from '@/features/profile/profileSaveRecovery';
+import { prepareProfileSave, markProfileRowSaved, readProfileSaveRecovery, type ProfileForm } from '@/features/profile/profileSaveRecovery';
 
 const MockNativeText = NativeText;
 const MockView = View;
@@ -18,31 +18,34 @@ const mockUsersRead = jest.fn(async () => ({
   error: null as Error | null,
 }));
 type MockMutationReceipt = { data?: Record<string, unknown> | null; error: Error | null };
-function mockSelectedMutation(result: Promise<MockMutationReceipt>, savedRow: Record<string, unknown>) {
-  const receipt = result.then((value) => ({ ...value, data: value.data === undefined ? savedRow : value.data }));
-  // Supabase's filtered mutation is thenable both before and after selecting a receipt.
-  return Object.assign(receipt, { select: (_fields: string) => ({ single: () => receipt }) });
-}
 const mockUsersUpdateEq = jest.fn(async (_field: string, _id: string): Promise<MockMutationReceipt> => ({ error: null }));
-const mockUsersUpdate = jest.fn((payload: Record<string, unknown>) => ({
-  eq: (field: string, id: string) => mockSelectedMutation(mockUsersUpdateEq(field, id), { id, ...payload }),
-}));
+const mockUsersUpdate = jest.fn((payload: Record<string, unknown>) => {
+  let userId = mockUser.id;
+  const source = {...mockProfile};
+  const query: any = {eq:(field:string,value:string)=>{if(field==='id')userId=value;return query;},is:()=>query,select:()=>query,maybeSingle:async()=>{
+    const result=await mockUsersUpdateEq('id',userId);
+    return {...result,data:result.data === undefined ? {...source,id:userId,...payload} : result.data};
+  }};
+  return query;
+});
 const mockQuestionnaireRead = jest.fn(async () => ({
   data: null as Record<string, unknown> | null,
   error: null as Error | null,
 }));
 const mockQuestionnaireUpdateEq = jest.fn(async (_field: string, _id: string): Promise<MockMutationReceipt> => ({ error: null }));
 const mockQuestionnaireUserFilter = jest.fn();
-const mockQuestionnaireUpdate = jest.fn((payload: { answers: string }) => ({
-  eq: (field: string, userId: string) => {
-    mockQuestionnaireUserFilter(field, userId);
-    return {
-      eq: (rowField: string, rowId: string) => mockSelectedMutation(
-        mockQuestionnaireUpdateEq(rowField, rowId), { id: rowId, user_id: userId, ...payload },
-      ),
-    };
-  },
-}));
+const mockQuestionnaireUpdate = jest.fn((payload: { answers: string; user_id?: string }) => {
+  let rowId = 'assessment-1';
+  const query: any = {
+    eq: (field: string, value: string) => { if (field === 'id') {rowId=value;} if(field==='user_id') mockQuestionnaireUserFilter(field,value); return query; },
+    is: () => query, select: () => query,
+    maybeSingle: async () => {
+      const result = await mockQuestionnaireUpdateEq('id',rowId);
+      return {...result,data: result.data === undefined ? {id:rowId,...payload} : result.data};
+    },
+  };
+  return query;
+});
 const mockResponsiveLayout = jest.fn(() => ({ isCompact: true }));
 const mockRouterBack = jest.fn();
 const mockSignOut = jest.fn();
@@ -57,7 +60,7 @@ let mockProfile = {
   id: 'user-1',
   full_name: 'Maya Singh',
   email: 'maya@example.com',
-  phone_number: null,
+  phone_number: null as string | null,
   country: null,
   profile_data: {} as Record<string, unknown>,
   package_start_date: '2026-08-01',
@@ -145,7 +148,7 @@ jest.mock('@/lib/supabase', () => ({
     from: (table: string) =>
       table === 'users'
         ? {
-            select: () => ({ eq: () => ({ maybeSingle: mockUsersRead }) }),
+            select: () => ({ eq: (_field:string,id:string) => ({ maybeSingle: async () => { const result=await mockUsersRead(); return {...result,data:result.data ? {...mockProfile,...result.data,id}:null}; } }) }),
             update: mockUsersUpdate,
           }
         : {
@@ -308,9 +311,9 @@ describe('ProfileScreen', () => {
         }),
       }),
     );
-    expect(mockQuestionnaireUpdate).toHaveBeenCalledWith({
-      answers: JSON.stringify({ q14: 'new goal', q1: 'keep me', q56: '', q64: '', q33: '' }),
-    });
+    expect(mockQuestionnaireUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      answers: JSON.stringify({ q14: 'new goal', q1: 'keep me' }),
+    }));
     expect(mockQuestionnaireUpdateEq).toHaveBeenCalledWith('id', 'assessment-1');
     expect(mockQuestionnaireUserFilter).toHaveBeenCalledWith('user_id', 'user-1');
   });
@@ -345,6 +348,7 @@ describe('ProfileScreen', () => {
       ...canonicalProfile({ ...intended, goal: failure === 'values' ? 'Old goal' : intended.goal }),
     };
     mockUsersUpdateEq.mockResolvedValueOnce({ data: receipt, error: null });
+    if (failure === 'missing') mockUsersUpdateEq.mockResolvedValueOnce({data:null,error:null}).mockResolvedValueOnce({data:null,error:null});
     const renderer = await renderScreen();
     edit(renderer, 'Goal', 'Wanted goal');
     await press(renderer, 'Save changes');
@@ -356,7 +360,7 @@ describe('ProfileScreen', () => {
     expect(visible(renderer, 'not confirmed saved')).toBe(true);
 
     await press(renderer, 'Save changes');
-    expect(mockUsersUpdate).toHaveBeenCalledTimes(2);
+    expect(mockUsersUpdate).toHaveBeenCalledTimes(failure === 'missing' ? 4 : 2);
     expect(mockQuestionnaireUpdate).toHaveBeenCalledTimes(1);
     expect(await readProfileSaveRecovery('user-1')).toBeNull();
   });
@@ -369,6 +373,7 @@ describe('ProfileScreen', () => {
       answers: JSON.stringify({ q14: failure === 'values' ? 'Old goal' : 'Wanted goal', q56: 'Old injury', q64: 'Old allergy', q33: '1-2 days', q1: 'keep latest' }),
     };
     mockQuestionnaireUpdateEq.mockResolvedValueOnce({ data: receipt, error: null });
+    if (failure === 'missing') mockQuestionnaireUpdateEq.mockResolvedValueOnce({data:null,error:null}).mockResolvedValueOnce({data:null,error:null});
     const renderer = await renderScreen();
     edit(renderer, 'Goal', 'Wanted goal');
     await press(renderer, 'Save changes');
@@ -377,9 +382,9 @@ describe('ProfileScreen', () => {
     expect(input(renderer, 'Goal').props.value).toBe('Wanted goal');
     expect(visible(renderer, 'assessment sync failed')).toBe(true);
     await press(renderer, 'Retry assessment sync');
-    expect(mockAuthUpdateUser).toHaveBeenCalledTimes(1);
+    expect(mockAuthUpdateUser).not.toHaveBeenCalled();
     expect(mockUsersUpdate).toHaveBeenCalledTimes(1);
-    expect(mockQuestionnaireUpdate).toHaveBeenCalledTimes(2);
+    expect(mockQuestionnaireUpdate).toHaveBeenCalledTimes(failure === 'missing' ? 4 : 2);
     expect(await readProfileSaveRecovery('user-1')).toBeNull();
   });
 
@@ -430,7 +435,7 @@ describe('ProfileScreen', () => {
       await renderer.root.findByProps({ accessibilityLabel: 'Retry assessment sync' }).props.onPress();
     });
 
-    expect(mockAuthUpdateUser).toHaveBeenCalledTimes(1);
+    expect(mockAuthUpdateUser).not.toHaveBeenCalled();
     expect(mockUsersRead).toHaveBeenCalledTimes(1);
     expect(mockUsersUpdate).toHaveBeenCalledTimes(1);
     expect(mockQuestionnaireUpdate).toHaveBeenCalledTimes(2);
@@ -493,6 +498,77 @@ describe('ProfileScreen', () => {
     expect(JSON.parse(mockQuestionnaireUpdate.mock.calls[0][0].answers)).toEqual({ q14: 'Old goal', q56: 'Old injury', q64: 'Old allergy', q33: '1-2 days', q1: 'keep latest' });
   });
 
+  it('preserves a prepared goal-only intent after remount and newer remote phone and injury changes', async () => {
+    mockQuestionnaireRead.mockResolvedValue({ data: assessmentRow, error: null });
+    mockUsersUpdateEq.mockResolvedValueOnce({ error: new Error('offline') });
+    let renderer = await renderScreen();
+    edit(renderer, 'Goal', 'Strength');
+    await press(renderer, 'Save changes');
+    expect((await readProfileSaveRecovery('user-1'))?.phase).toBe('prepared');
+    act(() => renderer.unmount());
+    mockProfile = { ...mockProfile, phone_number: '+919999999999', profile_data: { injuries: 'New injury detail', custom: 42 } };
+    mockUsersRead.mockResolvedValue({ data: { ...mockProfile }, error: null });
+    mockQuestionnaireRead.mockResolvedValue({ data: { ...assessmentRow, answers: JSON.stringify({ q14: 'Old goal', q56: 'New injury detail' }) }, error: null });
+    renderer = await renderScreen();
+    expect(input(renderer, 'Goal').props.value).toBe('Strength');
+    expect(input(renderer, 'Injuries').props.value).toBe('New injury detail');
+    await press(renderer, 'Save changes');
+    expect(mockUsersUpdate.mock.calls.at(-1)![0]).not.toHaveProperty('phone_number');
+    expect(mockUsersUpdate.mock.calls.at(-1)![0].profile_data).toMatchObject({ goal: 'Strength', injuries: 'New injury detail', custom: 42 });
+    expect(JSON.parse(mockQuestionnaireUpdate.mock.calls.at(-1)![0].answers)).toEqual({ q14: 'Strength', q56: 'New injury detail' });
+    expect(await readProfileSaveRecovery('user-1')).toBeNull();
+  });
+
+  it('honors an explicit undo made after restoring a prepared narrow intent', async () => {
+    await prepareProfileSave('user-1', recoveryForm, { assessmentPatch: { q14: 'Strength' }, profileDataPatch: { goal: 'Strength' }, profileFieldsPatch: {} });
+    mockQuestionnaireRead.mockResolvedValue({ data: assessmentRow, error: null });
+    const renderer = await renderScreen();
+    expect(input(renderer, 'Goal').props.value).toBe('Strength');
+    edit(renderer, 'Goal', 'Old goal');
+    await press(renderer, 'Save changes');
+    expect(mockUsersUpdate.mock.calls.at(-1)![0].profile_data).toMatchObject({ goal: 'Old goal' });
+    expect(JSON.parse(mockQuestionnaireUpdate.mock.calls.at(-1)![0].answers).q14).toBe('Old goal');
+    expect(await readProfileSaveRecovery('user-1')).toBeNull();
+  });
+
+  it.each([false, true])('keeps newer unrelated facts through a recovered-save exit and retry (new edits: %s)', async (newEdits) => {
+    await prepareProfileSave('user-1', recoveryForm, {
+      assessmentPatch: { q14: 'Strength' }, profileDataPatch: { goal: 'Strength' }, profileFieldsPatch: {},
+    });
+    mockProfile = { ...mockProfile, phone_number: '+919999999999', profile_data: { goal: 'Old goal', injuries: 'New injury detail', custom: 42 } };
+    mockUsersRead.mockResolvedValue({ data: { ...mockProfile }, error: null });
+    mockQuestionnaireRead.mockResolvedValue({ data: { ...assessmentRow, answers: JSON.stringify({ q14: 'Old goal', q56: 'New injury detail' }) }, error: null });
+    const renderer = await renderScreen();
+    const alert = jest.spyOn(Alert, 'alert');
+    if (newEdits) edit(renderer, 'Phone', '+918888888888');
+    await press(renderer, 'Back from profile');
+    if (newEdits) {
+      expect(alert.mock.calls.at(-1)?.[0]).toBe('Discard changes?');
+      await act(async () => { alert.mock.calls.at(-1)?.[2]?.find(option => option.text === 'Discard')?.onPress?.(); });
+    }
+    expect(alert.mock.calls.at(-1)?.[0]).toBe('Profile save pending');
+    expect(input(renderer, 'Phone').props.value).toBe('+919999999999');
+    expect(input(renderer, 'Injuries').props.value).toBe('New injury detail');
+    expect(input(renderer, 'Goal').props.value).toBe('Strength');
+    await act(async () => { alert.mock.calls.at(-1)?.[2]?.find(option => option.text === 'Retry save')?.onPress?.(); });
+    expect(mockUsersUpdate).toHaveBeenCalledTimes(1);
+    expect(mockUsersUpdate.mock.calls[0][0]).not.toHaveProperty('phone_number');
+    expect(mockUsersUpdate.mock.calls[0][0].profile_data).toMatchObject({ goal: 'Strength', injuries: 'New injury detail', custom: 42 });
+    expect(JSON.parse(mockQuestionnaireUpdate.mock.calls[0][0].answers)).toEqual({ q14: 'Strength', q56: 'New injury detail' });
+    expect(await readProfileSaveRecovery('user-1')).toBeNull();
+    expect(mockRouterBack).not.toHaveBeenCalled();
+  });
+
+  it('hydrates only pending overlap keys while preserving newer unrelated assessment facts', async () => {
+    const entry = await prepareProfileSave('user-1', recoveryForm, { assessmentPatch: { q14: 'Strength' }, profileDataPatch: { goal: 'Strength' }, profileFieldsPatch: {} });
+    await markProfileRowSaved('user-1', entry.id);
+    mockQuestionnaireRead.mockResolvedValue({ data: { ...assessmentRow, answers: JSON.stringify({ q14: 'Old goal', q56: 'New injury detail', q64: 'New allergy detail', q33: '5 days' }) }, error: null });
+    const renderer = await renderScreen();
+    expect(input(renderer, 'Goal').props.value).toBe('Strength');
+    expect(input(renderer, 'Injuries').props.value).toBe('New injury detail');
+    expect(input(renderer, 'Food allergies').props.value).toBe('New allergy detail');
+  });
+
   it('keeps an acknowledged assessment retry through unmount and uses only its overlap values', async () => {
     mockQuestionnaireRead.mockResolvedValue({ data: assessmentRow, error: null });
     mockQuestionnaireUpdateEq.mockResolvedValueOnce({ error: new Error('offline') });
@@ -508,10 +584,10 @@ describe('ProfileScreen', () => {
     expect(input(renderer, 'Full name').props.value).toBe('New server name');
     mockQuestionnaireRead.mockResolvedValue({ data: { ...assessmentRow, answers: JSON.stringify({ q1: 'changed later', q88: 7 }) }, error: null });
     await press(renderer, 'Retry assessment sync');
-    expect(mockAuthUpdateUser).toHaveBeenCalledTimes(1);
+    expect(mockAuthUpdateUser).not.toHaveBeenCalled();
     expect(mockUsersUpdate).toHaveBeenCalledTimes(1);
-    expect(JSON.parse(mockQuestionnaireUpdate.mock.calls.at(-1)![0].answers)).toEqual({ q1: 'changed later', q88: 7, q14: 'Strength', q56: 'Old injury', q64: 'Old allergy', q33: '1-2 days' });
-    expect(mockQuestionnaireUpdate.mock.calls.at(-1)![0]).not.toHaveProperty('completed_sections');
+    expect(JSON.parse(mockQuestionnaireUpdate.mock.calls.at(-1)![0].answers)).toEqual({ q1: 'changed later', q88: 7, q14: 'Strength' });
+    expect(mockQuestionnaireUpdate.mock.calls.at(-1)![0]).toHaveProperty('completed_sections', assessmentRow.completed_sections);
     expect(await readProfileSaveRecovery('user-1')).toBeNull();
   });
 
@@ -563,7 +639,7 @@ describe('ProfileScreen', () => {
     renderer = await renderScreen();
     await press(renderer, 'Retry assessment sync');
     expect(mockUsersUpdate).toHaveBeenCalledTimes(1);
-    expect(mockAuthUpdateUser).toHaveBeenCalledTimes(1);
+    expect(mockAuthUpdateUser).not.toHaveBeenCalled();
   });
 
   it('does not replace active edits when the profile cache refreshes', async () => {
@@ -685,7 +761,7 @@ describe('ProfileScreen', () => {
     expect(input(renderer, 'Goal').props.value).toBe('Survive in flight');
     await press(renderer, 'Retry assessment sync');
     expect(mockUsersUpdate).toHaveBeenCalledTimes(1);
-    expect(mockAuthUpdateUser).toHaveBeenCalledTimes(1);
+    expect(mockAuthUpdateUser).not.toHaveBeenCalled();
     expect(await readProfileSaveRecovery('user-1')).toBeNull();
   });
 
@@ -699,7 +775,7 @@ describe('ProfileScreen', () => {
     expect((await readProfileSaveRecovery('user-1'))?.phase).toBe('profile-saved');
     await press(renderer, 'Retry assessment sync');
     expect(mockQuestionnaireUpdate).toHaveBeenCalledTimes(1);
-    expect(mockAuthUpdateUser).toHaveBeenCalledTimes(1);
+    expect(mockAuthUpdateUser).not.toHaveBeenCalled();
     expect(mockUsersUpdate).toHaveBeenCalledTimes(1);
     expect(await readProfileSaveRecovery('user-1')).toBeNull();
   });

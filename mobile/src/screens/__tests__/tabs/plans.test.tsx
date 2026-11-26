@@ -13,6 +13,7 @@ let mockProvenanceReady = false;
 let mockWorkoutPlanLoading = false;
 let mockWorkoutPlanError = false;
 let mockWorkoutPlanMissing = false;
+let mockNoAssignment = false;
 let mockPlanSource: 'user' | 'template' = 'user';
 let mockProgressError = false;
 let mockProgressLoading = false;
@@ -119,12 +120,12 @@ jest.mock('@/components/ui', () => {
 jest.mock('@/hooks/usePlans', () => ({
   useUserProfile: () => ({
     data: {
-      active_workout_plan: JSON.stringify({
+      active_workout_plan: mockNoAssignment ? null : JSON.stringify({
         level: 'beginner', workoutType: 'strength', subCategory: null, daysPerWeek: 2,
       }),
       training_note: null,
-      cardio_note: null,
-      steps_note: null,
+      cardio_note: 'Walk after lunch.',
+      steps_note: 'Aim for 8000 steps.',
     },
     isLoading: mockProfileLoading,
     isFetching: mockProfileFetching,
@@ -195,6 +196,7 @@ describe('Training route', () => {
     mockWorkoutPlanLoading = false;
     mockWorkoutPlanError = false;
     mockWorkoutPlanMissing = false;
+    mockNoAssignment = false;
     mockProgressError = false;
     mockProgressLoading = false;
     mockProfileError = false;
@@ -207,6 +209,15 @@ describe('Training route', () => {
     mockProgressFetchStatus = 'idle';
     mockStatuses = { 1: 'today', 2: 'upcoming' };
     mockPlanSource = 'user';
+  });
+
+  it('keeps cardio and steps guidance accessible without a plan assignment', () => {
+    mockNoAssignment = true;
+    mockWorkoutPlanMissing = true;
+    let renderer!: ReturnType<typeof create>;
+    act(() => { renderer = create(<PlansScreen />); });
+    expect(renderer.root.findByProps({ children: 'Walk after lunch.' })).toBeTruthy();
+    expect(renderer.root.findByProps({ children: 'Aim for 8000 steps.' })).toBeTruthy();
   });
 
   it('opens Plan by default and exposes Plan and History as its only views', () => {
@@ -251,7 +262,7 @@ describe('Training route', () => {
   it('opens the focused session full prescription and preserves detailed exercise access', () => {
     let renderer!: ReturnType<typeof create>;
     act(() => { renderer = create(<PlansScreen />); });
-    act(() => renderer.root.findByProps({ accessibilityLabel: 'View full prescription for Day 1' }).props.onPress());
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'View exercises for Day 1' }).props.onPress());
 
     expect(renderer.root.findByProps({ children: 'Keep the tempo controlled.' })).toBeTruthy();
     expect(renderer.root.findByProps({ children: 'Leave two reps in reserve.' })).toBeTruthy();

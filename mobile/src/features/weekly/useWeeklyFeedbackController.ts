@@ -218,12 +218,12 @@ export function useWeeklyFeedbackController() {
       const alertIdentity = flowIdentity;
       if (cleanupRequired) {
         Alert.alert(
-          'Finish local cleanup?',
-          'Your check-in was submitted, but its saved draft still needs to be removed from this device.',
+          'Remove the saved draft?',
+          'Your check-in was sent. Retry removing the saved draft from this device; this won’t send it again.',
           [
             { text: 'Keep here', style: 'cancel' },
             {
-              text: 'Retry cleanup & exit',
+              text: 'Retry & exit',
               onPress: async () => {
                 const cleared = await clearDraft();
                 if (activeFlowIdentityRef.current !== alertIdentity) return;
@@ -231,7 +231,7 @@ export function useWeeklyFeedbackController() {
                   permitExit(data.action, alertIdentity);
                   return;
                 }
-                setExitError('Check-in sent, but local draft cleanup still failed. Try again.');
+                setExitError('Couldn’t remove the saved draft. Your check-in is sent. Retry won’t send it again.');
               },
             },
           ],
@@ -346,7 +346,7 @@ export function useWeeklyFeedbackController() {
       return;
     }
     setCleanupPending(true);
-    setSubmitError('Check-in sent, but its saved draft could not be cleared from this device.');
+    setSubmitError('We couldn’t remove the saved draft from this device. Retrying won’t send it again.');
   }, [clearDraft, cleanupRequired, flowIdentity, ownsCurrentForm, showSubmissionSuccess]);
 
   const submit = useCallback(async () => {
@@ -386,7 +386,7 @@ export function useWeeklyFeedbackController() {
       if (activeFlowIdentityRef.current !== submissionIdentity) return;
       if (!cleared) {
         setCleanupPending(true);
-        setSubmitError('Check-in sent, but its saved draft could not be cleared from this device.');
+        setSubmitError('We couldn’t remove the saved draft from this device. Retrying won’t send it again.');
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         return;
       }

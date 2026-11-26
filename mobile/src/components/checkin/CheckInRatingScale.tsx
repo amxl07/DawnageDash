@@ -47,6 +47,8 @@ type RatingOptionProps = {
   selectionRevision: number;
   lowLabel: string;
   highLabel: string;
+  minWidth: number;
+  minHeight: number;
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -62,6 +64,8 @@ function RatingOption({
   selectionRevision,
   lowLabel,
   highLabel,
+  minWidth,
+  minHeight,
 }: RatingOptionProps) {
   const { colors } = useTheme();
   const motion = useMotion();
@@ -104,7 +108,7 @@ function RatingOption({
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.get() }],
-    borderColor: interpolateColor(selection.get(), [0, 1], [colors.borderStrong, colors.primary]),
+    borderColor: interpolateColor(selection.get(), [0, 1], ['transparent', colors.primary]),
     backgroundColor: interpolateColor(selection.get(), [0, 1], ['transparent', colors.primarySoft]),
   }));
   const progressStyle = useAnimatedStyle(() => ({ opacity: progress.get() }));
@@ -130,12 +134,13 @@ function RatingOption({
       accessibilityRole={accessible ? 'radio' : undefined}
       accessibilityLabel={accessible ? `${label}, ${option}${option === 1 ? ', ' + lowLabel : option === 10 ? ', ' + highLabel : ''}` : undefined}
       accessibilityState={accessible ? { selected: active, checked: active } : undefined}
+      aria-checked={accessible ? active : undefined}
       pressRetentionOffset={16}
       style={[
         {
           flex: 1,
-          minWidth: HIT_SLOP_MIN,
-          minHeight: HIT_SLOP_MIN,
+          minWidth,
+          minHeight,
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
@@ -177,10 +182,18 @@ export function CheckInRatingScale({
   lowLabel = 'Low',
   highLabel = 'High',
 }: Props) {
-  const { isCompact, isWide } = useResponsiveLayout();
-  const rows = isWide ? [values] : [values.slice(0, 5), values.slice(5, 10)];
+  const { fontScale = 1 } = useResponsiveLayout();
+  const [availableWidth, setAvailableWidth] = useState(0);
+  const rowGap = spacing.xs;
+  // Reserve room for both digits at the current text size as well as a full touch target.
+  const minOptionWidth = Math.max(HIT_SLOP_MIN, Math.ceil((type.body.fontSize ?? 17) * 1.3 * Math.max(1, fontScale)) + spacing.xs * 2);
+  const minOptionHeight = Math.max(HIT_SLOP_MIN, Math.ceil((type.body.lineHeight ?? 24) * Math.max(1, fontScale)) + spacing.xs * 2);
+  const fittingColumns = availableWidth > 0 ? Math.floor((availableWidth + rowGap) / (minOptionWidth + rowGap)) : 5;
+  // Keep the familiar two rows on phones; allow extra rows at the largest text sizes.
+  const columns = fittingColumns >= 10 ? 10 : Math.max(1, Math.min(5, fittingColumns));
+  const rows = Array.from({ length: Math.ceil(values.length / columns) }, (_, index) => values.slice(index * columns, (index + 1) * columns));
+  const selectedValue = value !== null && Number.isInteger(value) && value >= 1 && value <= 10 ? value : null;
   const exposesOptions = accessibilityMode === 'options';
-  const rowGap = isCompact ? spacing.xs : spacing.sm;
   const [selectionRevision, setSelectionRevision] = useState(0);
 
   const select = (next: number) => {
@@ -193,11 +206,13 @@ export function CheckInRatingScale({
 
   return (
     <View
+      testID={optionTestIDPrefix}
+      onLayout={({ nativeEvent }) => setAvailableWidth(nativeEvent.layout.width)}
       accessible={!exposesOptions}
       accessibilityRole={exposesOptions ? undefined : 'adjustable'}
       accessibilityLabel={exposesOptions ? undefined : label}
       accessibilityValue={
-        exposesOptions ? undefined : value === null ? { text: 'Not selected' } : { min: 1, max: 10, now: value, text: `${value} of 10${value === 1 ? ', ' + lowLabel : value === 10 ? ', ' + highLabel : ''}` }
+        exposesOptions ? undefined : selectedValue === null ? { text: 'Not selected' } : { min: 1, max: 10, now: selectedValue, text: `${selectedValue} of 10${selectedValue === 1 ? ', ' + lowLabel : selectedValue === 10 ? ', ' + highLabel : ''}` }
       }
       accessibilityHint={exposesOptions ? undefined : `1 means ${lowLabel}; 10 means ${highLabel}. Swipe up or down to choose.`}
       accessibilityActions={
@@ -207,13 +222,14 @@ export function CheckInRatingScale({
         exposesOptions
           ? undefined
           : ({ nativeEvent }) => {
-              if (value === null) { select(nativeEvent.actionName === 'decrement' ? 10 : 1); return; }
-              const current = value;
-              if (nativeEvent.actionName === 'increment') select(Math.min(10, current + 1));
-              if (nativeEvent.actionName === 'decrement') select(Math.max(1, current - 1));
+              const { actionName } = nativeEvent;
+              if (actionName !== 'increment' && actionName !== 'decrement') return;
+              if (selectedValue === null) { select(actionName === 'decrement' ? 10 : 1); return; }
+              if (actionName === 'increment') select(Math.min(10, selectedValue + 1));
+              if (actionName === 'decrement') select(Math.max(1, selectedValue - 1));
             }
       }
-      style={{ gap: spacing.sm }}
+      style={{ gap: spacing.xs }}
     >
       {rows.map((row, rowIndex) => (
         <View
@@ -227,8 +243,8 @@ export function CheckInRatingScale({
             <RatingOption
               key={option}
               option={option}
-              active={value === option}
-              progressed={value !== null && option <= value}
+              active={selectedValue === option}
+              progressed={selectedValue !== null && option <= selectedValue}
               onPress={() => select(option)}
               accessible={exposesOptions}
               label={label}
@@ -236,15 +252,16 @@ export function CheckInRatingScale({
               selectionRevision={selectionRevision}
               lowLabel={lowLabel}
               highLabel={highLabel}
+              minWidth={minOptionWidth}
+              minHeight={minOptionHeight}
             />
           ))}
         </View>
       ))}
-      <View accessible={false} style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: spacing.sm }}>
-        <Text variant="bodySm" tone="muted" style={{ flex: 1 }}>1 · {lowLabel}</Text>
-        <Text variant="bodySm" tone="muted" style={{ flex: 1, textAlign: 'right' }}>10 · {highLabel}</Text>
+      <View accessible={false} style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', columnGap: spacing.sm }}>
+        <Text variant="bodySm" tone="muted" style={{ flexShrink: 1 }}>1 · {lowLabel}</Text>
+        <Text variant="bodySm" tone="muted" style={{ flexShrink: 1 }}>10 · {highLabel}</Text>
       </View>
-      <Text variant="bodySm" tone={value === null ? 'muted' : 'primary'} accessibilityLiveRegion="polite">{value === null ? 'Tap the number that feels closest' : value + ' of 10 selected'}</Text>
     </View>
   );
 }

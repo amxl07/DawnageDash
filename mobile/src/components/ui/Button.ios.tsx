@@ -15,7 +15,7 @@ import {
 import { StyleSheet } from 'react-native';
 
 import { useReducedTransparency } from '@/hooks/useReducedTransparency';
-import { useTheme } from '@/theme';
+import { HIT_SLOP_MIN, useTheme } from '@/theme';
 import { ButtonFallback } from './ButtonFallback';
 import type { ButtonProps, ButtonSize, ButtonVariant } from './Button.types';
 
@@ -52,11 +52,12 @@ export function Button({
   const nativeSize = ({ compact: 'small', regular: 'regular', large: 'large' } as const)[resolvedSize(variant, size)];
   const nativeTint = variant === 'primary' ? colors.primaryFill : variant === 'destructive' ? colors.destructive : colors.primary;
   const fillWidth = variant === 'primary' || variant === 'secondary';
-  const contentModifiers = [frame(fillWidth ? { maxWidth: Infinity } : { minHeight: 44 })];
+  const contentModifiers = fillWidth ? [frame({ maxWidth: Infinity })] : [];
   const modifiers = [
     buttonStyle(nativeStyle),
     buttonBorderShape('capsule'),
     controlSize(nativeSize),
+    ...(nativeSize !== 'large' ? [frame({ minHeight: HIT_SLOP_MIN })] : []),
     tint(nativeTint),
     disabledModifier(inactive),
     accessibilityLabel(label),

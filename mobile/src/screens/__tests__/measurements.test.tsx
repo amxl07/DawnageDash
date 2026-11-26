@@ -62,12 +62,15 @@ jest.mock('lucide-react-native', () => ({
   Ruler: () => null,
   Scale: () => null,
   TrendingDown: () => null,
+  Check: () => null,
+  ChevronDown: () => null,
 }));
 
 jest.mock('@/components/charts', () => ({
   LineChart: (props: Record<string, unknown>) => {
     mockLineChartRender(props);
-    return <MockView testID="measurement-chart" />;
+    const { LineChart } = jest.requireActual('@/components/charts/LineChart');
+    return <MockView testID="measurement-chart"><LineChart {...props} /></MockView>;
   },
 }));
 
@@ -90,6 +93,9 @@ jest.mock('@/components/ui', () => {
   const { AdaptiveGrid } = jest.requireActual('@/components/ui/AdaptiveGrid');
   return {
     AdaptiveGrid,
+    OptionRow: jest.requireActual('@/components/ui/OptionRow').OptionRow,
+    SegmentedControl: jest.requireActual('@/components/ui/SegmentedControl').SegmentedControl,
+    Sheet: ({ visible, children }: { visible: boolean; children: React.ReactNode }) => visible ? <MockView>{children}</MockView> : null,
     AnimatedFlatList: ({
       data,
       keyExtractor,
@@ -182,10 +188,13 @@ jest.mock('@/hooks/useResponsiveLayout', () => ({
 }));
 
 jest.mock('@/theme', () => ({
+  ...jest.requireActual('@/theme/tokens'),
+  useMotion: () => ({ enabled: false, duration: { feedback: 0 }, easing: { standard: [0.16, 1, 0.3, 1] } }),
   iconSize: { md: 20 },
   spacing: { xs: 4, sm: 8, md: 12, base: 16, lg: 24 },
   useTheme: () => ({
     colors: {
+      ...jest.requireActual('@/theme/colors').dark,
       borderStrong: '#aaa',
       chart1: '#111',
       chart2: '#222',
@@ -240,10 +249,11 @@ describe('MeasurementsScreen', () => {
     jest.restoreAllMocks();
   });
 
-  it('uses neutral change labels for weight and circumference in every goal', () => {
+  it('keeps weight progress discoverable in an explicit summary', () => {
     const renderer = renderScreen();
+    expect(renderer.root.findAllByProps({ label: 'Weight change' })).toHaveLength(0);
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'Weight summary' }).props.onPress());
     expect(renderer.root.findByProps({ label: 'Weight change' })).toBeTruthy();
-    expect(renderer.root.findByProps({ label: 'Waist change' })).toBeTruthy();
     expect(renderer.root.findByProps({ label: 'Avg weekly change' })).toBeTruthy();
     expect(renderer.root.findAllByProps({ label: 'Weight lost' })).toHaveLength(0);
   });
@@ -257,47 +267,116 @@ describe('MeasurementsScreen', () => {
     expect(renderer.root.findAllByProps({ testID: 'measurement-sheet' })).toHaveLength(0);
   });
 
-  it('stacks primary metrics and baseline comparisons for compact or large text', () => {
+  it('defaults to a single metric with its latest actual source date and range change', () => {
     const renderer = renderScreen();
-    const [grid] = renderer.root.findAll(
-      (node: { type?: unknown; props: { testID?: string; style?: unknown } }) =>
-        node.type === 'View' &&
-        node.props.testID === 'measurement-primary-metrics' &&
-        node.props.style !== undefined,
-    );
-    if (!grid) throw new Error('Measurement metric grid was not rendered');
-
-    expect(StyleSheet.flatten(grid.props.style)).toMatchObject({ flexDirection: 'column' });
-    expect(StyleSheet.flatten(renderer.root.findByProps({ testID: 'measurement-comparison-waist' }).props.style))
-      .toMatchObject({ flexDirection: 'column' });
-  });
-
-  it('keeps every chart-series filter at least 44 points high', () => {
-    const renderer = renderScreen();
-    const labels = ['Chest series', 'Waist series', 'Hips series', 'Thighs series', 'Arms series'];
-    const filters = labels.map((label) => {
-      const [filter] = renderer.root.findAll(
-        (node: { props: { accessibilityLabel?: string; style?: unknown } }) =>
-          node.props.accessibilityLabel === label &&
-          (StyleSheet.flatten(node.props.style) as Record<string, unknown> | undefined)?.minHeight !==
-            undefined,
-      );
-      if (!filter) throw new Error(`No styled filter found for ${label}`);
-      return filter;
-    });
-
-    expect(filters).toHaveLength(5);
-    for (const filter of filters) {
-      expect(StyleSheet.flatten(filter.props.style)).toMatchObject({ minHeight: 44 });
-    }
-  });
-
-  it('presents latest value, change, and recorded date before mounting the chart', () => {
-    const renderer = renderScreen();
-
-    expect(renderer.root.findByProps({ children: 'Latest entry · recorded 29 Aug 2026' })).toBeTruthy();
-    expect(renderer.root.findByProps({ children: 'Waist: 82.5 cm · down 3.5 cm from baseline' })).toBeTruthy();
+    expect(renderer.root.findByProps({ testID: 'measurement-headline-value' }).props.children).toBe('82.5 cm');
+    expect(renderer.root.findByProps({ testID: 'measurement-headline-date' }).props.children).toBe('Recorded 29 Aug 2026');
+    expect(renderer.root.findByProps({ testID: 'measurement-headline-change' }).props.children).toBe('Down 3.5 cm from 1 Jul 2026');
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Metric: Waist' })).toBeTruthy();
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Compare measurements' })).toBeTruthy();
     expect(renderer.root.findAllByProps({ testID: 'measurement-chart' })).toHaveLength(0);
+  });
+
+  it('uses a compact single-date baseline with accessible values and restores the chart for comparison', () => {
+    mockMeasurementQuery = { ...mockMeasurementQuery, data: [mockRows[0], { ...mockRows[0], id: 'duplicate' }] };
+    const renderer = renderScreen();
+    act(() => renderer.root.findByProps({ testID: 'measurement-list' }).props.onLayout({ nativeEvent: { layout: { height: 700 } } }));
+    act(() => renderer.root.findByProps({ testID: 'measurement-progress-section' }).props.onLayout({ nativeEvent: { layout: { y: 20, height: 330 } } }));
+    act(() => interactionCallbacks[0]?.());
+    expect(renderer.root.findAllByProps({ testID: 'measurement-chart' })).toHaveLength(0);
+    expect(renderer.root.findByProps({ testID: 'measurement-headline-value' }).props.children).toBe('82.5 cm');
+    expect(renderer.root.findByProps({ testID: 'measurement-headline-date' }).props.children).toBe('Recorded 29 Aug 2026');
+    expect(renderer.root.findAllByProps({ accessibilityLabel: 'Previous date' })).toHaveLength(0);
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'All values' }).props.onPress());
+    expect(renderer.root.findByProps({ accessibilityRole: 'list' }).props.children).toBeTruthy();
+    const values = renderer.root.findByProps({ accessibilityRole: 'list' });
+    expect(values.findByType(MockNativeText).props.children.join('')).toBe('29 Aug 2026 · Waist: 82.5 cm');
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'Compare measurements' }).props.onPress());
+    act(() => renderer.root.findByProps({ accessibilityRole: 'radio', accessibilityLabel: 'Chest' }).props.onPress());
+    expect(renderer.root.findByProps({ testID: 'measurement-chart' })).toBeTruthy();
+  });
+
+  it('preserves a hundredth-centimetre change instead of rounding it to zero', () => {
+    mockMeasurementQuery = { ...mockMeasurementQuery, data: [{ ...mockRows[0], waist: 85.99 }, mockRows[1]] };
+    const renderer = renderScreen();
+    expect(renderer.root.findByProps({ testID: 'measurement-headline-change' }).props.children).toBe('Down 0.01 cm from 1 Jul 2026');
+  });
+
+  it('switches the primary metric, adds one comparison, and removes it when it becomes the primary metric', () => {
+    const renderer = renderScreen();
+    const showChart = () => {
+      act(() => renderer.root.findByProps({ testID: 'measurement-list' }).props.onLayout({ nativeEvent: { layout: { height: 700 } } }));
+      act(() => renderer.root.findByProps({ testID: 'measurement-progress-section' }).props.onLayout({ nativeEvent: { layout: { y: 20, height: 330 } } }));
+      act(() => interactionCallbacks[0]?.());
+    };
+    showChart();
+    expect(mockLineChartRender.mock.calls.at(-1)?.[0].series.map((item: { name: string }) => item.name)).toEqual(['Waist']);
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'Compare measurements' }).props.onPress());
+    act(() => renderer.root.findByProps({ accessibilityRole: 'radio', accessibilityLabel: 'Chest' }).props.onPress());
+    expect(mockLineChartRender.mock.calls.at(-1)?.[0].series.map((item: { name: string }) => item.name)).toEqual(['Waist', 'Chest']);
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'Metric: Waist' }).props.onPress());
+    act(() => renderer.root.findByProps({ accessibilityRole: 'radio', accessibilityLabel: 'Chest' }).props.onPress());
+    expect(renderer.root.findByProps({ testID: 'measurement-headline-value' }).props.children).toBe('94 cm');
+    expect(mockLineChartRender.mock.calls.at(-1)?.[0].series.map((item: { name: string }) => item.name)).toEqual(['Chest']);
+  });
+
+  it('filters the chart and the dated comparison together, including an empty range', () => {
+    jest.useFakeTimers({ now: new Date(2026, 8, 24, 12) });
+    try {
+      const renderer = renderScreen();
+      act(() => renderer.root.findByProps({ accessibilityRole: 'radio', accessibilityLabel: '1M' }).props.onPress());
+      expect(renderer.root.findByProps({ testID: 'measurement-headline-value' }).props.children).toBe('82.5 cm');
+      expect(renderer.root.findByProps({ testID: 'measurement-headline-change' }).props.children).toBe('First recorded value in this range');
+      mockMeasurementQuery = { ...mockMeasurementQuery, data: [mockRows[1]] };
+      act(() => renderer.update(<MeasurementsScreen />));
+      expect(renderer.root.findByProps({ testID: 'measurement-headline-value' }).props.children).toBe('No recorded value');
+      expect(renderer.root.findByProps({ children: 'No waist measurements in this range.' })).toBeTruthy();
+    } finally { jest.useRealTimers(); }
+  });
+
+  it('keeps metric choices and timeframe controls reachable at large text', () => {
+    const renderer = renderScreen();
+    const group = renderer.root.findByProps({ accessibilityRole: 'radiogroup', accessibilityLabel: 'Timeframe' });
+    expect(StyleSheet.flatten(group.props.style)).toMatchObject({ flexWrap: 'wrap' });
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'Metric: Waist' }).props.onPress());
+    const [choice] = renderer.root.findAll((node) => node.props.accessibilityRole === 'radio' && node.props.accessibilityLabel === 'Chest');
+    const style = choice.props.style;
+    expect(StyleSheet.flatten(typeof style === 'function' ? style({ pressed: false }) : style).minHeight).toBeGreaterThanOrEqual(44);
+  });
+
+  it('returns comparison choices to their own trigger after dismissal', () => {
+    const renderer = renderScreen();
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'Compare measurements' }).props.onPress());
+    const choice = renderer.root.findByProps({ title: 'Compare measurements' });
+    const returnFocusRef = choice.props.returnFocusRef;
+    act(() => choice.props.onClose());
+    const sheet = renderer.root.findAll((node) => node.props.returnFocusRef !== undefined)[0];
+    expect(sheet.props.returnFocusRef === returnFocusRef).toBe(true);
+  });
+
+  it('explores earlier observations in the headline and keeps the comparison endpoints explicit', () => {
+    const renderer = renderScreen();
+    act(() => renderer.root.findByProps({ testID: 'measurement-list' }).props.onLayout({ nativeEvent: { layout: { height: 700 } } }));
+    act(() => renderer.root.findByProps({ testID: 'measurement-progress-section' }).props.onLayout({ nativeEvent: { layout: { y: 20, height: 330 } } }));
+    act(() => interactionCallbacks[0]?.());
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'Previous date' }).props.onPress());
+    expect(renderer.root.findByProps({ testID: 'measurement-headline-value' }).props.children).toBe('86 cm');
+    expect(renderer.root.findByProps({ testID: 'measurement-headline-date' }).props.children).toBe('Recorded 1 Jul 2026');
+    expect(renderer.root.findByProps({ testID: 'measurement-headline-change' }).props.children).toBe('First recorded value in this range');
+  });
+
+  it('starts a sparse comparison at the primary source date and reports missing values when exploring other dates', () => {
+    mockMeasurementQuery = { ...mockMeasurementQuery, data: [{ ...mockRows[0], waist: null }, mockRows[1]] };
+    const renderer = renderScreen();
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'Compare measurements' }).props.onPress());
+    act(() => renderer.root.findByProps({ accessibilityRole: 'radio', accessibilityLabel: 'Chest' }).props.onPress());
+    act(() => renderer.root.findByProps({ testID: 'measurement-list' }).props.onLayout({ nativeEvent: { layout: { height: 700 } } }));
+    act(() => renderer.root.findByProps({ testID: 'measurement-progress-section' }).props.onLayout({ nativeEvent: { layout: { y: 20, height: 330 } } }));
+    act(() => interactionCallbacks[0]?.());
+    expect(renderer.root.findByProps({ testID: 'measurement-headline-date' }).props.children).toBe('Recorded 1 Jul 2026');
+    act(() => renderer.root.findByProps({ accessibilityLabel: 'Next date' }).props.onPress());
+    expect(renderer.root.findByProps({ testID: 'measurement-headline-value' }).props.children).toBe('Not reported');
+    expect(renderer.root.findByProps({ children: 'No waist measurement on this date.' })).toBeTruthy();
   });
 
   it('passes dated missing observations to the chart instead of drawing zero', () => {
@@ -325,7 +404,7 @@ describe('MeasurementsScreen', () => {
       { date: '2026-08-29', value: null },
     ]);
     expect(
-      renderer.root.findByProps({ children: 'Waist: 86 cm · first recorded 1 Jul 2026' }),
+      renderer.root.findByProps({ testID: 'measurement-headline-date', children: 'Recorded 1 Jul 2026' }),
     ).toBeTruthy();
   });
 
@@ -377,7 +456,7 @@ describe('MeasurementsScreen', () => {
         (node: { type?: unknown; props: { testID?: string } }) =>
           node.type === 'View' && node.props.testID === 'measurement-metric-skeleton',
       ),
-    ).toHaveLength(3);
+    ).toHaveLength(1);
     const [chartSkeleton] = renderer.root.findAll(
       (node: { type?: unknown; props: { testID?: string } }) =>
         node.type === 'View' && node.props.testID === 'measurement-chart-skeleton',

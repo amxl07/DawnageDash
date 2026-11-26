@@ -21,6 +21,8 @@ export type InputProps = Omit<TextInputProps, 'style'> & {
   icon?: LucideIcon;
   error?: string | null;
   hint?: string;
+  /** A visible unit outside the editable text, e.g. kg or kcal. */
+  suffix?: string;
   /** Renders a show/hide toggle and manages secureTextEntry. */
   password?: boolean;
   containerStyle?: ViewStyle;
@@ -31,7 +33,7 @@ export type InputProps = Omit<TextInputProps, 'style'> & {
 };
 
 export const Input = forwardRef<TextInput, InputProps>(function Input(
-  { label, icon: Icon, error, hint, password, containerStyle, inputStyle, sheetAware = false, onFocus, onBlur, secureTextEntry, accessibilityLabel = label, accessibilityHint = hint, placeholderTextColor, ...rest },
+  { label, icon: Icon, error, hint, suffix, password, containerStyle, inputStyle, sheetAware = false, onFocus, onBlur, secureTextEntry, accessibilityLabel = label, accessibilityHint = [hint, suffix ? `Unit: ${suffix}` : undefined].filter(Boolean).join('. ') || undefined, placeholderTextColor, ...rest },
   ref,
 ) {
   const { colors } = useTheme();
@@ -62,7 +64,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
           minHeight: HIT_SLOP_MIN + 4,
           paddingHorizontal: spacing.md,
           borderRadius: radius.input,
-          borderWidth: focused ? 2 : 1,
+          borderWidth: 1,
           borderColor,
           backgroundColor: colors.elevated,
         }}
@@ -80,7 +82,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
           secureTextEntry={password ? !reveal : secureTextEntry}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          style={[type.body, { flex: 1, color: colors.foreground, paddingVertical: spacing.md }, inputStyle]}
+          style={[type.body, { flex: 1, minWidth: 0, color: colors.foreground, paddingVertical: spacing.md }, inputStyle]}
         /> : <TextInput
           ref={ref}
           {...rest}
@@ -90,8 +92,10 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
           secureTextEntry={password ? !reveal : secureTextEntry}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          style={[type.body, { flex: 1, color: colors.foreground, paddingVertical: spacing.md }, inputStyle]}
+          style={[type.body, { flex: 1, minWidth: 0, color: colors.foreground, paddingVertical: spacing.md }, inputStyle]}
         />}
+
+        {suffix ? <Text variant="bodySm" tone="muted" accessible={false}>{suffix}</Text> : null}
 
         {password ? (
           <Pressable
@@ -118,7 +122,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
 
       {/* Errors sit under the field they belong to, in words. */}
       {error ? (
-        <Text variant="bodySm" tone="primary" accessibilityLiveRegion="polite">
+        <Text variant="bodySm" tone="destructive" accessibilityLiveRegion="polite">
           {error}
         </Text>
       ) : hint ? (

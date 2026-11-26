@@ -10,14 +10,15 @@ export type InlineActionProps = {
   onPress?: () => void;
   disabled?: boolean;
   destructive?: boolean;
+  tone?: 'primary' | 'neutral';
   symbol?: AppSymbolName;
   accessibilityHint?: string;
   testID?: string;
 };
 
-export function InlineAction({ label, onPress, disabled = false, destructive = false, symbol, accessibilityHint, testID }: InlineActionProps) {
+export function InlineAction({ label, onPress, disabled = false, destructive = false, tone = 'primary', symbol, accessibilityHint, testID }: InlineActionProps) {
   const { colors } = useTheme();
-  const color = disabled ? colors.mutedForeground : destructive ? colors.destructive : colors.primary;
+  const color = disabled ? colors.mutedForeground : destructive ? colors.destructive : tone === 'neutral' ? colors.foreground : colors.primary;
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled }} disabled={disabled} hitSlop={6} onPress={disabled ? undefined : onPress}
@@ -31,7 +32,7 @@ export function InlineAction({ label, onPress, disabled = false, destructive = f
 }
 
 const styles = StyleSheet.create({
-  action: { minHeight: HIT_SLOP_MIN, alignSelf: 'flex-start', justifyContent: 'center', borderRadius: 10, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
+  action: { minWidth: HIT_SLOP_MIN, minHeight: HIT_SLOP_MIN, alignSelf: 'flex-start', justifyContent: 'center', borderRadius: 10, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
   content: { minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   label: { minWidth: 0, flexShrink: 1 },
 });

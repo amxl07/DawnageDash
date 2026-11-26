@@ -11,10 +11,9 @@ export function DailyRecordHeader({ editor, onHistory }: { editor: CheckInEditor
       <Text variant="bodySm" tone="muted">{format(parseLocalDate(editor.date), 'EEEE, d MMMM yyyy')}</Text>
       <Button label="History" variant="ghost" onPress={onHistory} />
     </View>
-    {editor.hasPendingNumericEdits ? <Text variant="bodySm" tone="muted" accessibilityLiveRegion="polite">Number in progress · not saved yet</Text> : editor.draftState === 'writing' ? <RecordStatus value="saving-local" /> : editor.draftState === 'error' ?
-      <Text variant="bodySm" tone="destructive" accessibilityRole="alert">Changes have not been saved on this device.</Text> : editor.hasEdits ?
-        <RecordStatus value="draft" /> : editor.deliveryState === 'queued' || editor.deliveryState === 'synced' || editor.deliveryState === 'blocked' ?
+    {editor.hasPendingNumericEdits ? <Text variant="bodySm" tone="muted" accessibilityLiveRegion="polite">Unsaved entry</Text> : editor.draftState === 'writing' ? <RecordStatus value="saving-local" /> : editor.draftState === 'error' ?
+      <Text variant="bodySm" tone="destructive" accessibilityRole="alert">Couldn’t save. Keep this screen open and retry.</Text> : editor.hasEdits ?
+        editor.receipt ? <Text variant="bodySm" tone="muted" accessibilityLiveRegion="polite">Editing a new draft · previous version {editor.receipt.status === 'synced' ? 'saved' : editor.deliveryState === 'blocked' ? 'couldn’t sync' : 'waiting to sync'}</Text> : <RecordStatus value="draft" /> : editor.deliveryState === 'queued' || editor.deliveryState === 'synced' || editor.deliveryState === 'blocked' ?
           <RecordStatus value={editor.deliveryState} /> : null}
-    {editor.hasEdits && editor.receipt ? <Text variant="bodySm" tone="muted">The previously submitted version is {editor.receipt.status === 'synced' ? 'synced' : 'waiting to sync'}. You are editing a newer draft.</Text> : null}
   </View>;
 }

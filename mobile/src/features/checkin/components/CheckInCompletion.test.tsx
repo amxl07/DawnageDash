@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import { fireEvent, render } from '@testing-library/react-native';
+import { AccessibilityInfo } from 'react-native';
 import { CheckInCompletion } from './CheckInCompletion';
 import { EMPTY_FORM } from '../model';
 
@@ -11,11 +12,15 @@ jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: mockNavigate }) 
 jest.mock('@/features/home/useHomeDate', () => ({ useHomeDate: () => '2026-09-20' }));
 jest.mock('@/features/home/useHomeLocal', () => ({ useHomeLocal: () => mockLocal() }));
 jest.mock('@/hooks/usePlans', () => ({ useWorkoutPlan: () => mockPlan(), useUserProfile: () => mockProfile }));
-jest.mock('./CheckInReceipt', () => {
-  const { Pressable, Text } = require('react-native');
-  return { CheckInReceipt: ({ onHome, nextAction }: { onHome: () => void; nextAction?: { label: string; onPress: () => void } }) =>
-    <Pressable accessibilityRole="button" accessibilityLabel={nextAction?.label ?? 'Back to Home'} onPress={nextAction?.onPress ?? onHome}><Text>{nextAction?.label ?? 'Back to Home'}</Text></Pressable> };
+jest.mock('lucide-react-native', () => ({ Check: () => null, Clock3: () => null, CircleAlert: () => null, ClipboardCheck: () => null }));
+jest.mock('@/components/ui/MotionReveal', () => ({ MotionReveal: ({ children }: { children: React.ReactNode }) => children }));
+jest.mock('@/components/ui', () => {
+  const { View, Pressable, Text } = require('react-native');
+  return { Card: View, Text,
+    Button: ({ label, onPress }: { label: string; onPress: () => void }) =>
+      <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress}><Text>{label}</Text></Pressable> };
 });
+jest.mock('@/theme', () => ({ spacing: { xs: 4, sm: 8, md: 12, base: 16, lg: 24 }, useTheme: () => ({ colors: {} }) }));
 
 const receipt = { date: '2026-09-20', status: 'synced' as const, form: { ...EMPTY_FORM }, generation: 1 };
 beforeEach(() => {
@@ -58,4 +63,19 @@ it.each([{ date: '2026-09-19' }, { status: 'queued' as const }])('keeps past and
   expect(view.getByRole('button', { name: 'Back to Home' })).toBeTruthy();
   expect(mockPlan).not.toHaveBeenCalled();
   expect(mockLocal).not.toHaveBeenCalled();
+});
+
+it('announces current-day delivery once as the training action becomes available', async () => {
+  const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => {});
+  const props = { onEdit: jest.fn(), onHome: jest.fn() };
+  const view = await render(<CheckInCompletion {...props} receipt={{ ...receipt, status: 'queued' }} />);
+  expect(announce).not.toHaveBeenCalled();
+  expect(mockPlan).not.toHaveBeenCalled();
+  await view.rerender(<CheckInCompletion {...props} receipt={receipt} />);
+  expect(announce).toHaveBeenCalledTimes(1);
+  expect(announce).toHaveBeenCalledWith('Check-in saved');
+  expect(view.getByRole('button', { name: 'View your training' })).toBeTruthy();
+  await view.rerender(<CheckInCompletion {...props} receipt={receipt} />);
+  expect(announce).toHaveBeenCalledTimes(1);
+  announce.mockRestore();
 });

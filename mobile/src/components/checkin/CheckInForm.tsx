@@ -28,14 +28,12 @@ import { NumericEntry } from '@/features/checkin/components/NumericEntry';
 import { PreviousValueButton } from '@/features/checkin/components/PreviousValueButton';
 import type { CheckInHistory } from '@/features/checkin/history';
 import { fromRow, type FormState, type CheckInStep } from '@/features/checkin/model';
-import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { requiresWorkoutPerformance } from '@/lib/checkin-validation';
 import type { DailyCheckIn, Digestion, WorkoutStatus } from '@/types/db';
 import { spacing, useMotion } from '@/theme';
 import { CheckInFieldBlock } from './CheckInFieldBlock';
 import { CheckInRatingScale } from './CheckInRatingScale';
 import { CheckInSummarySection } from './CheckInSummarySection';
-import { OptionalCheckInFields } from './OptionalCheckInFields';
 
 export { EMPTY_FORM, fromRow, prefillFrom, toPayload } from '@/features/checkin/model';
 export type { FormState, CheckInStep } from '@/features/checkin/model';
@@ -80,13 +78,10 @@ export function CheckInForm({
   history,
   showCarryForward = false,
   hideFinishSummary = false,
-  focusField,
-  focusRequest,
   registerField,
   onEditSection,
 }: Props) {
   const motion = useMotion();
-  const { isCompact } = useResponsiveLayout();
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -115,72 +110,31 @@ export function CheckInForm({
   if (step === 'readiness') {
     return (
       <Card style={{ gap: spacing.base }}>
-        {(
-          [
-            ['Energy', 'energyLevel', 'checkin-energy-rating', 'checkin-field-energy'],
-            ['Stress', 'stressLevel', 'checkin-stress-rating', 'checkin-field-stress'],
-          ] as const
-        ).map(([label, key, optionTestIDPrefix, testID]) => (
-          <CheckInFieldBlock
-            key={key}
-            label={label}
-            description={key === 'energyLevel' ? 'How much energy did you have today?' : 'How much stress did you feel today?'}
-            focusTarget={(node) => registerField?.(key, node)}
-            complete={form[key] !== null}
-            error={errors[key]}
-            testID={testID}
-          >
-            <CheckInRatingScale
-              label={`${label} out of 10`}
-              lowLabel={key === 'energyLevel' ? 'Exhausted' : 'Relaxed'}
-              highLabel={key === 'energyLevel' ? 'Very energetic' : 'Very stressed'}
-              value={form[key]}
-              onChange={(v) => set(key, v)}
-              accessibilityMode="options"
-              optionTestIDPrefix={optionTestIDPrefix}
-            />
-            <HistoryCaption value={form[key]} history={history?.[key]} precision={0} />
-          </CheckInFieldBlock>
-        ))}
-        <OptionalCheckInFields
-          label="Optional weight"
-          testID="checkin-optional-weight"
-          reveal={Boolean(errors.morningWeight || focusField === 'morningWeight')}
-          revealRequest={focusField === 'morningWeight' ? focusRequest : undefined}
+        <NumericEntry
+          label="Morning weight"
+          focusTarget={(node) => registerField?.('morningWeight', node)}
+          value={form.morningWeight}
+          onChange={(value) => set('morningWeight', value)}
+          precision={1}
+          min={20}
+          max={400}
+          unit="kg"
+          hint={showCarryForward ? undefined : prevHint.weight}
+          error={errors.morningWeight}
+          history={history?.morningWeight}
         >
-          <NumericEntry
-            label="Morning weight"
-            focusTarget={(node) => registerField?.('morningWeight', node)}
-            value={form.morningWeight}
-            onChange={(value) => set('morningWeight', value)}
-            precision={1}
-            min={20}
-            max={400}
-            unit="kg"
-            hint={showCarryForward ? undefined : prevHint.weight}
-            error={errors.morningWeight}
-            history={history?.morningWeight}
-          >
-            {showCarryForward ? (
-              <PreviousValueButton
-                label="Morning weight"
-                date={previous?.date}
-                currentValue={form.morningWeight}
-                onRestore={(value) => set('morningWeight', value)}
-                value={previousForm?.morningWeight ?? null}
-                unit="kg"
-                onApply={(value) => set('morningWeight', value)}
-              />
-            ) : null}
-          </NumericEntry>
-        </OptionalCheckInFields>
-      </Card>
-    );
-  }
-
-  if (step === 'recovery') {
-    return (
-      <Card style={{ gap: spacing.base }}>
+          {showCarryForward ? (
+            <PreviousValueButton
+              label="Morning weight"
+              date={previous?.date}
+              currentValue={form.morningWeight}
+              onRestore={(value) => set('morningWeight', value)}
+              value={previousForm?.morningWeight ?? null}
+              unit="kg"
+              onApply={(value) => set('morningWeight', value)}
+            />
+          ) : null}
+        </NumericEntry>
         <NumericEntry
           label="Sleep"
           focusTarget={(node) => registerField?.('sleepHours', node)}
@@ -208,6 +162,52 @@ export function CheckInForm({
             />
           ) : null}
         </NumericEntry>
+        <CheckInFieldBlock
+          label="Energy"
+          description="How much energy did you have today?"
+          focusTarget={(node) => registerField?.('energyLevel', node)}
+          complete={form.energyLevel !== null}
+          error={errors.energyLevel}
+          testID="checkin-field-energy"
+        >
+          <CheckInRatingScale
+            label="Energy out of 10"
+            lowLabel="Exhausted"
+            highLabel="Very energetic"
+            value={form.energyLevel}
+            onChange={(value) => set('energyLevel', value)}
+            accessibilityMode="options"
+            optionTestIDPrefix="checkin-energy-rating"
+          />
+          <HistoryCaption value={form.energyLevel} history={history?.energyLevel} precision={0} />
+        </CheckInFieldBlock>
+      </Card>
+    );
+  }
+
+  if (step === 'recovery') {
+    return (
+      <Card style={{ gap: spacing.base }}>
+        <CheckInFieldBlock
+          label="Stress"
+          description="How much stress did you feel today?"
+          focusTarget={(node) => registerField?.('stressLevel', node)}
+          complete={form.stressLevel !== null}
+          error={errors.stressLevel}
+          testID="checkin-field-stress"
+        >
+          <CheckInRatingScale
+            label="Stress out of 10"
+            lowLabel="Relaxed"
+            highLabel="Very stressed"
+            value={form.stressLevel}
+            onChange={(value) => set('stressLevel', value)}
+            accessibilityMode="options"
+            optionTestIDPrefix="checkin-stress-rating"
+          />
+          <HistoryCaption value={form.stressLevel} history={history?.stressLevel} precision={0} />
+        </CheckInFieldBlock>
+
         <CheckInFieldBlock
           label="Hunger"
           description="Think about your appetite across the day."
@@ -322,108 +322,92 @@ export function CheckInForm({
           />
           <HistoryCaption value={form.nutritionScore} history={history?.nutritionScore} precision={0} />
         </CheckInFieldBlock>
-        <OptionalCheckInFields
-          label="Optional measurements"
-          testID="checkin-optional-details"
-          reveal={Boolean(
-            errors.calorieIntake
-            || errors.waterLiters
-            || errors.dailySteps
-            || errors.protein
-            || errors.carbs
-            || errors.fats
-            || ['calorieIntake', 'waterLiters', 'dailySteps', 'protein', 'carbs', 'fats'].includes(focusField ?? ''),
-          )}
-          revealRequest={['calorieIntake', 'waterLiters', 'dailySteps', 'protein', 'carbs', 'fats'].includes(focusField ?? '') ? focusRequest : undefined}
+        <NumericEntry
+          label="Calories"
+          focusTarget={(node) => registerField?.('calorieIntake', node)}
+          value={form.calorieIntake}
+          onChange={(value) => set('calorieIntake', value)}
+          precision={0}
+          min={0}
+          max={20000}
+          unit="kcal"
+          hint={showCarryForward ? undefined : prevHint.calories}
+          error={errors.calorieIntake}
+          history={history?.calorieIntake}
         >
-          <NumericEntry
-            label="Calories"
-            focusTarget={(node) => registerField?.('calorieIntake', node)}
-            value={form.calorieIntake}
-            onChange={(value) => set('calorieIntake', value)}
-            precision={0}
-            min={0}
-            max={20000}
-            unit="kcal"
-            hint={showCarryForward ? undefined : prevHint.calories}
-            error={errors.calorieIntake}
-            history={history?.calorieIntake}
-          >
-            {showCarryForward ? (
-              <PreviousValueButton label="Calories" date={previous?.date} currentValue={form.calorieIntake} onRestore={(value) => set('calorieIntake', value)} value={previousForm?.calorieIntake ?? null} unit="kcal" onApply={(value) => set('calorieIntake', value)} />
-            ) : null}
-          </NumericEntry>
-          <NumericEntry
-            label="Water"
-            focusTarget={(node) => registerField?.('waterLiters', node)}
-            value={form.waterLiters}
-            onChange={(value) => set('waterLiters', value)}
-            precision={2}
-            min={0}
-            max={20}
-            unit="L"
-            quickValues={[1, 1.5, 2, 2.5, 3]}
-            hint={showCarryForward ? undefined : prevHint.water}
-            error={errors.waterLiters}
-            history={history?.waterLiters}
-          >
-            {showCarryForward ? (
-              <PreviousValueButton label="Water" date={previous?.date} currentValue={form.waterLiters} onRestore={(value) => set('waterLiters', value)} value={previousForm?.waterLiters ?? null} unit="L" onApply={(value) => set('waterLiters', value)} />
-            ) : null}
-          </NumericEntry>
-          <NumericEntry
-            label="Steps"
-            focusTarget={(node) => registerField?.('dailySteps', node)}
-            value={form.dailySteps}
-            onChange={(value) => set('dailySteps', value)}
-            precision={0}
-            min={0}
-            max={200000}
-            unit="steps"
-            hint={showCarryForward ? undefined : prevHint.steps}
-            error={errors.dailySteps}
-            history={history?.dailySteps}
-          >
-            {showCarryForward ? (
-              <PreviousValueButton label="Steps" date={previous?.date} currentValue={form.dailySteps} onRestore={(value) => set('dailySteps', value)} value={previousForm?.dailySteps ?? null} unit="steps" onApply={(value) => set('dailySteps', value)} />
-            ) : null}
-          </NumericEntry>
-          <View style={{ flexDirection: isCompact ? 'column' : 'row', gap: spacing.sm }}>
-            {(
-              [
-                ['Protein', 'protein'],
-                ['Carbs', 'carbs'],
-                ['Fats', 'fats'],
-              ] as const
-            ).map(([label, key]) => (
-              <NumericEntry
-                key={key}
-                style={isCompact ? undefined : { flex: 1 }}
-                label={label}
-                focusTarget={(node) => registerField?.(key, node)}
-                error={errors[key]}
-                value={form[key]}
-                onChange={(value) => set(key, value)}
-                min={0}
-                precision={0}
-                unit="g"
-                history={history?.[key]}
-              >
-                {showCarryForward ? (
-                  <PreviousValueButton
-                    label={label}
-                    date={previous?.date}
-                    currentValue={form[key]}
-                    onRestore={(value) => set(key, value)}
-                    value={previousForm?.[key] ?? null}
-                    unit="g"
-                    onApply={(value) => set(key, value)}
-                  />
-                ) : null}
-              </NumericEntry>
-            ))}
-          </View>
-        </OptionalCheckInFields>
+          {showCarryForward ? (
+            <PreviousValueButton label="Calories" date={previous?.date} currentValue={form.calorieIntake} onRestore={(value) => set('calorieIntake', value)} value={previousForm?.calorieIntake ?? null} unit="kcal" onApply={(value) => set('calorieIntake', value)} />
+          ) : null}
+        </NumericEntry>
+        <NumericEntry
+          label="Water"
+          focusTarget={(node) => registerField?.('waterLiters', node)}
+          value={form.waterLiters}
+          onChange={(value) => set('waterLiters', value)}
+          precision={2}
+          min={0}
+          max={20}
+          unit="L"
+          quickValues={[1, 1.5, 2, 2.5, 3]}
+          hint={showCarryForward ? undefined : prevHint.water}
+          error={errors.waterLiters}
+          history={history?.waterLiters}
+        >
+          {showCarryForward ? (
+            <PreviousValueButton label="Water" date={previous?.date} currentValue={form.waterLiters} onRestore={(value) => set('waterLiters', value)} value={previousForm?.waterLiters ?? null} unit="L" onApply={(value) => set('waterLiters', value)} />
+          ) : null}
+        </NumericEntry>
+        <NumericEntry
+          label="Steps"
+          focusTarget={(node) => registerField?.('dailySteps', node)}
+          value={form.dailySteps}
+          onChange={(value) => set('dailySteps', value)}
+          precision={0}
+          min={0}
+          max={200000}
+          unit="steps"
+          hint={showCarryForward ? undefined : prevHint.steps}
+          error={errors.dailySteps}
+          history={history?.dailySteps}
+        >
+          {showCarryForward ? (
+            <PreviousValueButton label="Steps" date={previous?.date} currentValue={form.dailySteps} onRestore={(value) => set('dailySteps', value)} value={previousForm?.dailySteps ?? null} unit="steps" onApply={(value) => set('dailySteps', value)} />
+          ) : null}
+        </NumericEntry>
+        <View style={{ gap: spacing.base }}>
+          {(
+            [
+              ['Protein', 'protein'],
+              ['Carbs', 'carbs'],
+              ['Fats', 'fats'],
+            ] as const
+          ).map(([label, key]) => (
+            <NumericEntry
+              key={key}
+              label={label}
+              focusTarget={(node) => registerField?.(key, node)}
+              error={errors[key]}
+              value={form[key]}
+              onChange={(value) => set(key, value)}
+              min={0}
+              precision={0}
+              unit="g"
+              history={history?.[key]}
+            >
+              {showCarryForward ? (
+                <PreviousValueButton
+                  label={label}
+                  date={previous?.date}
+                  currentValue={form[key]}
+                  onRestore={(value) => set(key, value)}
+                  value={previousForm?.[key] ?? null}
+                  unit="g"
+                  onApply={(value) => set(key, value)}
+                />
+              ) : null}
+            </NumericEntry>
+          ))}
+        </View>
       </Card>
     );
   }
@@ -433,25 +417,25 @@ export function CheckInForm({
       {!hideFinishSummary ? <View style={{ gap: spacing.sm }}>
         <View style={{ gap: spacing.xs }}>
           <CheckInSummarySection
-            title="Readiness and energy"
+            title="Morning"
             rows={[
-              ...(form.morningWeight === null ? [] : [['Weight', `${form.morningWeight} kg`] as const]),
+              ['Weight', form.morningWeight === null ? 'Not recorded' : `${form.morningWeight} kg`],
+              ['Sleep', form.sleepHours === null ? 'Not recorded' : `${form.sleepHours} h`],
               ['Energy', form.energyLevel === null ? 'Not recorded' : `${form.energyLevel}/10`],
-              ['Stress', form.stressLevel === null ? 'Not recorded' : `${form.stressLevel}/10`],
             ]}
           />
-          {onEditSection ? <Button testID="checkin-edit-readiness" label="Edit readiness" variant="ghost" onPress={() => onEditSection('readiness')} /> : null}
+          {onEditSection ? <Button testID="checkin-edit-readiness" label="Edit morning" variant="ghost" onPress={() => onEditSection('readiness')} /> : null}
         </View>
         <View style={{ gap: spacing.xs }}>
           <CheckInSummarySection
-            title="Sleep and recovery"
+            title="Your day"
             rows={[
-              ['Sleep', form.sleepHours === null ? 'Not recorded' : `${form.sleepHours} h`],
+              ['Stress', form.stressLevel === null ? 'Not recorded' : `${form.stressLevel}/10`],
               ['Hunger', form.hungerLevel === null ? 'Not recorded' : `${form.hungerLevel}/10`],
               ['Digestion', DIGESTION_SEGMENTS.find(({ value }) => value === form.digestion)?.label ?? 'Not recorded'],
             ]}
           />
-          {onEditSection ? <Button testID="checkin-edit-recovery" label="Edit recovery" variant="ghost" onPress={() => onEditSection('recovery')} /> : null}
+          {onEditSection ? <Button testID="checkin-edit-recovery" label="Edit your day" variant="ghost" onPress={() => onEditSection('recovery')} /> : null}
         </View>
         <View style={{ gap: spacing.xs }}>
           <CheckInSummarySection
@@ -467,12 +451,12 @@ export function CheckInForm({
                   ] as const]
                 : []),
               ['Nutrition', form.nutritionScore === null ? 'Not recorded' : `${form.nutritionScore}/10`],
-              ...(form.calorieIntake === null ? [] : [['Calories', `${form.calorieIntake} kcal`] as const]),
-              ...(form.waterLiters === null ? [] : [['Water', `${form.waterLiters} L`] as const]),
-              ...(form.dailySteps === null ? [] : [['Steps', String(form.dailySteps)] as const]),
-              ...(form.protein === null ? [] : [['Protein', `${form.protein} g`] as const]),
-              ...(form.carbs === null ? [] : [['Carbs', `${form.carbs} g`] as const]),
-              ...(form.fats === null ? [] : [['Fats', `${form.fats} g`] as const]),
+              ['Calories', form.calorieIntake === null ? 'Not recorded' : `${form.calorieIntake} kcal`],
+              ['Water', form.waterLiters === null ? 'Not recorded' : `${form.waterLiters} L`],
+              ['Steps', form.dailySteps === null ? 'Not recorded' : String(form.dailySteps)],
+              ['Protein', form.protein === null ? 'Not recorded' : `${form.protein} g`],
+              ['Carbs', form.carbs === null ? 'Not recorded' : `${form.carbs} g`],
+              ['Fats', form.fats === null ? 'Not recorded' : `${form.fats} g`],
             ]}
           />
           {onEditSection ? <Button testID="checkin-edit-adherence" label="Edit adherence" variant="ghost" onPress={() => onEditSection('adherence')} /> : null}
@@ -480,13 +464,14 @@ export function CheckInForm({
       </View> : null}
       <Input
         ref={(node) => registerField?.('notes', node)}
-        label="Notes (optional)"
+        label="Notes"
+        error={errors.notes}
         value={form.notes}
         onChangeText={(t) => set('notes', t)}
         multiline
         numberOfLines={3}
         inputStyle={{ minHeight: 72, textAlignVertical: 'top' }}
-        placeholder="Anything your coach should know?"
+        placeholder="Briefly describe your day for your coach."
       />
 
     </Card>

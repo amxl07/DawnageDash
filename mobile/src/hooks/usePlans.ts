@@ -321,12 +321,7 @@ export function useMealPlan() {
   });
 }
 
-export type Supplement = { id: string; name: string; serving: string; timing: string };
-
-export function parseSupplements(raw: string | null): Supplement[] {
-  const parsed = parseJson<Supplement[]>(raw);
-  return Array.isArray(parsed) ? parsed : [];
-}
+export { parseSupplements, type Supplement } from '@/lib/supplements';
 
 export function parsePointer(raw: string | null): PlanPointer | null {
   return parseJson<PlanPointer>(raw);

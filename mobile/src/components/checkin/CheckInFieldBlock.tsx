@@ -26,7 +26,7 @@ export function CheckInFieldBlock({ label, complete, error, children, testID, fo
       style={{
         gap: spacing.sm,
         paddingVertical: spacing.md,
-        paddingHorizontal: isCompact ? spacing.xs : spacing.md,
+        paddingHorizontal: isCompact ? spacing.xs : spacing.sm,
         borderRadius: radius.md,
         borderWidth: 1,
         borderColor: error ? colors.destructive : 'transparent',
@@ -40,7 +40,7 @@ export function CheckInFieldBlock({ label, complete, error, children, testID, fo
         tabIndex={Platform.OS === 'web' ? -1 : undefined}
         style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
       >
-        <Text variant="h2" style={{ flex: 1 }}>{label}</Text>
+        <Text variant="label" style={{ flex: 1 }}>{label}</Text>
         {complete && !error ? (
           <View testID={testID ? `${testID}-complete` : undefined} accessible={false}>
             <CheckCircle2 size={iconSize.sm} color={colors.primary} accessible={false} />

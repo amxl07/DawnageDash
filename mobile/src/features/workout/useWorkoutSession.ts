@@ -5,9 +5,9 @@ import { parsePointer, useUserProfile, useWorkoutPlan } from '@/hooks/usePlans';
 import { readWorkoutDraft, useWorkoutDraft, type DraftData } from '@/hooks/useWorkoutDraft';
 import { associateWorkoutOutbox, readOutbox, retryWorkoutRecovery, saveWorkoutLog, subscribeWorkoutDelivery, type OutboxItem, type WorkoutReceipt, type WorkoutRecoveryResult } from '@/lib/outbox';
 import { supabase } from '@/lib/supabase';
-import { parseWorkoutContent, serializeWorkoutContent } from '@/lib/workout-content';
+import { parseWorkoutContent } from '@/lib/workout-content';
 import { createDraftExerciseFromPlan, initialWorkoutState, workoutReducer, type WorkoutExercise, type WorkoutState } from './workoutReducer';
-import { acquireWorkoutSave, applyWorkoutEdit, attachPersistedWorkoutId, finalizeWorkoutSave, releaseWorkoutSave, type WorkoutEditAction, type WorkoutEditSnapshot } from './workoutSave';
+import { acquireWorkoutSave, applyWorkoutEdit, attachPersistedWorkoutId, finalizeWorkoutSave, releaseWorkoutSave, serializeWorkoutExercises, type WorkoutEditAction, type WorkoutEditSnapshot } from './workoutSave';
 import { resolveWorkoutEntry, type WorkoutEntry, type WorkoutScope } from './workout-entry';
 
 export type WorkoutSession = {
@@ -16,7 +16,7 @@ export type WorkoutSession = {
   state: WorkoutState;
   draftState: 'clean' | 'writing' | 'saved' | 'error';
   deliveryState: 'idle' | 'sending' | 'queued' | 'synced' | 'blocked';
-  edit: (action: WorkoutEditAction) => void;
+  edit: (action: WorkoutEditAction) => boolean;
   save: () => Promise<'synced' | 'queued' | 'blocked' | 'invalid' | 'storage-error'>;
   flushDraft: () => Promise<boolean>;
 };
@@ -25,7 +25,6 @@ type Local = { draft: DraftData | null; queued: OutboxItem | null; related?: Out
 type ReceiptState = { receipt: WorkoutReceipt; status: 'queued' | 'synced' | 'blocked' };
 type SourceProtection = { sourceKind: 'structured' | 'text' | 'unknown'; legacyText?: string };
 const asDraft = (state: WorkoutState, protection: SourceProtection): Omit<DraftData, 'savedAt'> => ({ workoutTitle: state.title, exercises: state.exercises, selectedPlanId: String(state.selectedDay ?? 'custom'), existingLogId: state.existingLogId, ...protection });
-const serializeExercises = (exercises: WorkoutExercise[], selectedDay: number | null) => serializeWorkoutContent({ planDayNumber: selectedDay, exercises: exercises.map((exercise) => ({ name: exercise.name, tracking: exercise.tracking, sets: exercise.sets.map(({ id: _id, ...set }, index) => ({ ...set, setNumber: index + 1 })) })) });
 
 /** Normalize all supported structured readers without silently dropping legacy values. */
 export function exercisesFromContent(content: string): { exercises: WorkoutExercise[]; day: number | null; text?: string } {
@@ -178,12 +177,15 @@ export function useWorkoutSession(scope: WorkoutScope, options: { initialDay?: n
 
   const isCurrent = useCallback(() => activeIdentity.current === identity && initialized.current === identity, [identity]);
   const edit = useCallback((action: WorkoutEditAction) => {
-    if (!isCurrent() || protection.current.sourceKind === 'text') return;
+    if (!isCurrent() || protection.current.sourceKind === 'text') return false;
     // Choosing another plan changes this session's contents, never its persisted row.
-    const currentId = snapshot.current.state.existingLogId;
-    let next = applyWorkoutEdit(snapshot.current, action);
+    const current = snapshot.current;
+    const currentId = current.state.existingLogId;
+    let next = applyWorkoutEdit(current, action);
+    if (next === current) return false;
     if (action.type === 'LOAD_DEFAULT_PLAN' && currentId) next = attachPersistedWorkoutId(next, currentId);
     publish(next); setError(null);
+    return true;
   }, [isCurrent, publish]);
   const flushDraft = useCallback(async () => {
     if (!isCurrent()) return false;
@@ -235,12 +237,12 @@ export function useWorkoutSession(scope: WorkoutScope, options: { initialDay?: n
     const submitted = snapshot.current;
     const current = () => isCurrent() && epoch.current === saveEpoch;
     if (!submitted.state.title.trim() || protection.current.sourceKind !== 'structured') {
-      setError(protection.current.sourceKind === 'text' ? 'This historical text remains available in Logs. It cannot be replaced with empty set data.' : protection.current.sourceKind === 'unknown' ? 'Reconnect to verify this historical workout before saving. Your local edits are preserved.' : 'Give this workout a title first.');
+      setError(protection.current.sourceKind === 'text' ? 'This historical text remains available in Training history. It cannot be replaced with empty set data.' : protection.current.sourceKind === 'unknown' ? 'Reconnect to verify this historical workout before saving. Your local edits are preserved.' : 'Give this workout a title first.');
       releaseWorkoutSave(saving); return 'invalid';
     }
     setDelivery('sending'); setError(null); pendingReceipt.current = null; receiptState.current = null;
     try {
-      const content = serializeExercises(submitted.state.exercises, submitted.state.selectedDay);
+      const content = serializeWorkoutExercises(submitted.state.exercises, submitted.state.selectedDay);
       const result = await saveWorkoutLog({ user_id: scope.userId, date: scope.date, title: submitted.state.title.trim(), content, existingLogId: submitted.state.existingLogId }, (receipt) => { if (current()) { pendingReceipt.current = receipt; receiptState.current = null; } });
       if (!current()) return result.status === 'offline' ? 'queued' : result.status;
       if (result.status === 'synced') publish(attachPersistedWorkoutId(snapshot.current, result.logId));
@@ -360,7 +362,7 @@ export function useWorkoutSession(scope: WorkoutScope, options: { initialDay?: n
       const newerDraft = local.draft && local.draft.savedAt > queued.queuedAt ? local.draft : null;
       const liveDraft = isCurrent() && snapshot.current.generation > 0 ? asDraft(snapshot.current.state, protection.current) : null;
       const retainedDraft = liveDraft ?? newerDraft;
-      const content = retainedDraft ? retainedDraft.legacyText ?? serializeExercises(retainedDraft.exercises, Number(retainedDraft.selectedPlanId) || null) : queued.content;
+      const content = retainedDraft ? retainedDraft.legacyText ?? serializeWorkoutExercises(retainedDraft.exercises, Number(retainedDraft.selectedPlanId) || null) : queued.content;
       const associated = await associateWorkoutOutbox({ userId: scope.userId, date: scope.date, outboxId: queued.id, revision: queued.revision ?? 0, logId, title: retainedDraft?.workoutTitle ?? queued.title, content });
       // The selected queue now contains the retained content before any source
       // draft cleanup. Failed cleanup cannot destroy the recovery payload.

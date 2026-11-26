@@ -1,5 +1,4 @@
-import { BottomTabBarHeightContext } from 'expo-router/js-tabs';
-import { useContext, useEffect, useRef, type ComponentProps, type ReactNode } from 'react';
+import { useEffect, useRef, type ComponentProps, type ReactNode } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -36,8 +35,6 @@ export function StickyActionBar({
 }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useContext(BottomTabBarHeightContext) ?? 0;
-  const clearsOverlayTabBar = process.env.EXPO_OS === 'ios' && tabBarHeight > 0;
   const lastHeight = useRef(0);
   const heightChangeRef = useRef(onHeightChange);
   heightChangeRef.current = onHeightChange;
@@ -59,11 +56,11 @@ export function StickyActionBar({
         position: 'absolute',
         left: 0,
         right: 0,
-        bottom: clearsOverlayTabBar ? tabBarHeight : 0,
+        bottom: 0,
         gap: spacing.sm,
         paddingHorizontal: spacing.base,
         paddingTop: spacing.sm,
-        paddingBottom: (clearsOverlayTabBar ? 0 : insets.bottom) + spacing.sm,
+        paddingBottom: insets.bottom + spacing.sm,
         backgroundColor: colors.card,
         borderTopWidth: 1,
         borderTopColor: colors.border,

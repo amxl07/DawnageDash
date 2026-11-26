@@ -82,3 +82,14 @@ it('keeps a newer requested time when an older foreground repair finishes slowly
   await Promise.all([repair, change]);
   expect(nativeHour).toBe(9);
 });
+
+it('distinguishes confirmed off, confirmed on, mismatched, residual and unavailable native schedules', () => {
+  const desired = { ...DEFAULT_SETTINGS, dailyEnabled: true, dailyHour: 9 };
+  const nativeDaily = { identifier: DAILY_ID, trigger: { type: 'daily', hour: 9, minute: 0 } };
+  expect(reminderDelivery(DEFAULT_SETTINGS, [])).toEqual({ daily: 'off', weekly: 'off' });
+  expect(reminderDelivery(desired, [nativeDaily]).daily).toBe('scheduled');
+  expect(reminderDelivery(desired, []).daily).toBe('pending');
+  expect(reminderDelivery(desired, [{ ...nativeDaily, trigger: { ...nativeDaily.trigger, hour: 8 } }]).daily).toBe('pending');
+  expect(reminderDelivery(DEFAULT_SETTINGS, [nativeDaily]).daily).toBe('pending');
+  expect(reminderDelivery(desired, null).daily).toBe('unavailable');
+});

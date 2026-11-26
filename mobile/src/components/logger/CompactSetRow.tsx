@@ -6,14 +6,14 @@ import { Text } from '@/components/ui';
 import type { WorkoutExercise, WorkoutSet } from '@/features/workout/workoutReducer';
 import { radius, spacing, useTheme } from '@/theme';
 
-export const CompactSetRow = memo(function CompactSetRow({ set, index, tracking, onEdit, onToggle }: { set: WorkoutSet; index: number; tracking: WorkoutExercise['tracking']; onEdit: () => void; onToggle: () => void }) {
+export const CompactSetRow = memo(function CompactSetRow({ set, index, tracking, selected = false, onEdit, onToggle }: { set: WorkoutSet; index: number; tracking: WorkoutExercise['tracking']; selected?: boolean; onEdit: () => void; onToggle: () => void }) {
   const { colors } = useTheme();
   const label = (set.kind === 'warmup' ? 'Warm-up ' : 'Set ') + (index + 1);
   const description = tracking === 'duration' ? (set.duration ? set.duration + ' seconds' : 'Not logged') : set.reps || set.weight ? (set.weight ? set.weight + ' kg × ' : '') + (set.reps || '—') + ' reps' : 'Not logged';
-  return <View style={[styles.row, { borderColor: colors.border }]}>
-    <Pressable accessibilityRole="button" accessibilityLabel={'Edit ' + label.toLowerCase() + ': ' + description + ', ' + (set.completed ? 'completed' : 'incomplete')} onPress={onEdit} style={styles.edit}>
+  return <View style={[styles.row, { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.elevated : 'transparent' }]}>
+    <Pressable accessibilityRole="button" accessibilityLabel={'Edit ' + label.toLowerCase() + ': ' + description + ', ' + (set.completed ? 'completed' : 'incomplete')} accessibilityState={{ selected }} onPress={onEdit} style={styles.edit}>
       <Text variant="bodySm" tone="muted" style={{ minWidth: 50 }}>{label}</Text>
-      <View style={{ flex: 1, gap: spacing.xs }}><Text variant="body" numeric>{description}</Text>{set.rpe ? <Text variant="bodySm" tone="muted">RPE {set.rpe}</Text> : null}</View>
+      <View style={{ flex: 1, gap: spacing.xs }}><Text variant="body" numeric>{description}</Text>{selected ? <Text variant="caption" tone="primary">Selected</Text> : null}{set.rpe ? <Text variant="bodySm" tone="muted">RPE {set.rpe}</Text> : null}</View>
       <ChevronRight size={16} color={colors.mutedForeground} accessible={false} />
     </Pressable>
     <Pressable accessibilityRole="checkbox" accessibilityLabel={'Mark ' + label.toLowerCase() + (set.completed ? ' incomplete' : ' complete')} accessibilityState={{ checked: set.completed }} onPress={onToggle} style={styles.check}>

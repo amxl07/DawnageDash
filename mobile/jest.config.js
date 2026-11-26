@@ -4,6 +4,10 @@ module.exports = {
   preset: 'jest-expo',
   resolver: '<rootDir>/jest.resolver.js',
   setupFilesAfterEnv: ['<rootDir>/src/test/setup.ts'],
-  moduleNameMapper: { '^@/(.*)$': '<rootDir>/src/$1' },
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+    // Jest executes CommonJS; the React Native export condition otherwise selects Lucide's .mjs bundle.
+    '^lucide-react-native$': '<rootDir>/node_modules/lucide-react-native/dist/cjs/lucide-react-native.js',
+  },
   testPathIgnorePatterns: ['/node_modules/', '/.maestro/'],
 };

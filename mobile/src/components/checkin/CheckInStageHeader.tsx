@@ -1,8 +1,9 @@
-import { ClipboardCheck, Gauge, Moon, Target } from 'lucide-react-native';
+import { ClipboardCheck, Gauge, Sunrise, Target } from 'lucide-react-native';
 import { View } from 'react-native';
 
 import { ProgressBar, Text } from '@/components/ui';
 import { iconSize, radius, spacing, useTheme } from '@/theme';
+import type { AnswerProgress } from '@/features/checkin/answer-progress';
 
 import type { CheckInStep } from './CheckInForm';
 import { CHECK_IN_STAGE_META } from './checkin-presentation';
@@ -12,16 +13,17 @@ type Props = {
   stepIndex: number;
   totalSteps: number;
   date: string;
+  progress?: AnswerProgress;
 };
 
 const STAGE_ICONS = {
-  readiness: Gauge,
-  recovery: Moon,
+  readiness: Sunrise,
+  recovery: Gauge,
   adherence: Target,
   finish: ClipboardCheck,
 };
 
-export function CheckInStageHeader({ step, stepIndex, totalSteps }: Props) {
+export function CheckInStageHeader({ step, stepIndex, totalSteps, progress }: Props) {
   const { colors } = useTheme();
   const Icon = STAGE_ICONS[step];
   const meta = CHECK_IN_STAGE_META[step];
@@ -40,7 +42,11 @@ export function CheckInStageHeader({ step, stepIndex, totalSteps }: Props) {
           <Icon size={iconSize.md} color={colors.primary} strokeWidth={2} accessible={false} />
         </View>
         <View style={{ flex: 1, gap: spacing.xs }}>
-          <Text variant="label" tone="primary">{`Step ${stepIndex + 1} of ${totalSteps}`}</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: spacing.sm }}>
+            {progress ? <Text testID="checkin-answer-progress" variant="caption" tone="muted" numeric accessibilityLiveRegion="polite">
+              {`${progress.answered} of ${progress.total} answered`}
+            </Text> : null}
+          </View>
           <Text variant="h1">{meta.title}</Text>
         </View>
       </View>

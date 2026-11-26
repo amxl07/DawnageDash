@@ -80,5 +80,6 @@ export function historyCaption(
   if (!history || history.count < 3) return 'Your range will appear as you log.';
   const precision = format.precision ?? 0;
   const unit = format.unit ? ` ${format.unit}` : '';
+  if (history.min14 === history.max14) return `Recently: ${formatted(history.min14, precision)}${unit}`;
   return `Recent range ${formatted(history.min14, precision)}–${formatted(history.max14, precision)}${unit}`;
 }

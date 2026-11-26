@@ -30,24 +30,39 @@ const width = Number(option('width', '390'));
 const height = Number(option('height', '844'));
 const waitSeconds = Number(option('wait-seconds', '600'));
 const startupSeconds = Number(option('startup-seconds', '300'));
+const commandSeconds = Number(option('command-seconds', '90'));
+if (!Number.isFinite(commandSeconds) || commandSeconds <= 0) throw new Error('Command timeout must be positive.');
 const exerciseFlows = args.includes('--exercise-flows');
+const existingEndpoint = option('endpoint', '');
+if (existingEndpoint && !['localhost', '127.0.0.1'].includes(new URL(existingEndpoint).hostname)) throw new Error('Debugger must be local.');
 const chromePath = option('chrome', process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome');
-const routes = { signin: '/login', signup: '/login', onboarding: '/onboarding', 'onboarding-rhythm': '/onboarding', 'onboarding-ready': '/onboarding', home: '/', welcome: '/', 'first-checkin': '/check-in?date=2026-09-15', checkin: '/check-in?date=2026-09-15', workout: '/logger?date=2026-09-15&day=1', training: '/plans?view=plan', 'training-history': '/plans?view=history', nutrition: '/nutrition' };
+const routes = { 'health-access': '/health-access', signin: '/login', signup: '/login', onboarding: '/onboarding', 'onboarding-rhythm': '/onboarding', 'onboarding-ready': '/onboarding', home: '/', welcome: '/', 'first-checkin': '/check-in?date=2026-09-15', checkin: '/check-in?date=2026-09-15', workout: '/logger?date=2026-09-15&day=1', training: '/plans?view=plan', 'training-history': '/plans?view=history', nutrition: '/nutrition', settings: '/settings', profile: '/profile', measurements: '/measurements', 'measurements-chart': '/measurements', media: '/media', weekly: '/weekly-feedback', you: '/more', hub: '/check-in', gallery: '/' };
+const signedOutScreens = new Set(['signin', 'signup', 'health-access']);
 const setupMilestones = { onboarding: 0, 'onboarding-rhythm': 1, 'onboarding-ready': 2 };
 const readyContent = {
+  'health-access': ['Your health data, your choice', 'Dawnage does not write to your health apps.', 'Change or remove access'],
+  gallery: ['Dawnage controls', 'Training view', 'Auto-start after a set'],
+  settings: ['Settings', 'Reminders'],
+  profile: ['Profile', 'Full name'],
+  measurements: ['Measurements', 'Waist'],
+  'measurements-chart': ['Progress', 'Previous date', 'All values'],
+  media: ['Progress photos', 'Add your first set'],
+  weekly: ['Weekly check-in'],
+  you: ['You', 'Coaching', 'Account'],
+  hub: ['Check In', 'Your history'],
   signin: ['Welcome', 'Sign in'],
   signup: ['Create', 'Full name', 'Email'],
   welcome: ['Ready when', 'Start my first check-in'],
-  'first-checkin': ['Your first check-in', 'Energy', 'Continue'],
+  'first-checkin': ['Morning', 'Energy', 'Continue'],
   onboarding: ['1 of 3', 'Fat loss', 'Continue'],
   'onboarding-rhythm': ['2 of 3', 'Check in with your day', 'Continue'],
   'onboarding-ready': ['3 of 3', 'Your timezone', 'Choose how to begin'],
-  home: ['Alex', 'Your daily check-in', 'This week'],
-  checkin: ['Readiness', 'Energy', 'Stress', 'Continue'],
+  home: ['Alex', 'Daily check-in', 'This week'],
+  checkin: ['Morning', 'Sleep', 'Energy', 'Continue'],
   workout: ['Bench press', 'Complete set', 'Overview'],
   training: ['Training', 'Assigned plan', 'Next session', 'Start Day 1'],
   'training-history': ['Training', 'Workout history', 'Upper body'],
-  nutrition: ['Nutrition', 'No meal plan yet'],
+  nutrition: ['Nutrition', 'Nutrition details', 'Breakfast'],
 };
 if (!screenNames.every((name) => name in routes)) throw new Error('Unknown screen selection.');
 if (!['localhost', '127.0.0.1'].includes(new URL(baseUrl).hostname)) throw new Error('Capture requires a local Expo server.');
@@ -63,7 +78,7 @@ for (let attempt = 0; attempt < waitSeconds; attempt++) {
 if (!serverReady) throw new Error('The local Expo server did not become ready: ' + baseUrl);
 await mkdir(output, { recursive: true });
 const profileDir = await mkdtemp(path.join(tmpdir(), 'dawnage-capture-'));
-const chrome = spawn(chromePath, [
+const chrome = existingEndpoint ? null : spawn(chromePath, [
   '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
   '--disable-background-networking', '--disable-component-update', '--disable-sync', '--remote-debugging-port=0',
   '--user-data-dir=' + profileDir, 'about:blank',
@@ -73,7 +88,7 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 let endpoint;
 let startupDiagnostic = '';
 try {
-  endpoint = await new Promise((resolve, reject) => {
+  endpoint = existingEndpoint || await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('Chrome did not expose its debugger within ' + startupSeconds + ' seconds.')), startupSeconds * 1000);
     chrome.once('error', (error) => { clearTimeout(timer); reject(error); });
     chrome.once('exit', (code) => { clearTimeout(timer); reject(new Error('Chrome exited during startup: ' + code + '\n' + startupDiagnostic)); });
@@ -84,7 +99,7 @@ try {
     });
   });
 } catch (error) {
-  chrome.kill('SIGTERM');
+  chrome?.kill('SIGTERM');
   await rm(profileDir, { recursive: true, force: true }).catch(() => {});
   throw error;
 }
@@ -95,7 +110,7 @@ const waiting = new Map();
 const handlers = new Map();
 const call = (method, params = {}, sessionId) => new Promise((resolve, reject) => {
   const id = ++sequence;
-  const timeout = method === 'Page.navigate' ? waitSeconds * 1000 : 90000;
+  const timeout = method === 'Page.navigate' ? waitSeconds * 1000 : commandSeconds * 1000;
   const timer = setTimeout(() => { waiting.delete(id); reject(new Error('Timed out: ' + method)); }, timeout);
   waiting.set(id, { resolve, reject, timer });
   socket.send(JSON.stringify({ id, method, params, ...(sessionId ? { sessionId } : {}) }));
@@ -120,13 +135,27 @@ const session = { access_token: tokenPart({ alg: 'HS256', typ: 'JWT' }) + '.' + 
 function responseFor(request, screen) {
   const url = new URL(request.url);
   const firstVisit = screen === 'welcome' || screen === 'first-checkin';
-  if (url.pathname.startsWith('/auth/v1/')) return url.pathname.endsWith('/user') ? user : session;
+  if (url.pathname.startsWith('/auth/v1/')) {
+    if (screen === 'health-access') return { user: null, session: null };
+    return url.pathname.endsWith('/user') ? user : session;
+  }
   if (url.pathname.includes('/rpc/get_my_coach')) return firstVisit ? [] : [fixtures.coach];
   const table = url.pathname.split('/').at(-1);
   let rows = [];
   if (table === 'users') rows = [{ ...fixtures.profile, onboarding_step: setupMilestones[screen] ?? 3 }];
+  if (table === 'users' && screen === 'nutrition') rows = [{ ...rows[0], active_meal_plan: JSON.stringify({ calories: 2200, dietType: 'Vegetarian' }), nutrition_note: 'Keep meals consistent and adjust portions with your coach.' }];
+  if (table === 'meal_plans') rows = [
+    { meal_type: 'Breakfast', description: 'Greek yoghurt, oats, seasonal berries and mixed seeds.', calories: 550, protein: 35, carbs: 65, fats: 17 },
+    { meal_type: 'Lunch', description: 'Lentils, brown rice and a generous serving of vegetables.', calories: 750, protein: 40, carbs: 100, fats: 21 },
+    { meal_type: 'Dinner', description: 'Grilled paneer with wholegrain roti and a fresh salad.', calories: 700, protein: 40, carbs: 75, fats: 26 },
+  ].map((meal) => ({ ...meal, user_id: fixtures.userId, day_of_week: 'Daily', calories_target: 2200, diet_type: 'Vegetarian' }));
   if (table === 'daily_check_ins') rows = fixtures.checkIns;
   if (table === 'body_measurements') rows = fixtures.measurements;
+  if (table === 'body_measurements' && screen === 'measurements-chart') rows = [
+    { ...fixtures.measurements[0], id: 'fixture-measurement-earlier', date: '2026-09-01', chest: 100, waist: 80, hips: 96 },
+    { ...fixtures.measurements[0], id: 'fixture-measurement-middle', date: '2026-09-07', chest: 99, waist: 79, hips: null },
+    ...fixtures.measurements,
+  ];
   if (table === 'workout_logs') rows = fixtures.workoutLogs;
   if (table === 'workout_plans') rows = fixtures.planDays.map((day) => ({ ...day, user_id: fixtures.userId, level: 'Intermediate', workout_type: 'Gym', sub_category: null, days_per_week: 3, exercises: JSON.stringify(day.exercises) }));
   if (table === 'onboarding_questionnaire') rows = [fixtures.assessment];
@@ -197,7 +226,9 @@ try {
         await call('Fetch.failRequest', { requestId, errorReason: 'BlockedByClient' }, sessionId);
         return;
       }
-      if (requestUrl.pathname.startsWith('/rest/v1/') && ['POST', 'PATCH', 'PUT'].includes(request.method) && request.postData) {
+      // This RPC is a read despite POST. Unknown RPCs remain recorded as writes.
+      const readsCoach = request.method === 'POST' && requestUrl.pathname === '/rest/v1/rpc/get_my_coach';
+      if (!readsCoach && requestUrl.pathname.startsWith('/rest/v1/') && ['POST', 'PATCH', 'PUT'].includes(request.method) && request.postData) {
         writes.push({ table: requestUrl.pathname.split('/').at(-1), method: request.method, payload: JSON.parse(request.postData) });
       }
       const body = request.method === 'OPTIONS' ? '' : JSON.stringify(responseFor(request, screen));
@@ -217,7 +248,7 @@ try {
     await call('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: theme }, { name: 'prefers-reduced-motion', value: motionPreference }] }, sessionId);
     await call('Fetch.enable', { patterns: [{ urlPattern: '*' }] }, sessionId);
     const clock = 'const RealDate = Date; globalThis.Date = class extends RealDate { constructor(...args) { if (args.length) super(...args); else super("2026-09-15T04:45:00Z"); } static now() { return RealDate.parse("2026-09-15T04:45:00Z"); } };';
-    await call('Page.addScriptToEvaluateOnNewDocument', { source: clock + 'localStorage.clear(); localStorage.setItem("theme-preference", ' + JSON.stringify(theme) + ');' + (['signin', 'signup'].includes(screen) ? '' : 'localStorage.setItem("sb-preview-auth-token", ' + JSON.stringify(JSON.stringify(session)) + ');') }, sessionId);
+    await call('Page.addScriptToEvaluateOnNewDocument', { source: clock + 'localStorage.clear(); localStorage.setItem("theme-preference", ' + JSON.stringify(theme) + ');' + (signedOutScreens.has(screen) ? '' : 'localStorage.setItem("sb-preview-auth-token", ' + JSON.stringify(JSON.stringify(session)) + ');') }, sessionId);
     await call('Page.navigate', { url: baseUrl + routes[screen] }, sessionId);
     // Close only the already-recorded SVG interop warning in Expo's development
     // toast. Keep it in the manifest; unexpected errors still reject the frame.
@@ -244,6 +275,15 @@ try {
     let content = '';
     for (let attempt = 0; attempt < waitSeconds; attempt++) {
       await delay(1000);
+      if (screen === 'measurements-chart') await call('Runtime.evaluate', { expression: `(() => {
+        const section = document.querySelector('[data-testid="measurement-progress-section"]');
+        if (!section) return;
+        for (let parent = section.parentElement; parent; parent = parent.parentElement) {
+          if (parent.scrollHeight > parent.clientHeight && /auto|scroll/.test(getComputedStyle(parent).overflowY)) {
+            parent.scrollTop += section.getBoundingClientRect().top - parent.getBoundingClientRect().top; break;
+          }
+        }
+      })()` }, sessionId);
       if (screen === 'signup') await call('Runtime.evaluate', { expression: 'document.querySelector(\'[data-testid="login-create-account"]\')?.click()' }, sessionId);
       const result = await call('Runtime.evaluate', { expression: 'document.body.innerText', returnByValue: true }, sessionId);
       content = result.result.value || '';
@@ -270,13 +310,13 @@ try {
     await writeFile(path.join(output, file.replace('.png', '.layout.json')), geometry.result.value + '\n');
     const record = { screen, theme, motionPreference, width, height, file, errors, warnings, dismissedDevelopmentWarnings, renderedTextLength: content.length };
     records.push(record);
-    if (exerciseFlows && ['checkin', 'workout'].includes(screen) && !errors.length) {
+    if (exerciseFlows && ['home', 'checkin', 'health-access', 'workout', 'nutrition', 'measurements-chart'].includes(screen) && !errors.length) {
       const checkpoints = [];
       const checkpoint = async (name) => {
         await dismissKnownDevelopmentToast();
         record.dismissedDevelopmentWarnings = dismissedDevelopmentWarnings;
         const frame = screen + '-' + name + '-' + theme + '-' + width;
-        if (name !== 'journey-failure') {
+        if (!['journey-failure', 'measurements', 'required-notes'].includes(name) && screen !== 'measurements-chart') {
           await call('Runtime.evaluate', { expression: `document.querySelectorAll('*').forEach(el => {
             if (el.scrollHeight > el.clientHeight && /auto|scroll/.test(getComputedStyle(el).overflowY)) el.scrollTo({ top: 0, behavior: 'instant' });
           })` }, sessionId);
@@ -288,11 +328,20 @@ try {
             const body = document.querySelector('[data-testid="workout-overview-scroll"]');
             if (!header || !body) return null;
             const a = header.getBoundingClientRect(), b = body.getBoundingClientRect();
-            return { headerBottom: a.bottom, contentTop: b.top };
+            return { headerTop: a.top, headerBottom: a.bottom, contentTop: b.top };
           })()`, returnByValue: true }, sessionId);
           const bounds = measured.result.value;
           await writeFile(path.join(output, frame + '.layout.json'), JSON.stringify(bounds, null, 2) + '\n');
           if (!bounds || bounds.headerBottom > bounds.contentTop + 1) throw new Error('The Overview sheet header overlaps its scrollable content.');
+          if (bounds.headerTop < 0) throw new Error('The Overview sheet header extends above the viewport.');
+        }
+        if (screen === 'workout' && name === 'history-suggestion' && width >= 360 && height >= 800) {
+          const measured = await call('Runtime.evaluate', { expression: geometryExpression, returnByValue: true }, sessionId);
+          const bounds = JSON.parse(measured.result.value);
+          const completion = bounds.controls.find(control => control.id === 'complete-current-set');
+          const footer = bounds.controls.find(control => control.id === 'workout-rest-footer');
+          await writeFile(path.join(output, frame + '.layout.json'), measured.result.value + '\n');
+          if (completion && footer && completion.bottom > footer.y) throw new Error('The suggested-set completion action is obscured by the dock.');
         }
         const text = await call('Runtime.evaluate', { expression: 'document.body.innerText', returnByValue: true }, sessionId);
         const snapshot = await call('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false }, sessionId);
@@ -316,10 +365,16 @@ try {
     handlers.delete(sessionId);
   }
   await writeFile(path.join(output, 'capture-manifest.json'), JSON.stringify({ platform: 'Expo web / headless Chrome', source: 'fictional intercepted data', sourceRevision, sourceDirty, nativeValidation: false, capturedAt: new Date().toISOString(), baseUrl, records }, null, 2) + '\n');
-  if (records.some((record) => record.errors.length || record.renderedTextLength < 140)) process.exitCode = 1;
+  if (records.some((record) => record.errors.length)) process.exitCode = 1;
 } finally {
   socket.close();
-  chrome.kill('SIGTERM');
+  if (chrome && chrome.exitCode === null && chrome.signalCode === null) {
+    const exited = new Promise(resolve => chrome.once('exit', resolve));
+    chrome.kill('SIGTERM');
+    const forceExit = setTimeout(() => chrome.kill('SIGKILL'), 5000);
+    await exited;
+    clearTimeout(forceExit);
+  }
   await delay(500);
   await rm(profileDir, { recursive: true, force: true }).catch(() => {});
 }

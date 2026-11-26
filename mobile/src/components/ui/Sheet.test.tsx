@@ -142,7 +142,7 @@ describe('Sheet', () => {
     const closeStyle = getByLabelText('Close Exercise details').props.style;
     expect(StyleSheet.flatten(typeof closeStyle === 'function' ? closeStyle({ pressed: false }) : closeStyle)).toMatchObject({ minWidth: 44, minHeight: 44 });
     expect(StyleSheet.flatten(getByTestId('sheet-content').props.style)).toMatchObject({ paddingBottom: 34 });
-    expect(mockModalProps).toMatchObject({ enableDynamicSizing: false, snapPoints: ['85%'] });
+    expect(mockModalProps).toMatchObject({ enableDynamicSizing: false, snapPoints: ['65%', '90%'] });
   });
 
   it('waits for presentation before moving accessibility focus to its title once', () => {
@@ -204,6 +204,7 @@ describe('Sheet', () => {
       expect(renderer!.root.findByProps({ accessibilityRole: 'header' }).props.tabIndex).toBe(-1);
       act(() => mockModalOnChange?.(1));
       expect(titleFocus).toHaveBeenCalledTimes(1);
+      expect(titleFocus).toHaveBeenCalledWith({ preventScroll: true });
 
       act(() => {
         renderer!.update(
@@ -215,6 +216,7 @@ describe('Sheet', () => {
       act(() => (mockModalProps.onDismiss as (() => void) | undefined)?.());
 
       expect(triggerFocus).toHaveBeenCalledTimes(1);
+      expect(triggerFocus).toHaveBeenCalledWith({ preventScroll: true });
       expect(mockFindNodeHandle).not.toHaveBeenCalled();
     } finally {
       mockFindNodeHandle.mockImplementation(() => 42);
@@ -464,4 +466,15 @@ describe('Sheet', () => {
     expect(mockHardwareBackHandler?.()).toBe(true);
     expect(onClose).not.toHaveBeenCalled();
   });
+});
+
+
+it('fits a short choice and gives a long editor expandable detents', () => {
+  mockSafeAreaInsets.mockReturnValue({ top: 47, right: 0, bottom: 34, left: 0 });
+  let renderer!: ReturnType<typeof create>;
+  act(() => { renderer = create(<Sheet role="choice" title="Keep your answers?" visible onClose={jest.fn()}><Text>Save or keep editing</Text></Sheet>); });
+  expect(mockModalProps.enableDynamicSizing).toBe(true);
+  act(() => renderer.update(<Sheet role="editor" title="Measurements" visible onClose={jest.fn()}><Text>Fields</Text></Sheet>));
+  expect(mockModalProps.enableDynamicSizing).toBe(false);
+  expect(mockModalProps.snapPoints).toEqual(['85%', '95%']);
 });

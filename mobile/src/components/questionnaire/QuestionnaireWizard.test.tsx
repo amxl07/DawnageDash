@@ -10,8 +10,10 @@ const mockQuestionnaireRead = jest.fn(async () => ({
   data: null as Record<string, unknown> | null,
   error: null as Error | null,
 }));
-const mockUpdateEq = jest.fn(async () => ({ error: null as Error | null }));
-const mockUpdate = jest.fn(() => ({ eq: mockUpdateEq }));
+const mockProfileRead = jest.fn(async () => ({ data: null as Record<string, unknown> | null, error: null }));
+const mockSummary = jest.fn(() => null);
+const mockUpdateEq = jest.fn(async (..._args: unknown[]) => ({ error: null as Error | null }));
+const mockUpdate = jest.fn((..._args: unknown[]) => ({ eq: mockUpdateEq }));
 let mockMotionEnabled = false;
 const mockPositionRead = jest.fn(async () => null as string | null);
 const mockPositionWrite = jest.fn(async () => undefined);
@@ -29,6 +31,7 @@ jest.mock('@/contexts/AuthContext', () => ({
 }));
 
 jest.mock('@/lib/questionnaire-data', () => ({
+  ...jest.requireActual('@/lib/questionnaire-data'),
   questionnaireSections: [
     {
       id: 'identity',
@@ -47,12 +50,16 @@ jest.mock('@/lib/questionnaire-data', () => ({
 
 jest.mock('@/lib/supabase', () => ({
   supabase: {
-    from: () => ({
+    from: (table: string) => table === 'users' ? { select: () => ({ eq: () => ({ maybeSingle: mockProfileRead }) }) } : ({
       select: () => ({
         eq: () => ({ maybeSingle: mockQuestionnaireRead }),
       }),
-      insert: mockInsert,
-      update: mockUpdate,
+      insert: (payload: Record<string,unknown>) => ({ select: () => ({ maybeSingle: async () => ({...await mockInsert(),data:payload}) }) }),
+      update: (payload: Record<string,unknown>) => {
+        mockUpdate(payload);
+        const query: any = {eq:(field:string,value:string)=>{mockUpdateEq(field,value);return query;},is:()=>query,select:()=>query,maybeSingle:async()=>({error:null,data:{id:'assessment-1',...payload}})};
+        return query;
+      },
     }),
   },
 }));
@@ -109,7 +116,7 @@ jest.mock('./QuestionField', () => {
   };
 });
 
-jest.mock('./QuestionnaireSummary', () => ({ QuestionnaireSummary: () => null }));
+jest.mock('./QuestionnaireSummary', () => ({ QuestionnaireSummary: (props: unknown) => (mockSummary as jest.Mock)(props) }));
 
 async function renderWizard(props: React.ComponentProps<typeof QuestionnaireWizard> = {}) {
   let renderer!: ReturnType<typeof create>;
@@ -127,8 +134,21 @@ describe('QuestionnaireWizard motion preference', () => {
     mockMotionEnabled = false;
     mockPositionRead.mockResolvedValue(null);
     mockQuestionnaireRead.mockResolvedValue({ data: null, error: null });
+    mockProfileRead.mockResolvedValue({ data: null, error: null });
     mockInsert.mockResolvedValue({ error: null });
     mockUpdateEq.mockResolvedValue({ error: null });
+  });
+
+  it('shows only acknowledged answers when opening a completed assessment with unsaved Profile suggestions', async () => {
+    const saved = { q14: 'Recorded goal', q60: 'Historical answer', future: { retained: true } };
+    mockQuestionnaireRead.mockResolvedValue({ data: { id: 'assessment-1', answers: JSON.stringify(saved), completed_sections: '["identity","goals"]', status: 'completed' }, error: null });
+    mockProfileRead.mockResolvedValue({ data: { full_name: 'Suggested name', profile_data: { injuries: 'Suggested injury' } }, error: null });
+    const renderer = await renderWizard();
+    expect(mockSummary).toHaveBeenCalled();
+    expect((mockSummary as jest.Mock).mock.calls.at(-1)[0].answers).toEqual(saved);
+    expect(mockInsert).not.toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
+    act(() => renderer.unmount());
   });
 
   it('uses non-animated validation and section scrolling with Reduced Motion', async () => {
@@ -252,7 +272,7 @@ describe('QuestionnaireWizard motion preference', () => {
 
     expect(mockUpdate).toHaveBeenCalledWith({
       user_id: 'user-1',
-      answers: JSON.stringify({ q14: 'latest Profile value', q77: 'keep me' }),
+      answers: JSON.stringify({ q14: 'latest Profile value', q77: 'keep me', __assessment_catalog_version: 2 }),
       completed_sections: JSON.stringify(['identity', 'goals']),
       status: 'completed',
     });

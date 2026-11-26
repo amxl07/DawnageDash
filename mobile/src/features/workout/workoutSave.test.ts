@@ -9,6 +9,7 @@ import {
   applyWorkoutEdit,
   attachPersistedWorkoutId,
   finalizeWorkoutSave,
+  serializeWorkoutExercises,
   runDraftMutationBeforeExit,
   releaseWorkoutSave,
 } from './workoutSave';
@@ -24,6 +25,18 @@ function deferred() {
 }
 
 describe('workout save integrity', () => {
+  it('keeps local explicit-field metadata out of persisted workout content', () => {
+    const content = serializeWorkoutExercises([{
+      id: 'pushup', name: 'Push-up', tracking: 'weight-reps',
+      sets: [{ id: 'pushup-1', weight: '', reps: '10', rpe: '', duration: '', kind: 'work', completed: true, explicitFields: ['weight'] }],
+    }], null);
+
+    expect(content).not.toContain('explicitFields');
+    expect(JSON.parse(content).exercises[0].sets[0]).toEqual({
+      weight: '', reps: '10', rpe: '', kind: 'work', completed: true, setNumber: 1,
+    });
+  });
+
   it('does not exit when a requested draft mutation is not durable', async () => {
     const exit = jest.fn();
 
@@ -66,6 +79,27 @@ describe('workout save integrity', () => {
     expect(next.generation).toBe(4);
     expect(next.state.title).toBe('Latest title');
     expect(next.state.isDirty).toBe(true);
+  });
+
+  it('keeps the owned snapshot identity and generation when the reducer rejects an edit', () => {
+    const current = {
+      generation: 3,
+      state: {
+        ...initialWorkoutState,
+        exercises: [{
+          id: 'bench', name: 'Bench', tracking: 'weight-reps' as const,
+          sets: [{ id: 'bench-1', weight: '60', reps: '', rpe: '', duration: '', kind: 'work' as const, completed: false, explicitFields: ['reps' as const] }],
+        }],
+      },
+    };
+
+    const next = applyWorkoutEdit(current, {
+      type: 'COMPLETE_SET',
+      payload: { exerciseIndex: 0, setIndex: 0, suggestion: { reps: '8' } },
+    });
+
+    expect(next).toBe(current);
+    expect(next.generation).toBe(3);
   });
 
   it('keeps a user-initiated plan-day switch dirty even though initial seeding is clean', () => {

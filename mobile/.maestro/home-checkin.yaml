@@ -2,37 +2,54 @@ appId: ${DAWNAGE_E2E_APP_ID}
 name: Daily record restores an acknowledged draft
 ---
 - runFlow: helpers/sign-in.yaml
-- tapOn: "Check in for today"
-- assertVisible: "Daily Record"
+- tapOn: "Check in for today.*"
+- tapOn:
+    id: "checkin-start"
+- assertVisible: "Close check-in"
+- runFlow:
+    when:
+      visible: "Enter kg"
+    commands:
+      - tapOn: "Enter kg"
+      - inputText: "72.4"
+      - hideKeyboard
+- scrollUntilVisible:
+    element: "8 h"
+    direction: DOWN
+- tapOn: "8 h"
 - scrollUntilVisible:
     element:
       id: "checkin-energy-rating-5"
     direction: DOWN
 - tapOn:
     id: "checkin-energy-rating-5"
+- tapOn:
+    id: "checkin-next"
+- assertVisible: "Your day"
 - scrollUntilVisible:
     element:
       id: "checkin-stress-rating-5"
     direction: DOWN
 - tapOn:
     id: "checkin-stress-rating-5"
-- tapOn:
-    id: "checkin-next"
-- assertVisible: "Sleep"
-- tapOn: "8 h"
 - scrollUntilVisible:
-    element: "Daily Record"
+    element: "Close check-in"
     direction: UP
 - extendedWaitUntil:
     visible: "Saved on this device"
     timeout: 10000
+- tapOn: "Close check-in"
 - tapOn: "Home, your dashboard"
-- tapOn: "Check in for today"
-- assertVisible: "Daily Record"
-- assertVisible: "Sleep"
+- tapOn: "Check in for today.*"
+- tapOn:
+    id: "checkin-start"
+- assertVisible: "Close check-in"
+- assertVisible: "Your day"
 - stopApp
 - launchApp
-- tapOn: "Check in for today"
-- assertVisible: "Daily Record"
-- assertVisible: "Sleep"
+- tapOn: "Check in for today.*"
+- tapOn:
+    id: "checkin-start"
+- assertVisible: "Close check-in"
+- assertVisible: "Your day"
 - assertVisible: "Saved on this device"

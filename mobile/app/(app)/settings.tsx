@@ -8,8 +8,6 @@ import { Button, Card, OptionRow, PageHeader, Screen, Sheet, Text } from '@/comp
 import {
   DEFAULT_SETTINGS,
   applyReminderSettings,
-  DAILY_ID,
-  WEEKLY_ID,
   hasPermission,
   listScheduled,
   loadSettings,
@@ -42,7 +40,6 @@ export default function SettingsScreen() {
   const [showExplainer, setShowExplainer] = useState<null | 'daily' | 'weekly'>(null);
   const [picker, setPicker] = useState<null | 'daily' | 'weekly'>(null);
   const [dayPicker, setDayPicker] = useState(false);
-  const [scheduledCount, setScheduledCount] = useState<number | null>(null);
   const [scheduled, setScheduled] = useState<Awaited<ReturnType<typeof listScheduled>> | null>(null);
   const [reminderError, setReminderError] = useState<string | null>(null);
   const [unavailable, setUnavailable] = useState(!remindersAvailable());
@@ -65,12 +62,11 @@ export default function SettingsScreen() {
       if (generation !== refreshGeneration.current) return;
       if (schedule.status === 'fulfilled') {
         setScheduled(schedule.value);
-        setScheduledCount(schedule.value.filter((item) => item.identifier === DAILY_ID || item.identifier === WEEKLY_ID).length);
-      } else { setScheduled(null); setScheduledCount(null); }
+      } else { setScheduled(null); }
       if (permission.status === 'fulfilled') {
         setPermissionGranted(permission.value);
         if (permission.value) setPermissionDenied(false);
-      } else { setPermissionGranted(null); setScheduled(null); setScheduledCount(null); }
+      } else { setPermissionGranted(null); setScheduled(null); }
     })();
   }, []);
 
@@ -114,7 +110,11 @@ export default function SettingsScreen() {
   };
 
   const toggle = (which: 'daily' | 'weekly', value: boolean) => {
-    if (value) setShowExplainer(which);
+    if (value) {
+      if (permissionGranted === true) {
+        void persist(which === 'daily' ? { ...settings, dailyEnabled: true } : { ...settings, weeklyEnabled: true });
+      } else setShowExplainer(which);
+    }
     else
       void persist(
         which === 'daily'
@@ -130,7 +130,7 @@ export default function SettingsScreen() {
 
         <Card style={{ gap: spacing.base }}>
           <Text variant="h2">Reminders</Text>
-          <Text variant="bodySm" tone="muted">Optional prompts, scheduled in this device’s local time.</Text>
+          <Text variant="bodySm" tone="muted">Times follow your device timezone.</Text>
           {unavailable ? <Text variant="bodySm" tone="muted">Reminders aren’t available in this preview. Set them up on your device.</Text> : null}
           {reminderError ? <Text variant="bodySm" tone="destructive" accessibilityLiveRegion="polite">{reminderError}</Text> : null}
           {reminderError || delivery.daily === 'pending' || delivery.weekly === 'pending' ? <Button label="Retry reminder setup" variant="secondary" loading={busy} onPress={() => { void loadSettings().then((saved) => { setSettings(saved); setLoaded(true); setReminderError(null); if (loaded) return persist(saved); refreshScheduled(); }).catch(() => setReminderError('Saved preferences are still unavailable. Please try again.')); }} /> : null}
@@ -142,7 +142,7 @@ export default function SettingsScreen() {
               <Text variant="bodySm" tone="muted" numeric>
                 {settings.dailyEnabled ? (delivery.daily === 'scheduled' ? '' : 'Requested: ') + fmtTime(settings.dailyHour, settings.dailyMinute) : 'Off'}
               </Text>
-              <Text variant="caption" tone="muted">{delivery.daily === 'scheduled' ? 'Scheduled on this device' : delivery.daily === 'pending' ? 'Device schedule needs updating' : delivery.daily === 'unavailable' ? 'Device schedule unavailable' : 'No daily reminder scheduled'}</Text>
+              {delivery.daily === 'pending' || delivery.daily === 'unavailable' ? <Text variant="bodySm" tone="muted" accessibilityLiveRegion="polite">{delivery.daily === 'pending' ? 'Device schedule needs updating' : 'Device schedule unavailable'}</Text> : null}
             </View>
             <Switch
               value={dailySwitchEnabled}
@@ -160,7 +160,9 @@ export default function SettingsScreen() {
             />
           </View>
           {settings.dailyEnabled ? (
-            <Button label="Change time" variant="secondary" onPress={() => setPicker('daily')} />
+            Platform.OS === 'ios' ? <CompactReminderTime label="Daily reminder time" hour={settings.dailyHour} minute={settings.dailyMinute} disabled={busy || unavailable || !loaded}
+              onChange={(dailyHour, dailyMinute) => { void persist({ ...settings, dailyHour, dailyMinute }); }} /> :
+            <Button label="Change time" variant="secondary" disabled={busy || unavailable || !loaded} onPress={() => setPicker('daily')} />
           ) : null}
 
           <View
@@ -180,7 +182,7 @@ export default function SettingsScreen() {
                   ? `${delivery.weekly === 'scheduled' ? '' : 'Requested: '}${WEEKDAYS[settings.weeklyWeekday - 1]}, ${fmtTime(settings.weeklyHour, settings.weeklyMinute)}`
                   : 'Off'}
               </Text>
-              <Text variant="caption" tone="muted">{delivery.weekly === 'scheduled' ? 'Scheduled on this device' : delivery.weekly === 'pending' ? 'Device schedule needs updating' : delivery.weekly === 'unavailable' ? 'Device schedule unavailable' : 'No weekly reminder scheduled'}</Text>
+              {delivery.weekly === 'pending' || delivery.weekly === 'unavailable' ? <Text variant="bodySm" tone="muted" accessibilityLiveRegion="polite">{delivery.weekly === 'pending' ? 'Device schedule needs updating' : 'Device schedule unavailable'}</Text> : null}
             </View>
             <Switch
               value={weeklySwitchEnabled}
@@ -199,8 +201,10 @@ export default function SettingsScreen() {
           </View>
           {settings.weeklyEnabled ? (
             <View style={{ gap: spacing.sm }}>
-              <Button label="Change day" variant="secondary" onPress={() => setDayPicker(true)} />
-              <Button label="Change time" variant="secondary" onPress={() => setPicker('weekly')} />
+              <Button label="Change day" variant="text" disabled={busy || unavailable || !loaded} onPress={() => setDayPicker(true)} />
+              {Platform.OS === 'ios' ? <CompactReminderTime label="Weekly reminder time" hour={settings.weeklyHour} minute={settings.weeklyMinute} disabled={busy || unavailable || !loaded}
+                onChange={(weeklyHour, weeklyMinute) => { void persist({ ...settings, weeklyHour, weeklyMinute }); }} /> :
+              <Button label="Change time" variant="secondary" disabled={busy || unavailable || !loaded} onPress={() => setPicker('weekly')} />}
             </View>
           ) : null}
 
@@ -217,9 +221,6 @@ export default function SettingsScreen() {
             </View>
           ) : null}
 
-          <Text variant="bodySm" tone="muted" numeric>
-            {scheduledCount === null ? 'Schedule status unavailable.' : scheduledCount + ' ' + (scheduledCount === 1 ? 'reminder' : 'reminders') + ' scheduled on this device.'}
-          </Text>
         </Card>
 
         <Card style={{ gap: spacing.base }}>
@@ -242,11 +243,10 @@ export default function SettingsScreen() {
       </View>
 
       {/* Contextual pre-permission explainer, shown BEFORE the OS prompt. */}
-      <Sheet
+      <Sheet role="choice"
         visible={showExplainer !== null}
         onClose={() => setShowExplainer(null)}
         title="Turn on reminders?"
-        heightRatio={0.45}
       >
         <View style={{ padding: spacing.base, gap: spacing.base }}>
           <Bell size={iconSize.xl} color={colors.primary} strokeWidth={2} accessible={false} />
@@ -267,11 +267,10 @@ export default function SettingsScreen() {
         </View>
       </Sheet>
 
-      <Sheet
+      <Sheet role="choice"
         visible={dayPicker}
         onClose={() => setDayPicker(false)}
         title="Which day?"
-        heightRatio={0.7}
       >
         <View style={{ padding: spacing.base, gap: spacing.sm }}>
           {WEEKDAYS.map((d, i) => (
@@ -320,4 +319,17 @@ export default function SettingsScreen() {
       ) : null}
     </Screen>
   );
+}
+
+
+function CompactReminderTime({ label, hour, minute, disabled, onChange }: {
+  label: string; hour: number; minute: number; disabled: boolean; onChange: (hour: number, minute: number) => void;
+}) {
+  const value = new Date();
+  value.setHours(hour, minute, 0, 0);
+  return <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: spacing.sm }}>
+    <Text variant="bodySm" tone="muted">Time</Text>
+    <DateTimePicker mode="time" display="compact" value={value} disabled={disabled} accessibilityLabel={label}
+      onChange={(event, selected) => { if (event.type === 'set' && selected && !disabled) onChange(selected.getHours(), selected.getMinutes()); }} />
+  </View>;
 }

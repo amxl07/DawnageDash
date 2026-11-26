@@ -28,7 +28,11 @@ it('rejects unconfigured or fictional production cloud builds without printing c
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'fictional-key';
   expect(() => appConfig(context)).toThrow('Configure the production Supabase');
   process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://project.supabase.co';
+  delete process.env.EXPO_PUBLIC_PRIVACY_URL;
+  expect(() => appConfig(context)).toThrow('EXPO_PUBLIC_PRIVACY_URL');
+  process.env.EXPO_PUBLIC_PRIVACY_URL = 'https://dashboard.example/privacy';
   expect(appConfig(context).name).toBe('Dawnage');
+  delete process.env.EXPO_PUBLIC_PRIVACY_URL;
 });
 it('rejects a preview cloud build without its backend configuration', () => {
   process.env.APP_VARIANT = 'preview';

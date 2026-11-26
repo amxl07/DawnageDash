@@ -1,8 +1,11 @@
+import { HIT_SLOP_MIN } from '@/theme/tokens';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BottomTabBarHeightContext } from 'expo-router/js-tabs';
-import { useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Pressable, View, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+import { SwitchRow } from '@/components/ui/SwitchRow';
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Button, Text } from '@/components/ui';
 import { DisclosureChevron } from '@/components/ui/DisclosureChevron';
 import { radius, spacing, useTheme } from '@/theme';
@@ -39,8 +42,6 @@ export function useRestPreference(userId: string) {
 export function WorkoutRestFooter({ children, onHeightChange }: { children: ReactNode; onHeightChange?: (height: number) => void }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useContext(BottomTabBarHeightContext) ?? 0;
-  const clearsOverlayTabBar = process.env.EXPO_OS === 'ios' && tabBarHeight > 0;
   const lastHeight = useRef(0);
   const heightChangeRef = useRef(onHeightChange);
   heightChangeRef.current = onHeightChange;
@@ -51,7 +52,7 @@ export function WorkoutRestFooter({ children, onHeightChange }: { children: Reac
     lastHeight.current = height;
     onHeightChange?.(height);
   };
-  return <View testID="workout-rest-footer" onLayout={handleLayout} style={{ position: 'absolute', left: 0, right: 0, bottom: clearsOverlayTabBar ? tabBarHeight : 0, paddingHorizontal: spacing.base, paddingTop: spacing.sm, paddingBottom: (clearsOverlayTabBar ? 0 : insets.bottom) + spacing.sm, backgroundColor: colors.card, borderTopWidth: 1, borderTopColor: colors.border }}>
+  return <View testID="workout-rest-footer" onLayout={handleLayout} style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: spacing.base, paddingTop: spacing.sm, paddingBottom: insets.bottom + spacing.sm, backgroundColor: colors.card, borderTopWidth: 1, borderTopColor: colors.border }}>
     {children}
   </View>;
 }
@@ -65,6 +66,7 @@ export function RestDock({ prescribedSeconds, preference, onPreferenceChange, pr
 }) {
   const { colors } = useTheme();
   const timer = useRestTimer();
+  const { isCompact } = useResponsiveLayout();
   const [expanded, setExpanded] = useState(false);
   const prescribed = prescribedSeconds && Number.isFinite(prescribedSeconds) && prescribedSeconds > 0 ? prescribedSeconds : null;
   const seconds = prescribed ?? preference.seconds;
@@ -72,8 +74,8 @@ export function RestDock({ prescribedSeconds, preference, onPreferenceChange, pr
   const mmss = `${Math.floor(timer.remaining / 60)}:${String(timer.remaining % 60).padStart(2, '0')}`;
   return <View testID="rest-dock" style={{ gap: spacing.xs }}>
     <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm }}>
-      <View style={{ flex: 1, gap: spacing.xs }}>
-        <Text variant="overline" tone={active ? 'primary' : 'muted'}>Rest</Text>
+      <View style={{ flex: 1, minWidth: isCompact ? 120 : 100, gap: spacing.xs }}>
+        {active ? <Text variant="overline" tone="primary">Rest</Text> : null}
         <Text variant={active ? 'h2' : 'bodySm'} numeric accessibilityLabel={active ? `Rest ${timer.paused ? 'paused' : 'running'}, ${timer.remaining} seconds remaining` : timer.complete ? 'Rest finished' : 'Rest timer ready'}>
           {active ? `${mmss}${timer.paused ? ' · paused' : ''}` : timer.complete ? 'Rest finished' : 'Rest after each set'}
         </Text>
@@ -90,9 +92,8 @@ export function RestDock({ prescribedSeconds, preference, onPreferenceChange, pr
     </View> : null}
     {expanded ? <View style={{ gap: spacing.sm }}>
       <Text variant="bodySm" tone="muted">{prescribed ? `Prescribed rest · ${prescribed} seconds` : preference.seconds ? `Your rest choice · ${preference.seconds} seconds` : 'Choose your rest duration.'}</Text>
-      {!prescribed ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>{REST_PRESETS.map((duration) => <Button key={duration} label={`${duration}s`} variant="secondary" onPress={() => onPreferenceChange({ ...preference, seconds: duration })} />)}</View> : null}
-      <Button label={preference.autoStart ? 'Auto-start after a set: on' : 'Auto-start after a set: off'} variant="secondary" onPress={() => onPreferenceChange({ ...preference, autoStart: !preference.autoStart })} />
-      <Text variant="bodySm" tone="muted">Rest uses your device clock, including time in the background. Changing that clock changes the countdown.</Text>
+      {!prescribed ? <SegmentedControl label="Rest duration" value={String(preference.seconds ?? '')} segments={REST_PRESETS.map((duration) => ({ value: String(duration), label: `${duration}s` }))} onChange={(duration) => onPreferenceChange({ ...preference, seconds: Number(duration) })} /> : null}
+      <SwitchRow label="Auto-start after a set" value={preference.autoStart} onValueChange={(autoStart) => onPreferenceChange({ ...preference, autoStart })} />
     </View> : null}
     {preferenceError ? <Text variant="bodySm" tone="destructive">{preferenceError}</Text> : null}
   </View>;
@@ -100,5 +101,5 @@ export function RestDock({ prescribedSeconds, preference, onPreferenceChange, pr
 
 function RestAction({ label, accessibilityLabel, onPress }: { label: string; accessibilityLabel: string; onPress: () => void }) {
   const { colors } = useTheme();
-  return <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress} style={({ pressed }) => ({ minHeight: 44, minWidth: 44, paddingHorizontal: spacing.xs, justifyContent: 'center', borderRadius: radius.sm, backgroundColor: pressed ? colors.primarySoft : 'transparent' })}><Text variant="bodySm" tone="primary">{label}</Text></Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress} style={({ pressed }) => ({ minHeight: HIT_SLOP_MIN, minWidth: HIT_SLOP_MIN, paddingHorizontal: spacing.xs, justifyContent: 'center', borderRadius: radius.sm, backgroundColor: pressed ? colors.primarySoft : 'transparent' })}><Text variant="bodySm" tone="primary">{label}</Text></Pressable>;
 }

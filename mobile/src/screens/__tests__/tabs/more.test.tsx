@@ -13,10 +13,12 @@ jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
 jest.mock('expo-image', () => ({ Image: 'ExpoImage' }));
 jest.mock('lucide-react-native', () => ({
   Camera: () => null,
+  FileText: () => null,
   LogOut: () => null,
   MessageSquareText: () => null,
   Ruler: () => null,
   Settings: () => null,
+  Trash2: () => null,
   User: () => null,
   UserRound: () => null,
 }));
@@ -44,6 +46,9 @@ jest.mock('@/components/ui', () => ({
 jest.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({ signOut: jest.fn() }),
 }));
+jest.mock('@/features/account/deleteAccount', () => ({ deleteAccount: jest.fn() }));
+jest.mock('@/lib/env', () => ({ privacyPolicyUrl: 'https://example.invalid/privacy' }));
+jest.mock('expo-web-browser', () => ({ openBrowserAsync: jest.fn() }));
 jest.mock('@/hooks/useCoach', () => ({
   useCoach: () => ({ data: { kind: 'unassigned' } }),
   coachInitials: () => '—',
@@ -86,18 +91,20 @@ describe('MoreScreen', () => {
       .map((node: { props: { children?: React.ReactNode } }) => node.props.children);
 
     expect(visibleOrder).toEqual([
-      'More',
+      'You',
       'Coach status',
       'No coach assigned yet',
       'Coaching',
-      'Weekly feedback',
+      'Weekly check-in',
       'Progress',
       'Measurements',
       'Progress photos',
       'Account',
       'Profile',
       'Settings',
+      'Privacy policy',
       'Sign out',
+      'Delete account',
     ]);
     expect(
       renderer.root.findByProps({ accessibilityLabel: 'Coach status: No coach assigned yet' }),
@@ -116,7 +123,7 @@ describe('MoreScreen', () => {
   it('routes every goal row to its supported destination', () => {
     const renderer = renderScreen();
     const routes = [
-      ['Weekly feedback', '/(app)/weekly-feedback'],
+      ['Weekly check-in', '/(app)/weekly-feedback'],
       ['Measurements', '/(app)/measurements'],
       ['Progress photos', '/(app)/media'],
       ['Profile', '/(app)/profile'],

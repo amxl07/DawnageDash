@@ -1,6 +1,6 @@
 import { act, create } from 'react-test-renderer';
 
-import LogsAlias from '../../../../app/(app)/(tabs)/logs';
+import LogsAlias from '../../../../app/(app)/logs';
 
 const mockParams = {
   date: '2026-09-10',

@@ -13,6 +13,8 @@ export type RecordDay = {
   state: 'absent' | 'draft' | 'queued' | 'synced' | 'blocked';
 };
 
+export type HomeWorkoutRecord = { id: string; date: string; content: unknown };
+
 export type HomeData = {
   profile: HomeSection<UserProfile | null>;
   checkIns: HomeSection<DailyCheckIn[]>;
@@ -21,6 +23,7 @@ export type HomeData = {
   coach: HomeSection<CoachLookup>;
   assessment: HomeSection<{ completed: number; total: number }>;
   loggedPlanDays: HomeSection<number[]>;
+  workouts: HomeSection<HomeWorkoutRecord[]>;
   refresh: () => void;
   refreshing: boolean;
 };

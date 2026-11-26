@@ -1,10 +1,11 @@
+import { HIT_SLOP_MIN } from '@/theme/tokens';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { format } from 'date-fns';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Linking, Pressable, View } from 'react-native';
 
-import { Button, Card, Sheet, SheetScrollView, StatusPill, Text } from '@/components/ui';
+import { Button, Sheet, SheetScrollView, StatusPill, Text } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   usePhotoMutation,
@@ -47,6 +48,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
   const [failedPersistence, setFailedPersistence] = useState<PhotoPayload | null>(null);
   const [interactionLocked, setInteractionLocked] = useState(false);
   const slotsRef = useRef(slots);
+  const acknowledgedPhotosRef = useRef(false);
   const failedPersistenceRef = useRef<PhotoPayload | null>(null);
   const sessionRef = useRef(0);
   const operationRef = useRef(0);
@@ -95,6 +97,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
       next.side_left.url = existing.side_left_url;
       next.side_right.url = existing.side_right_url;
     }
+    acknowledgedPhotosRef.current = Object.values(next).some((slot) => slot.url !== null);
     slotsRef.current = next;
     setSlots(next);
     setDirty(false);
@@ -217,7 +220,9 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
       closeSession();
       return;
     }
-    Alert.alert('Discard photo changes?', 'Selected photos have not been saved.', [
+    Alert.alert('Discard photo changes?', acknowledgedPhotosRef.current
+      ? 'Saved photos will stay saved. Unsaved photo changes will be discarded.'
+      : 'These photo changes are not saved to your progress record. Discarding closes this editor without saving them.', [
       { text: 'Keep editing', style: 'cancel' },
       { text: 'Discard', style: 'destructive', onPress: closeSession },
     ]);
@@ -285,7 +290,9 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
   const persistPhotoReferences = async (operation: Operation, payload: PhotoPayload) => {
     if (!isCurrentOperation(operation)) return false;
     await mutation.mutateAsync(payload);
-    return isCurrentOperation(operation);
+    if (!isCurrentOperation(operation)) return false;
+    acknowledgedPhotosRef.current = [payload.front_url, payload.back_url, payload.side_left_url, payload.side_right_url].some(Boolean);
+    return true;
   };
 
   const save = async () => {
@@ -411,7 +418,6 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
 
   const uploading = Object.values(slots).some((s) => s.uploading);
   const saving = interactionLocked || mutation.isPending;
-  const filled = Object.values(slots).filter((s) => s.url || s.pendingUri).length;
 
   const ghostFor = (key: AngleKey): string | null => {
     if (!ghost) return null;
@@ -420,7 +426,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
   };
 
   return (
-    <Sheet
+    <Sheet role="editor"
       visible={visible}
       onClose={requestClose}
       title={`Photos · ${format(parseLocalDate(date), 'd MMM yyyy')}`}
@@ -428,7 +434,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
     >
       <SheetScrollView contentContainerStyle={{ padding: spacing.base, gap: spacing.base }}>
         <Text variant="bodySm" tone="muted">
-          Photos upload to Dawnage only after you tap Save photos. They are used for progress review with your coaching team. You can leave any angle empty and return later.
+          Photos upload when you tap Save photos or retry an upload, and are shared with your coaching team for progress review. Any angles are optional.
         </Text>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
@@ -444,7 +450,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
             accessibilityState={{ checked: showGuide }}
             hitSlop={8}
             style={({ pressed }) => ({
-              minHeight: 44,
+              minHeight: HIT_SLOP_MIN,
               justifyContent: 'center',
               borderRadius: spacing.xs,
               paddingHorizontal: spacing.xs,
@@ -489,14 +495,6 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
           ))}
         </View>
 
-        {filled < 4 ? (
-          <Card>
-            <Text variant="bodySm" tone="muted">
-              {filled} of 4 angles added. Partial sets are fine — you can come back and finish.
-            </Text>
-          </Card>
-        ) : null}
-
         {saveError ? (
           <Text variant="bodySm" tone="primary" accessibilityLiveRegion="polite">
             {saveError}
@@ -505,18 +503,7 @@ export function PhotoCaptureSheet({ visible, onClose, date, existing, ghost }: P
       </SheetScrollView>
 
       <View style={{ padding: spacing.base, gap: spacing.sm }}>
-        {saving || saveError ? (
-          <StatusPill
-            status={saving ? 'saving' : 'error'}
-            label={
-              saving
-                ? 'Saving photo set…'
-                : failedPersistence
-                  ? 'Photo set not saved'
-                  : 'Some photos need attention'
-            }
-          />
-        ) : null}
+        {saving ? <StatusPill status="saving" label="Saving photos…" /> : null}
         <Button
           label={uploading ? 'Uploading…' : failedPersistence ? 'Retry save' : 'Save photos'}
           onPress={failedPersistence ? retryPersistence : save}

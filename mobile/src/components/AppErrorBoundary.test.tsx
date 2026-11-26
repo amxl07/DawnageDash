@@ -5,6 +5,9 @@ import { reportScreenError } from '@/lib/telemetry';
 import { ThemeProvider } from '@/theme';
 import { AppErrorBoundary } from './AppErrorBoundary';
 
+// Exercise the React Native host contract here; the SwiftUI adapter has dedicated tests.
+jest.mock('@/components/ui/Button', () => ({ Button: jest.requireActual('@/components/ui/ButtonFallback').ButtonFallback }));
+
 jest.mock('@react-native-async-storage/async-storage', () => jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('@/lib/telemetry', () => ({ reportScreenError: jest.fn() }));
 

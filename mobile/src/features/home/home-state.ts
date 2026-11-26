@@ -22,7 +22,7 @@ export function prioritizedPending(records: PendingRecord[]): PendingRecord[] {
 
 export function pendingRecordRoute(record: PendingRecord): Href {
   return record.kind === 'check-in'
-    ? { pathname: '/(app)/(tabs)/check-in', params: { date: record.date } }
+    ? { pathname: '/(app)/daily-check-in', params: { date: record.date } }
     : { pathname: '/(app)/logger', params: { date: record.date, outboxId: record.id, ...(record.logId ? { logId: record.logId } : {}) } };
 }
 

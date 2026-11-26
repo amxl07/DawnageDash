@@ -63,8 +63,6 @@ export function SkeletonCard({ lines = 3 }: { lines?: number }) {
       style={{
         backgroundColor: colors.card,
         borderRadius: radius.card,
-        borderWidth: 1,
-        borderColor: colors.border,
         padding: spacing.base,
         gap: spacing.md,
       }}
