@@ -55,6 +55,8 @@ export default function CoachClientsPage() {
   useEffect(() => {
     if (!effectiveCoachId) return;
 
+    const keys = ["coach-client-checkins", "coach-clients", "coach-client-weekly", "coach-client-measurements", "coach-client-photos"];
+    let joined = false;
     const channel = supabase
       .channel('coach-clients-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_check_ins' }, () => {
@@ -72,7 +74,12 @@ export default function CoachClientsPage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'weekly_progress_photos' }, () => {
         queryClient.invalidateQueries({ queryKey: ["coach-client-photos"] });
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status !== 'SUBSCRIBED') return;
+        // Changes made while the socket was down (e.g. laptop asleep) were never delivered; refetch on rejoin.
+        if (joined) keys.forEach((k) => queryClient.invalidateQueries({ queryKey: [k] }));
+        joined = true;
+      });
 
     return () => {
       supabase.removeChannel(channel);

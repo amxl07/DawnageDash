@@ -7,8 +7,9 @@ const config = getDefaultConfig(__dirname);
 config.watchFolders = [...new Set([...config.watchFolders, path.resolve(__dirname, '../shared')])];
 const modules = fs.realpathSync(path.join(__dirname, 'node_modules'));
 config.resolver.useWatchman = false;
+// ../shared has no node_modules of its own; EAS and CI install only mobile/.
+config.resolver.nodeModulesPaths = [modules];
 if (modules !== path.join(__dirname, 'node_modules')) {
   config.watchFolders = [...config.watchFolders, modules];
-  config.resolver.nodeModulesPaths = [modules];
 }
 module.exports = config;

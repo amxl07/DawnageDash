@@ -1,0 +1,65 @@
+# Nightly encrypted database backup (the Supabase Free plan has none).
+# Setup (once): add repository secrets
+#   SUPABASE_DB_URL    Dashboard > Connect > "Session pooler" URI (port 5432; runners are IPv4-only), with the DB password filled in
+#   BACKUP_PASSPHRASE  a long random passphrase; keep a copy in your password manager, it is the only way to read a backup
+# Then Actions > Database backup > Run workflow, and check the artifact appears.
+# Restore: openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in FILE.enc | tar xz  (prompts for the passphrase),
+#   then load roles.sql, schema.sql, data.sql into a new project with psql (supabase.com/docs/guides/platform/migrating-within-supabase).
+# ponytail: database only, kept 14 days as a GitHub artifact. Photos (~0.9 GB) exceed the free artifact quota:
+#   add an rclone mirror to Backblaze B2 (see research_notes/free_plan_alternatives.md, Appendix A) when ready.
+name: Database backup
+on:
+  schedule:
+    - cron: '17 17 * * *' # 17:17 UTC = 03:17/04:17 Sydney; off the hour on purpose
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: Check secrets
+        run: |
+          if [ -z "$DB_URL" ] || [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "::warning::Backup skipped: add the SUPABASE_DB_URL and BACKUP_PASSPHRASE repository secrets."
+            echo "SKIP=1" >> "$GITHUB_ENV"
+          fi
+      - name: Dump roles, schema and data
+        if: env.SKIP != '1'
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/out" && cd "$RUNNER_TEMP/out"
+          npx -y supabase@2.95.4 db dump --db-url "$DB_URL" --role-only -f roles.sql
+          npx -y supabase@2.95.4 db dump --db-url "$DB_URL" -f schema.sql
+          npx -y supabase@2.95.4 db dump --db-url "$DB_URL" --data-only --use-copy -f data.sql
+          for f in roles.sql schema.sql data.sql; do test -s "$f"; done
+          grep -q 'COPY "auth"."users"' data.sql
+          grep -q 'COPY "public"\.' data.sql
+          ls -l
+      - name: Encrypt
+        if: env.SKIP != '1'
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          umask 077
+          F="dawnage-db-$(date -u +%Y-%m-%dT%H%MZ).tar.gz.enc"
+          tar -C out -czf - . | openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -pass env:BACKUP_PASSPHRASE -out "$F"
+          sha256sum "$F" > "$F.sha256"
+          rm -rf out
+      - uses: actions/upload-artifact@v4
+        if: env.SKIP != '1'
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/dawnage-db-*.enc
+            ${{ runner.temp }}/dawnage-db-*.enc.sha256
+          retention-days: 14
+          if-no-files-found: error

@@ -78,44 +78,8 @@ export default function CoachClaimPage() {
         description: `Client assigned with ${packageType} package for ${duration} months!`,
       });
 
-      // Send welcome email
-      try {
-        const client = unassignedClients?.find(
-          (c) => c.id === selectedClientId
-        );
-        if (client?.email) {
-          const { error: emailError } = await supabase.functions.invoke(
-            "send-welcome-email",
-            {
-              body: {
-                email: client.email,
-                name: client.full_name || "Valued Client",
-                packageType,
-                coachName:
-                  user?.user_metadata?.full_name || "Your Coach",
-                duration,
-              },
-            }
-          );
-          if (emailError) {
-            console.error("Failed to send welcome email:", emailError);
-            toast({
-              title: "Email Error",
-              description:
-                "Client claimed, but welcome email failed to send.",
-              variant: "destructive",
-            });
-          } else {
-            toast({
-              title: "Email Sent",
-              description: "Welcome email with resources sent to client.",
-            });
-          }
-        }
-      } catch (emailErr) {
-        console.error("Error invoking email function:", emailErr);
-      }
-
+      // ponytail: welcome email removed; the "send-welcome-email" function was never deployed
+      // and, as designed, let any signed-in user mail any address. Rebuild it server-side (Phase 6).
       setIsClaimDialogOpen(false);
       // Invalidate both queries
       queryClient.invalidateQueries({ queryKey: ["unassigned-clients"] });

@@ -4,8 +4,6 @@
 !/.easignore
 !/mobile
 !/shared
-/shared/*
-!/shared/progress-photos.ts
 
 # .easignore replaces .gitignore for uploads, so exclusions are explicit.
 **/node_modules
@@ -35,6 +33,5 @@
 /mobile/docs
 /mobile/plans
 /mobile/animation-plans
-/mobile/src/testing
 **/__tests__
 **/*.test.*

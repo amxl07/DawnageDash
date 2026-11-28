@@ -1,10 +1,10 @@
 name: Mobile quality
 on:
   pull_request:
-    paths: ['mobile/**', 'package.json', 'package-lock.json', 'shared/progress-photos*', 'scripts/*photo*', 'client/**', 'sqlmigrationfiles/**', '.github/workflows/mobile.yml']
+    paths-ignore: ['**/*.md', 'docs/**', 'mobile/docs/**']
   push:
     branches: [main]
-    paths: ['mobile/**', 'package.json', 'package-lock.json', 'shared/progress-photos*', 'scripts/*photo*', 'client/**', 'sqlmigrationfiles/**', '.github/workflows/mobile.yml']
+    paths-ignore: ['**/*.md', 'docs/**', 'mobile/docs/**']
   workflow_dispatch:
 permissions:
   contents: read
@@ -32,7 +32,10 @@ jobs:
           cache-dependency-path: mobile/package-lock.json
       - run: npm ci --no-audit --no-fund
       - run: npm run verify
+      # Check against the installed SDK's own version table; the online one moves with every Expo patch release.
       - run: npx expo install --check
+        env:
+          EXPO_OFFLINE: '1'
       - run: npx expo export --platform all --output-dir dist-ci
       - uses: actions/upload-artifact@v4
         with:
